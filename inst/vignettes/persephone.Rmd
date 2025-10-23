@@ -1,0 +1,20 @@
+---
+title: Get started with persephone3
+description: >
+  A Short introduction that explains the very first steps to take
+  after persephone3 is installed.
+---
+
+This short introduction explains the very first steps to take
+after `{persephone3}` is installed.
+
+```{r, message=FALSE, warning=FALSE}
+library(persephone3)
+# construct a ts-model object
+x <- perX13(AirPassengers)
+x
+# run the model
+x$run()
+# visualize the results
+hchart(x)
+```

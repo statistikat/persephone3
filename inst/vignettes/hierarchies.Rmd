@@ -1,0 +1,19 @@
+---
+title: Hierarchical Data and Batch Processing
+description: >
+  Persephone provides certain features to process complex timeseries
+  with or without a hierarchical structure. This article aims to give
+  some syntax examples and showcase how batches of timeseries can
+  be processed.
+---
+
+Persephone provides certain features to process complex timeseries
+with or without a hierarchical structure. This article aims to give
+some syntax examples and showcase how batches of timeseries can
+be processed.
+
+## TODO
+
+Something similar to the [hierarchicalEU article](https://statistikat.github.io/persephone/articles/persephone-hierarchicalEU.html).
+
+
