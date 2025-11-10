@@ -197,6 +197,7 @@ plotSiRatios <- function(x) {
 
   }
 
+  if(stats::frequency(x$ts) == 12) {
   hc <-  hc %>% highcharter::hc_xAxis(
     #breaks = list(
     #  list(breakSize = 0.3, from = 2, to = 2),
@@ -215,6 +216,34 @@ plotSiRatios <- function(x) {
         ')
     )
   )
+  } else if (stats::frequency(x$ts) == 4) {
+    hc <-  hc %>% highcharter::hc_xAxis(
+       breaks = lapply(1:3, function(i) {
+        list(breakSize = 0.3, from = i + 1, to = i + 1)
+      }),
+      tickPositions = 1:4 + 0.5,
+      labels = list(
+        formatter = highcharter::JS('
+          function() {
+            return ["Q1", "Q2", "Q3", "Q4"][this.value-1.5];
+          }
+        ')
+      )
+    )
+  }
+  # else if (stats::frequency(x$ts) == 2) {
+  #   hc <-  hc %>% highcharter::hc_xAxis(
+  #     breaks = list(breakSize = 0.3, from = 2, to = 2),
+  #     tickPositions = 1:2 + 0.5,
+  #     labels = list(
+  #       formatter = highcharter::JS('
+  #         function() {
+  #           return ["H1","H2][this.value-1.5];
+  #         }
+  #       ')
+  #     )
+  #   )
+  # }
 
   # hc <- hc %>% highcharter::hc_tooltip(
   #   useHTML = TRUE,
