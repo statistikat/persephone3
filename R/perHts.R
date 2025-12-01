@@ -27,6 +27,7 @@
 hierarchicalTimeSeries <- R6::R6Class(
   "hierarchicalTimeSeries",
   inherit = multipleTimeSeries,
+  # ---- Public Methods ----
   public = list(
     #' @description create a new hierarchical time series
     #' @param ... one or more objects which are either of class persephone or
@@ -268,6 +269,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       self$iterate(generateQrList, asTable = TRUE, component = component)
     }
   ),
+  # ---- Active Bindings ----
   active = list(
     #' @field params of all components and the aggregated series
     params = function() {
@@ -313,6 +315,7 @@ hierarchicalTimeSeries <- R6::R6Class(
                         which = "forecastsIndirect")
     }
   ),
+  # ---- Private Methods ----
   private = list(
     forecasts_indirect_one_step = function() {
       if (is.null(self$output))

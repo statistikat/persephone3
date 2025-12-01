@@ -20,25 +20,25 @@ knitr::opts_chunk$set(
 [![](https://img.shields.io/github/last-commit/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone/commits/master)
  [![Coverage status](https://coveralls.io/repos/github/statistikat/persephone/badge.svg)](https://coveralls.io/r/statistikat/persephone?branch=master&service=github)
 
-This package is an object oriented wrapper around the R Package [RJDemetra], which performs
-time series adjustments with the java library [JDemetra+]
+This package is an object oriented wrapper around the R Packages in the rjdverse \url{https://github.com/rjdverse/}, which performs
+time series adjustments with the java library [JDemetra+].
 
 ## Installation
 
 
 ``` r
 # install the package from GitHub
-devtools::install_github("statistikat/persephone")
+devtools::install_github("statistikat/persephone/tree/persephone3")
 
 # optional: also install vignettes (needs prettydoc)
-devtools::install_github("statistikat/persephone", build_vignettes = TRUE)
+# devtools::install_github("statistikat/persephone3", build_vignettes = TRUE)
 ```
 
 ## Usage
 
-Objects can be constructed with `perX13` or `perTramo`. Subseqentually, 
+Objects can be constructed with [`perX13`] or [`perTramo`]. Subsequently, 
 the `run` method runs the model and `output` gives access to the output object from 
-`RJDemetra`. 
+[`rjd3x13::x13_fast`] or [`rjd3tramoseats::tramoseats_fast`]. 
 
 ```{r, message = FALSE}
 library(persephone)
@@ -46,11 +46,11 @@ obj <- perX13(AirPassengers)
 plot(obj)
 ```
 
-The original output from [RJDemetra] can be inspected via the `output` field.
+The original output from [`rjd3x13::x13_fast`] or [`rjd3tramoseats::tramoseats_fast`] can be inspected via the `output` field.
 
 ```{r}
 obj$run()
-obj$output$regarima
+obj$output$preprocessing
 ```
 
 ## Further reading
@@ -63,7 +63,7 @@ More information can be found on the [github-pages site] for persephone.
 * More information about hierarchical time series can be found in the
   [hierarchical timeseries vignette].
 
-[RJDemetra]: https://github.com/nbbrd/rjdemetra
+[rjdverse]: https://github.com/rjdverse
 [JDemetra+]: https://github.com/jdemetra
 [github-pages site]: https://statistikat.github.io/persephone/
 [useR!2019 slides]: https://statistikat.github.io/persephone/articles/persephone-useR.pdf

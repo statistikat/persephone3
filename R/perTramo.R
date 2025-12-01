@@ -12,6 +12,7 @@
 tramoseatsSingle <- R6::R6Class(
   "tramoseatsSingle",
   inherit = persephoneSingle,
+  # ---- Private Methods ----
   private = list(
     updateFun = function(...) {
       rjd3tramoseats::tramoseats_spec(...)
@@ -29,6 +30,8 @@ tramoseatsSingle <- R6::R6Class(
 #' @section Inherits: [persephone]
 #' @param ts a time series
 #' @param template passed as the `spec` argument to [tramoseats_spec()]
+#' @param context passed as the `context` argument of [tramoseats_fast()],
+#' a list of external regressors (calendar or other) to be used for estimation
 #' @param userdefined passed as the `userdefined` argument to [tramoseats_fast()]
 #' @param ... passed to [tramoseats_spec()]
 #' @examples
@@ -39,6 +42,6 @@ tramoseatsSingle <- R6::R6Class(
 #' obj$ts
 #' @export
 perTramo <- function(ts, template = c("rsafull", "rsa0", "rsa1", "rsa2", "rsa3", "rsa4", "rsa5"),
-                      userdefined = NULL, ...) {
-  tramoseatsSingle$new(ts, match.arg(template), userdefined, ...)
+                     context = NULL, userdefined = NULL, ...) {
+  tramoseatsSingle$new(ts, match.arg(template), context, userdefined, ...)
 }

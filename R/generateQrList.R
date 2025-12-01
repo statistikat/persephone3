@@ -1,3 +1,7 @@
+#' Generates a list containing the figures for a EUROSTAT quality report
+#'
+#' @param x an object of class [persephone].
+#'
 #' @importFrom stats start end
 generateQrList <- function(x){
 
