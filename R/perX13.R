@@ -32,7 +32,7 @@ x13Single <- R6::R6Class(
       spec_new <- init_spec
 
       # extract additional parameters from ...
-      spec_list <<- list(...) # extra arguments
+      spec_list <- list(...) # extra arguments
       if(length(spec_list) > 0) {
         # change persephone specific parameter names to rjd3 names
         # persephone specific parameters aber evt irgendwo aufheben?
@@ -57,7 +57,7 @@ x13Single <- R6::R6Class(
             spec_list[["addout.type"]] <- type
             spec_list[["addout.date"]] <- date
           }
-          spec_list2 <<- spec_list
+          # spec-blocks and their corresponding functions
           specfun_list <- list(arima = rjd3toolkit::set_arima, automdl = rjd3toolkit::set_automodel,
                                basic = rjd3toolkit::set_basic, easter = rjd3toolkit::set_easter,
                                estimate = rjd3toolkit::set_estimate, setout = rjd3toolkit::set_outlier,
@@ -115,7 +115,7 @@ x13Single <- R6::R6Class(
 #' @param ... additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally.
 #'
-#' These arguments allow you to set or update the specification of the
+#' These arguments allow you to set or update the specifications of the
 #' seasonal adjustment method by modifying one or more parameters.
 #' Parameters are organized into **spec-blocks**:
 #' - The first part of the parameter name (before the dot) indicates the
