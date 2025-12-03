@@ -37,7 +37,7 @@ x13Single <- R6::R6Class(
         # change persephone specific parameter names to rjd3 names
         # persephone specific parameters aber evt irgendwo aufheben?
         if("outliers" %in% names(spec_list)) {
-          if(!is.null(outliers)) {
+          if(!is.null(spec_list[["outliers"]])) {
             rjd3otl.cp <- rjd3otl <- spec_list[["outliers"]]
             spec_list[["outliers"]] <- NULL
             type <- substr(rjd3otl, 1,2)
