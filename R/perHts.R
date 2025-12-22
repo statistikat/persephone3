@@ -36,6 +36,13 @@ hierarchicalTimeSeries <- R6::R6Class(
     #'   time instances. All elements supplied in ... must be named.
     #' @param method specifies the method to be used for the direct adjustment
     #'   of the aggregate series. tramoseats or x13
+    #' @param template the name of the predefined specification template, passed
+    #' as the `name` argument to [rjd3x13::x13_spec()].
+    #' Must be one of:
+    #' `"rsa0"`, `"rsa1"`, `"rsa2c"`, `"rsa3"`, `"rsa4"`, `"rsa5c"`.
+    #' Defaults to `"rsa3"`.
+    #' @param context passed as the `context` argument of [x13_fast()] or
+    #'   [tramoseats_fast()], a list of external regressors (calendar or other) to be used for estimation.
     #' @param userdefined passed as the userdefined argument to x13_fast() or
     #'   tramoseats_fast()
     #' @param spec a model specification returned by x13_spec() or
@@ -46,21 +53,52 @@ hierarchicalTimeSeries <- R6::R6Class(
     #'   points or a list of ts objects or a mts object if the weight varies
     #'   for different time points. They must have the same length as the
     #'   number of components.
-    initialize = function(..., method = c("tramoseats", "x13"),
-                          userdefined = NULL, spec = NULL, list = NULL,
-                          weights = NULL) {
+    #' @param recursive logical, if TRUE, apply this setting to all subseries as well. If FALSE,
+    #'   only apply to aggregate
+    initialize = function(method = c("tramoseats", "x13"),
+                          template = c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4","rsa5c"),
+                          context = NULL,
+                          userdefined = NULL,
+                          spec = NULL,
+                          list = NULL,
+                          weights = NULL,
+                          recursive = TRUE,
+                          ...) {
+      # browser()
       private$method <- match.arg(method)
+      private$template <- match.arg(template)
+      # zusätzlich im eigenen privaten State speichern (für runDirect)
+      private$context_internal <- context
+      private$userdefined <- union(userdefined, userdefined_default)
+      private$params_internal <- spec
       if (!is.null(list)) {
         components <- list
         if (is.null(names(components))) {
           names(components) <- paste0("ts", seq_along(components))
         }
         if (length(list(...)) > 0) {
-          warning("If the list argument is specified, additional arguments ",
-                  " as ... will be ignored.")
+          # warning("If the list argument is specified, additional arguments ",
+          #         " as ... will be ignored.") <- gilt nicht mehr
+          # rjd3 specs für updateParams
         }
       } else {
         components <- list(...)
+        if (is.null(names(components)) || "" %in% names(components)) {
+          stop("all arguments must be named")
+        }
+        # reference by position -> each argument as ..1, ..2, ..3, ..n
+        # ...length() tells us how many arguments are passed in
+        # hier unterscheiden zwischen components und rjd3-specs
+        sel_spec <- vector()
+        for(c in paste0(names(specfun_list),".")) {
+          sel_spec <- c(sel_spec, which(startsWith(names(components), c)))
+        }
+        # remaining dots
+        spec_list <- components[sel_spec]
+        # "real" components
+        if(length(spec_list) >0){
+          components <- components[-sel_spec]
+        }
       }
       components <- lapply(components, as.persephone)
       componentsHts <- sapply(
@@ -69,7 +107,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       if (!is.null(weights)) {
         if (ifelse(is.list(weights) || is.vector(weights),
                    length(weights), ncol(weights)) != sum(!componentsHts)) {
-        stop("If the weights argument is provided,
+          stop("If the weights argument is provided,
              its length must be equal to the number of components.")
         }
       }
@@ -122,10 +160,22 @@ hierarchicalTimeSeries <- R6::R6Class(
         weights_ts <- do.call("cbind", weights_ts)
         colnames(weights_ts) <- names(components)
       }
-
       self$weights <- weights_ts
       private$ts_internal <- private$aggregate(components, self$weights)
-      super$super2()$setOptions(userdefined = userdefined, spec = spec)
+      # super$super2()$updateParams(context = context, userdefined = userdefined, spec = spec)
+      # Kein super$super2() mehr, sondern direkt setzen:
+      private$context_internal <- context
+      private$userdefined <- union(userdefined, userdefined_default)
+      # Spezifikation erzeugen/aktualisieren: init_spec = 'spec' aus Argumenten,
+      # und ggf. zusätzliche ... Parameter beachten (falls gewünscht, hier ohne ...)
+      private$params_internal <- private$updateFun(
+        name      = private$template,
+        freq      = frequency(private$ts_internal),
+        init_spec = private$params_internal,
+        spec_list = spec_list,
+        ...)
+
+      invisible(NULL)
     },
     #' @description run the model
     #' @param verbose if `FALSE` (the default), the results of the run will
@@ -137,7 +187,13 @@ hierarchicalTimeSeries <- R6::R6Class(
         component$run(verbose = verbose)
       })
       ## direct
-      private$runDirect(self$ts)
+      #     private$runDirect(self$ts)
+      # Je nach Oberklasse gibt es self$ts. Falls nicht, verwende private$ts_internal.
+      ts_to_run <- if (!is.null(self$ts)) self$ts else private$ts_internal
+      private$runDirect(ts_to_run)
+
+      invisible(NULL)
+
     },
     #' @field components the sub series of the hierarchical time series
     components = NULL,
@@ -152,28 +208,30 @@ hierarchicalTimeSeries <- R6::R6Class(
         tbl <- tbl[, 1:3]
       print(tbl, right = FALSE, row.names = FALSE)
     },
-    #' @description sets options for all entries of the dependency tree
-    #'   recursively (if recursive = TRUE). See
-    #'   vignette("persephone-hierarchical") for more details.
-    #' @param userdefined additional outputs to generate while running. See
-    #'   [x13_fast()] and [tramoseats_fast()].
-    #' @param spec specifications generated by `x13_spec()` or
-    #'   `tramoseats_spec()`
-    #' @param recursive apply this setting to all subseries as well?
-    #' @param component which component to modify.
-    setOptions = function(userdefined = NA, spec = NA, recursive = TRUE,
-                           component = "") {
-      if (component != "") {
-        root <- self$getComponent(component)
-        return(root$setOptions(userdefined, spec, recursive))
-      }
-      super$super2()$setOptions(userdefined, spec, recursive)
-      if (recursive)
-        lapply(self$components, function(x) {
-          x$setOptions(userdefined, spec, recursive)
-        })
-      invisible(NULL)
-    },
+    #' #' @description sets options for all entries of the dependency tree
+    #' #'   recursively (if recursive = TRUE). See
+    #' #'   vignette("persephone-hierarchical") for more details.
+    #' #' @param context passed as the `context` argument of [x13_fast()] or
+    #' #'   [tramoseats_fast()], a list of external regressors (calendar or other) to be used for estimation.
+    #' #' @param userdefined additional outputs to generate while running. See
+    #' #'   [x13_fast()] and [tramoseats_fast()].
+    #' #' @param spec specifications generated by `x13_spec()` or
+    #' #'   `tramoseats_spec()`.
+    #' #' @param recursive apply this setting to all subseries as well?
+    #' #' @param component which component to modify.
+    #' setOptions = function(context = NA, userdefined = NA, spec = NA, recursive = TRUE,
+    #'                       component = "") {
+    #'   if (component != "") {
+    #'     root <- self$getComponent(component)
+    #'     return(root$setOptions(context, userdefined, spec, recursive))
+    #'   }
+    #'   super$super2()$setOptions(context, userdefined, spec, recursive)
+    #'   if (recursive)
+    #'     lapply(self$components, function(x) {
+    #'       x$setOptions(context, userdefined, spec, recursive)
+    #'     })
+    #'   invisible(NULL)
+    #' },
     #' @description iterate over all components
     #' @details this functin is similar to `lapply()` in the sense that it
     #'   can be used to apply a function to several persephone objects
@@ -218,66 +276,94 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' for which the parameters should be changed. If NULL (default) the
     #' parameters of all components will be changed
     #' @param ... named arguments to be changed
-    updateParams = function(component = NULL, ...) {
-      if(is.null(component) || component ==""){
-        private$updateParamsDirect(...)
+    updateParams = function(component = NULL, iterate = FALSE, ...) {
+      # if(is.null(component) || component ==""){
+      #   private$updateParamsDirect(...)
+      # }
+      # super$updateParams(component,...)
+      # Gezielt ein Sub-Component updaten
+      if (nzchar(component)) {
+        root <- self$getComponent(component)
+        root$updateParams(iterate = iterate, ...)   # rekursives Verhalten übernimmt der Teilbaum selbst
+        return(invisible(NULL))
       }
-      super$updateParams(component,...)
-    },
+      # Direkt für die Aggregatreihe:
+      # brauche updateParamsDirect nicht mehr
+      private$updateFun(
+        name      = private$template,
+        freq      = frequency(private$ts_internal),
+        init_spec = private$params_internal,
+        spec_list = NULL,      # wird aus ... erzeugt
+        ...
+      )
+      # Optional rekursiv:
+      if (isTRUE(iterate)) {
+        lapply(self$components, function(node) {
+          node$updateParams(   iterate = TRUE,
+                               ...)
+          invisible(NULL)
+        })
+      }
+      invisible(NULL)
 
-    #' @description fix the arima model(s)
-    #' @param component character vector with names of the components
-    #' for which the parameters should be changed. If NULL (default) the
-    #' parameters of all components will be changed
-    #' @param verbose if TRUE the changed parameters will be reported
-    fixModel = function(component = NULL, verbose = FALSE) {
-      if(is.null(component) || component ==""){
-        super$super2()$fixModel(verbose = verbose)
-      }
-      if(!is.null(component)){
-        lapply(self$components[component],function(x)x$fixModel(verbose = verbose))
-      }else{
-        lapply(self$components,function(x)x$fixModel(verbose = verbose))
-      }
-      return(invisible(NULL))
     },
-    #' @description fix the automatically detected outliers and the
-    #' span to find new automatically detected outliers
-    #' @param component character vector with names of the components
-    #' for which the parameters should be changed. If NULL (default) the
-    #' parameters of all components will be changed
-    #' @param timespan number of months from the end of the time series
-    #' where outliers are not fixed
-    #' @param verbose if TRUE the changed parameters will be reported
-    fixOutlier = function(component = NULL, timespan =12, verbose = FALSE) {
-      if(is.null(component) || component ==""){
-        super$super2()$fixOutlier(timespan = timespan,
-                                  verbose = verbose)
-      }
-      if(!is.null(component)){
-        lapply(self$components[component],function(x)x$fixOutlier(timespan = timespan,
-                                                                  verbose = verbose))
-      }else{
-        lapply(self$components,function(x)x$fixOutlier(timespan = timespan,
-                                                       verbose = verbose))
-      }
-      return(invisible(NULL))
-    },
+    #' #' @description fix the arima model(s)
+    #' #' @param component character vector with names of the components
+    #' #' for which the parameters should be changed. If NULL (default) the
+    #' #' parameters of all components will be changed
+    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' fixModel = function(component = NULL, verbose = FALSE) {
+    #'   if(is.null(component) || component ==""){
+    #'     super$super2()$fixModel(verbose = verbose)
+    #'   }
+    #'   if(!is.null(component)){
+    #'     lapply(self$components[component],function(x)x$fixModel(verbose = verbose))
+    #'   }else{
+    #'     lapply(self$components,function(x)x$fixModel(verbose = verbose))
+    #'   }
+    #'   return(invisible(NULL))
+    #' },
+    #' #' @description fix the automatically detected outliers and the
+    #' #' span to find new automatically detected outliers
+    #' #' @param component character vector with names of the components
+    #' #' for which the parameters should be changed. If NULL (default) the
+    #' #' parameters of all components will be changed
+    #' #' @param timespan number of months from the end of the time series
+    #' #' where outliers are not fixed
+    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' fixOutlier = function(component = NULL, timespan =12, verbose = FALSE) {
+    #'   if(is.null(component) || component ==""){
+    #'     super$super2()$fixOutlier(timespan = timespan,
+    #'                               verbose = verbose)
+    #'   }
+    #'   if(!is.null(component)){
+    #'     lapply(self$components[component],function(x)x$fixOutlier(timespan = timespan,
+    #'                                                               verbose = verbose))
+    #'   }else{
+    #'     lapply(self$components,function(x)x$fixOutlier(timespan = timespan,
+    #'                                                    verbose = verbose))
+    #'   }
+    #'   return(invisible(NULL))
+    #' },
     #' @description Generate a table for the eurostat quality report
     #' @param component (optional) a sub-component to create the report for
     generateQrTable = function(component = "") {
-      self$iterate(generateQrList, asTable = TRUE, component = component)
+      self$iterate(generate_Qr_List, asTable = TRUE, component = component)
     }
   ),
   # ---- Active Bindings ----
   active = list(
     #' @field params of all components and the aggregated series
     params = function() {
-      c(self$private$params_internal,super$params)
+      # c(self$private$params_internal,super$params)
+      c(list(aggregate = private$params_internal), super$params)
     },
     #' @field paramsDirect params of the aggregated series
     paramsDirect = function() {
-      super$super2()$private$params_internal
+      # super$super2()$private$params_internal
+      #
+      # nur die Direkt-Spec der Aggregatreihe
+      private$params_internal
     },
     #' @field adjustedIndirect results from the indirect adjustment where
     #'   all components are adjusted and then aggregated
@@ -291,7 +377,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     adjusted = function() {
       if (is.na(self$indirect)) {
         warning("The decision between direct and indirect adjustment was not ",
-                 "recorded yet. \nDirect adjustment is returned.")
+                "recorded yet. \nDirect adjustment is returned.")
       } else if (self$indirect) {
         return(private$adjusted_indirect_one_step())
       }
@@ -317,6 +403,14 @@ hierarchicalTimeSeries <- R6::R6Class(
   ),
   # ---- Private Methods ----
   private = list(
+    template = NULL, # one of c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4", "rsa5c") -> in private
+    method = NULL,# one of c("rjdemetra","x13") -> in private
+    spec = NULL, # rjd3 spec object
+    context = NULL,
+    userdefined = NULL,
+    ts_internal = NULL,       # aggregate series (sum or weighted sum)
+    output_internal = NULL,   # output for direct aggregate
+    params_internal = NULL,   # spec for aggregate series
     forecasts_indirect_one_step = function() {
       if (is.null(self$output))
         return(NULL)
@@ -345,14 +439,14 @@ hierarchicalTimeSeries <- R6::R6Class(
     },
     aggregate = function(components, weights, which = "ts") {
       tss <- lapply(components, function(component) {
-         if (which == "adjustedIndirect" &
-             "persephoneSingle" %in% class(component)) {
-           return(component[["adjusted"]])
-         }
-         if (which == "forecastsIndirect" &
-             "persephoneSingle" %in% class(component)) {
-           return(component[["forecasts"]])
-         }
+        if (which == "adjustedIndirect" &
+            "persephoneSingle" %in% class(component)) {
+          return(component[["adjusted"]])
+        }
+        if (which == "forecastsIndirect" &
+            "persephoneSingle" %in% class(component)) {
+          return(component[["forecasts"]])
+        }
         component[[which]]
       })
       weights_ts <- NULL
@@ -366,7 +460,7 @@ hierarchicalTimeSeries <- R6::R6Class(
               startEndAsDecimal(end(tss[[i]]))) {
             weights_ts[[i]] <- ts(tail(weights[, i], 1),
                                   start = start(tss[[i]]),
-            end = end(tss[[i]]), frequency = frequency(tss[[i]]))
+                                  end = end(tss[[i]]), frequency = frequency(tss[[i]]))
           } else {
             weights_ts[[i]] <- window(weights[, i], start = start(tss[[i]]),
                                       end = end(tss[[i]]))
@@ -417,40 +511,122 @@ hierarchicalTimeSeries <- R6::R6Class(
           stop("all components in 'hierarchicalTimeSeries' must be named")
       })
     },
-    method = NULL,
-    spec = NULL,
+    # update parameters for direct adjustment of aggregated series
+    # updateParamsDirect = function(...) {
+    #
+    #   methodFunction <- switch(private$method,
+    #                            tramoseats = rjd3tramoseats::tramoseats_fast,
+    #                            x13 = rjd3x13::x13_fast)
+    #   if (is.null(self$spec)){
+    #     spec <- switch(private$method,
+    #                    tramoseats = tramoseats_spec(...),
+    #                    x13 = x13_spec( ...))
+    #   }else{
+    #     if("X13"%in%class(self$spec)){
+    #       spec <- x13_spec(self$spec,...)
+    #     }else{
+    #       spec <- tramoseats_spec(self$spec,...)
+    #     }
+    #
+    #   }
+    #  super$super2()$setOptions(spec=spec)
+    #  private$params_internal <- spec
+    # },
+
+    updateFun = function(name = NULL, freq, init_spec = NULL, spec_list = NULL, ...) {
+      # browser()
+      # initialize basic spec
+      # Wenn init_spec NULL ist, nimm das gespeicherte Spec
+      if (is.null(init_spec)) {
+        init_spec <- private$params_internal
+      }
+      # Falls das auch NULL ist (z. B. beim ersten Mal), erzeuge neues Spec
+      if (is.null(init_spec)) {
+        # nutze Template; falls name übergeben, verwende den
+        tmpl <- if (!is.null(name)) name else private$template
+        init_spec <- if (private$method == "x13") {
+          rjd3x13::x13_spec(name = tmpl)
+        } else {
+          rjd3tramoseats::tramoseats_spec(name = tmpl)
+        }
+      }
+      # zusätzliche Argumente aus ... holen und anwenden falls keine spec_list (bei Initialisierung von hts)
+      # übergeben wird
+      if(is.null(spec_list)) {
+        spec_list <- list(...)
+      }
+      if (length(spec_list) > 0) {
+        spec_new <- update_spec(
+          spec      = init_spec,
+          method    = if (private$method == "x13") "x13" else "tramoseats",
+          freq      = freq,
+          spec_list = spec_list
+        )
+      } else {
+        spec_new <- init_spec
+      }
+
+      # 3) Speichern & zurückgeben
+      private$params_internal <- spec_new
+      return(spec_new)
+    },
     updateParamsDirect = function(...) {
 
-      methodFunction <- switch(private$method, tramoseats = rjd3tramoseats::tramoseats_fast,
-                               x13 = rjd3x13::x13_fast)
-      if (is.null(self$spec)){
-        spec <- switch(private$method, tramoseats = tramoseats_spec(...),
-                       x13 = x13_spec( ...))
-      }else{
-        if("X13"%in%class(self$spec)){
-          spec <- x13_spec(self$spec,...)
-        }else{
-          spec <- tramoseats_spec(self$spec,...)
-        }
+      freq <- frequency(private$ts_internal)
 
+      init_spec <- private$params_internal
+
+      if (is.null(init_spec)) {
+        init_spec <- if (private$method == "x13") {
+          rjd3x13::x13_spec(name = private$template)
+        } else {
+          rjd3tramoseats::tramoseats_spec(name = private$template)
+        }
       }
-     super$super2()$setOptions(spec=spec)
-     private$params_internal <- spec
+      # extract additional parameters from ...
+      spec_list <- list(...) # extra arguments
+
+      if(length(spec_list) > 0) {
+        spec_new <- update_spec(spec = init_spec, method = private$method,
+                                freq = freq, spec_list = spec_list)
+      } else {
+        spec_new <- init_spec
+      }
+      # direkt speichern, kein super$super2()$updateParams(...) mehr
+      private$params_internal <- spec_new
+      #super$super2()$updateParams(spec = spec_new)
+      invisible(NULL)
     },
     runDirect = function(ts) {
-      methodFunction <- switch(private$method, tramoseats = rjd3tramoseats::tramoseats_fast,
+      # if (is.null(self$spec))
+      #   spec <- switch(private$method, tramoseats = tramoseats_spec(),
+      #                  x13 = x13_spec())
+      # else
+      #   spec <- self$spec
+
+      spec <- private$params_internal
+
+      # Falls das auch NULL ist (z. B. beim ersten Mal), erzeuge neues Spec
+      if (is.null(spec)) {
+        spec <- if (private$method == "x13") {
+          rjd3x13::x13_spec(name = private$template)
+        } else {
+          rjd3tramoseats::tramoseats_spec(name = private$template)
+        }
+        private$params_internal <- spec
+      }
+
+      # super$super2()$updateParams(spec=spec)
+
+      methodFunction <- switch(private$method,
+                               tramoseats = rjd3tramoseats::tramoseats_fast,
                                x13 = rjd3x13::x13_fast)
-      if (is.null(self$spec))
-        spec <- switch(private$method, tramoseats = tramoseats_spec(),
-                       x13 = x13_spec())
-      else
-        spec <- self$spec
-      super$super2()$setOptions(spec=spec)
 
       private$output_internal <- methodFunction(
-        ts,
-        spec = spec,
-        userdefined = private$userdefined
+        ts = private$ts_internal,
+        spec = private$params_internal,
+        userdefined = private$userdefined,
+        context = private$context
       )
     }
   )
@@ -461,17 +637,23 @@ hierarchicalTimeSeries <- R6::R6Class(
 #' Combine mutliple objects of persephone objects into a new persephone object.
 #' The resulting time series can perform direct and indirect adjustments.
 #'
-#' @param ... ne or more objects which are either of class persephone or can be
+#' @param ... one or more objects which are either of class persephone or can be
 #'   coerced to persephone objects with as_persephone. If more than one element
 #'   is supplied, the underlying time series must have the same time instances.
 #'   All elements supplied in ... must be named.
 #' @param method specifies the method to be used for the direct adjustment of
-#'   the aggregate series. tramoseats or x13
-#' @param userdefined passed as the userdefined argument to tramoseats() or x13()
-#' @param spec  a model specification returned by x13_spec() or
-#'   tramoseats_spec()
+#'   the aggregate series, i.e. "tramoseats" or "x13".
+#' @param template the name of the predefined specification, i.e. one of
+#' c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4","rsa5c")
+#' @param context a list of external regressors (calendar or other) to be used for estimation,
+#' passed as the `context` argument of [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]..
+#' @param userdefined a character vector of user-defined variables to be included in the output,
+#' passed as the `userdefined` argument to [rjd3x13::x13_fast()] or
+#' [rjd3tramoseats::tramoseats_fast()].
+#' @param spec  a model specification object returned by [rjd3x13::x13_spec()] or
+#'   [rjd3tramoseats::tramoseats_spec()].
 #' @param list a list of persephone objects as alternative input to `...`. This
-#'   argument can also handle mts objects
+#'   argument can also handle mts objects.
 #' @param weights  either a vector if the same weight is used for all time
 #'   points or a list of ts objects or a mts object if the weight varies for
 #'   different time points. They must have the same length as the number of
@@ -498,13 +680,36 @@ hierarchicalTimeSeries <- R6::R6Class(
 #' }
 #' @export
 perHts <- function(..., method = c("tramoseats", "x13"),
-                    userdefined = NULL, spec = NULL, list = NULL,
-                    weights = NULL) {
-  hierarchicalTimeSeries$new(..., method = method, userdefined = userdefined,
-                             spec = spec, list = list, weights = weights)
+                   template = c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4","rsa5c"),
+                   context = NULL, userdefined = NULL, spec = NULL,
+                   list = NULL, weights = NULL) {
+  hierarchicalTimeSeries$new(..., method = method, template = template,
+                             context = context,
+                             userdefined = userdefined, spec = spec,
+                             list = list, weights = weights)
 }
 
-
+# TO DO: für Quartalsdaten erweitern - mit freq parameter statt 12 hardcoded
 startEndAsDecimal <- function(x){
   x[1] + (x[2] - 1) / 12
 }
+#Und im aggregate()-Code:
+# or (i in seq_along(tss)) {
+#   # ...
+#   if (endAsDecimal(end(weights[, i]), frequency(weights[, i])) <
+#       endAsDecimal(end(tss[[i]]), frequency(tss[[i]]))) {
+#     weights_ts[[i]] <- ts(tail(weights[, i], 1),
+#                           start = start(tss[[i]]),
+#                           end = end(tss[[i]]),
+#                           frequency = frequency(tss[[i]]))
+#   } else {
+#     weights_ts[[i]] <- window(weights[, i],
+#                               start = start(tss[[i]]),
+#                               end = end(tss[[i]]))
+#   }
+#
+# Wenn weights eine Liste von ts ist, setzt du ohnehin
+# weights_ts <- do.call("cbind", weights) → mts,
+# was frequency(weights[, i]) korrekt macht.
+#
+# Funktioniert template setzen schon??
