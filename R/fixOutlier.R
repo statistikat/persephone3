@@ -99,4 +99,5 @@ fixOutlier = function(x, timespan = 12, verbose = FALSE) {
   }
 }
 
-# noch an rjd3 anpassen
+# noch an rjd3 anpassen, bzw. überhaupt anders aufziehen, Logik ist jetzt etwas anders.
+

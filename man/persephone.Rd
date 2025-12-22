@@ -33,8 +33,8 @@ object, see \link{plotResiduals}
 \section{Read-Only fields}{
 
 \itemize{
-\item \code{params}: A parameters object of class \code{SA_spec}. See \link{x13_spec} and
-\link{tramoseats_spec}.
+\item \code{params}: A parameters object of class \code{SA_spec}. See \link[rjd3x13:x13_spec]{rjd3x13::x13_spec} and
+\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec}.
 \item \code{ts}: The time series.
 \item \code{output}: The return value from the underlying functions \code{x13_fast} or
 \code{tramoseats_fast}. This slot will
@@ -59,8 +59,8 @@ run? If \code{FALSE} (the default), the output will be returned invisibly.
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{params}}{A parameters object of class \code{SA_spec}. See \code{\link[=x13_spec]{x13_spec()}}
-and \code{\link[=tramoseats_spec]{tramoseats_spec()}}.}
+\item{\code{params}}{A parameters object of class \code{SA_spec}. See \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}
+and \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.}
 
 \item{\code{ts}}{the (unajusted) time series}
 
@@ -70,11 +70,14 @@ and \code{\link[=tramoseats_spec]{tramoseats_spec()}}.}
 tramoseats_fast(). This slot will be empty (NULL) before run() is called for
 the first time.}
 
+\item{\code{context}}{passed to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} when the
+\verb{$run()} method is invoked}
+
 \item{\code{adjusted}}{get the adjusted series}
 
 \item{\code{adjustedDirect}}{see \link{perHts}}
 
-\item{\code{spec}}{specifications passed to \code{\link[=x13_fast]{x13_fast()}} and \code{\link[=tramoseats_fast]{tramoseats_fast()}} when the
+\item{\code{spec}}{specifications passed to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} when the
 \verb{$run()} method is invoked}
 
 \item{\code{forecasts}}{get forecasts from the model}
@@ -99,8 +102,6 @@ the first time.}
 \item \href{#method-persephone-iterate}{\code{persephone$iterate()}}
 \item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
 \item \href{#method-persephone-setOptions}{\code{persephone$setOptions()}}
-\item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
-\item \href{#method-persephone-fixOutlier}{\code{persephone$fixOutlier()}}
 \item \href{#method-persephone-clone}{\code{persephone$clone()}}
 }
 }
@@ -142,7 +143,7 @@ perform a run of the model
 \subsection{Method \code{updateParams()}}{
 update parameters for the adjustment
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$updateParams(...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{persephone$updateParams(template = NULL, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -306,55 +307,151 @@ create a table for the eurostat quality report
 \subsection{Method \code{setOptions()}}{
 update options for the model
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$setOptions(userdefined = NA, spec = NA, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{persephone$setOptions(
+  context = NA,
+  userdefined = NA,
+  spec = NA,
+  recursive = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{userdefined}}{see \code{\link[=x13_fast]{x13_fast()}} and \code{\link[=tramoseats_fast]{tramoseats_fast()}}}
+\item{\code{context}}{see \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
-\item{\code{spec}}{see \code{\link[=x13_fast]{x13_fast()}} and \code{\link[=tramoseats_fast]{tramoseats_fast()}}}
+\item{\code{userdefined}}{see \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
+
+\item{\code{spec}}{see \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
 \item{\code{recursive}}{only applicable to hierarchical series. propagates
-the updates to sub-series. see \link{perHts}}
+the updates to sub-series. see \link{perHts}
+#' @description fix the arima model
+#' @param verbose if TRUE the changed parameters will be reported
+fixModel = function(verbose = FALSE) {
+if(is.null(self$output)){
+warning("not run yet.")
+return(invisible(NULL))
 }
-\if{html}{\out{</div>}}
+p <- self$output$regarima$specification$arima$specification$arima.p
+d <- self$output$regarima$specification$arima$specification$arima.d
+q <- self$output$regarima$specification$arima$specification$arima.q
+bp <- self$output$regarima$specification$arima$specification$arima.bp
+bd <- self$output$regarima$specification$arima$specification$arima.bd
+bq <- self$output$regarima$specification$arima$specification$arima.bq
+if(self$output$regarima$specification$arima$specification$enabled){
+if(verbose){
+message("The model", paste("(",p,d,q,") (",bp,bd,bq,") is now fixed."))
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-persephone-fixModel"></a>}}
-\if{latex}{\out{\hypertarget{method-persephone-fixModel}{}}}
-\subsection{Method \code{fixModel()}}{
-fix the arima model
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$fixModel(verbose = FALSE)}\if{html}{\out{</div>}}
-}
+self$updateParams(arima.p=p,arima.d=d,arima.q=q,
+arima.bp=bp,arima.bd=bd,arima.bq=bq,
+automdl.enabled = FALSE
+)
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{if TRUE the changed parameters will be reported}
+}else if(verbose){
+message("The model", paste("(",p,d,q,") (",bp,bd,bq,") was already fixed."))
 }
-\if{html}{\out{</div>}}
+},
+#' @description create a new single object
+#' @param timespan number of months from the end of the time series
+#' where outliers are not fixed
+#' @param verbose if TRUE the changed parameters will be reported
+fixOutlier = function(timespan = 12, verbose = FALSE) {
+xxx <<- self
+if(is.null(self$output)){
+warning("not run yet.")
+return(invisible(NULL))
 }
+from <- time(self$ts)\link{length(self$ts)-timespan+1}
+y <- floor(from)
+m <- as.character(round((from-floor(from))*self$tsp\link{3}+1))
+if(frequency(self$ts)==4){
+m <- c("01","04","07","10")\link{as.numeric(m)}
 }
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-persephone-fixOutlier"></a>}}
-\if{latex}{\out{\hypertarget{method-persephone-fixOutlier}{}}}
-\subsection{Method \code{fixOutlier()}}{
-create a new single object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$fixOutlier(timespan = 12, verbose = FALSE)}\if{html}{\out{</div>}}
+if(nchar(m)==1){
+m <- paste0("0",m)
 }
+from <- paste0(y,"-",m,"-01")
+if(self$output$regarima$specification$outliers$enabled){
+possibleOutliers <- row.names(self$output$regarima$regression.coefficients)
+possibleOutliers <- possibleOutliers\link[=substring(possibleOutliers,1,2)\%in\%
+                                           c("AO","LS","TC")]{substring(possibleOutliers,1,2)\%in\% c("AO","LS","TC")}
+if(self$tsp\link{3}==12){
+outliers <- lapply(possibleOutliers, function(x){
+x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[\link{1}]
+x2\link{1} <- ifelse(nchar(x2\link{1})==1,paste0("0",x2\link{1}),x2\link{1})
+data.frame(type=substr(x,1,2),date=paste0(x2\link{2},"-",x2\link{1},"-01"))
+})
+}else if(self$tsp\link{3}==4){
+outliers <- lapply(possibleOutliers, function(x){
+x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[\link{1}]
+x2\link{1} <- c(I="01",II="04",III="07",IV="10")[x2\link{1}]
+data.frame(type=substr(x,1,2),date=paste0(x2\link{2},"-",x2\link{1},"-01"))
+})
+}
+if(!is.na(self$output$regarima$specification$regression$userdef$outliers\link{1})){
+if(self$tsp\link{3}==12){
+outliers <- outliers[sapply(outliers,
+userdefOut = self$output$regarima$specification$regression$userdef$outliers\link{,1:2},
+function(x,userdefOut){
+m <- merge(x, userdefOut, by = c("type","date"))
+return(nrow(m)==0)
+})]
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{timespan}}{number of months from the end of the time series
-where outliers are not fixed}
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  \}else if(self$tsp[3]==4)\{
+    outliers <- outliers[sapply(outliers,
+                                userdefOut = self$output$regarima$specification$regression$userdef$outliers[,1:2],
+                                function(x,userdefOut)\{
+                                  m <- merge(x, userdefOut, by = c("type","date"))
+                                  return(nrow(m)==0)
+                                \})]
+  \}
+  oldType <- self$output$regarima$specification$regression$userdef$outliers$type
+  oldDate <- self$output$regarima$specification$regression$userdef$outliers$date
+\}else\{
+  oldType <- NULL
+  oldDate <- NULL
+\}
+if(length(outliers)>0)\{
+  if(verbose)\{
+    for(i in seq_along(outliers))\{
+      message(outliers[[i]]$type," outlier saved at ",outliers[[i]]$date,".")
+    \}
+  \}
+  df <- data.frame(type=c(oldType,
+                          sapply(outliers, function(x)x$type)),
+                   date=c(oldDate,
+                          sapply(outliers, function(x)x$date)))
+  df <- unique(df)
+  if(class(self)[1]=="hierarchicalTimeSeries")\{
+    private$updateParamsDirect(usrdef.outliersEnabled = TRUE,
+                               usrdef.outliersType = df$type,
+                               usrdef.outliersDate = df$date)
+  \}else\{
+    self$updateParams(usrdef.outliersEnabled = TRUE,
+                      usrdef.outliersType = df$type,
+                      usrdef.outliersDate = df$date)
+  \}
 
-\item{\code{verbose}}{if TRUE the changed parameters will be reported}
+\}else\{
+  if(verbose)\{
+    message("No automatic outliers found.")
+  \}
+\}
+if(verbose)\{
+  message("Updating parameter outlier.from to '",from,"'")
+\}
+if(class(self)[1]=="hierarchicalTimeSeries")\{
+  private$updateParamsDirect(outlier.from = from)
+\}else\{
+  self$updateParams(outlier.from = from)
+\}
+}\if{html}{\out{</div>}}
+
+}else if(verbose){
+message("Automatic outliers not enabled.")
+}
+}}
 }
 \if{html}{\out{</div>}}
 }

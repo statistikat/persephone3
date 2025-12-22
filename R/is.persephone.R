@@ -1,7 +1,7 @@
 #' is.persephone
 #'
 #' Check if an R object is of or derives from the class `persephone` or convert
-#' an object to persephone
+#' an object to persephone with method "tramoseats" as default.
 #' @param x R object to be tested or converted.
 #' @examples
 #' is.persephone(2)
@@ -22,3 +22,4 @@ as.persephone <- function(x) {
   else
     stop("cannot coerce object of type ", class(x)[1], " to persephone")
 }
+# Achtung: hier noch kontrollieren, ob das eh durch method-Setzung overridden wird

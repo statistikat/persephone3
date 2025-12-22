@@ -6,31 +6,101 @@
 \usage{
 perX13(
   ts,
-  template = c("rsa4", "rsa0", "rsa1", "rsa2c", "rsa3", "rsa5c"),
+  template = c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4", "rsa5c"),
+  context = NULL,
   userdefined = NULL,
   ...
 )
 }
 \arguments{
-\item{ts}{a time series}
+\item{ts}{a time series.}
 
-\item{template}{passed as the \code{name} argument to \code{\link[=x13_spec]{x13_spec()}}}
+\item{template}{the name of the predefined specification, passed as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}.
+Must be one of:
+\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"}.
+Defaults to \code{"rsa3"}.}
 
-\item{userdefined}{passed as the \code{userdefined} argument to \code{\link[=x13_fast]{x13_fast()}}}
+\item{context}{a list of external regressors (calendar or other) to be used for estimation,
+passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
 
-\item{...}{passed to \code{\link[=x13_spec]{x13_spec()}}}
+\item{userdefined}{a character vector of user-defined variables to include in the output,
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
+
+\item{...}{additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally.
+
+These arguments allow you to set or update the specifications of the
+seasonal adjustment method by modifying one or more parameters.
+Parameters are organized into \strong{spec-blocks}:
+\itemize{
+\item The first part of the parameter name (before the dot) indicates the
+block.
+\item The second part (after the dot) specifies the parameter within that
+block.
+}
+
+Supported spec-blocks and their corresponding functions:
+\itemize{
+\item \code{arima}        → \code{\link[rjd3toolkit:set_arima]{rjd3toolkit::set_arima}}
+\item \code{automdl}      → \code{\link[rjd3toolkit:set_automodel]{rjd3toolkit::set_automodel}}
+\item \code{basic}        → \code{\link[rjd3toolkit:set_basic]{rjd3toolkit::set_basic}}
+\item \code{easter}       → \code{\link[rjd3toolkit:set_easter]{rjd3toolkit::set_easter}}
+\item \code{estimate}     → \code{\link[rjd3toolkit:set_estimate]{rjd3toolkit::set_estimate}}
+\item \code{setout}       → \code{\link[rjd3toolkit:set_outlier]{rjd3toolkit::set_outlier}}
+\item \code{td}           → \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays}}
+\item \code{transform}    → \code{\link[rjd3toolkit:set_transform]{rjd3toolkit::set_transform}}
+\item \code{addout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_outlier}}
+\item \code{remout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_outlier}}
+\item \code{addramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
+\item \code{remramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
+\item \code{usrdefvar}    → \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
+\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}}
+\item \code{benchmarking} → \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
+}}
+}
+\value{
+An object of class \code{\link{x13Single}} representing an x13 seasonal
+adjustment model.
 }
 \description{
 An R6 class that represents a x13 model.
 }
+\details{
+The function initializes an x13 model with the given time series and
+template. Internally, it creates an \code{\link{x13Single}} object, stores the
+specification, and prepares the model for execution. To perform the
+seasonal adjustment, call the \verb{$run()} method on the returned object.
+}
 \section{Inherits}{
- \link{persephone}
+
+The returned object is an instance of the \code{\link{x13Single}} class, which inherits from
+\code{\link{persephoneSingle}} and ultimately from \code{\link{persephone}}.
 }
 
 \examples{
 data(AirPassengers, package = "datasets")
 
+# create an x13Single object with the specifications settings of the rjd3 "rsa3" template
 obj <- perX13(AirPassengers, "rsa3")
 obj$run()
+
+# access the ts object stored in the x13Single object
 obj$ts
+
+# inspect the rjd3 output
+obj$output
+
+# set some additional parameters when initializing the object
+obj <- perX13(AirPassengers, "rsa3", transform.fun = "Log", transform.adjust = NA,
+              easter.enabled = TRUE, outliers = c("AO1953.7", "AO1954.6"))
+obj$run()
+
+}
+\references{
+For more details on x13 specifications and the underlying implementation,
+see the rjd3x13 documentation:
+\url{https://rjdverse.github.io/rjd3x13/}
+}
+\seealso{
+\code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}, \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}
 }

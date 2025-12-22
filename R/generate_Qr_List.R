@@ -1,9 +1,9 @@
 #' Generates a list containing the figures for a EUROSTAT quality report
-#'
+#' @keywords internal
 #' @param x an object of class [persephone].
 #'
 #' @importFrom stats start end
-generateQrList <- function(x){
+generate_Qr_List <- function(x){
 
   # TO DO wenn persephone obj neu, das funktioniert jetzt anders.
   # if (is.null(x$output$user_defined)) {

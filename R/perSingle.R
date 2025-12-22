@@ -24,7 +24,8 @@ persephoneSingle <- R6::R6Class(
       private$userdefined <- union(userdefined, userdefined_default)
       private$params_internal <- private$updateFun(name = template,
                                                    freq = frequency(private$ts_internal),
-                                                   init_spec = private$params_internal,...)
+                                                   init_spec = private$params_internal,
+                                                   ...)
     },
     #' @description run the model
     #' @param verbose wether to display outputs after the run

@@ -11,7 +11,7 @@ data(AirPassengers, package = "datasets")
 
 obj <- perX13(AirPassengers, "rsa3")
 obj$run()
-obj$ts
+obj$output
 }
 \section{Super classes}{
 \code{\link[persephone3:persephone]{persephone3::persephone}} -> \code{\link[persephone3:persephoneSingle]{persephone3::persephoneSingle}} -> \code{x13Single}
@@ -25,8 +25,6 @@ obj$ts
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="generateQrTable"><a href='../../persephone3/html/persephone.html#method-persephone-generateQrTable'><code>persephone3::persephone$generateQrTable()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="iterate"><a href='../../persephone3/html/persephone.html#method-persephone-iterate'><code>persephone3::persephone$iterate()</code></a></span></li>

@@ -25,8 +25,6 @@ A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSing
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="generateQrTable"><a href='../../persephone3/html/persephone.html#method-persephone-generateQrTable'><code>persephone3::persephone$generateQrTable()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="iterate"><a href='../../persephone3/html/persephone.html#method-persephone-iterate'><code>persephone3::persephone$iterate()</code></a></span></li>
@@ -47,7 +45,13 @@ A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSing
 \subsection{Method \code{new()}}{
 create a new single object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$new(ts, template = "rsa3", userdefined = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$new(
+  ts,
+  template = "rsa3",
+  context = NULL,
+  userdefined = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -55,13 +59,16 @@ create a new single object
 \describe{
 \item{\code{ts}}{a time series object}
 
-\item{\code{template}}{passed as the \code{spec} argument of \code{\link[=x13_fast]{x13_fast()}} or
-\code{\link[=tramoseats_fast]{tramoseats_fast()}}}
+\item{\code{template}}{passed as the \code{spec} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
-\item{\code{userdefined}}{passed as the \code{userdefined} argument of \code{\link[=x13_fast]{x13_fast()}} or
-\code{\link[=tramoseats_fast]{tramoseats_fast()}}}
+\item{\code{context}}{passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}, a list of external regressors (calendar or other) to be used for estimation}
 
-\item{\code{...}}{passed to \code{\link[=x13_spec]{x13_spec()}} or \code{\link[=tramoseats_spec]{tramoseats_spec()}}}
+\item{\code{userdefined}}{passed as the \code{userdefined} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
+
+\item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
 }
 \if{html}{\out{</div>}}
 }

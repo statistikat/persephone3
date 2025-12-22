@@ -34,6 +34,7 @@ ignore_unused_imports <- function() {
 
 }
 
+# Null-Coalescing
 `%||%` <- function(x, y) {
   if (is.null(x))
     y
@@ -46,3 +47,23 @@ rescale <- function(x, min, max) {
   rg <- range(x)
   min + (x - rg[1])/(rg[2] - rg[1])*(max - min)
 }
+
+# spec-blocks and their corresponding functions
+specfun_list <- list(arima = rjd3toolkit::set_arima,
+                     automdl = rjd3toolkit::set_automodel,
+                     basic = rjd3toolkit::set_basic,
+                     easter = rjd3toolkit::set_easter,
+                     estimate = rjd3toolkit::set_estimate,
+                     setout = rjd3toolkit::set_outlier,
+                     td = rjd3toolkit::set_tradingdays,
+                     transform = rjd3toolkit::set_transform,
+                     addout = rjd3toolkit::add_outlier,
+                     remout = rjd3toolkit::remove_outlier,
+                     addramp = rjd3toolkit::add_ramp,
+                     remramp = rjd3toolkit::remove_ramp,
+                     usrdefvar = rjd3toolkit::add_usrdefvar,
+                     x11 = rjd3x13::set_x11, # only for x13
+                     benchmarking = rjd3toolkit::set_benchmarking)
+
+# persephone3 internal spec names
+p3_spec_names <- c("outliers")

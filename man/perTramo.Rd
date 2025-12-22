@@ -7,6 +7,7 @@
 perTramo(
   ts,
   template = c("rsafull", "rsa0", "rsa1", "rsa2", "rsa3", "rsa4", "rsa5"),
+  context = NULL,
   userdefined = NULL,
   ...
 )
@@ -14,11 +15,14 @@ perTramo(
 \arguments{
 \item{ts}{a time series}
 
-\item{template}{passed as the \code{spec} argument to \code{\link[=tramoseats_spec]{tramoseats_spec()}}}
+\item{template}{passed as the \code{spec} argument to \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
 
-\item{userdefined}{passed as the \code{userdefined} argument to \code{\link[=tramoseats_fast]{tramoseats_fast()}}}
+\item{context}{passed as the \code{context} argument of \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}},
+a list of external regressors (calendar or other) to be used for estimation}
 
-\item{...}{passed to \code{\link[=tramoseats_spec]{tramoseats_spec()}}}
+\item{userdefined}{passed as the \code{userdefined} argument to \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
+
+\item{...}{passed to \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
 }
 \description{
 an R6 class that represents a tramoseats model

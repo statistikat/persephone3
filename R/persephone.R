@@ -55,9 +55,25 @@ persephone <- R6::R6Class(
     },
     #' @description update parameters for the adjustment
     #' @param ... passed to `x13_spec()` or `tramoseats_spec()`
-    updateParams = function(...) {
-      private$params_internal <- private$updateFun(freq = frequency(private$ts_internal),
-                                                   init_spec = private$params_internal,
+    updateParams = function(template = NULL,       # optional: neue Spec aus Template
+                            spec = NULL,           # optional: komplette Spec
+                            context = NULL,        # optional: Kontext
+                            userdefined = NULL,    # optional: Userdefined
+                            iterate = FALSE,       # Kompatibilitätsflag; Basisklasse hat keine Kinder
+                            component = "",        # Kompatibilität: Basisklasse ignoriert component
+                            ...) {
+
+      if (!missing(context)) {
+        private$context_internal <- context
+      }
+      if (!missing(userdefined)) {
+        private$userdefined <- union(userdefined, userdefined_default)
+      }
+      init_spec <- if (!missing(spec) && !is.null(spec)) spec else private$params_internal
+
+      private$params_internal <- private$updateFun(name = template,
+                                                   freq = frequency(private$ts_internal),
+                                                   init_spec = init_spec,
                                                    ...)
     },
     #' @description visualize the results of an adjustment
@@ -116,148 +132,35 @@ persephone <- R6::R6Class(
     },
     #' @description create a table for the eurostat quality report
     generateQrTable = function() {
-      self$iterate(generateQrList, asTable = TRUE)
+      self$iterate(generate_Qr_List, asTable = TRUE)
     },
-    #' @description update options for the model
-    #' @param userdefined see [x13_fast()] and [tramoseats_fast()]
-    #' @param context see [x13_fast()] and [tramoseats_fast()]
-    #' @param spec see [x13_fast()] and [tramoseats_fast()]
-    #' @param recursive only applicable to hierarchical series. propagates
-    #'   the updates to sub-series. see [perHts]
-    setOptions = function(context = NA, userdefined = NA,
-                          spec = NA, recursive = TRUE) {
-      if (is.null(context) || !identical(context, NA))
-        private$context <- context
-      if (is.null(userdefined) || !identical(userdefined, NA))
-        private$userdefined <- union(userdefined, userdefined_default)
-      if (is.null(spec) || !identical(spec, NA))
-        private$spec_internal <- spec
-    }#,
+    #' #' @description update options for the model
+    #' #' @param userdefined see [x13_fast()] and [tramoseats_fast()]
+    #' #' @param context see [x13_fast()] and [tramoseats_fast()]
+    #' #' @param spec see [x13_fast()] and [tramoseats_fast()]
+    #' #' @param recursive only applicable to hierarchical series. propagates
+    #' #'   the updates to sub-series. see [perHts]
+    #' setOptions = function(context = NA, userdefined = NA,
+    #'                       spec = NA, recursive = TRUE) {
+    #'   if (is.null(context) || !identical(context, NA))
+    #'     private$context <- context
+    #'   if (is.null(userdefined) || !identical(userdefined, NA))
+    #'     private$userdefined <- union(userdefined, userdefined_default)
+    #'   if (is.null(spec) || !identical(spec, NA))
+    #'     private$spec_internal <- spec
+    #' },
     #' #' @description fix the arima model
     #' #' @param verbose if TRUE the changed parameters will be reported
-    #' fixModel = function(verbose = FALSE) {
-    #'   if(is.null(self$output)){
-    #'     warning("not run yet.")
-    #'     return(invisible(NULL))
-    #'   }
-    #'   p <- self$output$regarima$specification$arima$specification$arima.p
-    #'   d <- self$output$regarima$specification$arima$specification$arima.d
-    #'   q <- self$output$regarima$specification$arima$specification$arima.q
-    #'   bp <- self$output$regarima$specification$arima$specification$arima.bp
-    #'   bd <- self$output$regarima$specification$arima$specification$arima.bd
-    #'   bq <- self$output$regarima$specification$arima$specification$arima.bq
-    #'   if(self$output$regarima$specification$arima$specification$enabled){
-    #'     if(verbose){
-    #'       message("The model", paste("(",p,d,q,") (",bp,bd,bq,") is now fixed."))
-    #'     }
-    #'     self$updateParams(arima.p=p,arima.d=d,arima.q=q,
-    #'                       arima.bp=bp,arima.bd=bd,arima.bq=bq,
-    #'                       automdl.enabled = FALSE
-    #'     )
-    #'
-    #'   }else if(verbose){
-    #'     message("The model", paste("(",p,d,q,") (",bp,bd,bq,") was already fixed."))
-    #'   }
-    #' },
+    fixModel = function(...) {
+      fixModel(self, ...)
+    },
     #' #' @description create a new single object
     #' #' @param timespan number of months from the end of the time series
     #' #' where outliers are not fixed
     #' #' @param verbose if TRUE the changed parameters will be reported
-    #' fixOutlier = function(timespan = 12, verbose = FALSE) {
-    #'   xxx <<- self
-    #'   if(is.null(self$output)){
-    #'     warning("not run yet.")
-    #'     return(invisible(NULL))
-    #'   }
-    #'   from <- time(self$ts)[length(self$ts)-timespan+1]
-    #'   y <- floor(from)
-    #'   m <- as.character(round((from-floor(from))*self$tsp[3]+1))
-    #'   if(frequency(self$ts)==4){
-    #'     m <- c("01","04","07","10")[as.numeric(m)]
-    #'   }
-    #'   if(nchar(m)==1){
-    #'     m <- paste0("0",m)
-    #'   }
-    #'   from <- paste0(y,"-",m,"-01")
-    #'   if(self$output$regarima$specification$outliers$enabled){
-    #'     possibleOutliers <- row.names(self$output$regarima$regression.coefficients)
-    #'     possibleOutliers <- possibleOutliers[substring(possibleOutliers,1,2)%in%
-    #'                                            c("AO","LS","TC")]
-    #'     if(self$tsp[3]==12){
-    #'       outliers <- lapply(possibleOutliers, function(x){
-    #'         x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[[1]]
-    #'         x2[1] <- ifelse(nchar(x2[1])==1,paste0("0",x2[1]),x2[1])
-    #'         data.frame(type=substr(x,1,2),date=paste0(x2[2],"-",x2[1],"-01"))
-    #'       })
-    #'     }else if(self$tsp[3]==4){
-    #'       outliers <- lapply(possibleOutliers, function(x){
-    #'         x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[[1]]
-    #'         x2[1] <- c(I="01",II="04",III="07",IV="10")[x2[1]]
-    #'         data.frame(type=substr(x,1,2),date=paste0(x2[2],"-",x2[1],"-01"))
-    #'       })
-    #'     }
-    #'     if(!is.na(self$output$regarima$specification$regression$userdef$outliers[1])){
-    #'       if(self$tsp[3]==12){
-    #'         outliers <- outliers[sapply(outliers,
-    #'                                     userdefOut = self$output$regarima$specification$regression$userdef$outliers[,1:2],
-    #'                                     function(x,userdefOut){
-    #'                                       m <- merge(x, userdefOut, by = c("type","date"))
-    #'                                       return(nrow(m)==0)
-    #'                                     })]
-    #'
-    #'       }else if(self$tsp[3]==4){
-    #'         outliers <- outliers[sapply(outliers,
-    #'                                     userdefOut = self$output$regarima$specification$regression$userdef$outliers[,1:2],
-    #'                                     function(x,userdefOut){
-    #'                                       m <- merge(x, userdefOut, by = c("type","date"))
-    #'                                       return(nrow(m)==0)
-    #'                                     })]
-    #'       }
-    #'       oldType <- self$output$regarima$specification$regression$userdef$outliers$type
-    #'       oldDate <- self$output$regarima$specification$regression$userdef$outliers$date
-    #'     }else{
-    #'       oldType <- NULL
-    #'       oldDate <- NULL
-    #'     }
-    #'     if(length(outliers)>0){
-    #'       if(verbose){
-    #'         for(i in seq_along(outliers)){
-    #'           message(outliers[[i]]$type," outlier saved at ",outliers[[i]]$date,".")
-    #'         }
-    #'       }
-    #'       df <- data.frame(type=c(oldType,
-    #'                               sapply(outliers, function(x)x$type)),
-    #'                        date=c(oldDate,
-    #'                               sapply(outliers, function(x)x$date)))
-    #'       df <- unique(df)
-    #'       if(class(self)[1]=="hierarchicalTimeSeries"){
-    #'         private$updateParamsDirect(usrdef.outliersEnabled = TRUE,
-    #'                                    usrdef.outliersType = df$type,
-    #'                                    usrdef.outliersDate = df$date)
-    #'       }else{
-    #'         self$updateParams(usrdef.outliersEnabled = TRUE,
-    #'                           usrdef.outliersType = df$type,
-    #'                           usrdef.outliersDate = df$date)
-    #'       }
-    #'
-    #'     }else{
-    #'       if(verbose){
-    #'         message("No automatic outliers found.")
-    #'       }
-    #'     }
-    #'     if(verbose){
-    #'       message("Updating parameter outlier.from to '",from,"'")
-    #'     }
-    #'     if(class(self)[1]=="hierarchicalTimeSeries"){
-    #'       private$updateParamsDirect(outlier.from = from)
-    #'     }else{
-    #'       self$updateParams(outlier.from = from)
-    #'     }
-    #'
-    #'   }else if(verbose){
-    #'     message("Automatic outliers not enabled.")
-    #'   }
-    #' }
+    fixOutlier = function(...) {
+      fixOutlier(self, ...)
+    }
   ),
   # ---- Active Bindings ----
   ## read-only access to params, ts, and output
@@ -294,11 +197,11 @@ persephone <- R6::R6Class(
     adjustedDirect = function() {
       self$output$user_defined$sa
     },
-    #' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
-    #'   `$run()` method is invoked
-    spec = function() {
-      private$spec_internal
-    },
+    #' #' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
+    #' #'   `$run()` method is invoked
+    #' spec = function() {
+    #'   private$params_internal
+    #' },
     #' @field forecasts get forecasts from the model
     forecasts = function(){
       self$output$final$forecasts
@@ -324,7 +227,7 @@ persephone <- R6::R6Class(
     output_internal = NULL,
     context_internal = NULL,
     userdefined = NULL,
-    spec_internal = NULL,
+    # spec_internal = NULL,
     printTable = function(prefix) {#führt zu komischem Output für single-Objekte. fixed?
       cbind(
         data.frame(
@@ -364,5 +267,5 @@ userdefined_default <- c(
   "regression.easter","regression.lp","regression.td(*)","regression.leaster","regression.ntd",
   "regression.outlier(*)","regression.nout",
   "diagnostics.seas-si-combined","diagnostics.seas-si-combined3",
-  "regression.nout","regression.outlier(*)","residuals.tsres","residuals.ser"
+  "residuals.tsres","residuals.ser"
 )
