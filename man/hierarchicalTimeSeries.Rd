@@ -12,28 +12,25 @@ indirect seasonal adjustments.
 \dontrun{
 objX13 <- perX13(AirPassengers, "rsa3")
 
-ht <- perHts(a = objX13, b = objX13, method = "x13", spec = "rsa1")
+# change parameters for all series (iterate = TRUE)
+ht <- perHts(a = objX13, b = objX13, method = "x13", template = "rsa0",
+            automdl.enabled = FALSE,
+            arima.p = 1, arima.d = 2, arima.q = 0,
+            arima.bp = 1, arima.bd = 1, arima.bq = 0,
+            iterate = TRUE)
 
-ht$updateParams(easter.enabled = TRUE)
-
-ht$updateParams(component = "a", usrdef.outliersEnabled = TRUE,
-                     usrdef.outliersType = c("AO","LS","LS"),
-                     usrdef.outliersDate=c("1950-01-01","1955-04-01","1959-10-01"))
 ht$run()
-ht$adjustedDirect
-ht$adjustedIndirect
+ht
 
-ht2 <- perHts(a = ht, b = objX13)
+# change parameters only for aggregate series (iterate = FALSE)
+ht2 <- perHts(a = ht, b = objX13, method = "x13", template = "rsa0",
+             transform.fun = "Log", transform.adjust = NA,
+             easter.enabled = TRUE,
+             outliers = c("AO1953.7", "LS1954.6"),
+             iterate = FALSE)
 ht2$run()
-ht2$adjustedDirect
-ht2$adjustedIndirect
+ht2
 }
-
-## ------------------------------------------------
-## Method `hierarchicalTimeSeries$run`
-## ------------------------------------------------
-
-perX13(AirPassengers)$run()
 }
 \section{Super classes}{
 \code{\link[persephone3:persephone]{persephone3::persephone}} -> \code{\link[persephone3:multipleTimeSeries]{persephone3::multipleTimeSeries}} -> \code{hierarchicalTimeSeries}
@@ -45,14 +42,18 @@ perX13(AirPassengers)$run()
 
 \item{\code{weights}}{the weights used for aggregating components}
 
-\item{\code{indirect}}{wether to use direct or indirect adjustement}
+\item{\code{indirect}}{whether to use direct or indirect adjustment}
 }
 \if{html}{\out{</div>}}
 }
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{params}}{of all components and the aggregated series}
+\item{\code{params}}{of all components and the aggregated series
+#' @field methodDirect SA method used for the aggregated series
+methodDirect = function() {
+private$method
+},}
 
 \item{\code{paramsDirect}}{params of the aggregated series}
 
@@ -73,7 +74,6 @@ all components are adjusted and then aggregated}
 \item \href{#method-hierarchicalTimeSeries-new}{\code{hierarchicalTimeSeries$new()}}
 \item \href{#method-hierarchicalTimeSeries-run}{\code{hierarchicalTimeSeries$run()}}
 \item \href{#method-hierarchicalTimeSeries-print}{\code{hierarchicalTimeSeries$print()}}
-\item \href{#method-hierarchicalTimeSeries-setOptions}{\code{hierarchicalTimeSeries$setOptions()}}
 \item \href{#method-hierarchicalTimeSeries-iterate}{\code{hierarchicalTimeSeries$iterate()}}
 \item \href{#method-hierarchicalTimeSeries-getComponent}{\code{hierarchicalTimeSeries$getComponent()}}
 \item \href{#method-hierarchicalTimeSeries-updateParams}{\code{hierarchicalTimeSeries$updateParams()}}
@@ -84,6 +84,8 @@ all components are adjusted and then aggregated}
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plot"><a href='../../persephone3/html/persephone.html#method-persephone-plot'><code>persephone3::persephone$plot()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotResiduals"><a href='../../persephone3/html/persephone.html#method-persephone-plotResiduals'><code>persephone3::persephone$plotResiduals()</code></a></span></li>
@@ -101,12 +103,16 @@ create a new hierarchical time series
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$new(
   ...,
+  list = NULL,
   method = c("tramoseats", "x13"),
+  template = NULL,
   context = NULL,
   userdefined = NULL,
   spec = NULL,
-  list = NULL,
-  weights = NULL
+  weights = NULL,
+  recursive = TRUE,
+  iterate = TRUE,
+  speclist = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -116,10 +122,24 @@ create a new hierarchical time series
 \item{\code{...}}{one or more objects which are either of class persephone or
 can be coerced to persephone objects with asPersephone. If more than
 one element is supplied, the underlying time series must have the same
-time instances. All elements supplied in ... must be named.}
+time instances. All elements supplied in ... must be named.
+
+In addition to the ts/mts/persephone objects,
+\code{...} accepts arguments for customizing the model specifications as alternative input to speclist.
+These are passed to the rjd3 specification functions internally.}
+
+\item{\code{list}}{a list of persephone objects as alternative input to \code{...}.
+This argument can also handle mts objects}
 
 \item{\code{method}}{specifies the method to be used for the direct adjustment
 of the aggregate series. tramoseats or x13}
+
+\item{\code{template}}{the name of the predefined specification template, passed
+as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
+Must be one of:
+\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
+\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
+Defaults to \code{"rsa3"}.}
 
 \item{\code{context}}{passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
 \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}, a list of external regressors (calendar or other) to be used for estimation.}
@@ -127,16 +147,21 @@ of the aggregate series. tramoseats or x13}
 \item{\code{userdefined}}{passed as the userdefined argument to x13_fast() or
 tramoseats_fast()}
 
-\item{\code{spec}}{a model specification returned by x13_spec() or
-tramoseats_spec()}
-
-\item{\code{list}}{a list of persephone objects as alternative input to \code{...}.
-This argument can also handle mts objects}
+\item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
+returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.}
 
 \item{\code{weights}}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies
 for different time points. They must have the same length as the
 number of components.}
+
+\item{\code{recursive}}{logical, if TRUE, apply this setting to all subseries as well. If FALSE,
+only apply to aggregate}
+
+\item{\code{iterate}}{logical, if TRUE apply the given ... spec/params also to all components}
+
+\item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -158,14 +183,6 @@ be returned invisibly}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{perX13(AirPassengers)$run()
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-hierarchicalTimeSeries-print"></a>}}
@@ -176,42 +193,6 @@ print a hierarchical timeseries to screen
 \if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$print()}\if{html}{\out{</div>}}
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-hierarchicalTimeSeries-setOptions"></a>}}
-\if{latex}{\out{\hypertarget{method-hierarchicalTimeSeries-setOptions}{}}}
-\subsection{Method \code{setOptions()}}{
-sets options for all entries of the dependency tree
-recursively (if recursive = TRUE). See
-vignette("persephone-hierarchical") for more details.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$setOptions(
-  context = NA,
-  userdefined = NA,
-  spec = NA,
-  recursive = TRUE,
-  component = ""
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{context}}{passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}, a list of external regressors (calendar or other) to be used for estimation.}
-
-\item{\code{userdefined}}{additional outputs to generate while running. See
-\code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
-
-\item{\code{spec}}{specifications generated by \code{x13_spec()} or
-\code{tramoseats_spec()}.}
-
-\item{\code{recursive}}{apply this setting to all subseries as well?}
-
-\item{\code{component}}{which component to modify.}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-hierarchicalTimeSeries-iterate"></a>}}
@@ -243,9 +224,9 @@ nested list into a flat list}
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-this functin is similar to \code{lapply()} in the sense that it
+this function is similar to \code{lapply()} in the sense that it
 can be used to apply a function to several persephone objects
-simultaniusely
+simultaneously
 }
 
 }
@@ -270,65 +251,29 @@ extract a component series
 \if{html}{\out{<a id="method-hierarchicalTimeSeries-updateParams"></a>}}
 \if{latex}{\out{\hypertarget{method-hierarchicalTimeSeries-updateParams}{}}}
 \subsection{Method \code{updateParams()}}{
-change all or some parameters of components
+change parameters of components or aggregate
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$updateParams(component = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$updateParams(
+  component = "",
+  iterate = FALSE,
+  speclist = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{component}}{character vector with names of the components
-for which the parameters should be changed. If NULL (default) the
-parameters of all components will be changed}
+\item{\code{component}}{character scalar name of the component to change; if empty, operate on aggregate}
 
-\item{\code{...}}{named arguments to be changed
-#' @description fix the arima model(s)
-#' @param component character vector with names of the components
-#' for which the parameters should be changed. If NULL (default) the
-#' parameters of all components will be changed
-#' @param verbose if TRUE the changed parameters will be reported
-fixModel = function(component = NULL, verbose = FALSE) {
-if(is.null(component) || component ==""){
-super$super2()$fixModel(verbose = verbose)
-}
-if(!is.null(component)){
-lapply(self$components\link{component},function(x)x$fixModel(verbose = verbose))
-}else{
-lapply(self$components,function(x)x$fixModel(verbose = verbose))
-}
-return(invisible(NULL))
-},
-#' @description fix the automatically detected outliers and the
-#' span to find new automatically detected outliers
-#' @param component character vector with names of the components
-#' for which the parameters should be changed. If NULL (default) the
-#' parameters of all components will be changed
-#' @param timespan number of months from the end of the time series
-#' where outliers are not fixed
-#' @param verbose if TRUE the changed parameters will be reported
-fixOutlier = function(component = NULL, timespan =12, verbose = FALSE) {
-if(is.null(component) || component ==""){
-super$super2()$fixOutlier(timespan = timespan,
-verbose = verbose)
-}
-if(!is.null(component)){
-lapply(self$components\link{component},function(x)x$fixOutlier(timespan = timespan,
-verbose = verbose))
-}else{
-lapply(self$components,function(x)x$fixOutlier(timespan = timespan,
-verbose = verbose))
-}
-return(invisible(NULL))
-},}
+\item{\code{iterate}}{logical: if TRUE, apply parameter changes to all components recursively}
+
+\item{\code{speclist}}{list with named arguments to be changed}
+
+\item{\code{...}}{named arguments to be changed (spec options forwarded to updateFun)}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-this functions provides the possibility to update
-parameters of one or more persephone single objects
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-hierarchicalTimeSeries-generateQrTable"></a>}}

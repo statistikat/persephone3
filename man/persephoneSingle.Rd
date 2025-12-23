@@ -25,6 +25,8 @@ A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSing
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="generateQrTable"><a href='../../persephone3/html/persephone.html#method-persephone-generateQrTable'><code>persephone3::persephone$generateQrTable()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="iterate"><a href='../../persephone3/html/persephone.html#method-persephone-iterate'><code>persephone3::persephone$iterate()</code></a></span></li>
@@ -34,7 +36,6 @@ A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSing
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone3::persephone$plotSiRatios()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone3::persephone$plotSpectrum()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="print"><a href='../../persephone3/html/persephone.html#method-persephone-print'><code>persephone3::persephone$print()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="setOptions"><a href='../../persephone3/html/persephone.html#method-persephone-setOptions'><code>persephone3::persephone$setOptions()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="updateParams"><a href='../../persephone3/html/persephone.html#method-persephone-updateParams'><code>persephone3::persephone$updateParams()</code></a></span></li>
 </ul>
 </details>
@@ -50,6 +51,7 @@ create a new single object
   template = "rsa3",
   context = NULL,
   userdefined = NULL,
+  speclist = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -68,7 +70,10 @@ create a new single object
 \item{\code{userdefined}}{passed as the \code{userdefined} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
 \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
-\item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
+\item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}} if no speclist parameter is set.}
 }
 \if{html}{\out{</div>}}
 }

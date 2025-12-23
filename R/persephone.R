@@ -55,14 +55,15 @@ persephone <- R6::R6Class(
     },
     #' @description update parameters for the adjustment
     #' @param ... passed to `x13_spec()` or `tramoseats_spec()`
-    updateParams = function(template = NULL,       # optional: neue Spec aus Template
-                            spec = NULL,           # optional: komplette Spec
-                            context = NULL,        # optional: Kontext
-                            userdefined = NULL,    # optional: Userdefined
-                            iterate = FALSE,       # Kompatibilitätsflag; Basisklasse hat keine Kinder
-                            component = "",        # Kompatibilität: Basisklasse ignoriert component
+    updateParams = function(template = NULL,
+                            speclist = NULL,
+                            spec = NULL,
+                            context = NULL,
+                            userdefined = NULL,
+                            iterate = FALSE,
+                            component = "",
                             ...) {
-
+#browser()
       if (!missing(context)) {
         private$context_internal <- context
       }
@@ -74,6 +75,7 @@ persephone <- R6::R6Class(
       private$params_internal <- private$updateFun(name = template,
                                                    freq = frequency(private$ts_internal),
                                                    init_spec = init_spec,
+                                                   spec_list = speclist,
                                                    ...)
     },
     #' @description visualize the results of an adjustment
@@ -129,26 +131,11 @@ persephone <- R6::R6Class(
     iterate = function(fun, asTable = FALSE, unnest = FALSE) {
       res <- list(value = fun(self))
       private$convert_list(res, asTable, unnest)
-    },
+    },# TO DO: iterate anderen Namen geben, verwechselt man sonst mit Parameter iterate
     #' @description create a table for the eurostat quality report
     generateQrTable = function() {
       self$iterate(generate_Qr_List, asTable = TRUE)
     },
-    #' #' @description update options for the model
-    #' #' @param userdefined see [x13_fast()] and [tramoseats_fast()]
-    #' #' @param context see [x13_fast()] and [tramoseats_fast()]
-    #' #' @param spec see [x13_fast()] and [tramoseats_fast()]
-    #' #' @param recursive only applicable to hierarchical series. propagates
-    #' #'   the updates to sub-series. see [perHts]
-    #' setOptions = function(context = NA, userdefined = NA,
-    #'                       spec = NA, recursive = TRUE) {
-    #'   if (is.null(context) || !identical(context, NA))
-    #'     private$context <- context
-    #'   if (is.null(userdefined) || !identical(userdefined, NA))
-    #'     private$userdefined <- union(userdefined, userdefined_default)
-    #'   if (is.null(spec) || !identical(spec, NA))
-    #'     private$spec_internal <- spec
-    #' },
     #' #' @description fix the arima model
     #' #' @param verbose if TRUE the changed parameters will be reported
     fixModel = function(...) {
@@ -169,6 +156,10 @@ persephone <- R6::R6Class(
     #'   and [tramoseats_spec()].
     params = function() {
       private$params_internal
+    },
+    #' @field method SA method used
+    method = function() {
+      private$method
     },
     #' @field ts the (unajusted) time series
     ts = function() {

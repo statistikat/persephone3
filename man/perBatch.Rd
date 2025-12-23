@@ -4,16 +4,51 @@
 \alias{perBatch}
 \title{Define a multiple time series}
 \usage{
-perBatch(..., list = NULL)
+perBatch(
+  ...,
+  list = NULL,
+  method = c("tramoseats", "x13"),
+  template = "rsa3",
+  context = NULL,
+  userdefined = NULL,
+  speclist = NULL,
+  spec = NULL
+)
 }
 \arguments{
-\item{...}{ne or more objects which are either of class persephone or can be
-coerced to persephone objects with asPersephone. If more than one element
-is supplied, the underlying time series must have the same time instances.
-All elements supplied in ... must be named.}
+\item{...}{one or more objects which are either of class persephone or
+can be coerced to persephone objects with asPersephone. If more than
+one element is supplied, the underlying time series must have the same
+time instances. All elements supplied in ... must be named.
+
+In addition to the ts/mts/persephone objects,
+\code{...} accepts arguments for customizing the model specifications as alternative input to speclist.
+These are passed to the rjd3 specification functions internally.}
 
 \item{list}{a list of persephone objects as alternative input to \code{...}. This
-argument can also handle mts objects}
+argument can also handle mts objects.}
+
+\item{method}{specifies the method to be used for the direct adjustment of
+the aggregate series, i.e. "tramoseats" or "x13".}
+
+\item{template}{the name of the predefined specification template, passed
+as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
+Must be one of:
+\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
+\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
+Defaults to \code{"rsa3"}.}
+
+\item{context}{a list of external regressors (calendar or other) to be used for estimation,
+passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}..}
+
+\item{userdefined}{a character vector of user-defined variables to be included in the output,
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+
+\item{speclist}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{spec}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
 }
 \description{
 Combine mutliple objects of persephone objects into a new persephone batch object.

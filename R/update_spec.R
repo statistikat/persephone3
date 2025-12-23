@@ -11,11 +11,11 @@
 #' Passed to the rjd3 specification functions internally. See [`perX13`] or [`perTramo`] for more details.
 #' @return  An updated specification object (JD3_*_SPEC).
 update_spec <- function(spec = NULL, method = c("x13","tramoseats"), freq, spec_list) {
-  #browser()  # Debugger startet hier
+  # browser()  # Debugger startet hier
   method <- match.arg(method)
   # spec_list <- list(...)
   spec_new <- spec
-
+  # exists("specfun_list", envir = asNamespace("persephone3"))
   # change persephone specific parameter names to rjd3 names
   # persephone specific parameters aber evt irgendwo aufheben?
   if("outliers" %in% names(spec_list)) {
@@ -57,7 +57,7 @@ update_spec <- function(spec = NULL, method = c("x13","tramoseats"), freq, spec_
   #                      usrdefvar = rjd3toolkit::add_usrdefvar,
   #                      x11 = rjd3x13::set_x11, # only for x13
   #                      benchmarking = rjd3toolkit::set_benchmarking)
-  # # moved to helpers
+  # # moved to helpers.R
 
   spec_blocks <- unique(sapply(names(spec_list), function(s) unlist(strsplit(s, ".", fixed = TRUE))[1] ))
 

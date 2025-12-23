@@ -17,10 +17,12 @@ printDiagnostics <- function(x) {
 
   qStat  <- x$output$mstats$q
   out <- getOutliers(x)
-
+  type <- ifelse(grepl("Single",class(x)[1]),  "single" , "aggregate")
   data.frame(
     run = !is.null(x$output),
-    class = class(x)[1],
+    method = x$method,
+    #class = class(x)[1],
+    type = type,
     # seasonality: placeholder (test for stable seasonality)
     seasonality = userdef$`diagnostics.seas-si-combined`,
     logTransform = x$output$preprocessing$description$log,

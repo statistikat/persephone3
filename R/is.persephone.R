@@ -18,7 +18,7 @@ as.persephone <- function(x) {
   if (is.persephone(x))
     return(x$clone(deep = TRUE))
   if (stats::is.ts(x))
-    return(perTramo(x))
+    return(perTramo(x)) # ? wollen wir hier und bei Aggregatsreihen tramoseats als default?
   else
     stop("cannot coerce object of type ", class(x)[1], " to persephone")
 }

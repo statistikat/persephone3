@@ -4,7 +4,7 @@
 \alias{update_spec}
 \title{Update rjd3-spec object for seasonal adjustment}
 \usage{
-update_spec(spec, method = c("x13", "tramoseats"), freq, spec_list)
+update_spec(spec = NULL, method = c("x13", "tramoseats"), freq, spec_list)
 }
 \arguments{
 \item{spec}{an rjd3-specification object.}

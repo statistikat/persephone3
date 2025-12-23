@@ -9,6 +9,7 @@ perX13(
   template = c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4", "rsa5c"),
   context = NULL,
   userdefined = NULL,
+  speclist = NULL,
   ...
 )
 }
@@ -23,8 +24,11 @@ Defaults to \code{"rsa3"}.}
 \item{context}{a list of external regressors (calendar or other) to be used for estimation,
 passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
 
-\item{userdefined}{a character vector of user-defined variables to include in the output,
+\item{userdefined}{a character vector of user-defined variables to be included in the output,
 passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
+
+\item{speclist}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
 
 \item{...}{additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally.
@@ -54,9 +58,12 @@ Supported spec-blocks and their corresponding functions:
 \item \code{addramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
 \item \code{remramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
 \item \code{usrdefvar}    → \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
-\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}}
+\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}} (x13 only)
 \item \code{benchmarking} → \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
-}}
+}
+
+The package offers convenient options for setting certain parameters to improve usability.
+Documentation pending.}
 }
 \value{
 An object of class \code{\link{x13Single}} representing an x13 seasonal
@@ -91,9 +98,29 @@ obj$ts
 obj$output
 
 # set some additional parameters when initializing the object
-obj <- perX13(AirPassengers, "rsa3", transform.fun = "Log", transform.adjust = NA,
-              easter.enabled = TRUE, outliers = c("AO1953.7", "AO1954.6"))
+# by using the persephone3 parameters for setting outliers
+obj <- perX13(AirPassengers, "rsa3",
+              transform.fun = "Log", transform.adjust = NA,
+              easter.enabled = TRUE,
+              outliers = c("AO1953.7", "LS1954.6"),
+              automdl.enabled = FALSE,
+              arima.p = 1, arima.d = 2, arima.q = 0,
+              arima.bp = 1, arima.bd = 1, arima.bq = 0)
 obj$run()
+obj$output
+
+# set some additional parameters when initializing the object
+# by using the rjd3 parameters for setting outliers
+obj2 <- perX13(AirPassengers, "rsa3",
+               transform.fun = "Log", transform.adjust = NA,
+               easter.enabled = TRUE,
+               addout.type = c("AO","LS"),
+               addout.date = c("1953-07-01","1954-06-01"),
+               automdl.enabled = FALSE,
+               arima.p = 1, arima.d = 2, arima.q = 0,
+               arima.bp = 1, arima.bd = 1, arima.bq = 0)
+obj2$run()
+obj2$output
 
 }
 \references{
