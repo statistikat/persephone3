@@ -1,11 +1,20 @@
 printDiagnostics <- function(x) {
+  #browser()
+  type <- ifelse(grepl("Single",class(x)[1]),  "single" , "aggregate")
+
   if (is.null(x$output) | length(x$output)==0)
     return(data.frame(
-      run = !is.null(x$output), class = class(x)[1],
-      seasonality = NA, logTransform = NA, arimaMdl = NA,
-      nOutliers = NA, qStat = NA
+      run = !is.null(x$output),
+      #class = class(x)[1],
+      method = x$method,
+      type = type,
+      seasonality = NA,
+      logTransform = NA,
+      arimaMdl = NA,
+      nOutliers = NA,
+      qStat = NA
     ))
-  bla <- x
+
   userdef <-  x$output$user_defined
 
   bpbdbq <- paste0("(", userdef$arima.p, " ",
@@ -17,11 +26,10 @@ printDiagnostics <- function(x) {
 
   qStat  <- x$output$mstats$q
   out <- getOutliers(x)
-  type <- ifelse(grepl("Single",class(x)[1]),  "single" , "aggregate")
   data.frame(
     run = !is.null(x$output),
-    method = x$method,
     #class = class(x)[1],
+    method = x$method,
     type = type,
     # seasonality: placeholder (test for stable seasonality)
     seasonality = userdef$`diagnostics.seas-si-combined`,

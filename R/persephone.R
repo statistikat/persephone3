@@ -118,7 +118,7 @@ persephone <- R6::R6Class(
       if (!is.null(self$output)) {
         message("Output:")
         tbl <- private$printTable("")
-        tbl <- tbl[, -(1:3)]
+       # tbl <- tbl[, -(1:3)]
         print(tbl, right = FALSE, row.names = FALSE)
       } else {
         message("Not yet run.")
@@ -219,15 +219,15 @@ persephone <- R6::R6Class(
     context_internal = NULL,
     userdefined = NULL,
     # spec_internal = NULL,
-    printTable = function(prefix) {#führt zu komischem Output für single-Objekte. fixed?
-      cbind(
-        data.frame(
-          component = sub("/", "", prefix),
-          class = class(self)[1],
-          run = !is.null(self$output)
-        ),
+    printTable = function(prefix) {
+      # cbind(
+      #   data.frame(
+      #     component = sub("/", "", prefix),
+      #     class = class(self)[1],
+      #     run = !is.null(self$output)
+      #   ),
         printDiagnostics(self)
-      )
+      # )
     },
     updateFun = function(params, ...) {
       # placeholder

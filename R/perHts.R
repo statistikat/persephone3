@@ -282,7 +282,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     print = function() {
       tbl <- private$print_table()
       if (all(!tbl$run))
-        tbl <- tbl[, 1:3]
+        tbl <- tbl[, 1:4] # hier 1:3 wenn class statt method + type
       print(tbl, right = FALSE, row.names = FALSE)
     },
 
