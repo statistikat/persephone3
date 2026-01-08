@@ -297,6 +297,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @param unnest if `asTable = FALSE`, converts the return value from a
     #'   nested list into a flat list
     iterate = function(fun, asTable = FALSE, component = "", unnest = FALSE) {
+      # browser()
       if (component != "") {
         root <- self$getComponent(component)
         return(root$iterate(fun, asTable))
@@ -373,6 +374,10 @@ hierarchicalTimeSeries <- R6::R6Class(
 
   # ---- Active Bindings ----
   active = list(
+    #' @field ts the aggregated time series
+    ts = function() {
+      private$ts_internal
+    },
     #' @field params of all components and the aggregated series
     params = function() {
       c(list(aggregate = private$params_internal), super$params)
