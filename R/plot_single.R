@@ -200,17 +200,37 @@ plot.persephoneSingle <- function(
 
     otlTF <- FALSE
     # Outliers
-    if (showOutliers & !is.null(x$output$user_defined$`regression.outlier(*)`)) {
-      # outliers <- rownames(x$output$user_defined$`regression.outlier(*)`)
-      # outliers <- outliers[substr(outliers, 1, 2) %in% c("AO", "LS", "TC")]
-      # #if (length(outliers) > 0) {
-      # outliersName <- outliers
-      # outliers <- gsub("(", "", outliers, fixed = TRUE)
-      # outliers <- gsub(")", "", outliers, fixed = TRUE)
-      # outliers <- strsplit(outliers, " ")
-      # otl <- gettsout(outliers, y)
-      otl <- gettsout(x)
+    if (showOutliers & !is.null(x$output$regarima$regression.coefficients)) {
+      outliers <- rownames(x$output$regarima$regression.coefficients)
+      outliers <- outliers[substr(outliers, 1, 2) %in% c("AO", "LS", "TC")]
+      if (length(outliers) > 0) {
+      outliersName <- outliers
+      outliers <- gsub("(", "", outliers, fixed = TRUE)
+      outliers <- gsub(")", "", outliers, fixed = TRUE)
+      outliers <- strsplit(outliers, " ")
+      # outliersType <- outliers
+      # # Variante1 : Date format
+      # if (frequency(x$ts) == 12) {
+      #   outliers <- sapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
+      #                     function(y) paste0(
+      #                       y[[2]], "-", stringfix(y[[1]], 2, "0"), "-01")
+      #   )
+      # }else{
+      #   outliers <- sapply(
+      #     sapply(
+      #       outliers,
+      #       function(x) strsplit(x[[2]], "-")
+      #     ),
+      #     function(y) paste0(
+      #       y[[2]], "-",
+      #       stringfix(c(1, 4, 7, 10)[as.numeric(utils::as.roman(y[[1]]))],
+      #               2, "0"), "-01"))
+      # }
+      # Variante2 : ts format und date format
+      #
+      otl <- gettsout(outliers, y)
       otlTF <- TRUE
+      }
     }
 
     # Initialize Graph Object
