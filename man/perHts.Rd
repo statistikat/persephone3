@@ -6,29 +6,52 @@
 \usage{
 perHts(
   ...,
-  method = c("tramoseats", "x13"),
-  userdefined = NULL,
-  spec = NULL,
   list = NULL,
-  weights = NULL
+  method = c("tramoseats", "x13"),
+  template = "rsa3",
+  context = NULL,
+  userdefined = NULL,
+  speclist = NULL,
+  spec = NULL,
+  weights = NULL,
+  iterate = TRUE
 )
 }
 \arguments{
-\item{...}{ne or more objects which are either of class persephone or can be
-coerced to persephone objects with as_persephone. If more than one element
-is supplied, the underlying time series must have the same time instances.
-All elements supplied in ... must be named.}
+\item{...}{one or more objects which are either of class persephone or
+can be coerced to persephone objects with asPersephone. If more than
+one element is supplied, the underlying time series must have the same
+time instances. All elements supplied in ... must be named.
 
-\item{method}{specifies the method to be used for the direct adjustment of
-the aggregate series. tramoseats or x13}
-
-\item{userdefined}{passed as the userdefined argument to tramoseats() or x13()}
-
-\item{spec}{a model specification returned by x13_spec() or
-tramoseats_spec()}
+In addition to the ts/mts/persephone objects,
+\code{...} accepts arguments for customizing the model specifications as alternative input to speclist.
+These are passed to the rjd3 specification functions internally.}
 
 \item{list}{a list of persephone objects as alternative input to \code{...}. This
-argument can also handle mts objects}
+argument can also handle mts objects.}
+
+\item{method}{specifies the method to be used for the direct adjustment of
+the aggregate series, i.e. "tramoseats" or "x13".}
+
+\item{template}{the name of the predefined specification template, passed
+as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
+Must be one of:
+\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
+\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
+Defaults to \code{"rsa3"}.}
+
+\item{context}{a list of external regressors (calendar or other) to be used for estimation,
+passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}..}
+
+\item{userdefined}{a character vector of user-defined variables to be included in the output,
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+
+\item{speclist}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{spec}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
+returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.}
 
 \item{weights}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies for
@@ -41,21 +64,26 @@ The resulting time series can perform direct and indirect adjustments.
 }
 \examples{
 \dontrun{
-objX13 <- perX13(AirPassengers, "RSA3")
+objX13 <- perX13(AirPassengers, "rsa3")
 
-ht <- perHts(a = objX13, b = objX13, method = "x13")
+# change parameters for all series (iterate = TRUE)
+ht <- perHts(a = objX13, b = objX13, method = "x13", template = "rsa0",
+            automdl.enabled = FALSE,
+            arima.p = 1, arima.d = 2, arima.q = 0,
+            arima.bp = 1, arima.bd = 1, arima.bq = 0,
+            iterate = TRUE)
 
-ht$updateParams(easter.enabled = TRUE)
-
-ht$updateParams(component = "a", usrdef.outliersEnabled = TRUE,
-                     usrdef.outliersType = c("AO","LS","LS"),
-                     usrdef.outliersDate=c("1950-01-01","1955-04-01","1959-10-01"))
 ht$run()
-ht$adjustedDirect
-ht$adjustedIndirect
+ht
 
-ht2 <- perHts(a = ht, b = objX13)
+# change parameters only for aggregate series (iterate = FALSE)
+ht2 <- perHts(a = ht, b = objX13, method = "x13", template = "rsa0",
+             transform.fun = "Log", transform.adjust = NA,
+             easter.enabled = TRUE,
+             outliers = c("AO1953.7", "LS1954.6"),
+             iterate = FALSE)
 ht2$run()
+ht2
 ht2$adjustedDirect
 ht2$adjustedIndirect
 }

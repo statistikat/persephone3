@@ -12,7 +12,7 @@ knitr::opts_chunk$set(
   out.width = "90%"
 )
 ```
-# persephone
+# persephone3
 
 [![Travis-CI Build Status](https://img.shields.io/travis/statistikat/persephone.svg?logo=travis)](https://travis-ci.org/statistikat/persephone)
 [![](https://img.shields.io/badge/lifecycle-experimental-orange.svg?logo=github)](https://www.tidyverse.org/lifecycle/#experimental)
@@ -20,40 +20,47 @@ knitr::opts_chunk$set(
 [![](https://img.shields.io/github/last-commit/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone/commits/master)
  [![Coverage status](https://coveralls.io/repos/github/statistikat/persephone/badge.svg)](https://coveralls.io/r/statistikat/persephone?branch=master&service=github)
 
-This package is an object oriented wrapper around the R Package [RJDemetra], which performs
-time series adjustments with the java library [JDemetra+]
+
+Object oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/). 
+The package performs time series adjustments with the java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses on batch processing, 
+hierarchical time series and analytic charts.
 
 ## Installation
 
+The following commands install `persephone3` as well as the packages from the [rjdverse](https://github.com/rjdverse/) that talk with the java interface.
 
 ``` r
-# install the package from GitHub
-devtools::install_github("statistikat/persephone")
+# install dependencies
+remotes::install_github("rjdverse/rjd3toolkit@*release")
+remotes::install_github("rjdverse/rjd3x13@*release")
+remotes::install_github("rjdverse/rjd3tramoseats@*release")
 
-# optional: also install vignettes (needs prettydoc)
-devtools::install_github("statistikat/persephone", build_vignettes = TRUE)
+# install the package from GitHub
+remotes::install_github("statistikat/persephone/tree/persephone3")
 ```
 
 ## Usage
 
-Objects can be constructed with `perX13` or `perTramo`. Subseqentually, 
-the `run` method runs the model and `output` gives access to the output object from 
-`RJDemetra`. 
+Objects can be constructed with `perX13()` or `perTramo()`. Subsequently, 
+the `run()` method runs the model and `output` gives access to the output object from 
+`rjd3x13::x13_fast()` or `rjd3tramoseats::tramoseats_fast()`. 
 
 ```{r, message = FALSE}
-library(persephone)
+library(persephone) #change to persephone3 at some point, still working on some issues
+# construct a ts-model object
 obj <- perX13(AirPassengers)
-plot(obj)
-```
-
-The original output from [RJDemetra] can be inspected via the `output` field.
-
-```{r}
+# run the model
 obj$run()
-obj$output$regarima
+# access the preprocessing slot of the rjd3 output object
+obj$output$preprocessing
+# visualize the results 
+obj$plot() # change to hchart some time
 ```
 
-## Further reading
+
+## Further reading 
+
+This section still needs an update to persephone3.
 
 More information can be found on the [github-pages site] for persephone.
 
@@ -63,7 +70,7 @@ More information can be found on the [github-pages site] for persephone.
 * More information about hierarchical time series can be found in the
   [hierarchical timeseries vignette].
 
-[RJDemetra]: https://github.com/nbbrd/rjdemetra
+[rjdverse]: https://github.com/rjdverse
 [JDemetra+]: https://github.com/jdemetra
 [github-pages site]: https://statistikat.github.io/persephone/
 [useR!2019 slides]: https://statistikat.github.io/persephone/articles/persephone-useR.pdf

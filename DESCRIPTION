@@ -1,21 +1,27 @@
-Package: persephone
+Package: persephone3
 Type: Package
-Title: Object-Oriented Wrappers for RJDemetra
-Version: 0.2.1
+Title: Object-Oriented Wrappers for the Seasonal Adjustment Functionality of the JDemetra+ R Ecosystem
+Version: 0.1.0
 Authors@R: c(
-  person("Angelika", "Meraner", email = "angelika.meraner@statistik.gv.at", role = c("aut")),
+  person("Angelika", "Meraner", email = "angelika.meraner@statistik.gv.at", role = c("aut","cre")),
   person("Gregor", "de Cillia", email = "gregor.decillia@statistik.gv.at", role = "aut"),
-  person("Markus", "Fröhlich", email = "markus.foehlich@statistik.gv.at", role = "aut"),
-  person("Alexander", "Kowarik", email = "alexander.kowarik@statistik.gv.at", role = c("aut","cre"), comment=c(ORCID="0000-0001-8598-4130"))
+  person("Alexander", "Kowarik", email = "alexander.kowarik@statistik.gv.at", role = c("ctb")),
+  person("Markus", "Fröhlich", email = "markus.foehlich@statistik.gv.at", role = "ctb")
   )
-Description: This package is an object oriented wrapper around the R Package RJDemetra, 
+Description: This package is an object oriented wrapper around the R Packages rjd3x13 and rjd3tramoseats, 
   which performs time series adjustments with the java library JDemetra+.
 License: MIT + file LICENSE
+URL: https://github.com/statistikat/persephone3
 Encoding: UTF-8
+Language: en-US
 LazyData: true
-Depends: R (>= 2.10)
+Depends: R (>= 4.1.0)
 Imports: 
-    RJDemetra (>= 0.1.1),
+    rjd3toolkit (>= 3.5.0),
+    rjd3x13 (>= 3.5.0),
+    rjd3tramoseats (>= 3.5.0),
+    cli,
+    highcharter,
     dygraphs,
     plotly,
     ggplot2,
@@ -23,9 +29,6 @@ Imports:
     timeDate,
     magrittr,
     zoo
-Roxygen: list(markdown = TRUE)
-URL: https://github.com/statistikat/persephone
-RoxygenNote: 7.1.1
 Suggests: 
     knitr,
     rmarkdown,
@@ -33,4 +36,11 @@ Suggests:
     tinytest,
     forecast,
     bookdown
+Remotes: 
+     github::rjdverse/rjd3toolkit@*release,
+     github::rjdverse/rjd3tramoseats@*release,
+     github::rjdverse/rjd3x13@*release
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+BugReports: https://github.com/statistikat/persephone3/issues
 VignetteBuilder: knitr

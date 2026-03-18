@@ -6,31 +6,128 @@
 \usage{
 perTramo(
   ts,
-  template = c("RSAfull", "RSA0", "RSA1", "RSA2", "RSA3", "RSA4", "RSA5"),
+  template = c("rsafull", "rsa0", "rsa1", "rsa2", "rsa3", "rsa4", "rsa5"),
+  context = NULL,
   userdefined = NULL,
+  speclist = NULL,
   ...
 )
 }
 \arguments{
-\item{ts}{a time series}
+\item{ts}{a time series.}
 
-\item{template}{passed as the \code{spec} argument to \code{\link[=tramoseats_spec]{tramoseats_spec()}}}
+\item{template}{the name of the predefined specification, passed as the \code{name} argument to \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
+Must be one of:
+\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"}.
+Defaults to \code{"rsa3"}.}
 
-\item{userdefined}{passed as the \code{userdefined} argument to \code{\link[=tramoseats]{tramoseats()}}}
+\item{context}{a list of external regressors (calendar or other) to be used for estimation,
+passed as the \code{context} argument of \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
 
-\item{...}{passed to \code{\link[=tramoseats_spec]{tramoseats_spec()}}}
+\item{userdefined}{a character vector of user-defined variables to be included in the output,
+passed as the \code{userdefined} argument to \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+
+\item{speclist}{a list of additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{...}{additional arguments for customizing the model specifications,
+passed to the rjd3 specification functions internally.
+
+These arguments allow you to set or update the specifications of the
+seasonal adjustment method by modifying one or more parameters.
+Parameters are organized into \strong{spec-blocks}:
+\itemize{
+\item The first part of the parameter name (before the dot) indicates the
+block.
+\item The second part (after the dot) specifies the parameter within that
+block.
+}
+
+Supported spec-blocks and their corresponding functions:
+\itemize{
+\item \code{arima}        → \code{\link[rjd3toolkit:set_arima]{rjd3toolkit::set_arima}}
+\item \code{automdl}      → \code{\link[rjd3toolkit:set_automodel]{rjd3toolkit::set_automodel}}
+\item \code{basic}        → \code{\link[rjd3toolkit:set_basic]{rjd3toolkit::set_basic}}
+\item \code{easter}       → \code{\link[rjd3toolkit:set_easter]{rjd3toolkit::set_easter}}
+\item \code{estimate}     → \code{\link[rjd3toolkit:set_estimate]{rjd3toolkit::set_estimate}}
+\item \code{setout}       → \code{\link[rjd3toolkit:set_outlier]{rjd3toolkit::set_outlier}}
+\item \code{td}           → \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays}}
+\item \code{transform}    → \code{\link[rjd3toolkit:set_transform]{rjd3toolkit::set_transform}}
+\item \code{addout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_outlier}}
+\item \code{remout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_outlier}}
+\item \code{addramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
+\item \code{remramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
+\item \code{usrdefvar}    → \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
+\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}} (x13 only)
+\item \code{benchmarking} → \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
+}
+
+The package offers convenient options for setting certain parameters to improve usability.
+Documentation pending.}
+}
+\value{
+An object of class \code{\link{tramoseatsSingle}} representing an tramoseats seasonal
+adjustment model.
 }
 \description{
-an R6 class that represents a tramoseats model
+An R6 class that represents a tramoseats model.
+}
+\details{
+The function initializes an tramoseats model with the given time series and
+template. Internally, it creates an \code{\link{tramoseatsSingle}} object, stores the
+specification, and prepares the model for execution. To perform the
+seasonal adjustment, call the \verb{$run()} method on the returned object.
 }
 \section{Inherits}{
- \link{persephone}
+
+The returned object is an instance of the \code{\link{tramoseatsSingle}} class, which inherits from
+\code{\link{persephoneSingle}} and ultimately from \code{\link{persephone}}.
 }
 
 \examples{
 data(AirPassengers, package = "datasets")
 
-obj <- perTramo(AirPassengers, "RSA3")
+# create an tramoseatsSingle object with the specifications settings of the rjd3 "rsa3" template
+obj <- perTramo(AirPassengers, "rsa3")
 obj$run()
+
+# access the ts object stored in the tramoseatsSingle object
 obj$ts
+
+# inspect the rjd3 output
+obj$output
+
+# set some additional parameters when initializing the object
+# by using the persephone3 parameters for setting outliers
+obj <- perTramo(AirPassengers, "rsa3",
+              transform.fun = "Log", transform.adjust = NA,
+              easter.enabled = TRUE,
+              outliers = c("AO1953.7", "LS1954.6"),
+              automdl.enabled = FALSE,
+              arima.p = 1, arima.d = 2, arima.q = 0,
+              arima.bp = 1, arima.bd = 1, arima.bq = 0)
+obj$run()
+obj$output
+
+# set some additional parameters when initializing the object
+# by using the rjd3 parameters for setting outliers
+obj2 <- perTramo(AirPassengers, "rsa3",
+               transform.fun = "Log", transform.adjust = NA,
+               easter.enabled = TRUE,
+               addout.type = c("AO","LS"),
+               addout.date = c("1953-07-01","1954-06-01"),
+               automdl.enabled = FALSE,
+               arima.p = 1, arima.d = 2, arima.q = 0,
+               arima.bp = 1, arima.bd = 1, arima.bq = 0)
+obj2$run()
+obj2$output
+
+}
+\references{
+For more details on tramoseats specifications and the underlying implementation,
+see the rjd3tramoseats documentation:
+\url{https://rjdverse.github.io/rjd3tramoseats/}
+}
+\seealso{
+\code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}, \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}
 }

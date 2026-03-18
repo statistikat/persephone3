@@ -1,24 +1,42 @@
 printDiagnostics <- function(x) {
-  if (is.null(x$output))
+  #browser()
+  type <- ifelse(grepl("Single",class(x)[1]),  "single" , "aggregate")
+
+  if (is.null(x$output) | length(x$output)==0)
     return(data.frame(
-      run = !is.null(x$output), class = class(x)[1],
-      seasonality = NA, logTransform = NA, arimaMdl = NA,
-      nOutliers = NA, qStat = NA
+      run = !is.null(x$output),
+      #class = class(x)[1],
+      method = x$method,
+      type = type,
+      seasonality = NA,
+      logTransform = NA,
+      arimaMdl = NA,
+      nOutliers = NA,
+      qStat = NA
     ))
 
-  arma <- x$output$regarima$arma
-  pdq <- paste0("(", arma[["p"]], " ", arma[["d"]], " ", arma[["q"]], ")")
-  bpbdbq <- paste0("(", arma[["bp"]], " ", arma[["bd"]], " ", arma[["bq"]], ")")
-  qStat <- x$output$decomposition$mstats["Q", ]
+  userdef <-  x$output$user_defined
 
+  bpbdbq <- paste0("(", userdef$arima.p, " ",
+                   userdef$arima.d, " ",
+                   userdef$arima.q, ")",
+                   "(", userdef$arima.bp, " ",
+                   userdef$arima.bd, " ",
+                   userdef$arima.bq, ")")
+
+  qStat  <- x$output$mstats$q
+  out <- getOutliers(x)
   data.frame(
     run = !is.null(x$output),
-    class = class(x)[1],
+    #class = class(x)[1],
+    method = x$method,
+    type = type,
     # seasonality: placeholder (test for stable seasonality)
-    seasonality = x$output$diagnostics$combined_test$combined_seasonality_test,
-    logTransform = x$output$regarima$model$spec_rslt$`Log transformation`,
-    arimaMdl = paste0(pdq, bpbdbq),
-    nOutliers = x$output$regarima$model$spec_rslt$Outliers,
+    seasonality = userdef$`diagnostics.seas-si-combined`,
+    logTransform = x$output$preprocessing$description$log,
+    arimaMdl = bpbdbq,
+    nOutliers = ifelse(is.null(nrow(out)), NA, nrow(out)),
     qStat = ifelse(is.null(qStat), NA, round(qStat, digits = 2))
   )
+
 }

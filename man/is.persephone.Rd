@@ -14,7 +14,7 @@ as.persephone(x)
 }
 \description{
 Check if an R object is of or derives from the class \code{persephone} or convert
-an object to persephone
+an object to persephone with method "tramoseats" as default.
 }
 \examples{
 is.persephone(2)

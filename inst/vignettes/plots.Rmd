@@ -1,0 +1,40 @@
+---
+title: Plots With Persephone3
+description: >
+  Overview about the different chart types that are available with the
+  persephone3 package.
+---
+
+Overview about the different chart types that are available with the
+`{persephone3}` package.
+Note that these charts are all interactive and based on `{highcharter}`.
+If you are interested in print graphics, `{ggdemetra3}` might be more relevant. <- TO DO: Implement ggplot print graphics from old persephone without interactive option
+
+## TODO
+
+* [spectral plots](https://statistikat.github.io/persephone/reference/plotSpectrum.html)
+* [residual plots](https://statistikat.github.io/persephone/reference/plotResiduals.html)
+* [calendar effects](https://statistikat.github.io/persephone/reference/plotSeasIrrCal.html)
+* [si ratios](https://statistikat.github.io/persephone/reference/plotSiRatios.html)
+
+
+```{r, include=FALSE}
+devtools::load_all()
+```
+
+
+```{r}
+library(persephone3)
+x <- perX13(AirPassengers)
+x$run()
+hchart(x)
+plotSeasIrrCal(x)
+```
+
+```{r}
+y <- perTramo(nottem)
+y$run()
+hchart(y) %>% 
+  hc_title(text = "Average Monthly Temperatures at Nottingham")
+plotSeasIrrCal(y)
+```

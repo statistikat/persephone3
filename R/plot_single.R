@@ -5,7 +5,7 @@
 #' # Monthly data
 #' data(AirPassengers, package = "datasets")
 #' # Generate a persephoneSingle object, in this case an x13Single object
-#' obj <- perX13(AirPassengers, "RSA1")
+#' obj <- perX13(AirPassengers, "rsa1")
 #' # Plot before run of persephoneSingle object
 #' plot(obj, drawPoints = TRUE)
 #' obj$run()
@@ -23,13 +23,13 @@
 #'
 #' # Quarterly data
 #' data(UKgas, package = "datasets")
-#' obj2 <- perX13(UKgas, "RSA3")
+#' obj2 <- perX13(UKgas, "rsa3")
 #' plot(obj2)
 #' obj2$run()
 #' plot(obj2)
 #'
 #' # Generate a persephoneSingle object, in this case a tramoseatsSingle object
-#' obj3 <- perTramo(UKgas, "RSA3")
+#' obj3 <- perTramo(UKgas, "rsa3")
 #' plot(obj3)
 #' obj3$run()
 #' plot(obj3)
@@ -94,65 +94,65 @@ plot.persephoneSingle <- function(
 
   }
 
-  gettsout <- function(outliers, y) {
-
-    names(outliers) <- sapply(outliers, function(x) x[1])
-
-    if (frequency(x$ts) == 12) {
-      #Date format für dyevent
-      dateout <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-                        function(z) paste0(
-                          z[[2]], "-", stringfix(z[[1]], 2, "0"), "-01"))
-
-      outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-                         function(z) as.numeric(c( z[[2]],z[[1]])))
-    } else {
-      dateout <- lapply(
-        sapply(outliers,function(x) strsplit(x[[2]], "-")),
-        function(z) paste0(
-          z[[2]], "-",
-          stringfix(c(1, 4, 7, 10)[as.numeric(utils::as.roman(z[[1]]))],
-                    2, "0"), "-01"))
-      outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-                         function(z) as.numeric(c( z[[2]], as.numeric(utils::as.roman(z[[1]])))))
-    }
-
-    outliersAO <- outliers[names(outliers) %in% "AO"]
-    outliersLS <- outliers[names(outliers) %in% "LS"]
-    outliersTC <- outliers[names(outliers) %in% "TC"]
-
-    tsout <- list()
-    if(length(outliersAO)>0){
-      otlAO <- ts(start = start(y), end = end(y), frequency = frequency(y))
-      for(i in seq_along(outliersAO)) {
-        window(otlAO, start=outliersAO[[i]], end=outliersAO[[i]]) <- window(y, start=outliersAO[[i]], end=outliersAO[[i]])
-      }
-      tsout[[length(tsout)+1]] <- otlAO
-      names(tsout)[length(tsout)] <- "otlAO"
-    }
-
-    if(length(outliersLS)>0){
-      otlLS <- ts(start = start(y), end = end(y), frequency = frequency(y))
-      for(i in seq_along(outliersLS)) {
-        window(otlLS, start=outliersLS[[i]], end=outliersLS[[i]]) <- window(y, start=outliersLS[[i]], end=outliersLS[[i]])
-      }
-      tsout[[length(tsout)+1]] <- otlLS
-      names(tsout)[length(tsout)] <- "otlLS"
-    }
-
-    if(length(outliersTC)>0){
-      otlTC <- ts(start = start(y), end = end(y), frequency = frequency(y))
-      for(i in seq_along(outliersTC)) {
-        window(otlTC, start=outliersTC[[i]], end=outliersTC[[i]]) <- window(y, start=outliersTC[[i]], end=outliersTC[[i]])
-      }
-      tsout[[length(tsout)+1]] <- otlTC
-      names(tsout)[length(tsout)] <- "otlTC"
-    }
-
-    tsout <- do.call(cbind, tsout)
-
-    return(list(tsout, dateout))
-  }
+  # gettsout <- function(outliers, y) {
+  #
+  #   names(outliers) <- sapply(outliers, function(x) x[1])
+  #
+  #   if (frequency(x$ts) == 12) {
+  #     #Date format für dyevent
+  #     dateout <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
+  #                       function(z) paste0(
+  #                         z[[2]], "-", stringfix(z[[1]], 2, "0"), "-01"))
+  #
+  #     outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
+  #                        function(z) as.numeric(c( z[[2]],z[[1]])))
+  #   } else {
+  #     dateout <- lapply(
+  #       sapply(outliers,function(x) strsplit(x[[2]], "-")),
+  #       function(z) paste0(
+  #         z[[2]], "-",
+  #         stringfix(c(1, 4, 7, 10)[as.numeric(utils::as.roman(z[[1]]))],
+  #                   2, "0"), "-01"))
+  #     outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
+  #                        function(z) as.numeric(c( z[[2]], as.numeric(utils::as.roman(z[[1]])))))
+  #   }
+  #
+  #   outliersAO <- outliers[names(outliers) %in% "AO"]
+  #   outliersLS <- outliers[names(outliers) %in% "LS"]
+  #   outliersTC <- outliers[names(outliers) %in% "TC"]
+  #
+  #   tsout <- list()
+  #   if(length(outliersAO)>0){
+  #     otlAO <- ts(start = start(y), end = end(y), frequency = frequency(y))
+  #     for(i in seq_along(outliersAO)) {
+  #       window(otlAO, start=outliersAO[[i]], end=outliersAO[[i]]) <- window(y, start=outliersAO[[i]], end=outliersAO[[i]])
+  #     }
+  #     tsout[[length(tsout)+1]] <- otlAO
+  #     names(tsout)[length(tsout)] <- "otlAO"
+  #   }
+  #
+  #   if(length(outliersLS)>0){
+  #     otlLS <- ts(start = start(y), end = end(y), frequency = frequency(y))
+  #     for(i in seq_along(outliersLS)) {
+  #       window(otlLS, start=outliersLS[[i]], end=outliersLS[[i]]) <- window(y, start=outliersLS[[i]], end=outliersLS[[i]])
+  #     }
+  #     tsout[[length(tsout)+1]] <- otlLS
+  #     names(tsout)[length(tsout)] <- "otlLS"
+  #   }
+  #
+  #   if(length(outliersTC)>0){
+  #     otlTC <- ts(start = start(y), end = end(y), frequency = frequency(y))
+  #     for(i in seq_along(outliersTC)) {
+  #       window(otlTC, start=outliersTC[[i]], end=outliersTC[[i]]) <- window(y, start=outliersTC[[i]], end=outliersTC[[i]])
+  #     }
+  #     tsout[[length(tsout)+1]] <- otlTC
+  #     names(tsout)[length(tsout)] <- "otlTC"
+  #   }
+  #
+  #   tsout <- do.call(cbind, tsout)
+  #
+  #   return(list(tsout, dateout))
+  # }
 
   includeOutGraphically <- function (otlType, otlColor = NULL, otl, graphObj) {
 
@@ -193,8 +193,8 @@ plot.persephoneSingle <- function(
     y <- x$output$user_defined$y
     t <- x$output$user_defined$t
     sa <- x$output$user_defined$sa
-    ppm_y_f <- x$output$user_defined$preprocessing.model.y_f # nolint
-    ppm_y_ef <- x$output$user_defined$preprocessing.model.y_ef # nolint
+    ppm_y_f <- x$output$user_defined$y_f # nolint
+    ppm_y_ef <- x$output$user_defined$y_ef # nolint
     # forecasts currently only plotted for original series, maybe allow t and
     # sa forecasts in some other setting??
 
@@ -336,3 +336,4 @@ stringfix <- function(x, l, fill = " ") {
   })
   return(x)
 }
+
