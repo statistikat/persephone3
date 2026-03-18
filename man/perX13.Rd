@@ -45,21 +45,21 @@ block.
 
 Supported spec-blocks and their corresponding functions:
 \itemize{
-\item \code{arima}        → \code{\link[rjd3toolkit:set_arima]{rjd3toolkit::set_arima}}
-\item \code{automdl}      → \code{\link[rjd3toolkit:set_automodel]{rjd3toolkit::set_automodel}}
-\item \code{basic}        → \code{\link[rjd3toolkit:set_basic]{rjd3toolkit::set_basic}}
-\item \code{easter}       → \code{\link[rjd3toolkit:set_easter]{rjd3toolkit::set_easter}}
-\item \code{estimate}     → \code{\link[rjd3toolkit:set_estimate]{rjd3toolkit::set_estimate}}
-\item \code{setout}       → \code{\link[rjd3toolkit:set_outlier]{rjd3toolkit::set_outlier}}
-\item \code{td}           → \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays}}
-\item \code{transform}    → \code{\link[rjd3toolkit:set_transform]{rjd3toolkit::set_transform}}
-\item \code{addout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_outlier}}
-\item \code{remout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_outlier}}
-\item \code{addramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
-\item \code{remramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
-\item \code{usrdefvar}    → \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
-\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}} (x13 only)
-\item \code{benchmarking} → \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
+\item \code{arima}        -> \code{\link[rjd3toolkit:set_arima]{rjd3toolkit::set_arima}}
+\item \code{automdl}      -> \code{\link[rjd3toolkit:set_automodel]{rjd3toolkit::set_automodel}}
+\item \code{basic}        -> \code{\link[rjd3toolkit:set_basic]{rjd3toolkit::set_basic}}
+\item \code{easter}       -> \code{\link[rjd3toolkit:set_easter]{rjd3toolkit::set_easter}}
+\item \code{estimate}     -> \code{\link[rjd3toolkit:set_estimate]{rjd3toolkit::set_estimate}}
+\item \code{setout}       -> \code{\link[rjd3toolkit:set_outlier]{rjd3toolkit::set_outlier}}
+\item \code{td}           -> \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays}}
+\item \code{transform}    -> \code{\link[rjd3toolkit:set_transform]{rjd3toolkit::set_transform}}
+\item \code{addout}       -> \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_outlier}}
+\item \code{remout}       -> \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_outlier}}
+\item \code{addramp}      -> \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
+\item \code{remramp}      -> \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
+\item \code{usrdefvar}    -> \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
+\item \code{x11}          -> \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}} (x13 only)
+\item \code{benchmarking} -> \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
 }
 
 The package offers convenient options for setting certain parameters to improve usability.

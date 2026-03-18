@@ -1,5 +1,9 @@
 # x <- obj$clone()
 
+quarter_from_month <- function(month) {
+  ((as.integer(month) - 1L) %/% 3L) + 1L
+}
+
 getOutliers <- function(x) {
 
   if(is.null(x$output)) {
@@ -23,7 +27,7 @@ getOutliers <- function(x) {
     if (frequency(x$ts) == 12) {
       outliers$name <-lapply(newname, function(nn) paste0(nn, collapse="."))
     } else {
-      newname <- lapply(newname, function(nn) c(nn[1], lubridate::quarter(nn[2])))
+      newname <- lapply(newname, function(nn) c(nn[1], quarter_from_month(nn[2])))
       outliers$name <-lapply(newname, function(nn2) paste0(nn2, collapse="."))
     }
     outliers$name <- paste0(outliers$type, outliers$name)
@@ -31,7 +35,7 @@ getOutliers <- function(x) {
     stde <- sqrt(diag(x$output$preprocessing$estimation$bvar))[otlind]
     t <- outliers$coef.value / stde
     ndf <- x$output$preprocessing$estimation$likelihood$neffectiveobs - x$output$preprocessing$estimation$likelihood$nparams
-    pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
+    pval <- 2 * stats::pt(abs(t), ndf, lower.tail = FALSE)
     outliers$stde <- stde
     outliers$t <- t
     outliers$pvalue <- pval
@@ -80,7 +84,7 @@ regarimaCoefTable <- function(x) {
     sel <- xregs$type == "ESTIMATED"
     t <- xregs$value[sel] / stde
     ndf <- q$estimation$likelihood$neffectiveobs - q$estimation$likelihood$nparams
-    pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
+    pval <- 2 * stats::pt(abs(t), ndf, lower.tail = FALSE)
     xregs$stde[sel] <- stde
     xregs$t[sel] <- t
     xregs$pvalue[sel] <- pval
@@ -112,7 +116,7 @@ arimaCoefTable.print <- function(xregs) {
   rownames(xregs.print) <- xregs$name
   colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
 
-  printCoefmat(xregs.print)
+  stats::printCoefmat(xregs.print)
 }
 
 
@@ -151,14 +155,14 @@ arimaCoefTable.print <- function(xregs) {
 gettsout<- function(x) {
   outliers <- getOutliers(x)
   if(frequency(x$ts) == 12) {
-    outliers$mq <- lubridate::month(outliers$date)
-    outliers$y <- lubridate::year(outliers$date)
+    outliers$mq <- as.integer(format(outliers$date, "%m"))
+    outliers$y <- as.integer(format(outliers$date, "%Y"))
 
   }else {
-    outliers$mq <- lubridate::quarter(outliers$date)
-    outliers$y <- lubridate::year(outliers$date)
+    outliers$mq <- quarter_from_month(format(outliers$date, "%m"))
+    outliers$y <- as.integer(format(outliers$date, "%Y"))
   }
-  #Date format für dyevent
+  # Date format for dyEvent
 
   dateout <- list()
   for(i in 1:nrow(outliers)) {

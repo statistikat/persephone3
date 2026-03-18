@@ -26,16 +26,23 @@
 #'
 #'
 #' @examples
-#' hdAT <- genTd(hd = list("01-01","01-06","05-01","easter+1", "easter+39",
+#' hdAT <- genTd(firstYear = 2000, lastYear = 2005,
+#'               hd = list("01-01","01-06","05-01","easter+1", "easter+39",
 #'                         "easter+50","easter+60",
-#'                          "08-15","10-26","11-01","12-08","12-24","12-25",
-#'                          "12-26","12-31"),
-#'                         weight = c(rep(1,11),0.5,rep(1,2),0.5))
-#' obj_x13 <- perX13(AirPassengers, template = "rsa3", tradingdays.option = "UserDefined",
-#'                         usrdef.varType = "Calendar",
-#'                         usrdef.varEnabled = TRUE, usrdef.var = hdAT[[3]])
+#'                         "08-15","10-26","11-01","12-08","12-24","12-25",
+#'                         "12-26","12-31"),
+#'               weight = c(rep(1,11),0.5,rep(1,2),0.5))
+#' \dontrun{
+#' obj_x13 <- perX13(
+#'   AirPassengers,
+#'   template = "rsa3",
+#'   context = list(calendar_td = hdAT[[3]]),
+#'   td.option = "UserDefined",
+#'   td.uservariable = "calendar_td"
+#' )
 #' obj_x13$run()
 #' obj_x13$output$regarima
+#' }
 #'
 #' @importFrom stats ts
 #' @importFrom zoo as.yearmon as.Date
@@ -53,10 +60,10 @@ genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep
   stopifnot(adjustEaster %in% c("exact","approximate"))
   eaDist_exact <- eaDist_approx <- NULL
   if(adjustEaster == "exact"){
-    data("eaDist_exact", envir = as.environment(-1), package = "persephone")
+    data("eaDist_exact", envir = as.environment(-1), package = "persephone3")
     eaDist <- eaDist_exact
   } else{
-    data("eaDist_approx", envir = as.environment(-1), package = "persephone")
+    data("eaDist_approx", envir = as.environment(-1), package = "persephone3")
     eaDist <- eaDist_approx
   }
 
@@ -181,4 +188,3 @@ genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep
 
   return(list(dd, td, td1))
 }
-

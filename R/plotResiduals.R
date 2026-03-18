@@ -52,6 +52,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
                             main = NULL, interactive = TRUE, ...) {
 
   y <- NULL # nolint
+  density <- NULL # nolint
 
   if (is.null(x$output$user_defined)) {
     stop("No results from run available.\n")

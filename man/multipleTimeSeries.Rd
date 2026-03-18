@@ -49,7 +49,7 @@ perX13(AirPassengers)$run()
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{adjusted}}{results from the seasonal adjustment}
+\item{\code{ts}}{list of unadjusted component series}
 
 \item{\code{adjusted}}{results from the seasonal adjustment}
 
@@ -111,27 +111,20 @@ create a new multiple time series object
 \item{\code{list}}{a list of persephone objects as alternative input to \code{...}.
 This argument can also handle mts objects}
 
-\item{\code{method}}{specifies the method to be used for the direct adjustment of
-the aggregate series, i.e. "tramoseats" or "x13".}
+\item{\code{method}}{adjustment method used for the component series}
 
-\item{\code{template}}{the name of the predefined specification template, passed
-as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
-Must be one of:
-\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
-\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
-Defaults to \code{"rsa3"}.}
+\item{\code{template}}{predefined specification template name}
 
-\item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation,
-passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}..}
+\item{\code{context}}{optional external regressor context used at run time}
 
-\item{\code{userdefined}}{a character vector of user-defined variables to be included in the output,
-passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+\item{\code{userdefined}}{optional user-defined outputs to request}
 
-\item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
-passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+\item{\code{speclist}}{optional named list of specification updates}
 
-\item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
+\item{\code{spec}}{optional explicit specification object}
+
+\item{\code{iterate}}{logical, if TRUE propagate initialization updates to all
+components}
 
 \item{\code{...}}{one or more objects which are either of class persephone or
 can be coerced to persephone objects with asPersephone. If more than

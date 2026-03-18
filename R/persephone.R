@@ -54,6 +54,13 @@ persephone <- R6::R6Class(
       stop("implement this function")
     },
     #' @description update parameters for the adjustment
+    #' @param template optional template name used as the starting specification
+    #' @param speclist optional named list of specification updates
+    #' @param spec optional explicit specification object to update
+    #' @param context optional external regressor context used at run time
+    #' @param userdefined optional user-defined outputs to request
+    #' @param iterate logical flag used by subclasses that support recursive updates
+    #' @param component optional component identifier used by subclasses
     #' @param ... passed to `x13_spec()` or `tramoseats_spec()`
     updateParams = function(template = NULL,
                             speclist = NULL,
@@ -85,8 +92,7 @@ persephone <- R6::R6Class(
       plot(self, ...)
     },
     #' @description visualize the results of an adjustment
-    #' @param ...  passed to [hchart()]
-    #'   see [hchart.persephoneSingle()] or [hchart.hierarchicalTimeSeries()]
+    #' @param ... passed to [highcharter::hchart()]
     hchart = function(...) {
       hchart(self, ...)
     },
@@ -136,15 +142,13 @@ persephone <- R6::R6Class(
     generateQrTable = function() {
       self$iterate(generate_Qr_List, asTable = TRUE)
     },
-    #' #' @description fix the arima model
-    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' @description fix the arima model
+    #' @param ... passed to the internal `fixModel()` helper
     fixModel = function(...) {
       fixModel(self, ...)
     },
-    #' #' @description create a new single object
-    #' #' @param timespan number of months from the end of the time series
-    #' #' where outliers are not fixed
-    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' @description create a new single object
+    #' @param ... passed to the internal `fixOutlier()` helper
     fixOutlier = function(...) {
       fixOutlier(self, ...)
     }
@@ -188,11 +192,6 @@ persephone <- R6::R6Class(
     adjustedDirect = function() {
       self$output$user_defined$sa
     },
-    #' #' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
-    #' #'   `$run()` method is invoked
-    #' spec = function() {
-    #'   private$params_internal
-    #' },
     #' @field forecasts get forecasts from the model
     forecasts = function(){
       self$output$final$forecasts
@@ -239,8 +238,8 @@ persephone <- R6::R6Class(
 )
 # In der Basisklasse persephone (oder persephoneSingle) ist updateFun
 # als abstrakte Methode vorgesehen.
-# -> Jede abgeleitete Klasse muss diese Methode überschreiben,
-# um die Spezifikation des jeweiligen Modells zu erzeugen.
+# -> Each derived class must override this method
+# to create the specification for its model.
 
 # userdefined_default <- c(
 #   "y", "t", "sa", "s", "i", "cal", "y_f", "t_f", "sa_f", "s_f", "i_f",

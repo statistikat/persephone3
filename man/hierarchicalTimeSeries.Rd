@@ -49,11 +49,11 @@ ht2
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{params}}{of all components and the aggregated series
-#' @field methodDirect SA method used for the aggregated series
-methodDirect = function() {
-private$method
-},}
+\item{\code{ts}}{the aggregated time series}
+
+\item{\code{params}}{of all components and the aggregated series}
+
+\item{\code{methodDirect}}{SA method used for the aggregated series}
 
 \item{\code{paramsDirect}}{params of the aggregated series}
 

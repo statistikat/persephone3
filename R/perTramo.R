@@ -27,12 +27,12 @@ tramoseatsSingle <- R6::R6Class(
     updateFun = function(name = NULL, freq, init_spec = NULL, method = NULL, spec_list = NULL, ...) {
       # browser()  # Debugger startet hier
       # initialize basic spec
-      # soll init_spec jedes Mal neu ausgeführt werden? Oder wollen wir alte spec-Stände modifizieren können?
-      # Wenn init_spec NULL ist, nimm das gespeicherte Spec
+      # Should init_spec be rebuilt each time, or should existing specs be updated?
+      # If init_spec is NULL, use the stored spec
       if (is.null(init_spec)) {
         init_spec <- private$params_internal
       }
-      # Falls das auch NULL ist (z. B. beim ersten Mal), erzeuge neues Spec
+      # If that is also NULL (for example on the first call), create a new spec
       if (is.null(init_spec)) {
         init_spec <- rjd3tramoseats::tramoseats_spec(name = name)
       }
@@ -48,7 +48,7 @@ tramoseatsSingle <- R6::R6Class(
       } else {
         spec_new <- init_spec
       }
-      # neue specs speichern
+      # Store the updated spec
       private$params_internal <- spec_new
       return(spec_new)
     },
@@ -87,21 +87,21 @@ tramoseatsSingle <- R6::R6Class(
 #'   block.
 #'
 #' Supported spec-blocks and their corresponding functions:
-#' - `arima`        → [`rjd3toolkit::set_arima`]
-#' - `automdl`      → [`rjd3toolkit::set_automodel`]
-#' - `basic`        → [`rjd3toolkit::set_basic`]
-#' - `easter`       → [`rjd3toolkit::set_easter`]
-#' - `estimate`     → [`rjd3toolkit::set_estimate`]
-#' - `setout`       → [`rjd3toolkit::set_outlier`]
-#' - `td`           → [`rjd3toolkit::set_tradingdays`]
-#' - `transform`    → [`rjd3toolkit::set_transform`]
-#' - `addout`       → [`rjd3toolkit::add_outlier`]
-#' - `remout`       → [`rjd3toolkit::remove_outlier`]
-#' - `addramp`      → [`rjd3toolkit::add_ramp`]
-#' - `remramp`      → [`rjd3toolkit::remove_ramp`]
-#' - `usrdefvar`    → [`rjd3toolkit::add_usrdefvar`]
-#' - `x11`          → [`rjd3x13::set_x11`] (x13 only)
-#' - `benchmarking` → [`rjd3toolkit::set_benchmarking`]
+#' - `arima`        -> [`rjd3toolkit::set_arima`]
+#' - `automdl`      -> [`rjd3toolkit::set_automodel`]
+#' - `basic`        -> [`rjd3toolkit::set_basic`]
+#' - `easter`       -> [`rjd3toolkit::set_easter`]
+#' - `estimate`     -> [`rjd3toolkit::set_estimate`]
+#' - `setout`       -> [`rjd3toolkit::set_outlier`]
+#' - `td`           -> [`rjd3toolkit::set_tradingdays`]
+#' - `transform`    -> [`rjd3toolkit::set_transform`]
+#' - `addout`       -> [`rjd3toolkit::add_outlier`]
+#' - `remout`       -> [`rjd3toolkit::remove_outlier`]
+#' - `addramp`      -> [`rjd3toolkit::add_ramp`]
+#' - `remramp`      -> [`rjd3toolkit::remove_ramp`]
+#' - `usrdefvar`    -> [`rjd3toolkit::add_usrdefvar`]
+#' - `x11`          -> [`rjd3x13::set_x11`] (x13 only)
+#' - `benchmarking` -> [`rjd3toolkit::set_benchmarking`]
 #'
 #' The package offers convenient options for setting certain parameters to improve usability.
 #' Documentation pending.

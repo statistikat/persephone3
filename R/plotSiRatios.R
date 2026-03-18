@@ -261,7 +261,7 @@ plotSiRatios <- function(x) {
     let custom = this.points[0].series.chart.series[0].options.custom;
     let xVal = this.x;
 
-    // Funktion zum Finden des nächsten Index
+    // Find the closest index for the hovered x value
     function findClosestIndex(arr, val) {
       let closest = arr.reduce((prev, curr) =>
         Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev

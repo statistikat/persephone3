@@ -77,12 +77,7 @@ the first time.}
 
 \item{\code{adjusted}}{get the adjusted series}
 
-\item{\code{adjustedDirect}}{see \link{perHts}
-#' @field spec specifications passed to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} when the
-#'   \verb{$run()} method is invoked
-spec = function() {
-private$params_internal
-},}
+\item{\code{adjustedDirect}}{see \link{perHts}}
 
 \item{\code{forecasts}}{get forecasts from the model}
 
@@ -163,6 +158,20 @@ update parameters for the adjustment
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{template}}{optional template name used as the starting specification}
+
+\item{\code{speclist}}{optional named list of specification updates}
+
+\item{\code{spec}}{optional explicit specification object to update}
+
+\item{\code{context}}{optional external regressor context used at run time}
+
+\item{\code{userdefined}}{optional user-defined outputs to request}
+
+\item{\code{iterate}}{logical flag used by subclasses that support recursive updates}
+
+\item{\code{component}}{optional component identifier used by subclasses}
+
 \item{\code{...}}{passed to \code{x13_spec()} or \code{tramoseats_spec()}}
 }
 \if{html}{\out{</div>}}
@@ -198,8 +207,7 @@ visualize the results of an adjustment
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{...}}{passed to \code{\link[=hchart]{hchart()}}
-see \code{\link[=hchart.persephoneSingle]{hchart.persephoneSingle()}} or \code{\link[=hchart.hierarchicalTimeSeries]{hchart.hierarchicalTimeSeries()}}}
+\item{\code{...}}{passed to \code{\link[highcharter:hchart]{highcharter::hchart()}}}
 }
 \if{html}{\out{</div>}}
 }
@@ -310,12 +318,6 @@ see \link{perHts}
 \if{latex}{\out{\hypertarget{method-persephone-generateQrTable}{}}}
 \subsection{Method \code{generateQrTable()}}{
 create a table for the eurostat quality report
-#' @description fix the arima model
-#' @param verbose if TRUE the changed parameters will be reported
-#' @description create a new single object
-#' @param timespan number of months from the end of the time series
-#' where outliers are not fixed
-#' @param verbose if TRUE the changed parameters will be reported
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$generateQrTable()}\if{html}{\out{</div>}}
 }
@@ -325,19 +327,35 @@ create a table for the eurostat quality report
 \if{html}{\out{<a id="method-persephone-fixModel"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixModel}{}}}
 \subsection{Method \code{fixModel()}}{
+fix the arima model
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$fixModel(...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{passed to the internal \code{fixModel()} helper}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-fixOutlier"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixOutlier}{}}}
 \subsection{Method \code{fixOutlier()}}{
+create a new single object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$fixOutlier(...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{passed to the internal \code{fixOutlier()} helper}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-clone"></a>}}

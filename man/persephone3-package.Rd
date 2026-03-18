@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-This package is an object oriented wrapper around the R Packages rjd3x13 and rjd3tramoseats, which performs time series adjustments with the java library JDemetra+.
+Object-oriented wrappers around the seasonal adjustment functionality provided by the JDemetra+ R ecosystem, with time-series adjustment workflows based on rjd3x13 and rjd3tramoseats.
 }
 \seealso{
 Useful links:

@@ -9,6 +9,10 @@ highcharter::hc_title
 #' @export
 highcharter::`%>%`
 
+#' @importFrom R6 R6Class
+#' @importFrom rjd3toolkit add_outlier add_ramp add_usrdefvar remove_outlier
+#'   remove_ramp set_arima set_automodel set_basic set_benchmarking
+#'   set_easter set_estimate set_outlier set_tradingdays set_transform
 #' @keywords internal
 "_PACKAGE"
 

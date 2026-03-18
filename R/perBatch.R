@@ -63,6 +63,14 @@ multipleTimeSeries <- R6::R6Class(
     #'   time instances. All elements supplied in ... must be named.
     #' @param list a list of persephone objects as alternative input to `...`.
     #'   This argument can also handle mts objects
+    #' @param method adjustment method used for the component series
+    #' @param template predefined specification template name
+    #' @param context optional external regressor context used at run time
+    #' @param userdefined optional user-defined outputs to request
+    #' @param speclist optional named list of specification updates
+    #' @param spec optional explicit specification object
+    #' @param iterate logical, if TRUE propagate initialization updates to all
+    #'   components
     initialize = function(list = NULL,
                           method = c("tramoseats", "x13"),
                           template = NULL,
@@ -237,7 +245,7 @@ multipleTimeSeries <- R6::R6Class(
   ),
   # ---- Active Bindings ----
   active = list(
-    #' @field adjusted results from the seasonal adjustment
+    #' @field ts list of unadjusted component series
     ts = function() {
       lapply(self$components,function(x)x$ts)
     },

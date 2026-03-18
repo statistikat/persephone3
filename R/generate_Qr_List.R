@@ -109,8 +109,8 @@ generate_Qr_List <- function(x){
   # bpbdbq <- paste0("(", arma[["p"]], " ", arma[["d"]], " ", arma[["q"]], ")",
   #                  "(", arma[["bp"]], " ", arma[["bd"]], " ", arma[["bq"]], ")")
 
-  # x$output$preprocessing$description$arima nicht vollständig, arbeiten also lieber mit
-  # user_defined output als hier im print output herumzustochern
+  # x$output$preprocessing$description$arima is not complete, so use
+  # the user_defined output instead of digging through the print output
   bpbdbq <- paste0("(", x$output$user_defined$arima.p, " ",
                    x$output$user_defined$arima.d, " ",
                    x$output$user_defined$arima.q, ")",
@@ -157,5 +157,4 @@ generate_Qr_List <- function(x){
 
   return(QrEntries)
 }
-
 

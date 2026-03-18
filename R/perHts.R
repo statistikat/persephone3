@@ -310,7 +310,7 @@ hierarchicalTimeSeries <- R6::R6Class(
         }
       )
 
-      # Ergebnis für die Aggregatsreihe (fun applied to this HTS object)
+      # Result for the aggregate series (fun applied to this HTS object)
       agg <- list(value = fun(self))
 
       # kombiniere Aggregate + Komponenten (keine doppelte Verwendung von super$iterate)
@@ -382,10 +382,10 @@ hierarchicalTimeSeries <- R6::R6Class(
     params = function() {
       c(list(aggregate = private$params_internal), super$params)
     },
-    #' #' @field methodDirect SA method used for the aggregated series
-    #' methodDirect = function() {
-    #'   private$method
-    #' },
+    #' @field methodDirect SA method used for the aggregated series
+    methodDirect = function() {
+      private$method
+    },
     #' @field paramsDirect params of the aggregated series
     paramsDirect = function() {
       private$params_internal
@@ -700,6 +700,8 @@ hierarchicalTimeSeries <- R6::R6Class(
 #'   points or a list of ts objects or a mts object if the weight varies for
 #'   different time points. They must have the same length as the number of
 #'   components.
+#' @param iterate logical, if TRUE apply the given `...` spec/params also to all
+#'   components.
 #' @examples
 #' \dontrun{
 #' objX13 <- perX13(AirPassengers, "rsa3")
@@ -737,11 +739,11 @@ perHts <- function( ..., list = NULL, method = c("tramoseats", "x13"),
                              iterate = iterate)
 }
 
-# TO DO: für Quartalsdaten erweitern - mit freq parameter statt 12 hardcoded
+# TO DO: extend for quarterly data with a freq parameter instead of hardcoded 12
 # startEndAsDecimal <- function(x){
 #   x[1] + (x[2] - 1) / 12
 # }
-# generalisierte start/end -> Dezimal-Position (funktioniert für beliebige Frequenz)
+# generalized start/end -> decimal position (works for arbitrary frequencies)
 startEndAsDecimal <- function(x, freq = 12) {
   # x: numeric vector like end(ts) or start(ts) -> c(year, period)
   if (is.null(x) || length(x) < 2) {

@@ -26,6 +26,11 @@ plotSpectrum <- function(x,
                          plotType = c("arSpec", "arSpecBars", "periodogram"),
                          maxobs = NULL, main = NULL, n.freq = NULL, order = 30) {
   stopifnot(inherits(x, "persephone"))
+  if (is.numeric(plotType)) {
+    plotType <- c("arSpec", "arSpecBars", "periodogram")[plotType]
+  } else {
+    plotType <- match.arg(plotType)
+  }
   series <- plotSpectrum_series(x, tsType)
   freq <- switch(
     as.character(stats::frequency(series$ts)),
@@ -46,7 +51,6 @@ plotSpectrum <- function(x,
     stop("The minimum number of observations needed to compute the spectrum",
          " is ", freq$minobs, ".")
   }
-  plotType <- match.arg(plotType)
   if (is.null(maxobs)) {
     if (plotType %in% c("arSpec", "periodogram")) {
       # Default settings in JD+
@@ -171,7 +175,7 @@ plotSpectrum_series <- function(x, tsType = c("original", "sa", "irregular", "re
     tsobj <- x$output$user_defined$i
     d1 <- tsobj
   } else if (tsType == "residuals") {
-    tsobj <- x$output$regarima$residuals
+    tsobj <- x$output$user_defined$residuals.tsres
     d1 <- tsobj
   }
   list(ts = tsobj, d = d1, type = tsType)

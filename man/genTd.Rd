@@ -47,15 +47,22 @@ country-specific holidays and associated weights. Each holiday can be given
 a specific weight depending on the extent of the work load of that specific holiday.
 }
 \examples{
-hdAT <- genTd(hd = list("01-01","01-06","05-01","easter+1", "easter+39",
+hdAT <- genTd(firstYear = 2000, lastYear = 2005,
+              hd = list("01-01","01-06","05-01","easter+1", "easter+39",
                         "easter+50","easter+60",
-                         "08-15","10-26","11-01","12-08","12-24","12-25",
-                         "12-26","12-31"),
-                        weight = c(rep(1,11),0.5,rep(1,2),0.5))
-obj_x13 <- perX13(AirPassengers, template = "rsa3", tradingdays.option = "UserDefined",
-                        usrdef.varType = "Calendar",
-                        usrdef.varEnabled = TRUE, usrdef.var = hdAT[[3]])
+                        "08-15","10-26","11-01","12-08","12-24","12-25",
+                        "12-26","12-31"),
+              weight = c(rep(1,11),0.5,rep(1,2),0.5))
+\dontrun{
+obj_x13 <- perX13(
+  AirPassengers,
+  template = "rsa3",
+  context = list(calendar_td = hdAT[[3]]),
+  td.option = "UserDefined",
+  td.uservariable = "calendar_td"
+)
 obj_x13$run()
 obj_x13$output$regarima
+}
 
 }
