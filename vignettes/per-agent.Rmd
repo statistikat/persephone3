@@ -1,0 +1,323 @@
+---
+title: "Agentic seasonal adjustment with perAgent"
+description: >
+  How `perAgent()` iterates through conservative seasonal-adjustment updates,
+  how to read the agent history, and where `perAgentOpenAI()` fits into the
+  workflow.
+output:
+  rmarkdown::html_vignette:
+    fig_width: 7
+    fig_height: 4.5
+vignette: >
+  %\VignetteIndexEntry{Agentic seasonal adjustment with perAgent}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  out.width = "100%",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+`perAgent()` is a conservative orchestration layer on top of the regular
+`perX13()` and `perTramo()` workflows. Instead of jumping directly to one
+hand-crafted specification, it starts from a standard template, checks the
+diagnostics, proposes a small set of explainable updates, and keeps the full
+search history.
+
+This article shows that workflow on an aggregate production-in-industry series
+built from `pi_unadj`, following the same data family used in
+`vignettes/resources/slides_ntts.Rmd.src`. It also shows how to present the
+agent's updates in a readable way and where `perAgentOpenAI()` fits in.
+
+## How the agent works
+
+At a high level, `perAgent()` follows four steps:
+
+1. It runs pre-tests for seasonality.
+2. In `method = "auto"` mode it compares an initial X-13ARIMA-SEATS run with an
+   initial TRAMO-SEATS run.
+3. It creates a short list of conservative candidate actions such as enabling a
+   log transform, adding working-day regressors, trying holiday-adjusted
+   trading-day variants based on the built-in Austrian holiday calendar,
+   enabling Easter, tightening automatic outlier detection, freezing the
+   current ARIMA model, or switching the seasonal-adjustment family.
+4. It re-runs those candidates, accepts only the ones that improve the score
+   enough, and stores the whole search path in `result$history`.
+
+The score is driven by diagnostics that matter for official-statistics style
+workflows: residual seasonality, residual trading-day effects, the Q statistic,
+and a few stability-oriented penalties.
+
+## Build the aggregate series
+
+We follow the same setup as in the NTTS slides and start from `pi_unadj` plus
+the EA-19 weights. The stored aggregate columns in `pi_unadj` are empty, so we
+reconstruct the aggregate from the country series and keep the common sample
+where all selected components are observed.
+
+```{r}
+library(persephone3)
+
+data(pi_unadj)
+data(weights_pi_ea19)
+
+weighted_aggregate <- function(x, weights) {
+  w <- weights$weight[match(colnames(x), weights$country)]
+  values <- apply(x, 1, stats::weighted.mean, w = w)
+  stats::ts(values, start = stats::start(x), frequency = stats::frequency(x))
+}
+
+ea19_countries <- weights_pi_ea19$country
+ea19_panel <- pi_unadj[, ea19_countries]
+ea19_panel <- ea19_panel[, colSums(is.na(ea19_panel)) < nrow(ea19_panel)]
+first_complete <- which(stats::complete.cases(ea19_panel))[1]
+ea19_panel <- stats::window(ea19_panel, start = stats::time(ea19_panel)[first_complete])
+ea19_weights <- weights_pi_ea19[match(colnames(ea19_panel), weights_pi_ea19$country), ]
+ea19_aggregate <- weighted_aggregate(ea19_panel, ea19_weights)
+
+c(
+  start = paste(stats::start(ea19_aggregate), collapse = ", "),
+  end = paste(stats::end(ea19_aggregate), collapse = ", "),
+  frequency = stats::frequency(ea19_aggregate),
+  components = ncol(ea19_panel)
+)
+```
+
+For context, the next figure compares the unadjusted weighted aggregate with the
+final adjusted series chosen by the agent.
+
+```{r run-agent}
+agent_fit <- perAgent(ea19_aggregate, method = "auto", max_iter = 4)
+agent_fit
+```
+
+```{r plot-final-series}
+plot_original <- stats::window(
+  ea19_aggregate,
+  end = stats::end(agent_fit$final_model$adjusted)
+)
+
+series_plot <- data.frame(
+  date = zoo::as.Date(zoo::as.yearmon(stats::time(plot_original))),
+  original = as.numeric(plot_original),
+  adjusted = as.numeric(agent_fit$final_model$adjusted)
+)
+
+ggplot2::ggplot(series_plot, ggplot2::aes(date)) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = original, color = "Original aggregate"),
+    linewidth = 0.5,
+    alpha = 0.75
+  ) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = adjusted, color = "Final adjusted series"),
+    linewidth = 0.6
+  ) +
+  ggplot2::scale_color_manual(
+    values = c(
+      "Original aggregate" = "#6c757d",
+      "Final adjusted series" = "#005f73"
+    )
+  ) +
+  ggplot2::labs(
+    x = NULL,
+    y = "Index",
+    color = NULL,
+    title = "Weighted EA-19 aggregate from pi_unadj"
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(legend.position = "top")
+```
+
+In this run the agent ends on `r agent_fit$selected_method` with a final score
+of `r round(agent_fit$final_score, 2)`.
+
+The dedicated plot method gives a compact view of the whole search: the
+original aggregate, the final adjusted series, and the earlier successful runs
+in the background.
+
+```{r plot-agent-search}
+plot(agent_fit)
+```
+
+## Present the accepted updates clearly
+
+The most useful part of a `perAgent()` result is `history`. Each row is one
+evaluated candidate, and `accepted = TRUE` marks the path that actually became
+the current best model.
+
+```{r history-helpers}
+format_value <- function(x) {
+  paste(as.character(x), collapse = ", ")
+}
+
+format_speclist <- function(x) {
+  if (length(x) == 0) {
+    return("default template")
+  }
+
+  paste(
+    sprintf("%s = %s", names(x), vapply(x, format_value, character(1))),
+    collapse = "; "
+  )
+}
+
+format_num <- function(x, digits = 3) {
+  ifelse(is.na(x), "NA", format(round(x, digits), nsmall = digits))
+}
+
+accepted_history <- agent_fit$history[agent_fit$history$accepted, ]
+accepted_updates <- data.frame(
+  round = accepted_history$iteration,
+  method = accepted_history$method,
+  action = accepted_history$action,
+  score = round(accepted_history$score, 2),
+  score_gain = c(NA, round(diff(accepted_history$score), 2)),
+  residual_td_p = format_num(accepted_history$residual_td_pvalue),
+  q_stat = format_num(accepted_history$q_stat),
+  specification = vapply(accepted_history$speclist, format_speclist, character(1)),
+  rationale = accepted_history$rationale,
+  check.names = FALSE
+)
+
+knitr::kable(
+  accepted_updates,
+  caption = "Accepted path through the agent search"
+)
+```
+
+That table is usually the clearest summary for a report: it shows the initial
+choice, the accepted updates, the cumulative specification at each accepted
+step, and the size of each score improvement.
+
+## Show the full search history
+
+For debugging or method-development work, it is often useful to keep the full
+candidate log instead of only the accepted path.
+
+```{r full-history}
+history_display <- data.frame(
+  step = seq_len(nrow(agent_fit$history)),
+  round = agent_fit$history$iteration,
+  status = ifelse(agent_fit$history$accepted, "accepted", "considered"),
+  method = agent_fit$history$method,
+  action = agent_fit$history$action,
+  score = round(agent_fit$history$score, 2),
+  residual_f_p = format_num(agent_fit$history$residual_seasonal_f_pvalue),
+  residual_qs_p = format_num(agent_fit$history$residual_seasonal_qs_pvalue),
+  residual_td_p = format_num(agent_fit$history$residual_td_pvalue),
+  q_stat = format_num(agent_fit$history$q_stat),
+  check.names = FALSE
+)
+
+knitr::kable(
+  history_display,
+  caption = "Full agent evaluation log"
+)
+```
+
+```{r score-trajectory}
+plot_history <- transform(
+  agent_fit$history,
+  step = seq_len(nrow(agent_fit$history)),
+  status = ifelse(agent_fit$history$accepted, "accepted", "considered")
+)
+
+accepted_points <- plot_history[plot_history$accepted, ]
+
+ggplot2::ggplot(plot_history, ggplot2::aes(step, score)) +
+  ggplot2::geom_line(color = "#c0cad5", linewidth = 0.5) +
+  ggplot2::geom_point(
+    ggplot2::aes(color = status, shape = method),
+    size = 2.8
+  ) +
+  ggplot2::geom_text(
+    data = accepted_points,
+    ggplot2::aes(label = action),
+    vjust = -0.8,
+    size = 3,
+    check_overlap = TRUE
+  ) +
+  ggplot2::scale_color_manual(
+    values = c(accepted = "#005f73", considered = "#94a1b2")
+  ) +
+  ggplot2::labs(
+    x = "Candidate evaluation",
+    y = "Agent score",
+    color = NULL,
+    shape = "Method",
+    title = "Score trajectory across the search"
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(legend.position = "top")
+```
+
+Together, the accepted-path table and the full search log answer slightly
+different questions:
+
+- Use the accepted-path table when you want a concise narrative of what the
+  agent changed.
+- Use the full log when you want to understand which alternatives were
+  considered and why they were not kept.
+
+## Where perAgentOpenAI fits
+
+`perAgentOpenAI()` does not replace the rule-based search. Instead, it creates a
+small OpenAI-backed `llm_decider` that sees the current diagnostics, the search
+history, and the candidate actions already generated by `perAgent()`.
+
+That decider can then prioritise which candidate should be tried first. The
+underlying safety rail stays the same: `perAgent()` still evaluates the
+candidate, scores it, and accepts it only if it improves the diagnostics enough.
+
+```{r openai-example, eval=FALSE}
+decider <- perAgentOpenAI(
+  model = "gpt-4.1-mini",
+  system_prompt = paste(
+    "Prefer updates that remove residual trading-day effects first.",
+    "Only switch method when the diagnostics clearly improve."
+  )
+)
+
+agent_fit_llm <- perAgent(
+  ea19_aggregate,
+  method = "auto",
+  max_iter = 4,
+  llm_decider = decider
+)
+
+agent_fit_llm$llm_used
+agent_fit_llm$history[, c("iteration", "method", "action", "score", "accepted")]
+```
+
+In practice:
+
+- `perAgentOpenAI()` is most useful when several candidate actions look
+  reasonable and you want a language-model nudge on the order in which they are
+  explored.
+- It requires the suggested package `ellmer` plus OpenAI credentials, typically
+  via `OPENAI_API_KEY`.
+- It is still a prioritisation layer, not a free-form model builder.
+
+If you want to keep the final production specification fully reproducible, you
+can also ask the agent to freeze the winning model after the search:
+
+```{r fixed-final-model, eval=FALSE}
+agent_fit_fixed <- perAgent(
+  ea19_aggregate,
+  method = "auto",
+  max_iter = 4,
+  fix_outliers = TRUE,
+  fix_model = TRUE
+)
+```

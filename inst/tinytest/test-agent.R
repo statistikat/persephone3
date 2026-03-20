@@ -41,3 +41,37 @@ message("agent")
   expect_true(is.function(decider))
   expect_true(all(c("credentials", "api_key") %in% names(formals(perAgentOpenAI))))
 #
+
+# agent plot", {
+  res <- perAgent(AirPassengers, method = "x13", max_iter = 2)
+
+  expect_true("ggplot" %in% class(plot(res)))
+  expect_true("ggplot" %in% class(plot(res, accepted_only = TRUE)))
+#
+
+# trading-day variants", {
+  res <- perAgent(AirPassengers, method = "x13", max_iter = 1)
+
+  expect_true(any(grepl("^holiday_td_", res$history$action)))
+#
+
+# post-process fix model", {
+  res <- perAgent(AirPassengers, method = "x13", max_iter = 1, fix_model = TRUE)
+
+  expect_true(isTRUE(res$fixed_model))
+  expect_true(any(res$history$action == "fix_model"))
+  expect_false(res$final_model$params$regarima$automodel$enabled)
+#
+
+# post-process fix outliers", {
+  x <- AirPassengers
+  x[10] <- x[10] * 10
+  x[20:26] <- x[20:26] * 3
+
+  res <- perAgent(x, method = "x13", max_iter = 1, fix_outliers = TRUE)
+
+  expect_true(isTRUE(res$fixed_outliers))
+  expect_true(any(res$history$action == "fix_outliers"))
+  expect_identical(res$final_model$params$regarima$outlier$span$type, "FROM")
+  expect_true(length(res$final_model$params$regarima$regression$outliers) >= 1L)
+#

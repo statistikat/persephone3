@@ -15,6 +15,12 @@ perAgent(
   alpha = 0.05,
   improvement_threshold = 0.5,
   allow_no_adjustment = TRUE,
+  fix_outliers = FALSE,
+  fix_outliers_timespan = 12,
+  fix_model = FALSE,
+  td_holidays = per_agent_default_td_holidays(),
+  td_holiday_weights = per_agent_default_td_holiday_weights(),
+  td_holiday_scales = c(1, 0.5, 0),
   llm_decider = NULL,
   verbose = FALSE,
   ...
@@ -48,6 +54,31 @@ accept a new candidate.}
 
 \item{allow_no_adjustment}{If \code{TRUE}, the result records when the pre-tests do
 not identify seasonality clearly enough for publishing adjusted data.}
+
+\item{fix_outliers}{If \code{TRUE}, automatically detected outliers from the final
+selected model are added back as fixed outliers, and automatic outlier
+detection is restricted to the trailing \code{fix_outliers_timespan}
+observations.}
+
+\item{fix_outliers_timespan}{Number of observations at the end of the series
+that remain available for future automatic outlier detection when
+\code{fix_outliers = TRUE}.}
+
+\item{fix_model}{If \code{TRUE}, the final selected ARIMA orders are fixed by
+disabling automatic model selection and storing the chosen orders
+explicitly in the specification.}
+
+\item{td_holidays}{Holiday definitions passed to \code{\link[=genTd]{genTd()}} when the agent
+evaluates holiday-adjusted user-defined trading-day variants. By default,
+a Statistics Austria holiday calendar is used.}
+
+\item{td_holiday_weights}{Base holiday weights used together with
+\code{td_holiday_scales} when constructing user-defined trading-day variants.}
+
+\item{td_holiday_scales}{Multipliers applied to \code{td_holiday_weights} when the
+agent tries alternative holiday-adjusted trading-day variants. Setting a
+scale to \code{0} keeps the same calendar structure but effectively skips the
+holiday adjustment.}
 
 \item{llm_decider}{Optional function that can prioritise the next candidate
 action. The function receives a compact state list and should return either

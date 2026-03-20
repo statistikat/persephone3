@@ -32,6 +32,25 @@
 #'   accept a new candidate.
 #' @param allow_no_adjustment If `TRUE`, the result records when the pre-tests do
 #'   not identify seasonality clearly enough for publishing adjusted data.
+#' @param fix_outliers If `TRUE`, automatically detected outliers from the final
+#'   selected model are added back as fixed outliers, and automatic outlier
+#'   detection is restricted to the trailing `fix_outliers_timespan`
+#'   observations.
+#' @param fix_outliers_timespan Number of observations at the end of the series
+#'   that remain available for future automatic outlier detection when
+#'   `fix_outliers = TRUE`.
+#' @param fix_model If `TRUE`, the final selected ARIMA orders are fixed by
+#'   disabling automatic model selection and storing the chosen orders
+#'   explicitly in the specification.
+#' @param td_holidays Holiday definitions passed to [`genTd()`] when the agent
+#'   evaluates holiday-adjusted user-defined trading-day variants. By default,
+#'   a Statistics Austria holiday calendar is used.
+#' @param td_holiday_weights Base holiday weights used together with
+#'   `td_holiday_scales` when constructing user-defined trading-day variants.
+#' @param td_holiday_scales Multipliers applied to `td_holiday_weights` when the
+#'   agent tries alternative holiday-adjusted trading-day variants. Setting a
+#'   scale to `0` keeps the same calendar structure but effectively skips the
+#'   holiday adjustment.
 #' @param llm_decider Optional function that can prioritise the next candidate
 #'   action. The function receives a compact state list and should return either
 #'   a candidate action name or a list with at least an `action` element and,
@@ -60,6 +79,12 @@ perAgent <- function(ts,
                      alpha = 0.05,
                      improvement_threshold = 0.5,
                      allow_no_adjustment = TRUE,
+                     fix_outliers = FALSE,
+                     fix_outliers_timespan = 12,
+                     fix_model = FALSE,
+                     td_holidays = per_agent_default_td_holidays(),
+                     td_holiday_weights = per_agent_default_td_holiday_weights(),
+                     td_holiday_scales = c(1, 0.5, 0),
                      llm_decider = NULL,
                      verbose = FALSE,
                      ...) {
@@ -69,6 +94,18 @@ perAgent <- function(ts,
   if (NCOL(ts) != 1) {
     stop("`perAgent()` currently supports only univariate time series.", call. = FALSE)
   }
+  if (!is.numeric(fix_outliers_timespan) ||
+      length(fix_outliers_timespan) != 1L ||
+      is.na(fix_outliers_timespan) ||
+      fix_outliers_timespan < 1) {
+    stop("`fix_outliers_timespan` must be a positive integer.", call. = FALSE)
+  }
+  fix_outliers_timespan <- as.integer(fix_outliers_timespan)
+  td_variant_settings <- per_agent_validate_td_variant_settings(
+    td_holidays = td_holidays,
+    td_holiday_weights = td_holiday_weights,
+    td_holiday_scales = td_holiday_scales
+  )
 
   requested_method <- per_agent_normalize_method(match.arg(method))
   template <- template %||% "rsa3"
@@ -95,6 +132,7 @@ perAgent <- function(ts,
         speclist = base_speclist,
         context = context,
         userdefined = userdefined,
+        td_variant_settings = td_variant_settings,
         pretests = pretests,
         alpha = alpha,
         action = "initial",
@@ -150,6 +188,7 @@ perAgent <- function(ts,
       current = current,
       requested_method = requested_method,
       ts = ts,
+      td_variant_settings = td_variant_settings,
       alpha = alpha
     )
 
@@ -215,6 +254,7 @@ perAgent <- function(ts,
           speclist = candidate_speclist,
           context = context,
           userdefined = userdefined,
+          td_variant_settings = td_variant_settings,
           pretests = pretests,
           alpha = alpha,
           action = action$name,
@@ -273,13 +313,34 @@ perAgent <- function(ts,
     stopped_reason <- "Maximum number of improving iterations reached."
   }
 
+  postprocess <- per_agent_apply_requested_fixes(
+    current = current,
+    start_iteration = accepted_iter + 1L,
+    ts = ts,
+    template = template,
+    context = context,
+    userdefined = userdefined,
+    td_variant_settings = td_variant_settings,
+    pretests = pretests,
+    alpha = alpha,
+    fix_outliers = fix_outliers,
+    fix_outliers_timespan = fix_outliers_timespan,
+    fix_model = fix_model,
+    verbose = verbose
+  )
+  current <- postprocess$current
+  history_rows <- c(history_rows, postprocess$history_rows)
+
   result <- list(
     call = match.call(),
     ts = ts,
     requested_method = requested_method,
     selected_method = current$method,
     template = template,
+    context = context,
+    userdefined = userdefined,
     base_speclist = base_speclist,
+    td_variant_settings = td_variant_settings,
     pretests = pretests,
     history = per_agent_bind_history(history_rows),
     final_model = current$model,
@@ -287,7 +348,9 @@ perAgent <- function(ts,
     final_score = current$score,
     should_adjust = isTRUE(pretests$has_identifiable_seasonality) || !allow_no_adjustment,
     stopped_reason = stopped_reason,
-    llm_used = llm_used
+    llm_used = llm_used,
+    fixed_outliers = postprocess$fixed_outliers,
+    fixed_model = postprocess$fixed_model
   )
   class(result) <- "persephoneAgent"
   result
@@ -380,6 +443,12 @@ print.persephoneAgent <- function(x, ...) {
   if (isTRUE(x$llm_used)) {
     cat("LLM prioritisation: used\n")
   }
+  if (isTRUE(x$fixed_outliers)) {
+    cat("Automatic outliers fixed: yes\n")
+  }
+  if (isTRUE(x$fixed_model)) {
+    cat("ARIMA model fixed: yes\n")
+  }
 
   final <- x$final_summary
   cat(
@@ -444,6 +513,7 @@ per_agent_run_candidate <- function(ts,
                                     speclist,
                                     context,
                                     userdefined,
+                                    td_variant_settings,
                                     pretests,
                                     alpha,
                                     action,
@@ -458,14 +528,25 @@ per_agent_run_candidate <- function(ts,
 
   tryCatch(
     {
+      inputs <- per_agent_prepare_candidate_inputs(
+        ts = ts,
+        speclist = speclist,
+        context = context,
+        userdefined = userdefined,
+        td_variant_settings = td_variant_settings
+      )
       obj <- builder(
         ts = ts,
         template = template,
-        context = context,
-        userdefined = userdefined,
-        speclist = speclist
+        context = inputs$context,
+        userdefined = inputs$userdefined,
+        speclist = inputs$speclist
       )
       obj$run(verbose = verbose)
+      adjusted_series <- obj$output$user_defined$sa %||% obj$adjusted
+      if (is.null(adjusted_series) || !stats::is.ts(adjusted_series)) {
+        stop("Candidate run did not produce an adjusted series.", call. = FALSE)
+      }
       summary <- per_agent_collect_summary(obj, ts, pretests)
       score <- per_agent_score(summary, alpha = alpha)
       list(
@@ -596,6 +677,7 @@ per_agent_score <- function(summary, alpha = 0.05) {
 per_agent_candidate_actions <- function(current,
                                         requested_method,
                                         ts,
+                                        td_variant_settings,
                                         alpha = 0.05) {
   summary <- current$summary
   speclist <- current$speclist %||% list()
@@ -623,13 +705,24 @@ per_agent_candidate_actions <- function(current,
     actions <- c(actions, list(list(
       name = "working_days",
       updates = list(
+        agenttd.scale = NA_real_,
         td.option = "WorkingDays",
+        td.uservariable = NA_character_,
         td.leapyear = "LeapYear",
         td.test = "None"
       ),
       rationale = "Residual trading-day effects remain in the adjusted series."
     )))
   }
+
+  actions <- c(
+    actions,
+    per_agent_td_variant_actions(
+      needs_td = needs_td,
+      freq = freq,
+      td_variant_settings = td_variant_settings
+    )
+  )
 
   if (freq == 12 &&
       (isTRUE(needs_seasonality) || isTRUE(needs_td)) &&
@@ -686,6 +779,390 @@ per_agent_candidate_actions <- function(current,
   }
 
   actions
+}
+
+per_agent_default_td_holidays <- function() {
+  list(
+    "01-01", "01-06", "05-01", "easter+1", "easter+39",
+    "easter+50", "easter+60", "08-15", "10-26", "11-01",
+    "12-08", "12-24", "12-25", "12-26", "12-31"
+  )
+}
+
+per_agent_default_td_holiday_weights <- function() {
+  c(rep(1, 11), 0.5, rep(1, 2), 0.5)
+}
+
+per_agent_validate_td_variant_settings <- function(td_holidays,
+                                                   td_holiday_weights,
+                                                   td_holiday_scales) {
+  if (is.null(td_holidays) || length(td_holidays) == 0 ||
+      is.null(td_holiday_scales) || length(td_holiday_scales) == 0) {
+    return(list(
+      enabled = FALSE,
+      holidays = list(),
+      weights = numeric(0),
+      scales = numeric(0)
+    ))
+  }
+
+  holidays <- as.list(td_holidays)
+  weights <- as.numeric(td_holiday_weights)
+  scales <- unique(as.numeric(td_holiday_scales))
+
+  if (length(weights) != length(holidays)) {
+    stop(
+      "`td_holiday_weights` must have the same length as `td_holidays`.",
+      call. = FALSE
+    )
+  }
+  if (any(is.na(weights)) || any(weights < 0)) {
+    stop("`td_holiday_weights` must contain non-negative numbers.", call. = FALSE)
+  }
+  if (any(is.na(scales)) || any(scales < 0)) {
+    stop("`td_holiday_scales` must contain non-negative numbers.", call. = FALSE)
+  }
+
+  list(
+    enabled = TRUE,
+    holidays = holidays,
+    weights = weights,
+    scales = scales
+  )
+}
+
+per_agent_td_variant_actions <- function(needs_td,
+                                         freq,
+                                         td_variant_settings) {
+  if (!isTRUE(needs_td) ||
+      !identical(freq %in% c(4, 12), TRUE) ||
+      !isTRUE(td_variant_settings$enabled)) {
+    return(list())
+  }
+
+  lapply(td_variant_settings$scales, function(scale) {
+    label <- per_agent_td_scale_label(scale)
+    rationale <- if (isTRUE(all.equal(scale, 0))) {
+      "Try the Austrian trading-day calendar without applying any holiday weights."
+    } else {
+      paste0(
+        "Try a holiday-adjusted Austrian trading-day regressor with holiday-weight scale ",
+        format(scale, trim = TRUE, scientific = FALSE),
+        "."
+      )
+    }
+    list(
+      name = paste0("holiday_td_", label),
+      updates = list(
+        agenttd.scale = scale,
+        td.option = "UserDefined",
+        td.uservariable = paste0("peragent_td_", label),
+        td.leapyear = "None",
+        td.test = "None"
+      ),
+      rationale = rationale
+    )
+  })
+}
+
+per_agent_prepare_candidate_inputs <- function(ts,
+                                               speclist,
+                                               context,
+                                               userdefined,
+                                               td_variant_settings) {
+  speclist_out <- speclist %||% list()
+  context_out <- context %||% list()
+  userdefined_out <- userdefined
+
+  td_scale <- suppressWarnings(as.numeric(speclist_out$agenttd.scale %||% NA_real_))
+  speclist_out <- per_agent_remove_speclist_keys(speclist_out, "agenttd.scale")
+
+  if (!is.na(td_scale) && isTRUE(td_variant_settings$enabled)) {
+    td_variant <- per_agent_build_td_variant(
+      ts = ts,
+      scale = td_scale,
+      td_variant_settings = td_variant_settings
+    )
+    uservar_name <- speclist_out$td.uservariable %||% td_variant$name
+    context_out[[uservar_name]] <- td_variant$series
+    speclist_out$td.option <- "UserDefined"
+    speclist_out$td.uservariable <- uservar_name
+    speclist_out$td.test <- "None"
+    speclist_out$td.leapyear <- "None"
+  }
+
+  list(
+    speclist = speclist_out,
+    context = context_out,
+    userdefined = userdefined_out
+  )
+}
+
+per_agent_build_td_variant <- function(ts, scale, td_variant_settings) {
+  years <- per_agent_td_year_range(ts)
+  label <- per_agent_td_scale_label(scale)
+  td <- genTd(
+    freq = stats::frequency(ts),
+    firstYear = years$first,
+    lastYear = years$last,
+    hd = td_variant_settings$holidays,
+    weight = td_variant_settings$weights * scale
+  )
+  list(
+    name = paste0("peragent_td_", label),
+    series = td[[3]][, 7]
+  )
+}
+
+per_agent_td_year_range <- function(ts) {
+  start_year <- as.integer(stats::start(ts)[1])
+  end_year <- as.integer(stats::end(ts)[1])
+  list(
+    first = min(2000L, start_year),
+    last = max(2026L, end_year + 2L)
+  )
+}
+
+per_agent_td_scale_label <- function(scale) {
+  if (isTRUE(all.equal(scale, 0))) {
+    return("no_holidays")
+  }
+  raw <- format(scale, trim = TRUE, scientific = FALSE)
+  raw <- gsub("\\.", "_", raw)
+  raw <- gsub("[^A-Za-z0-9_]+", "_", raw)
+  paste0("scale_", raw)
+}
+
+per_agent_apply_requested_fixes <- function(current,
+                                            start_iteration,
+                                            ts,
+                                            template,
+                                            context,
+                                            userdefined,
+                                            td_variant_settings,
+                                            pretests,
+                                            alpha,
+                                            fix_outliers = FALSE,
+                                            fix_outliers_timespan = 12L,
+                                            fix_model = FALSE,
+                                            verbose = FALSE) {
+  history_rows <- list()
+  next_iteration <- as.integer(start_iteration)
+  current_candidate <- current
+  fixed_outliers <- FALSE
+  fixed_model <- FALSE
+
+  if (isTRUE(fix_outliers)) {
+    candidate_speclist <- per_agent_fixed_outlier_speclist(
+      current_candidate = current_candidate,
+      ts = ts,
+      timespan = fix_outliers_timespan
+    )
+    candidate_signature <- per_agent_signature(current_candidate$method, candidate_speclist)
+    current_signature <- per_agent_signature(current_candidate$method, current_candidate$speclist)
+    if (!identical(candidate_signature, current_signature)) {
+      candidate <- per_agent_run_candidate(
+        ts = ts,
+        method = current_candidate$method,
+        template = template,
+        speclist = candidate_speclist,
+        context = context,
+        userdefined = userdefined,
+        td_variant_settings = td_variant_settings,
+        pretests = pretests,
+        alpha = alpha,
+        action = "fix_outliers",
+        rationale = "Persist the detected outliers as fixed regressors.",
+        verbose = verbose
+      )
+      if (!is.null(candidate$error)) {
+        stop(
+          "Post-processing action `fix_outliers` failed: ",
+          candidate$error,
+          call. = FALSE
+        )
+      }
+      current_candidate <- candidate
+      history_rows[[length(history_rows) + 1L]] <- per_agent_history_row(
+        candidate = candidate,
+        iteration = next_iteration,
+        accepted = TRUE
+      )
+      next_iteration <- next_iteration + 1L
+      fixed_outliers <- TRUE
+    }
+  }
+
+  if (isTRUE(fix_model)) {
+    candidate_speclist <- per_agent_merge_speclists(
+      current_candidate$speclist,
+      per_agent_fixed_model_updates(current_candidate)
+    )
+    candidate_signature <- per_agent_signature(current_candidate$method, candidate_speclist)
+    current_signature <- per_agent_signature(current_candidate$method, current_candidate$speclist)
+    if (!identical(candidate_signature, current_signature)) {
+      candidate <- per_agent_run_candidate(
+        ts = ts,
+        method = current_candidate$method,
+        template = template,
+        speclist = candidate_speclist,
+        context = context,
+        userdefined = userdefined,
+        td_variant_settings = td_variant_settings,
+        pretests = pretests,
+        alpha = alpha,
+        action = "fix_model",
+        rationale = "Freeze the selected ARIMA orders for the final model.",
+        verbose = verbose
+      )
+      if (!is.null(candidate$error)) {
+        stop(
+          "Post-processing action `fix_model` failed: ",
+          candidate$error,
+          call. = FALSE
+        )
+      }
+      current_candidate <- candidate
+      history_rows[[length(history_rows) + 1L]] <- per_agent_history_row(
+        candidate = candidate,
+        iteration = next_iteration,
+        accepted = TRUE
+      )
+      fixed_model <- TRUE
+    }
+  }
+
+  list(
+    current = current_candidate,
+    history_rows = history_rows,
+    fixed_outliers = fixed_outliers,
+    fixed_model = fixed_model
+  )
+}
+
+per_agent_fixed_outlier_speclist <- function(current_candidate, ts, timespan = 12L) {
+  fixed_outliers <- per_agent_existing_fixed_outlier_names(current_candidate$model)
+  detected_outliers <- per_agent_detected_outlier_names(current_candidate$model)
+  all_outliers <- unique(c(fixed_outliers, detected_outliers))
+
+  speclist <- current_candidate$speclist %||% list()
+  speclist <- per_agent_remove_speclist_keys(
+    speclist,
+    c(
+      "outliers",
+      "addout.type",
+      "addout.date",
+      "setout.span.type",
+      "setout.d0",
+      "setout.d1",
+      "setout.n0",
+      "setout.n1"
+    )
+  )
+  if (length(all_outliers) > 0) {
+    speclist$outliers <- all_outliers
+  }
+  speclist[["setout.span.type"]] <- "From"
+  speclist[["setout.d0"]] <- per_agent_outlier_detection_from_date(ts, timespan)
+  speclist
+}
+
+per_agent_fixed_model_updates <- function(current_candidate) {
+  summary <- current_candidate$summary
+  arima_values <- c(
+    summary$arima.p,
+    summary$arima.d,
+    summary$arima.q,
+    summary$arima.bp,
+    summary$arima.bd,
+    summary$arima.bq
+  )
+  if (any(is.na(arima_values))) {
+    stop(
+      "Unable to extract ARIMA orders from the final model for `fix_model = TRUE`.",
+      call. = FALSE
+    )
+  }
+
+  list(
+    automdl.enabled = FALSE,
+    arima.p = summary$arima.p,
+    arima.d = summary$arima.d,
+    arima.q = summary$arima.q,
+    arima.bp = summary$arima.bp,
+    arima.bd = summary$arima.bd,
+    arima.bq = summary$arima.bq
+  )
+}
+
+per_agent_existing_fixed_outlier_names <- function(model) {
+  outliers <- model$params$regarima$regression$outliers %||% list()
+  if (length(outliers) == 0) {
+    return(character(0))
+  }
+
+  freq <- stats::frequency(model$ts)
+  unique(vapply(
+    outliers,
+    function(outlier) {
+      per_agent_outlier_name(
+        type = outlier$code %||% outlier$type,
+        date = outlier$pos %||% outlier$date,
+        freq = freq
+      )
+    },
+    character(1)
+  ))
+}
+
+per_agent_detected_outlier_names <- function(model) {
+  outliers <- tryCatch(getOutliers(model), error = function(e) NA)
+  if (!is.data.frame(outliers) || nrow(outliers) == 0) {
+    return(character(0))
+  }
+  unique(as.character(outliers$name))
+}
+
+per_agent_outlier_name <- function(type, date, freq) {
+  date <- as.Date(date)
+  if (is.na(date)) {
+    return(NA_character_)
+  }
+
+  year <- format(date, "%Y")
+  if (identical(freq, 12)) {
+    period <- as.integer(format(date, "%m"))
+  } else if (identical(freq, 4)) {
+    period <- quarter_from_month(format(date, "%m"))
+  } else {
+    stop("Outlier naming is implemented only for monthly and quarterly series.", call. = FALSE)
+  }
+  paste0(type, year, ".", period)
+}
+
+per_agent_outlier_detection_from_date <- function(ts, timespan = 12L) {
+  start_index <- max(1L, length(ts) - as.integer(timespan) + 1L)
+  per_agent_time_to_date(stats::time(ts)[start_index], stats::frequency(ts))
+}
+
+per_agent_time_to_date <- function(time_point, freq) {
+  year <- floor(time_point + 1e-08)
+  period <- as.integer(round((time_point - year) * freq + 1))
+  period <- max(1L, min(as.integer(freq), period))
+  month <- if (identical(freq, 12)) {
+    period
+  } else if (identical(freq, 4)) {
+    c(1L, 4L, 7L, 10L)[period]
+  } else {
+    stop("Date conversion is implemented only for monthly and quarterly series.", call. = FALSE)
+  }
+  as.Date(sprintf("%04d-%02d-01", year, month))
+}
+
+per_agent_remove_speclist_keys <- function(speclist, keys) {
+  speclist <- speclist %||% list()
+  keep <- setdiff(names(speclist), keys)
+  speclist[keep]
 }
 
 per_agent_prioritise_actions <- function(actions, llm_decider, state) {

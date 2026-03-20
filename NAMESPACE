@@ -3,6 +3,7 @@
 S3method(autoplot,persephone)
 S3method(hchart,persephoneSingle)
 S3method(plot,hierarchicalTimeSeries)
+S3method(plot,persephoneAgent)
 S3method(plot,persephoneSingle)
 S3method(print,persephoneAgent)
 export("%>%")
