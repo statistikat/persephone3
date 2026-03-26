@@ -1,0 +1,338 @@
+---
+title: "Production-ready seasonal adjustment workflows"
+description: >
+  A narrative version of the NTTS Persephone slides, updated for
+  `persephone3`.
+output:
+  rmarkdown::html_vignette:
+    fig_width: 7
+    fig_height: 4.5
+vignette: >
+  %\VignetteIndexEntry{Production-ready seasonal adjustment workflows}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5,
+  out.width = "100%",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+This vignette turns the original NTTS slide deck in
+`vignettes/resources/slides_ntts.Rmd.src` into a compact workflow article for
+the current `persephone3` package. The goal is the same as in the slides:
+build production-ready seasonal-adjustment pipelines in R, while staying close
+to the underlying JDemetra+ ecosystem.
+
+`persephone3` wraps `rjd3x13` and `rjd3tramoseats` in a small set of object
+types that make routine production work easier:
+
+```{r workflow-table}
+workflow_map <- data.frame(
+  constructor = c("perX13() / perTramo()", "perBatch()", "perHts()"),
+  role = c(
+    "Create a single seasonal-adjustment object.",
+    "Run the same workflow over a collection of aligned series.",
+    "Build direct and indirect adjustments for hierarchical aggregates."
+  ),
+  stringsAsFactors = FALSE
+)
+
+knitr::kable(
+  workflow_map,
+  col.names = c("Constructor", "Role"),
+  caption = "Core object types in persephone3"
+)
+```
+
+## A single series
+
+We start with the simplest workflow: define one X-13ARIMA-SEATS model, update
+its specification, and run it.
+
+```{r single-series}
+library(persephone3)
+
+data(AirPassengers, package = "datasets")
+
+obj_x13 <- perX13(AirPassengers, template = "rsa3")
+obj_x13$updateParams(transform.fun = "Log")
+obj_x13$run()
+```
+
+The resulting object keeps the original series, the adjusted series, and the
+full model specification. For a quick check, we can compare the original and
+adjusted paths directly.
+
+```{r single-plot}
+single_plot <- data.frame(
+  date = zoo::as.Date(zoo::as.yearmon(stats::time(obj_x13$ts))),
+  original = as.numeric(obj_x13$ts),
+  adjusted = as.numeric(obj_x13$adjusted)
+)
+
+ggplot2::ggplot(single_plot, ggplot2::aes(date)) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = original, color = "Original"),
+    linewidth = 0.5,
+    alpha = 0.7
+  ) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = adjusted, color = "Adjusted"),
+    linewidth = 0.6
+  ) +
+  ggplot2::scale_color_manual(
+    values = c("Original" = "#6c757d", "Adjusted" = "#005f73")
+  ) +
+  ggplot2::labs(
+    x = NULL,
+    y = "Passengers",
+    color = NULL,
+    title = "AirPassengers before and after seasonal adjustment"
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(legend.position = "top")
+```
+
+## A small batch
+
+Production work usually means many related series rather than one. The next
+example takes three monthly production-index series, creates one
+`perX13()` object for each of them, and processes them as a batch.
+
+```{r prepare-panel}
+data(pi_caladj)
+data(weights_pi_ea19)
+data(weights_pi_eu28)
+
+pi_panel <- stats::window(pi_caladj[, -c(1, 2)], end = c(2019, 5))
+
+panel_to_persephone <- function(x, template = "rsa3") {
+  out <- lapply(as.data.frame(x), function(series) {
+    perX13(
+      stats::ts(
+        series,
+        start = stats::start(x),
+        frequency = stats::frequency(x)
+      ),
+      template = template
+    )
+  })
+
+  names(out) <- colnames(x)
+  out
+}
+
+ts_28 <- panel_to_persephone(pi_panel)
+```
+
+```{r batch}
+batch_fit <- perBatch(list = ts_28[c("AT", "DE", "FR")])
+batch_fit$run()
+
+batch_summary <- data.frame(
+  component = names(batch_fit$components),
+  start = vapply(
+    batch_fit$components,
+    function(x) paste(stats::start(x$adjusted), collapse = "-"),
+    character(1)
+  ),
+  end = vapply(
+    batch_fit$components,
+    function(x) paste(stats::end(x$adjusted), collapse = "-"),
+    character(1)
+  ),
+  transform = vapply(
+    batch_fit$components,
+    function(x) x$params$regarima$transform$fn,
+    character(1)
+  ),
+  stringsAsFactors = FALSE
+)
+
+knitr::kable(
+  batch_summary,
+  caption = "A small batch of aligned series"
+)
+```
+
+This pattern is useful when the series are processed together but do not belong
+to a formal hierarchy.
+
+## A weighted hierarchy
+
+The main production use case in the NTTS slides was a hierarchy of European
+production indices. We can recreate that workflow with `perHts()`. Here we use
+EA-19 as an intermediate aggregate and retain the EU-28 weights for the
+aggregation steps.
+
+```{r hierarchy}
+ea19 <- weights_pi_ea19$country
+non_ea19 <- weights_pi_eu28$country[!weights_pi_eu28$country %in% ea19]
+
+w_ea19 <- weights_pi_eu28$weight[weights_pi_eu28$country %in% ea19]
+w_non_ea19 <- weights_pi_eu28$weight[!weights_pi_eu28$country %in% ea19]
+
+hts_ea19 <- perHts(
+  list = ts_28[ea19],
+  method = "x13",
+  weights = w_ea19
+)
+
+hts_non_ea19 <- perHts(
+  list = ts_28[non_ea19],
+  weights = w_non_ea19
+)
+
+hts_eu28 <- perHts(
+  EA19 = hts_ea19,
+  non_EA19 = hts_non_ea19
+)
+
+hts_eu28$run()
+```
+
+Once the hierarchy has been run, the root object contains both the direct and
+indirect adjustment of the aggregate.
+
+```{r hierarchy-plot}
+aggregate_plot <- data.frame(
+  date = zoo::as.Date(zoo::as.yearmon(stats::time(hts_eu28$ts))),
+  original = as.numeric(hts_eu28$ts),
+  direct = as.numeric(hts_eu28$adjustedDirect),
+  indirect = as.numeric(hts_eu28$adjustedIndirect)
+)
+
+ggplot2::ggplot(aggregate_plot, ggplot2::aes(date)) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = original, color = "Original aggregate"),
+    linewidth = 0.5,
+    alpha = 0.65
+  ) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = direct, color = "Direct adjustment"),
+    linewidth = 0.6
+  ) +
+  ggplot2::geom_line(
+    ggplot2::aes(y = indirect, color = "Indirect adjustment"),
+    linewidth = 0.6,
+    linetype = "22"
+  ) +
+  ggplot2::scale_color_manual(
+    values = c(
+      "Original aggregate" = "#6c757d",
+      "Direct adjustment" = "#0a9396",
+      "Indirect adjustment" = "#bb3e03"
+    )
+  ) +
+  ggplot2::labs(
+    x = NULL,
+    y = "Index",
+    color = NULL,
+    title = "Weighted EU-28 aggregate: direct and indirect adjustment"
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(legend.position = "top")
+```
+
+The hierarchy also feeds directly into the Eurostat-style quality report table.
+
+```{r qr-table}
+qr_table <- generateQrTable(hts_eu28)
+
+knitr::kable(
+  head(qr_table, n = 4),
+  caption = "First rows of the quality-report table"
+)
+```
+
+## Stabilizing a production specification
+
+Two helpers from the original slides are especially useful in recurring
+production runs:
+
+- `fixModel()` freezes the currently selected ARIMA model.
+- `fixOutlier()` can move detected outliers into fixed regressors while leaving
+  the trailing part of the sample open for fresh detection.
+
+The first one is easy to inspect directly. After `fixModel()`, automatic model
+selection is disabled in the stored specification.
+
+```{r fix-model}
+obj_fixed <- perX13(AirPassengers, template = "rsa3")
+obj_fixed$run()
+obj_fixed$fixModel()
+
+data.frame(
+  automodel_enabled = obj_fixed$params$regarima$automodel$enabled,
+  regular_d = obj_fixed$params$regarima$arima$d,
+  seasonal_d = obj_fixed$params$regarima$arima$bd
+)
+```
+
+The same helpers also recurse through `perBatch()` and `perHts()` objects.
+
+When the workflow already carries a user-defined outlier block, `fixOutlier()`
+can be used in the same spirit:
+
+```{r fix-outlier, eval = FALSE}
+obj_fixed$fixOutlier(timespan = 12)
+obj_fixed$run()
+```
+
+## Country-specific trading-day regressors
+
+The slide deck ended with a `genTd()` example for holiday-aware trading-day
+regressors. The same idea is still useful when the default calendars do not
+match a country's production pattern.
+
+```{r gentd}
+hdAT <- genTd(
+  firstYear = 2000,
+  lastYear = 2026,
+  hd = list(
+    "01-01", "01-06", "05-01", "easter+1", "easter+39",
+    "easter+50", "easter+60", "08-15", "10-26", "11-01",
+    "12-08", "12-24", "12-25", "12-26", "12-31"
+  ),
+  weight = c(rep(1, 11), 0.5, rep(1, 2), 0.5)
+)
+
+knitr::kable(
+  round(head(hdAT[[3]][, c("Monday", "lpYear")]), 3),
+  caption = "Centered holiday-adjusted trading-day regressors"
+)
+```
+
+Those regressors can then be passed into a model specification as user-defined
+calendar variables:
+
+```{r gentd-model, eval = FALSE}
+obj_td <- perX13(
+  AirPassengers,
+  template = "rsa3",
+  context = list(calendar_td = hdAT[[3]]),
+  td.option = "UserDefined",
+  td.uservariable = "calendar_td"
+)
+
+obj_td$run()
+```
+
+## Closing remarks
+
+The original NTTS slides framed `persephone` as an infrastructure layer on top
+of JDemetra+. That description still fits `persephone3`: single series, batches
+of aligned series, weighted hierarchies, production freezing with
+`fixModel()`, and custom calendar regressors all live in the same object model,
+which makes it much easier to move from exploratory work to repeatable
+production runs.
