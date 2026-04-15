@@ -49,7 +49,7 @@
 genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep(1,length(hd)),
                    adjustEaster = "exact"){
   y <- ts(frequency = 12, start = c(firstYear, 1), end = c(lastYear, 12))
-  dNam <- weekdays(as.Date("2020-02-16")+0:6, abbreviate = TRUE)
+  dNam <- weekdays(as.Date("2020-02-16") + 1:7, abbreviate = TRUE)
   stopifnot(adjustEaster %in% c("exact","approximate"))
   eaDist_exact <- eaDist_approx <- NULL
   if(adjustEaster == "exact"){
@@ -101,7 +101,7 @@ genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep
     datNE <- unique(datNE)
     colnames(datNE) <- c("dat", "weight")
     datNE$mon <- as.numeric(substr(datNE$dat,6,7))
-    aMeans <- aggregate(datNE[, 2], list(datNE$mon), sum)
+    aMeans <- stats::aggregate(datNE[, 2], list(mon=datNE$mon), sum)
   }
 
   # Elimination of redundant dates (e.g. 1st of May 2008 is both, Labour Day and Ascension )
@@ -128,7 +128,7 @@ genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep
     moDays <- data.frame(dat=rT, days, stringsAsFactors = TRUE)
     moDays0 <- merge(moDays, dat, by = "dat", all.x = TRUE)
     if(any(!is.na(moDays0$weight))){
-      moDays1 <- aggregate(. ~ days, data = moDays0, FUN = "sum")
+      moDays1 <- stats::aggregate(. ~ days, data = moDays0, FUN = "sum")
       moDays1$days <- as.numeric(factor(moDays1$days, levels = dNam))
       dd0[ii, moDays1$days] <- moDays1$weight
       dd0[ii, 7] <- -sum(dd0[ii, 1:6])
@@ -174,9 +174,9 @@ genTd <- function(freq = 12, firstYear = 1960, lastYear = 2099, hd, weight = rep
   colnames(dd) <- c("Monday","Tuesday","Wednesday","Thursday","Friday",
                     "Saturday", "Sunday")
   if(freq == 4){
-    td1 <- aggregate(td1, nfrequency = 4)
-    td <- aggregate(td, nfrequency = 4)
-    dd <- aggregate(dd, nfrequency = 4)
+    td1 <- aggregate.ts(td1, nfrequency = 4)
+    td <- aggregate.ts(td, nfrequency = 4)
+    dd <- aggregate.ts(dd, nfrequency = 4)
   }
 
   return(list(dd, td, td1))

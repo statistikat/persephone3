@@ -258,5 +258,11 @@ userdefined_default <- c(
   "regression.easter","regression.lp","regression.td(*)","regression.leaster","regression.ntd",
   "regression.outlier(*)","regression.nout",
   "diagnostics.seas-si-combined","diagnostics.seas-si-combined3",
-  "residuals.tsres","residuals.ser"
+  "residuals.tsres","residuals.ser", # ab hier zusätzliche Ausgabe 
+  "regression.td-ftest", "residuals.doornikhansen",
+                         "residuals.lb", "regression.td-derived",
+                         "diagnostics.seas-sa-f", "diagnostics.seas-sa-qs",
+                         "diagnostics.td-sa-all", "diagnostics.td-sa-last",
+                         "diagnostics.td-i-all", "diagnostics.td-i-last",
+                         "m-statistics.q", "m-statistics.q-m2", "quality.summary"
 )
