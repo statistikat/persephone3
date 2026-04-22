@@ -102,6 +102,7 @@ regarimaCoefTable <- function(x) {
     #   "T-stat", "Pr(>|t|)"
     # )
     xregs <- xregs[,c("name","value","stde","t","pvalue")]
+    xregs
   } else {
     NULL
   }
