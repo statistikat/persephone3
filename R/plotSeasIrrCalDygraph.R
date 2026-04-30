@@ -1,13 +1,12 @@
-#' Interactive plot of the seasonal component, irregular component and calendar
-#' effects for a persephone object
+#' Interactive Seasonal, Irregular, and Calendar Effects Plot
 #'
 #' Produces a dygraph (see the
 #' [online documentation](https://rstudio.github.io/dygraphs/) for more detail).
 #' The function generates an interactive time series plot of the seasonal
 #' component, irregular component and calendar effects
-#' for a [persephone] object together with one year forecasts
+#' for a [persephone] object together with one year forecasts.
 #'
-#' @param x an object of class [persephone].
+#' @param x an object of class [persephone]
 #' @param main plot title
 #' @param forecasts logical flag indicating if forecasts should be plotted
 #' @param rangeSelector logical flag specifying if a range selector should be
@@ -15,9 +14,9 @@
 #' @param drawPoints logical flag indicating if a small dot should be drawn at
 #'   each point, in addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which
-#'   should be highlighted in the plot for every year.
+#'   should be highlighted in the plot for every year
 #'
-#' @return Returns an object of class `dygraphs`.
+#' @return Returns an object of class `dygraphs`
 #'
 #' @examples
 #' data(AirPassengers, package = "datasets")
@@ -26,10 +25,10 @@
 #'
 #' obj$run()
 #' # Plot after run
-#' plotSeasIrrCal(obj)
+#' plotSeasIrrCalDygraph(obj)
 #'
 #' @export
-plotSeasIrrCal_old <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TRUE,
+plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TRUE,
                     drawPoints=FALSE, annualComparison=NULL){
 
   if (is.null(x$output$user_defined)) {

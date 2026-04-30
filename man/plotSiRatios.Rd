@@ -2,21 +2,47 @@
 % Please edit documentation in R/plotSiRatios.R
 \name{plotSiRatios}
 \alias{plotSiRatios}
-\title{Plot of SI-ratios by period}
+\title{SI-Ratio Plot}
 \usage{
-plotSiRatios(x)
+plotSiRatios(
+  x,
+  plotEngine = c("hc", "ggplot"),
+  main = NULL,
+  interactive = FALSE,
+  ...
+)
 }
 \arguments{
-\item{x}{An object of class \code{persephone}}
+\item{x}{an object of class \link{persephone}.}
+
+\item{plotEngine}{character. Either \code{"hc"} (default, interactive highcharter plots)
+or \code{"ggplot"} (static ggplot2 plots).}
+
+\item{main}{if \code{plotEngine="ggplot"}, plot title. Ignored for highcharter plots.}
+
+\item{interactive}{If \code{plotEngine="ggplot"}, whether to wrap in plotly for
+basic interactivity. Ignored for highcharter plots.}
+
+\item{...}{other parameters passed to the underlying plot function. Not currently used.}
 }
 \value{
-An object of class \code{highchart}
+A highchart object (if \code{plotEngine="hc"}) or a ggplot/plotly object
+(if \code{plotEngine="ggplot"}).
 }
 \description{
-Generate a \code{hchart} showing the si ratios and seasonal factors.
+Create SI-ratio plots using either highcharter (interactive) or ggplot2 (static).
+This is a unified interface for \link{plotSiRatiosHc} and \link{plotSiRatiosGgplot}.
+}
+\details{
+For \code{x13Single} objects, displays SI-ratios, replaced SI-ratios, seasonal
+factors, and their mean. For \code{tramoseatsSingle} objects, shows SI-ratios
+and their mean.
 }
 \examples{
 x <- perX13(AirPassengers)
 x$run()
-plotSiRatios(x)
+plotSiRatios(x, plotEngine = "hc")
+plotSiRatios(x, plotEngine = "ggplot")
+plotSiRatios(x, plotEngine = "ggplot", interactive = TRUE)
+
 }

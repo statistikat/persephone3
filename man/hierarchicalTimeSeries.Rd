@@ -49,6 +49,8 @@ ht2
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
+\item{\code{ts}}{the aggregated time series}
+
 \item{\code{params}}{of all components and the aggregated series
 #' @field methodDirect SA method used for the aggregated series
 methodDirect = function() {
@@ -84,6 +86,7 @@ all components are adjusted and then aggregated}
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone3::persephone$diagnosticsTable()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>

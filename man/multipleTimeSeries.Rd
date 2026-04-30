@@ -49,7 +49,7 @@ perX13(AirPassengers)$run()
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{adjusted}}{results from the seasonal adjustment}
+\item{\code{ts}}{the time series (inherited from persephone)}
 
 \item{\code{adjusted}}{results from the seasonal adjustment}
 
@@ -75,6 +75,7 @@ perX13(AirPassengers)$run()
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone3::persephone$diagnosticsTable()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
@@ -112,31 +113,30 @@ create a new multiple time series object
 This argument can also handle mts objects}
 
 \item{\code{method}}{specifies the method to be used for the direct adjustment of
-the aggregate series, i.e. "tramoseats" or "x13".}
+the aggregate series, i.e. "tramoseats" or "x13"}
 
 \item{\code{template}}{the name of the predefined specification template, passed
-as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
-Must be one of:
-\code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
-\code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
-Defaults to \code{"rsa3"}.}
+as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
 
 \item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation,
-passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}..}
+passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
 \item{\code{userdefined}}{a character vector of user-defined variables to be included in the output,
-passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
 
 \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
-passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+passed to the rjd3 specification functions internally. As alternative input to \code{...}}
 
 \item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
+
+\item{\code{iterate}}{logical, whether to iterate over components (currently not used)}
 
 \item{\code{...}}{one or more objects which are either of class persephone or
 can be coerced to persephone objects with asPersephone. If more than
 one element is supplied, the underlying time series must have the same
-time instances. All elements supplied in ... must be named.}
+time instances. All elements supplied in ... must be named.
+In addition to the ts/mts/persephone objects,
+\code{...} accepts arguments for customizing the model specifications as alternative input to speclist}
 }
 \if{html}{\out{</div>}}
 }
@@ -207,7 +207,7 @@ nested list into a flat list}
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-this functin is similar to \code{lapply()} in the sense that it
+this function is similar to \code{lapply()} in the sense that it
 can be used to apply a function to several persephone objects
 simultaniusely
 }

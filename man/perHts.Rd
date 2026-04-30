@@ -57,6 +57,8 @@ returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[r
 points or a list of ts objects or a mts object if the weight varies for
 different time points. They must have the same length as the number of
 components.}
+
+\item{iterate}{logical, if TRUE apply the given spec/params also to all components recursively}
 }
 \description{
 Combine mutliple objects of persephone objects into a new persephone object.

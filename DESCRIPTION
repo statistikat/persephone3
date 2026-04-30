@@ -8,7 +8,7 @@ Authors@R: c(
   person("Alexander", "Kowarik", email = "alexander.kowarik@statistik.gv.at", role = c("ctb")),
   person("Markus", "Fröhlich", email = "markus.foehlich@statistik.gv.at", role = "ctb")
   )
-Description: This package is an object oriented wrapper around the R Packages rjd3x13 and rjd3tramoseats, 
+Description: This package is an object oriented wrapper around the R Packages rjd3x13 and rjd3tramoseats,
   which performs time series adjustments with the java library JDemetra+.
 License: MIT + file LICENSE
 URL: https://github.com/statistikat/persephone3
@@ -16,7 +16,7 @@ Encoding: UTF-8
 Language: en-US
 LazyData: true
 Depends: R (>= 4.1.0)
-Imports: 
+Imports:
     rjd3toolkit (>= 3.5.0),
     rjd3x13 (>= 3.5.0),
     rjd3tramoseats (>= 3.5.0),
@@ -28,15 +28,18 @@ Imports:
     scales,
     timeDate,
     magrittr,
-    zoo
-Suggests: 
+    zoo,
+    lubridate
+Suggests:
     knitr,
     rmarkdown,
     prettydoc,
     tinytest,
     forecast,
-    bookdown
-Remotes: 
+    bookdown,
+    base64enc,
+    htmltools
+Remotes:
      github::rjdverse/rjd3toolkit@*release,
      github::rjdverse/rjd3tramoseats@*release,
      github::rjdverse/rjd3x13@*release

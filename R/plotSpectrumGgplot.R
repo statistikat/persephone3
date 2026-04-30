@@ -1,6 +1,10 @@
-#' Spectral Plots
+#' Spectral Plots (ggplot2 version)
 #'
-#' Interactive plot of the periodogram or the autogregressive spectrum.
+#' Create spectral plots using ggplot2, suitable for publications and reports
+#' with easy export to PDF, PNG, and other formats. Supports optional plotly
+#' conversion for basic interactivity. For advanced interactive features,
+#' see [plotSpectrum].
+#'
 #' Produces a `ggplot`/`plotly` object for objects of class [persephone].
 #'
 #' @param x an object of class [persephone].
@@ -18,8 +22,9 @@
 #'   and `n.freq=61` for plotType `"arSpecBars"`.
 #' @param order order of the AR model
 #' @param main plot title
-#' @param interactive If the return value would be a `ggplot` object, wrap it
-#'   in [plotly::ggplotly] before returning.
+#' @param interactive If TRUE, wrap the `ggplot` object in [plotly::ggplotly]
+#'   to add basic interactivity (zoom, pan, hover tooltips). If FALSE (default),
+#'   returns a static ggplot object suitable for export.
 #' @param ... other plotting parameters to affect the plot. Not currently used.
 #'
 #' @details
@@ -58,37 +63,42 @@
 #' # Autoregressive Spectrum of the original series
 #' # (similar to JD+ plots)
 #' # where n.freq = 301 and order = 30
-#' plotSpectrum(obj)
+#' plotSpectrumGgplot(obj)
 #'
 #' # Autoregressive Spectrum of the original series
 #' # (similar to X-13ARIMA-SEATS plots)
 #' # where n.freq = 61 and order = 30
-#' plotSpectrum(obj, plotType="arSpecBars")
+#' plotSpectrumGgplot(obj, plotType="arSpecBars")
 #'
 #' # Periodogram
-#' plotSpectrum(obj, plotType="periodogram")
+#' plotSpectrumGgplot(obj, plotType="periodogram")
 #' # same as
-#' plotSpectrum(obj, plotType=3)
+#' plotSpectrumGgplot(obj, plotType=3)
 #'
 #' # Quarterly Data Example
 #' data(UKgas, package = "datasets")
 #' # Generate a persephone object, in this case a tramoseats object
 #' obj2 <- perTramo(UKgas, "rsafull")
 #' obj2$run()
-#' plotSpectrum(obj2, tsType="original")
-#' plotSpectrum(obj2, tsType="sa")
-#' plotSpectrum(obj2, tsType="irregular")
-#' plotSpectrum(obj2, tsType="residuals")
+#' plotSpectrumGgplot(obj2, tsType="original")
+#' plotSpectrumGgplot(obj2, tsType="sa")
+#' plotSpectrumGgplot(obj2, tsType="irregular")
+#' plotSpectrumGgplot(obj2, tsType="residuals")
 #'
 #' @importFrom stats window ts spec.ar spec.pgram
 #'
 #' @export
-plotSpectrum_old <- function(x,
-                         tsType = c("original", "sa", "irregular", "residuals"),
-                         plotType = c("arSpec", "arSpecBars", "periodogram"),
-                         maxobs = NULL, n.freq = NULL, order = 30,
-                         main = NULL, interactive = TRUE, ...) {
-
+plotSpectrumGgplot <- function(
+  x,
+  tsType = c("original", "sa", "irregular", "residuals"),
+  plotType = c("arSpec", "arSpecBars", "periodogram"),
+  maxobs = NULL,
+  n.freq = NULL,
+  order = 30,
+  main = NULL,
+  interactive = FALSE,
+  ...
+) {
   freq <- spec <- spec_new1 <- NULL # nolint
 
   if (is.null(x$output$user_defined)) {
@@ -97,12 +107,12 @@ plotSpectrum_old <- function(x,
 
   if (is.numeric(plotType)) {
     plotType <- c("arSpec", "arSpecBars", "periodogram")[plotType]
-  }else{
+  } else {
     plotType <- match.arg(plotType)
   }
   if (is.numeric(tsType)) {
     tsType <- c("original", "sa", "irregular", "residuals")[tsType]
-  }else{
+  } else {
     tsType <- match.arg(tsType)
   }
   if (is.null(n.freq)) {
@@ -144,8 +154,12 @@ plotSpectrum_old <- function(x,
 
   # minobs error (minobs=60 for quartlery data, minobs=80 for monthly data)
   if (length(tsobj) <= minobs) {
-    stop("The minimum number of observations needed to compute the spectrum",
-         " is ", minobs, ".")
+    stop(
+      "The minimum number of observations needed to compute the spectrum",
+      " is ",
+      minobs,
+      "."
+    )
   }
 
   # maxobs
@@ -164,9 +178,13 @@ plotSpectrum_old <- function(x,
     }
   }
   if (length(tsobj) > maxobs) {
-    d1 <- window(d1, start = start(lag(
-      ts(end = end(d1), frequency = frequency(d1)), maxobs - 2
-    )))
+    d1 <- window(
+      d1,
+      start = start(lag(
+        ts(end = end(d1), frequency = frequency(d1)),
+        maxobs - 2
+      ))
+    )
   }
 
   if (plotType == "periodogram") {
@@ -178,15 +196,14 @@ plotSpectrum_old <- function(x,
     d1s <- data.frame(freq = d1s$freq / frequency(d1), spec = d1s$spec)
 
     p <- ggplot(d1s, aes(x = freq, y = spec)) +
-      geom_line() + geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
+      geom_line() +
+      geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
       geom_vline(xintercept = seas_freq, col = "blue", alpha = 0.3) +
       labs(title = main) +
       theme_minimal() +
       ylab("Spectrum") +
       xlab("Frequency")
-
   } else if (plotType == "arSpec") {
-
     # Autoregressive Spectrum JD+
 
     if (is.null(main)) {
@@ -196,8 +213,10 @@ plotSpectrum_old <- function(x,
     # Default settings in JD+
     # d2s <- spec.ar(d1, n.freq = 301, order = 30, plot = FALSE)
     d2s <- spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
-    d2s <- data.frame(freq = d2s$freq / frequency(d1),
-                      spec = 10 * log10(2 * d2s$spec))
+    d2s <- data.frame(
+      freq = d2s$freq / frequency(d1),
+      spec = 10 * log10(2 * d2s$spec)
+    )
 
     p <- ggplot(d2s, aes(x = freq, y = spec)) +
       geom_line() +
@@ -207,9 +226,7 @@ plotSpectrum_old <- function(x,
       theme_minimal() +
       ylab("Spectrum") +
       xlab("Frequency")
-
   } else if (plotType == "arSpecBars") {
-
     # Autoregressive Spectrum X-13ARIMA-SEATS
 
     if (is.null(main)) {
@@ -222,8 +239,10 @@ plotSpectrum_old <- function(x,
     # 10 * log10(d3s$spec/sum(d3s$spec)
     # comes closest to the scale they use
     d3s <- spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
-    d3s <- data.frame(freq = d3s$freq / frequency(d1),
-                      spec = 10 * log10(d3s$spec / sum(d3s$spec)))
+    d3s <- data.frame(
+      freq = d3s$freq / frequency(d1),
+      spec = 10 * log10(d3s$spec / sum(d3s$spec))
+    )
 
     ## Quick-Fix: use closest value of d3s$freq to td_freq
     ## (spec.ar() only allows for a parameter "n.freq=The number of points at
@@ -237,8 +256,11 @@ plotSpectrum_old <- function(x,
     # where the scale of the y-axis
     # ranges from a low negative value (e.g. -40) to a higher negative value
     # (e.g. -15)
-    d3s$spec_new1 <- scales::rescale(d3s$spec, from = range(d3s$spec),
-                                     to = c(1, max(d3s$spec - min(d3s$spec))))
+    d3s$spec_new1 <- scales::rescale(
+      d3s$spec,
+      from = range(d3s$spec),
+      to = c(1, max(d3s$spec - min(d3s$spec)))
+    )
     #d3s$spec_new2 <- d3s$spec - min(d3s$spec)
     #d3s$spec_rescaled <-  scales::rescale(d3s$spec_new1, to = c(min(d3s$spec),
     #max(d3s$spec)))
@@ -253,24 +275,30 @@ plotSpectrum_old <- function(x,
     seas_td_col[which(d3s$freq %in% seas_freq)] <- "blue"
     seas_td_col[which(d3s$freq %in% td_freq_approx)] <- "red"
 
-    p <- ggplot(d3s,  aes(x = freq, y = abs(spec_new1))) +
-      geom_bar(stat = "identity", position = "dodge",
-               fill = seas_td_col, width = 0.003) +
+    p <- ggplot(d3s, aes(x = freq, y = abs(spec_new1))) +
+      geom_bar(
+        stat = "identity",
+        position = "dodge",
+        fill = seas_td_col,
+        width = 0.003
+      ) +
       scale_x_continuous(
         breaks = c(seas_freq, td_freq_approx),
-        labels = c(seas_freq_lab,
-                   as.character(round(td_freq_approx, digits = 3)))
+        labels = c(
+          seas_freq_lab,
+          as.character(round(td_freq_approx, digits = 3))
+        )
       ) +
       scale_y_continuous(breaks = breaks_15, labels = labels_15) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1,
-                                       size = rel(0.9))) +
+      theme(
+        axis.text.x = element_text(angle = 90, hjust = 1, size = rel(0.9))
+      ) +
       ggtitle(main) +
       ylab("Spectrum") +
       xlab("Frequency")
-
   }
 
-  p <-  p + theme_bw()
+  p <- p + theme_bw()
 
   if (interactive) {
     p <- plotly::ggplotly(p)
