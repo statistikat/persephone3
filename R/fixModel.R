@@ -1,6 +1,11 @@
-#' @description fix the arima model
-#' @param x an object of class [persephone].
+#' Fix ARIMA model parameters
+#'
+#' @description Fixes the ARIMA model parameters to prevent re-estimation
+#'
+#' @param x a persephone object
 #' @param verbose if TRUE the changed parameters will be reported
+#'
+#' @export
 fixModel = function(x, verbose = FALSE) {
   if(is.null(x$output)){
     warning("not run yet.")

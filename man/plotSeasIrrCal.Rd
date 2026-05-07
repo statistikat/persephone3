@@ -2,15 +2,51 @@
 % Please edit documentation in R/plotSeasIrrCal.R
 \name{plotSeasIrrCal}
 \alias{plotSeasIrrCal}
-\title{irregular component and calendar effects for a persephone object}
+\title{Interactive Seasonal, Irregular, and Calendar Effects Plot}
 \usage{
-plotSeasIrrCal(x)
+plotSeasIrrCal(
+  x,
+  plotEngine = c("hc", "dygraph"),
+  main = NULL,
+  forecasts = TRUE,
+  rangeSelector = TRUE,
+  drawPoints = FALSE,
+  annualComparison = NULL
+)
 }
 \arguments{
 \item{x}{an object of class \link{persephone}.}
+
+\item{plotEngine}{character. Either \code{"hc"} (default, highcharter) or
+\code{"dygraph"} (dygraphs).}
+
+\item{main}{if \code{plotEngine="dygraph"}: plot title}
+
+\item{forecasts}{if \code{plotEngine="dygraph"}: logical flag indicating if forecasts should be plotted}
+
+\item{rangeSelector}{if \code{plotEngine="dygraph"}: logical flag specifying if a range selector should be
+included in the plot}
+
+\item{drawPoints}{if \code{plotEngine="dygraph"}: logical flag indicating if a small dot should be drawn at
+each point, in addition to a line going through the point.}
+
+\item{annualComparison}{if \code{plotEngine="dygraph"}: integer corresponding to the month or quarter which
+should be highlighted in the plot for every year. If NULL (default), no
+annual comparison is shown.}
+}
+\value{
+A highchart object (if \code{plotEngine="hc"}) or a dygraph object
+(if \code{plotEngine="dygraph"}).
 }
 \description{
-The function generates an interactive time series plot of the seasonal
-component, irregular component and calendar effects
-for a \link{persephone} object together with one year forecasts
+Create interactive plots of seasonal, irregular, and calendar effects using
+either highcharter or dygraphs. This is a unified interface for
+\link{plotSeasIrrCalHc} and \link{plotSeasIrrCalDygraph}.
+}
+\examples{
+x <- perX13(AirPassengers)
+x$run()
+plotSeasIrrCal(x, plotEngine = "hc")
+plotSeasIrrCal(x, plotEngine = "dygraph")
+
 }

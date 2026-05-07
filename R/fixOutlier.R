@@ -1,8 +1,12 @@
-#' @description create a new single object
-#' @param x an object of class [persephone].
-#' @param timespan number of months from the end of the time series
-#' where outliers are not fixed
+#' Fix outliers in the model
+#'
+#' @description Fixes detected outliers to prevent re-detection
+#'
+#' @param x a persephone object
+#' @param timespan number of months from the end of the time series where outliers are not fixed
 #' @param verbose if TRUE the changed parameters will be reported
+#'
+#' @export
 fixOutlier = function(x, timespan = 12, verbose = FALSE) {
   # xxx <<- x
   if(is.null(x$output)){

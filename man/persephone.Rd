@@ -103,6 +103,7 @@ private$params_internal
 \item \href{#method-persephone-plotSiRatios}{\code{persephone$plotSiRatios()}}
 \item \href{#method-persephone-plotSpectrum}{\code{persephone$plotSpectrum()}}
 \item \href{#method-persephone-print}{\code{persephone$print()}}
+\item \href{#method-persephone-diagnosticsTable}{\code{persephone$diagnosticsTable()}}
 \item \href{#method-persephone-iterate}{\code{persephone$iterate()}}
 \item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
 \item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
@@ -163,7 +164,21 @@ update parameters for the adjustment
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{...}}{passed to \code{x13_spec()} or \code{tramoseats_spec()}}
+\item{\code{template}}{template name passed to \code{x13_spec()} or \code{tramoseats_spec()}}
+
+\item{\code{speclist}}{a list of additional arguments for customizing the model specifications}
+
+\item{\code{spec}}{a specification object to use as starting point}
+
+\item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation}
+
+\item{\code{userdefined}}{character vector of user-defined output variables}
+
+\item{\code{iterate}}{logical, whether to iterate (for hierarchical objects)}
+
+\item{\code{component}}{character, component id for hierarchical objects}
+
+\item{\code{...}}{additional arguments passed to \code{x13_spec()} or \code{tramoseats_spec()}}
 }
 \if{html}{\out{</div>}}
 }
@@ -181,7 +196,7 @@ visualize the results of an adjustment
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{passed to \code{\link[=plot]{plot()}}
-see \code{\link[=plot.persephoneSingle]{plot.persephoneSingle()}} or \code{\link[=plot.hierarchicalTimeSeries]{plot.hierarchicalTimeSeries()}}}
+see plot method for persephoneSingle or hierarchicalTimeSeries objects}
 }
 \if{html}{\out{</div>}}
 }
@@ -199,7 +214,7 @@ visualize the results of an adjustment
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{passed to \code{\link[=hchart]{hchart()}}
-see \code{\link[=hchart.persephoneSingle]{hchart.persephoneSingle()}} or \code{\link[=hchart.hierarchicalTimeSeries]{hchart.hierarchicalTimeSeries()}}}
+see the hchart method for persephoneSingle or hierarchicalTimeSeries objects}
 }
 \if{html}{\out{</div>}}
 }
@@ -285,6 +300,19 @@ display a persephone object in the console
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-persephone-diagnosticsTable"></a>}}
+\if{latex}{\out{\hypertarget{method-persephone-diagnosticsTable}{}}}
+\subsection{Method \code{diagnosticsTable()}}{
+display a persephone object in the console
+
+
+create a table for the eurostat quality report
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{persephone$diagnosticsTable()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-iterate"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-iterate}{}}}
 \subsection{Method \code{iterate()}}{
@@ -310,12 +338,6 @@ see \link{perHts}
 \if{latex}{\out{\hypertarget{method-persephone-generateQrTable}{}}}
 \subsection{Method \code{generateQrTable()}}{
 create a table for the eurostat quality report
-#' @description fix the arima model
-#' @param verbose if TRUE the changed parameters will be reported
-#' @description create a new single object
-#' @param timespan number of months from the end of the time series
-#' where outliers are not fixed
-#' @param verbose if TRUE the changed parameters will be reported
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$generateQrTable()}\if{html}{\out{</div>}}
 }
@@ -325,19 +347,38 @@ create a table for the eurostat quality report
 \if{html}{\out{<a id="method-persephone-fixModel"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixModel}{}}}
 \subsection{Method \code{fixModel()}}{
+fix the arima model
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$fixModel(...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{additional arguments passed to \code{\link{fixModel}}}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-fixOutlier"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixOutlier}{}}}
 \subsection{Method \code{fixOutlier()}}{
+create a new single object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{persephone$fixOutlier(...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{additional arguments passed to \code{\link{fixOutlier}}}
+
+\item{\code{timespan}}{number of months from the end of the time series
+where outliers are not fixed}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-clone"></a>}}

@@ -106,10 +106,8 @@ obj$run()
 plot(obj, drawPoints=TRUE)
 # Update some parameters of the persephoneSingle object
 # (randomly specify some outliers for illustrative purposes only)
-obj$updateParams(usrdef.outliersEnabled = TRUE,
-                usrdef.outliersType = c("AO","LS","LS"),
-                usrdef.outliersDate=c("1950-01-01","1955-04-01",
-                                      "1959-10-01"))
+obj$updateParams(addout.type = c("AO","LS","LS"),
+                 addout.date = c("1950-01-01","1955-04-01","1959-10-01"))
 # Perform run to make updateParams take effect
 obj$run()
 plot(obj)

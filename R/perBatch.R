@@ -57,12 +57,26 @@ multipleTimeSeries <- R6::R6Class(
   # ---- Public Methods ----
   public = list(
     #' @description create a new multiple time series object
+    #' @param list a list of persephone objects as alternative input to `...`.
+    #'   This argument can also handle mts objects
+    #' @param method specifies the method to be used for the direct adjustment of
+    #'   the aggregate series, i.e. "tramoseats" or "x13"
+    #' @param template the name of the predefined specification template, passed
+    #'   as the `name` argument to [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()]
+    #' @param context a list of external regressors (calendar or other) to be used for estimation,
+    #'   passed as the `context` argument of [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]
+    #' @param userdefined a character vector of user-defined variables to be included in the output,
+    #'   passed as the `userdefined` argument to [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]
+    #' @param speclist a list of additional arguments for customizing the model specifications,
+    #'   passed to the rjd3 specification functions internally. As alternative input to `...`
+    #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
+    #' @param iterate logical, whether to iterate over components (currently not used)
     #' @param ... one or more objects which are either of class persephone or
     #'   can be coerced to persephone objects with asPersephone. If more than
     #'   one element is supplied, the underlying time series must have the same
     #'   time instances. All elements supplied in ... must be named.
-    #' @param list a list of persephone objects as alternative input to `...`.
-    #'   This argument can also handle mts objects
+    #'   In addition to the ts/mts/persephone objects,
+    #'   `...` accepts arguments for customizing the model specifications as alternative input to speclist
     initialize = function(list = NULL,
                           method = c("tramoseats", "x13"),
                           template = NULL,
@@ -177,7 +191,7 @@ multipleTimeSeries <- R6::R6Class(
       print(tbl, right = FALSE, row.names = FALSE)
     },
     #' @description iterate over all components
-    #' @details this functin is similar to `lapply()` in the sense that it
+    #' @details this function is similar to `lapply()` in the sense that it
     #'   can be used to apply a function to several persephone objects
     #'   simultaniusely
     #' @param fun a function that takes a persephone object as a parameter
@@ -237,7 +251,7 @@ multipleTimeSeries <- R6::R6Class(
   ),
   # ---- Active Bindings ----
   active = list(
-    #' @field adjusted results from the seasonal adjustment
+    #' @field ts the time series (inherited from persephone)
     ts = function() {
       lapply(self$components,function(x)x$ts)
     },

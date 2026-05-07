@@ -54,39 +54,54 @@ persephone <- R6::R6Class(
       stop("implement this function")
     },
     #' @description update parameters for the adjustment
-    #' @param ... passed to `x13_spec()` or `tramoseats_spec()`
-    updateParams = function(template = NULL,
-                            speclist = NULL,
-                            spec = NULL,
-                            context = NULL,
-                            userdefined = NULL,
-                            iterate = FALSE,
-                            component = "",
-                            ...) {
-#browser()
+    #' @param template template name passed to `x13_spec()` or `tramoseats_spec()`
+    #' @param speclist a list of additional arguments for customizing the model specifications
+    #' @param spec a specification object to use as starting point
+    #' @param context a list of external regressors (calendar or other) to be used for estimation
+    #' @param userdefined character vector of user-defined output variables
+    #' @param iterate logical, whether to iterate (for hierarchical objects)
+    #' @param component character, component id for hierarchical objects
+    #' @param ... additional arguments passed to `x13_spec()` or `tramoseats_spec()`
+    updateParams = function(
+      template = NULL,
+      speclist = NULL,
+      spec = NULL,
+      context = NULL,
+      userdefined = NULL,
+      iterate = FALSE,
+      component = "",
+      ...
+    ) {
+      #browser()
       if (!missing(context)) {
         private$context_internal <- context
       }
       if (!missing(userdefined)) {
         private$userdefined <- union(userdefined, userdefined_default)
       }
-      init_spec <- if (!missing(spec) && !is.null(spec)) spec else private$params_internal
+      init_spec <- if (!missing(spec) && !is.null(spec)) {
+        spec
+      } else {
+        private$params_internal
+      }
 
-      private$params_internal <- private$updateFun(name = template,
-                                                   freq = frequency(private$ts_internal),
-                                                   init_spec = init_spec,
-                                                   spec_list = speclist,
-                                                   ...)
+      private$params_internal <- private$updateFun(
+        name = template,
+        freq = frequency(private$ts_internal),
+        init_spec = init_spec,
+        spec_list = speclist,
+        ...
+      )
     },
     #' @description visualize the results of an adjustment
     #' @param ...  passed to [plot()]
-    #'   see [plot.persephoneSingle()] or [plot.hierarchicalTimeSeries()]
+    #'   see plot method for persephoneSingle or hierarchicalTimeSeries objects
     plot = function(...) {
       plot(self, ...)
     },
     #' @description visualize the results of an adjustment
     #' @param ...  passed to [hchart()]
-    #'   see [hchart.persephoneSingle()] or [hchart.hierarchicalTimeSeries()]
+    #'   see the hchart method for persephoneSingle or hierarchicalTimeSeries objects
     hchart = function(...) {
       hchart(self, ...)
     },
@@ -118,11 +133,16 @@ persephone <- R6::R6Class(
       if (!is.null(self$output)) {
         message("Output:")
         tbl <- private$printTable("")
-       # tbl <- tbl[, -(1:3)]
+        # tbl <- tbl[, -(1:3)]
         print(tbl, right = FALSE, row.names = FALSE)
       } else {
         message("Not yet run.")
       }
+    },
+    #' @description display a persephone object in the console
+    #' @description create a table for the eurostat quality report
+    diagnosticsTable = function() {
+      self$iterate(generate_diagnostics_table, asTable = TRUE)
     },
     #' @description see [perHts]
     #' @param fun see [perHts]
@@ -131,20 +151,20 @@ persephone <- R6::R6Class(
     iterate = function(fun, asTable = FALSE, unnest = FALSE) {
       res <- list(value = fun(self))
       private$convert_list(res, asTable, unnest)
-    },# TO DO: iterate anderen Namen geben, verwechselt man sonst mit Parameter iterate
+    }, # TO DO: iterate anderen Namen geben, verwechselt man sonst mit Parameter iterate
     #' @description create a table for the eurostat quality report
     generateQrTable = function() {
       self$iterate(generate_Qr_List, asTable = TRUE)
     },
-    #' #' @description fix the arima model
-    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' @description fix the arima model
+    #' @param ... additional arguments passed to \code{\link{fixModel}}
     fixModel = function(...) {
       fixModel(self, ...)
     },
-    #' #' @description create a new single object
-    #' #' @param timespan number of months from the end of the time series
-    #' #' where outliers are not fixed
-    #' #' @param verbose if TRUE the changed parameters will be reported
+    #' @description create a new single object
+    #' @param timespan number of months from the end of the time series
+    #' where outliers are not fixed
+    #' @param ... additional arguments passed to \code{\link{fixOutlier}}
     fixOutlier = function(...) {
       fixOutlier(self, ...)
     }
@@ -194,23 +214,24 @@ persephone <- R6::R6Class(
     #'   private$params_internal
     #' },
     #' @field forecasts get forecasts from the model
-    forecasts = function(){
+    forecasts = function() {
       self$output$final$forecasts
     },
     #' @field forecastsDirect get direct forecasts from the model
-    forecastsDirect = function(){
+    forecastsDirect = function() {
       self$output$final$forecasts
     }
   ),
   # ---- Private Methods ----
   private = list(
     convert_list = function(res, asTable = FALSE, unnest = FALSE) {
-      if (asTable)
+      if (asTable) {
         return(asTable_nested_list(res))
-      else if (unnest)
+      } else if (unnest) {
         return(unnest_nested_list(res))
-      else
+      } else {
         return(res)
+      }
     },
     ts_internal = NULL,
     tsp_internal = NULL,
@@ -226,7 +247,7 @@ persephone <- R6::R6Class(
       #     class = class(self)[1],
       #     run = !is.null(self$output)
       #   ),
-        printDiagnostics(self)
+      printDiagnostics(self)
       # )
     },
     updateFun = function(params, ...) {
@@ -250,19 +271,55 @@ persephone <- R6::R6Class(
 # )
 #userdefined_default_neu nur helper beim Umschreiben.
 userdefined_default <- c(
-  "y", "t", "sa", "s", "i", "cal", "y_f", "t_f", "sa_f", "s_f","i_f",
-  "cal_f", "y_ef",
-  "decomposition.d6", "decomposition.d7", "decomposition.d9","decomposition.d13",
-  "decomposition.s_cmp","decomposition.i_cmp","mode",
-  "decomposition.mode", "arima.p","arima.d", "arima.q" ,"arima.bp" , "arima.bd","arima.bq",
-  "regression.easter","regression.lp","regression.td(*)","regression.leaster","regression.ntd",
-  "regression.outlier(*)","regression.nout",
-  "diagnostics.seas-si-combined","diagnostics.seas-si-combined3",
-  "residuals.tsres","residuals.ser", # ab hier zusätzliche Ausgabe 
-  "regression.td-ftest", "residuals.doornikhansen",
-                         "residuals.lb", "regression.td-derived",
-                         "diagnostics.seas-sa-f", "diagnostics.seas-sa-qs",
-                         "diagnostics.td-sa-all", "diagnostics.td-sa-last",
-                         "diagnostics.td-i-all", "diagnostics.td-i-last",
-                         "m-statistics.q", "m-statistics.q-m2", "quality.summary"
+  "y",
+  "t",
+  "sa",
+  "s",
+  "i",
+  "cal",
+  "y_f",
+  "t_f",
+  "sa_f",
+  "s_f",
+  "i_f",
+  "cal_f",
+  "y_ef",
+  "decomposition.d6",
+  "decomposition.d7",
+  "decomposition.d9",
+  "decomposition.d13",
+  "decomposition.s_cmp",
+  "decomposition.i_cmp",
+  "mode",
+  "decomposition.mode",
+  "arima.p",
+  "arima.d",
+  "arima.q",
+  "arima.bp",
+  "arima.bd",
+  "arima.bq",
+  "regression.easter",
+  "regression.lp",
+  "regression.td(*)",
+  "regression.leaster",
+  "regression.ntd",
+  "regression.outlier(*)",
+  "regression.nout",
+  "diagnostics.seas-si-combined",
+  "diagnostics.seas-si-combined3",
+  "residuals.tsres",
+  "residuals.ser", # ab hier zusätzliche Ausgabe
+  "regression.td-ftest",
+  "residuals.doornikhansen",
+  "residuals.lb",
+  "regression.td-derived",
+  "diagnostics.seas-sa-f",
+  "diagnostics.seas-sa-qs",
+  "diagnostics.td-sa-all",
+  "diagnostics.td-sa-last",
+  "diagnostics.td-i-all",
+  "diagnostics.td-i-last",
+  "m-statistics.q",
+  "m-statistics.q-m2",
+  "quality.summary"
 )
