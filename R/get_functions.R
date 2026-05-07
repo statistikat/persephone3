@@ -102,19 +102,29 @@ regarimaCoefTable <- function(x) {
     #   "T-stat", "Pr(>|t|)"
     # )
     xregs <- xregs[,c("name","value","stde","t","pvalue")]
+    xregs
   } else {
     NULL
   }
 }
 
-arimaCoefTable.print <- function(xregs) {
+
+# arimaCoefTable.print <- function(xregs) {
+#   xregs.print <- xregs[,c("value","stde","t","pvalue")]
+#   rownames(xregs.print) <- xregs$name
+#   colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
+#
+#   printCoefmat(xregs.print)
+# }
+
+getArimaCoef<- function(x) {
+  xregs <- regarimaCoefTable(x)
   xregs.print <- xregs[,c("value","stde","t","pvalue")]
   rownames(xregs.print) <- xregs$name
   colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
 
   printCoefmat(xregs.print)
 }
-
 
 ########################################
 ###         from rdj3toolkit         ###

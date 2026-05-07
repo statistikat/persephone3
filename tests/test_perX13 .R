@@ -21,10 +21,10 @@ AT <- national_calendar(list(
   fixed_day(12, 31, weight = 0.5)
 ))
 
-tdAT7 <- calendar_td(AT, 12, c(2000,1), 480, groups=c(1,2,3,4,5,6,0),
+td7at <- calendar_td(AT, 12, c(2000,1), 480, groups=c(1,2,3,4,5,6,0),
                      holiday = 7, contrasts = TRUE)
 
-tdAT5 <- calendar_td(AT, 12, c(2005,1), 480, groups=c(1,1,1,1,1,0,0),
+calendar_td(AT, 12, c(2005,1), 480, groups=c(1,1,1,1,1,0,0),
                      holiday = 7, contrasts = TRUE)
 
 # Alternativ: aus Persephone ..........................
