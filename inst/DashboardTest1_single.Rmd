@@ -1,0 +1,285 @@
+
+
+---
+title: PERSEPHONE 2.0
+output:
+  flexdashboard::flex_dashboard:
+    theme: 
+      version: 4
+      bootswatch: minty
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(here)
+library(shiny)
+library(shinyjs)
+library(mountSTAT)
+library(data.table)
+library(persephone)
+q <- readRDS(here("q_all.RDS"))
+zr <- readRDS(here("ts_linked1.RDS"))
+ber <- readRDS(here("batch_pi.RDS"))
+ 
+
+```
+
+# SUMMARY
+```{r}
+library(reactable)
+sticky_style <- list(backgroundColor = "#f7f7f7")
+
+q %>% dplyr::select(
+    component, Start, End, dplyr::everything(), Q.Stat
+) %>% reactable(striped = TRUE, selection = "single", onClick = "select", 
+                wrap = FALSE, defaultPageSize = 20, resizable = TRUE, 
+                compact = TRUE, columns = list(
+  component = colDef(
+    sticky = "left",
+    name = "comp.",
+    style = sticky_style,
+    headerStyle = sticky_style, width = 60
+  ),
+  Start = colDef(
+    sticky = "left",
+    style = sticky_style,
+    headerStyle = sticky_style, width = 70
+  ),
+  End = colDef(
+    sticky = "left",
+    style = sticky_style,
+    headerStyle = sticky_style, width = 70
+  ),
+  Q.Stat = colDef(
+    "Qual.<br>stat", html = TRUE, width = 50,
+    #filterable = TRUE,
+    sticky = "right",
+    #headerStyle = sticky_style,
+    style = function(value) {
+      if (value < 1) {
+        color <- "#008000"
+      } else if (value < 1.2) {
+        color <- "#777"
+      } else {
+        color <- "#e00000"
+      }
+      list(color = color, fontWeight = "bold")
+    }
+  ),
+  "Log.Transformation" = colDef(
+    name = "Log<br/>trans", html = TRUE, width = 60
+  ),
+  "ARIMA.Model" = colDef(
+    name = "Arima<br/>model", html = TRUE, cell = function(x) {
+      gsub(" ", "", x)
+    },
+    width = 85
+  ),
+  LeapYear = colDef(name = "leap<br/>year", html = TRUE, width = 55),
+  MovingHoliday = colDef(name = "Moving<br/>Holiday", html = TRUE,
+                         width = 68),
+  NbTD = colDef(width = 55),
+  Residual.Seasonality = colDef("Resid<br/>seas", html = TRUE, width = 55),
+  Residual.TD.Effect = colDef("Resid<br/>TD", html = TRUE, width = 55),
+  CombinedTest_SI = colDef(
+    name = "Comb<br/>SI", html = TRUE, width = 65
+  ),
+  Seasonal.Filter = colDef(
+    name = "Seas.<br/>Filter", html = TRUE, width = 65
+  ),
+  Final.Henderson.Filter = colDef(
+    name = "Final<br/>H-Filt", html = TRUE, width = 75
+  ),
+  Stage.2.Henderson.Filter = colDef(
+    name = "Stage 2<br/>H-Filt", html = TRUE, width = 75
+  ),
+  Max.Adj = colDef(name = "Max<br/>Adj", html = TRUE, width = 75),
+  Method = colDef(width = 70),
+  Period = colDef(width = 60),
+  Nobs = colDef(width = 60),
+  Noutliers = colDef(name = "Number<br/>outl.", html = TRUE, width = 65)
+))
+```
+
+
+
+```{r}
+#tags$br()
+# Define inputs
+
+useShinyjs()
+
+fluidRow(
+  column(11,
+         selectInput("variable", "Choose a variable:",
+                     c("AT00" = "opt1",
+                       "AT01" = "opt2",
+                       "AT02" = "opt3")),
+         tags$style(HTML("
+           .selectize-input {
+             width: 100%;
+             border: 7px solid #ccc;
+             border-radius: 4px;
+             background-color: #fff;
+           }
+           .selectize-input input {
+             width: 100%;
+             outline: none;
+             border: none;
+           }
+           .selectize-dropdown {
+             width: 400px; /* Adjust the width as needed */
+             border: none;
+             border-radius: 4px;
+           }
+         "))
+  ),
+  tags$script('
+    $(document).on("shiny:inputchanged", function(event) {
+      if (event.name === "variable") {
+        Shiny.onInputChange("selected_variable", event.value);
+      }
+    });
+  ')
+)
+
+
+```
+
+
+
+
+# X13 - ARIMA/SEATS
+
+
+Column {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+### TS-Plot
+```{r}
+library(grid)
+library(gridExtra)
+library(lattice)
+library(ggplot2)
+library(plotly)
+plot(ber$components$AT05)
+
+#
+```
+
+### TS Plot (neu)
+```{r}
+#plotSiRatios(ber$components$AT00)
+hc <- readRDS("charts/hchart.rds")
+hc$x$hc_opts$rangeSelector$buttons <- list(
+  list(type = "all", text = "all"),
+  list(type = "year", count = 10, text = "10y"), 
+  list(type = "year", count = 5, text = "5y"), 
+  list(type = "year", count = 3, text = "3y")
+)
+hc
+```
+
+### SI-Ratios
+```{r}
+#plotSiRatios(ber$components$AT00)
+readRDS("charts/plotSiRatios.rds")
+```
+
+### Spectrum Original
+```{r}
+#plotSpectrum(ber$components$AT00, tsType = "original", plotType = "arSpec")
+readRDS("charts/plotSpectrum.rds")
+```
+### Spectrum SA
+```{r}
+#plotSpectrum(ber$components$AT00, tsType = "sa", plotType = "arSpec")
+readRDS("charts/plotSpectrum_sa.rds")
+```
+### Spectrum Irregular
+```{r}
+#plotSpectrum(ber$components$AT00, tsType = "irregular", plotType = "arSpec")
+readRDS("charts/plotSpectrum_i.rds")
+```
+
+### SeasIrrCal
+```{r}
+readRDS("charts/plotSeasIrrCal.rds")
+```
+
+
+
+Column {data-width=220}
+-----------------------------------------------------------------------
+
+
+### RegArima
+
+```{r}
+tt <- round(ber$components$AT00$output$regarima$regression.coefficients,4)
+tt <- as.data.frame(tt)
+tt$Regressor <- rownames(tt)
+tt1 <- as.data.table(tt[, c(4, 1, 2, 3)])
+sticky_style <- list(backgroundColor = "#f7f7f7")
+reactable(tt1, resizable = TRUE,
+              columns = list(
+                Regressor = colDef(
+                  #filterable = TRUE,
+                  sticky = "left",
+                  style = sticky_style,
+                  headerStyle = sticky_style
+                )
+              )
+    )
+```
+
+```{r}
+
+```
+
+
+### Arima-Model {.value-box}
+```{r}
+mod <- q[q$component == "AT00", 8]
+valueBox(mod)
+```
+
+### LOG-Transformation {.value-box}
+```{r}
+loga <- q[q$component == "AT00", 7]
+valueBox(loga)
+```
+
+### Quality Indicator {.value-box}
+```{r}
+q1 = paste0("Q = 1.25")
+valueBox(q1,
+         color = ifelse(q1 > 1, "danger", "primary"))
+```
+
+
+# TRAMO - SEATS
+
+## Row
+
+## Column {data-width="650"}
+
+### Chart A
+
+```{r}
+
+```
+
+## Column {data-width="350"}
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```

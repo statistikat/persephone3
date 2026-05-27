@@ -1,0 +1,221 @@
+---
+title: "Persephone 3 Dashboard"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+library(shiny)
+library(dplyr)
+devtools::load_all()
+# deine funktion laden
+syntaxDir <- usethis::proj_get()
+source(file.path(syntaxDir, "tests/dashboard.R"))
+
+# Beispiel-Objekte
+set.seed(123)
+
+# Dummy: ersetze durch echtes persephone hts_object
+hts_object <- list(
+  TS_1 = perX13(AirPassengers),
+  TS_2 = perX13(AirPassengers),
+  TS_3 = perX13(AirPassengers)
+)
+
+qr_table <- data.frame(
+  series = names(hts_object),
+  quality = runif(length(hts_object))
+)
+tags$style(HTML(
+  "
+  table.dataTable tbody tr {
+    transition: all 0.2s ease;
+  }
+
+  table.dataTable tbody tr:hover {
+    background-color: #e3f2fd !important;
+    transform: scale(1.01);
+  }
+
+  table.dataTable tbody tr.selected {
+    background-color: #1976D2 !important;
+    color: white;
+    font-weight: bold;
+  }
+"
+))
+
+dashboard_cache <- reactiveValues()
+```
+
+Row
+-------------------------------------
+
+### Übersicht
+
+```{r}
+h4("👉 Bitte eine Serie auswählen (Zeile anklicken)")
+
+qr_table_view <- qr_table
+qr_table_view$select <- "👉"
+qr_table_view <- qr_table_view[c("select", "series", "quality")]
+
+output$table <- renderDT({
+  datatable(
+    qr_table_view,
+    rownames = FALSE,
+    selection = list(mode = "single", target = "row"),
+    options = list(
+      pageLength = 10,
+      dom = "tip",
+      rowCallback = JS(
+        "
+        function(row, data) {
+          $(row).css('cursor', 'pointer');
+        }
+      "
+      )
+    ),
+    class = "stripe hover compact"
+  )
+})
+
+div(
+  style = "height: calc(100vh - 200px); overflow-y: auto;",
+  DTOutput("table")
+)
+```
+
+Row
+-------------------------------------
+
+### Details
+
+```{r}
+div(
+  style = "height: 100%; overflow-y:auto;",
+  tabsetPanel(
+    id = "details_tabs",
+    tabPanel("Start", "Bitte eine Serie auswählen")
+  )
+)
+```
+
+```{r}
+# hält offene Tabs
+open_tabs <- reactiveValues(tabs = character())
+
+# close handler
+observeEvent(
+  input$close_tab,
+  {
+    tab_id <- input$close_tab
+    
+    req(tab_id %in% open_tabs$tabs)
+    
+    removeTab("details_tabs", target = tab_id)
+    open_tabs$tabs <- setdiff(open_tabs$tabs, tab_id)
+  },
+  ignoreInit = TRUE
+)
+
+last_selected <- reactiveVal(NULL)
+
+observeEvent(input$table_rows_selected, {
+  i <- input$table_rows_selected
+  
+  # nichts auswählen → nichts tun
+  if (is.null(i) || length(i) == 0) {
+    return()
+  }
+  if (length(i) != 1) {
+    return()
+  }
+  
+  current_series <- qr_table$series[i]
+  
+  # gleiche Zeile nochmal geklickt → Tab aktivieren
+  if (identical(last_selected(), current_series)) {
+    series_name <- current_series
+    req(series_name %in% names(hts_object))
+    tab_id <- paste0("tab_", series_name)
+    
+    if (tab_id %in% open_tabs$tabs) {
+      updateTabsetPanel(session, "details_tabs", selected = tab_id)
+    }
+    return()
+  }
+  
+  # merken
+  last_selected(current_series)
+  
+  series_name <- current_series
+  tab_id <- paste0("tab_", series_name)
+  
+  # Tab existiert schon → nur aktivieren
+  if (tab_id %in% open_tabs$tabs) {
+    updateTabsetPanel(session, "details_tabs", selected = tab_id)
+    return()
+  }
+  
+  insertTab(
+    inputId = "details_tabs",
+    target = "Start",
+    position = "after",
+    select = TRUE,
+    
+    tabPanel(
+      title = tagList(
+        series_name,
+        # tags$button(
+        #   type = "button",
+        #   class = "btn btn-link btn-xs",
+        #   onclick = sprintf(
+        #     "Shiny.setInputValue('close_tab', '%s', {priority: 'event'})",
+        #     tab_id
+        #   ),
+        #   icon("times")
+        # )
+        tags$span(
+          onclick = sprintf(
+            "Shiny.setInputValue('close_tab', '%s', {priority: 'event'})",
+            tab_id
+          ),
+          style = "
+    margin-left:8px;
+    color:#bbb;
+    cursor:pointer;
+    font-size:14px;
+  ",
+  onmouseover = "this.style.color='#ff4444';",
+  onmouseout = "this.style.color='#bbb';",
+  "✕"
+        )
+      ),
+  value = tab_id,
+  
+  fluidRow(
+    column(12, uiOutput(paste0("dash_", series_name)))
+  )
+    )
+  )
+  
+  open_tabs$tabs <- c(open_tabs$tabs, tab_id)
+  
+  output[[paste0("dash_", series_name)]] <- renderUI({
+    if (!is.null(dashboard_cache[[series_name]])) {
+      return(dashboard_cache[[series_name]])
+    }
+    
+    obj <- hts_object[[series_name]]
+    ui <- persephone_dashboard(obj)
+    
+    dashboard_cache[[series_name]] <- ui
+    ui
+  })
+})
+```
