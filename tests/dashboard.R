@@ -98,7 +98,7 @@ quad_plot_panel <- function(p11, p12, p21, p22) {
   classify_td_ftest <- function(p) {
     if (is.null(p) || length(p) == 0 || is.na(p)) return("Undefined")
     p <- as.numeric(p[1])
-    if (p >= 0.05) "Good" else "Severe"
+    if (p >= 0.05) "Good" else "Bad"
   }
 
   classify_qstat <- function(q) {
@@ -338,8 +338,8 @@ quad_plot_panel <- function(p11, p12, p21, p22) {
   acf_plot <- render_persephone_plot(plotResiduals(x, which = "acf"), height = "100%")
   pacf_plot <- render_persephone_plot(plotResiduals(x, which = "pacf"), height = "100%")
   resid_qq_plot <- render_persephone_plot(plotResiduals(x, which = "nqq"), height = "100%")
-  
-  
+
+
 
   diag_df <- data.frame(
     Diagnostic = c("Normality", "Independence", "Seasonality", "TD F-test", "SeasQS", "SeasF", "Q1", "Q2"),

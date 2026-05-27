@@ -27,6 +27,15 @@ td7at <- calendar_td(AT, 12, c(2000,1), 480, groups=c(1,2,3,4,5,6,0),
 calendar_td(AT, 12, c(2005,1), 480, groups=c(1,1,1,1,1,0,0),
                      holiday = 7, contrasts = TRUE)
 
+td_at <- calendar_td(
+  calendar = AT,
+  s = g00,
+  holiday = 7,
+  groups = c(1, 2, 3, 4, 5, 6, 0),
+  contrasts = FALSE
+)
+
+
 # Alternativ: aus Persephone ..........................
 td7lpY <- genTd(freq = 12, firstYear = 2000,
                  hd = list("01-01", "01-06", "05-01", "easter+1", "easter+39",
@@ -46,6 +55,16 @@ spec_init <- rjd3x13::x13_spec("RSA3")
 #rjd3x13::userdefined_variables_x13()
 
 my_context <- rjd3toolkit::modelling_context(calendars = list(cal = AT))
+my_context <- modelling_context(variables = list(REGS_TD = td_at))
+spec_new <- set_tradingdays(
+  x = spec_init,
+  option = "UserDefined",
+  uservariable = c("REGS_TD.group_0", "REGS_TD.group_1", "REGS_TD.group_2", "REGS_TD.group_3",
+                   "REGS_TD.group_4", "REGS_TD.group_5", "REGS_TD.group_6"),
+  test = c("Add", "Joint_F")
+)
+serAdj <- x13(g00, spec_new, context = my_context)
+serAdj
 
 #my_context <- rjd3toolkit::modelling_context(variables = list(cal = tdAT7))
 spec_g00 <- rjd3toolkit::set_tradingdays(spec_init,
@@ -68,3 +87,51 @@ sa <- g00_adj$result$final$d11final
 t <- g00_adj$result$final$d12final
 unlist(g00_adj$result$mstats)
 g00_adj$result$diagnostics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ser <- AirPassengers
+BE <- national_calendar(list(
+  fixed_day(7, 21),
+  special_day("NEWYEAR"),
+  special_day("CHRISTMAS"),
+  special_day("MAYDAY"),
+  special_day("EASTERMONDAY"),
+  special_day("ASCENSION"),
+  special_day("WHITMONDAY"),
+  special_day("ASSUMPTION"),
+  special_day("ALLSAINTSDAY"),
+  special_day("ARMISTICE")
+))
+td_be <- calendar_td(
+  calendar = BE,
+  s = ser,
+  holiday = 7,
+  groups = c(1, 1, 1, 2, 2, 3, 0),
+  contrasts = FALSE
+)
+
+my_context <- modelling_context(variables = list(REGS_TD = td_be))
+
+spec_init <- x13_spec("RSA3")
+spec_new <- set_tradingdays(
+  x = spec_init,
+  option = "UserDefined",
+  uservariable = c("REGS_TD.group_0", "REGS_TD.group_1", "REGS_TD.group_2", "REGS_TD.group_3"),
+  test = c("Add", "Joint_F")
+)
+serAdj <- x13(ser, spec_new, context = my_context)
+serAdj
+
