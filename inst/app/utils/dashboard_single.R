@@ -1,4 +1,4 @@
-persephone_dashboard <- function(x, file = NULL, title = "Persephone 3 dashboard") {
+dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")
   miss <- pkgs[!vapply(pkgs, requireNamespace, quietly = TRUE, FUN.VALUE = logical(1))]
@@ -9,43 +9,43 @@ persephone_dashboard <- function(x, file = NULL, title = "Persephone 3 dashboard
 
   # ---- helpers ----
   safe_get <- function(obj, path, default = NULL) {
-  cur <- obj
-  for (nm in path) {
-    if (is.null(cur)) return(default)
+    cur <- obj
+    for (nm in path) {
+      if (is.null(cur)) return(default)
 
-    nxt <- tryCatch({
-      # list/data.frame style
-      if (is.list(cur) || is.data.frame(cur)) {
-        if (nm %in% names(cur)) cur[[nm]] else NULL
+      nxt <- tryCatch({
+        # list/data.frame style
+        if (is.list(cur) || is.data.frame(cur)) {
+          if (nm %in% names(cur)) cur[[nm]] else NULL
 
-      # environment style
-      } else if (is.environment(cur)) {
-        if (exists(nm, envir = cur, inherits = FALSE)) {
-          get(nm, envir = cur, inherits = FALSE)
+          # environment style
+        } else if (is.environment(cur)) {
+          if (exists(nm, envir = cur, inherits = FALSE)) {
+            get(nm, envir = cur, inherits = FALSE)
+          } else {
+            NULL
+          }
+
         } else {
           NULL
         }
+      }, error = function(e) NULL)
 
-      } else {
-        NULL
-      }
-    }, error = function(e) NULL)
-
-    if (is.null(nxt)) return(default)
-    cur <- nxt
+      if (is.null(nxt)) return(default)
+      cur <- nxt
+    }
+    cur
   }
-  cur
-}
 
-quad_plot_panel <- function(p11, p12, p21, p22) {
-  htmltools::tags$div(
-    class = "quad-grid",
-    htmltools::tags$div(class = "quad-cell", p11),
-    htmltools::tags$div(class = "quad-cell", p12),
-    htmltools::tags$div(class = "quad-cell", p21),
-    htmltools::tags$div(class = "quad-cell", p22)
-  )
-}
+  quad_plot_panel <- function(p11, p12, p21, p22) {
+    htmltools::tags$div(
+      class = "quad-grid",
+      htmltools::tags$div(class = "quad-cell", p11),
+      htmltools::tags$div(class = "quad-cell", p12),
+      htmltools::tags$div(class = "quad-cell", p21),
+      htmltools::tags$div(class = "quad-cell", p22)
+    )
+  }
 
   first_non_null <- function(...) {
     vals <- list(...)
@@ -329,16 +329,25 @@ quad_plot_panel <- function(p11, p12, p21, p22) {
   st_q2    <- classify_qstat(q2)
 
   # ---- Persephone native plots as widgets ----
-  original_plot  <- render_persephone_plot(plot(x), height = "320px")
-  si_plot        <- render_persephone_plot(plotSiRatios(x), height = "320px")
-  spec_orig_plot <- render_persephone_plot(plotSpectrum(x, tsType = "original"),  height = "320px")
-  spec_sa_plot   <- render_persephone_plot(plotSpectrum(x, tsType = "sa"),        height = "320px")
-  spec_res_plot  <- render_persephone_plot(plotSpectrum(x, tsType = "residuals"), height = "320px")
-  resid_density_plot <- render_persephone_plot(plotResiduals(x, which = "sreshist"), height = "100%")
-  acf_plot <- render_persephone_plot(plotResiduals(x, which = "acf"), height = "100%")
-  pacf_plot <- render_persephone_plot(plotResiduals(x, which = "pacf"), height = "100%")
-  resid_qq_plot <- render_persephone_plot(plotResiduals(x, which = "nqq"), height = "100%")
+  # original_plot  <- render_persephone_plot(plot(x), height = "320px")
+  # si_plot        <- render_persephone_plot(plotSiRatios(x), height = "320px")
+  # spec_orig_plot <- render_persephone_plot(plotSpectrum(x, tsType = "original"),  height = "320px")
+  # spec_sa_plot   <- render_persephone_plot(plotSpectrum(x, tsType = "sa"),        height = "320px")
+  # spec_res_plot  <- render_persephone_plot(plotSpectrum(x, tsType = "residuals"), height = "320px")
+  # resid_density_plot <- render_persephone_plot(plotResiduals(x, which = "sreshist"), height = "100%")
+  # acf_plot <- render_persephone_plot(plotResiduals(x, which = "acf"), height = "100%")
+  # pacf_plot <- render_persephone_plot(plotResiduals(x, which = "pacf"), height = "100%")
+  # resid_qq_plot <- render_persephone_plot(plotResiduals(x, which = "nqq"), height = "100%")
 
+  original_plot  <- function() render_persephone_plot(plot(x))
+  si_plot        <- function() render_persephone_plot(plotSiRatios(x))
+  spec_orig_plot <- function() render_persephone_plot(plotSpectrum(x, tsType = "original"))
+  spec_sa_plot   <- function() render_persephone_plot(plotSpectrum(x, tsType = "sa"))
+  # spec_res_plot  <- function() render_persephone_plot(plotSpectrum(x, tsType = "residuals"))# wird momentan noch nirgends verwendet
+  resid_density_plot <- function() render_persephone_plot(plotResiduals(x, which = "sreshist"))
+  acf_plot  <- function() render_persephone_plot(plotResiduals(x, which = "acf"))
+  pacf_plot <- function() render_persephone_plot(plotResiduals(x, which = "pacf"))
+  resid_qq_plot <- function() render_persephone_plot(plotResiduals(x, which = "nqq"))
 
 
   diag_df <- data.frame(
@@ -554,27 +563,29 @@ quad_plot_panel <- function(p11, p12, p21, p22) {
         ),
 
         # 2) original series
-        card("Original series", original_plot),
+        # statt card("Original series", original_plot),
+        card("Original series", original_plot()),
 
+        # für alle anderen auch
         # 3) SI ratios
-        card("SI ratios", si_plot),
+        card("SI ratios", si_plot()),
 
         # 4) spectrum original
-        card("Spectrum: original series", spec_orig_plot),
+        card("Spectrum: original series", spec_orig_plot()),
 
         # 5) spectrum sa
-        card("Spectrum: seasonally adjusted", spec_sa_plot),
+        card("Spectrum: seasonally adjusted", spec_sa_plot()),
 
         # 6) spectrum residuals
         card(
-            "Residual diagnostics",
-            quad_plot_panel(
-              resid_density_plot,  # top-left
-              resid_qq_plot,       # top-right
-              acf_plot,            # bottom-left
-              pacf_plot            # bottom-right
-            )
-          ),
+          "Residual diagnostics",
+          quad_plot_panel(
+            resid_density_plot(),  # top-left
+            resid_qq_plot(),       # top-right
+            acf_plot(),            # bottom-left
+            pacf_plot()            # bottom-right
+          )
+        ),
 
         # 9) diagnostics
         card(
