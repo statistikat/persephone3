@@ -7,6 +7,21 @@ source(file.path("modules", "mod_table.R"), local = TRUE)
 source(file.path("modules", "mod_series.R"), local = TRUE)
 source(file.path("utils", "dashboard_single.R"), local = TRUE)
 
+get_series_by_path <- function(hts, path) {
+
+  parts <- strsplit(path, "/")[[1]]
+
+  obj <- hts
+
+  if (parts[1] != "total aggregate") {
+    for (p in parts) {
+      obj <- obj$components[[p]]
+    }
+  }
+
+  obj
+}
+
 server <- function(input, output, session) {
 
   # 👉 R6 Objekt holen
@@ -68,7 +83,8 @@ server <- function(input, output, session) {
           mod_series_server(
             id,
             reactive({
-              if (s == "aggregate") hts else hts$components[[s]]
+              #if (s == "aggregate") hts else hts$components[[s]]
+              get_series_by_path(hts, s)
             })
           )
         })

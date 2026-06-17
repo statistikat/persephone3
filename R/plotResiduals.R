@@ -115,15 +115,31 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Normal Q-Q Plot"
     }
 
-    result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
-    result <- data.frame(date = paste0(
-      c(floor(time(result) + .01)), "-",
-      stringfix(c(cycle(result)), 2, "0"), "-01"),
-      y = c(result))
+    # result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
+    # result <- data.frame(date = paste0(
+    #   c(floor(time(result) + .01)), "-",
+    #   stringfix(c(cycle(result)), 2, "0"), "-01"),
+    #   y = c(result))
+    #
+    # p <- ggplot(result, aes(sample = y)) +
+    #   stat_qq() +
+    #   stat_qq_line(color = "red") +
+    #   xlab("Theoretical Quantiles") +
+    #   ylab("Standardized Residuals") +
+    #   ggtitle(main) +
+    #   theme_bw()
 
-    p <- ggplot(result, aes(sample = y)) +
-      stat_qq() +
-      stat_qq_line(color = "red") +
+    result <- as.numeric(x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser)
+    result <- qqnorm(result, plot.it = FALSE)
+
+    result <- data.frame(
+      x = result$x,
+      y = result$y
+    )
+
+    p <- ggplot(result, aes(x = x, y = y)) +
+      geom_point() +
+      geom_abline(slope = 1, intercept = 0, color = "red") +
       xlab("Theoretical Quantiles") +
       ylab("Standardized Residuals") +
       ggtitle(main) +

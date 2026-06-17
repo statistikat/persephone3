@@ -34,8 +34,16 @@ ui <- fluidPage(
 
     tabs.disableSelection();
   });
+")),
+    tags$style(HTML("
+  table.dataTable tbody td {
+    white-space: normal !important;
+    padding-left: 0 !important;
+  }
+  .series-cell {
+    display: inline-block;
+  }
 "))
-
   ),
 
   titlePanel("Persephone3 Dashboard"),
