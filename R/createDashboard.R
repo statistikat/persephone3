@@ -1,91 +1,45 @@
 createDashboard <- function(x) {
+  app_dir <- system.file("app", package = "persephone3")
+  if (app_dir == "") stop("Could not find the app directory.")
 
-  app_dir <- normalizePath("inst/app")
   pkg_dir <- normalizePath(".")
-
   port <- httpuv::randomPort()
+  shiny_url <- paste0("http://127.0.0.1:", port)
 
-
-  callr::r_bg(
+  p <- callr::r_bg(
     function(app_dir, obj, pkg_dir, port) {
-
       suppressPackageStartupMessages({
         library(shiny)
         devtools::load_all(pkg_dir)
       })
-
-      setwd(app_dir)   # ✅ erst NACH load_all()
-
       options(persephone.dashboard.object = obj)
-
-      shiny::runApp(
-        appDir = app_dir,
-        host = "127.0.0.1",
-        port = port,
-        launch.browser = FALSE
-      )
-
+      shiny::runApp(app_dir, host = "127.0.0.1", port = port, launch.browser = FALSE)
     },
-    args = list(app_dir = app_dir, obj = x, pkg_dir = pkg_dir, port = port),
-    stdout = "|",
-    stderr = "|"
+    args = list(app_dir = app_dir, pkg_dir = pkg_dir, obj = x, port = port),
+    supervise = TRUE
   )
 
-  # ✅ Warten bis Server wirklich läuft
-  url <- paste0("http://127.0.0.1:", port)
-
-  for (i in 1:100) {
-
-    con <- try(suppressWarnings(url(url, open = "rb")), silent = TRUE)
-
+  # Warten bis Server wirklich läuft
+  start_time <- Sys.time()
+  ready <- FALSE
+  max_startup_time <- 10
+  while (difftime(Sys.time(), start_time, units = "secs") < max_startup_time) {
+    con <- try(suppressWarnings(base::url(shiny_url, open = "rb")), silent = TRUE)
     if (!inherits(con, "try-error")) {
       close(con)
+      ready <- TRUE
       break
     }
-
-    Sys.sleep(0.1)
+    Sys.sleep(0.2)
   }
 
-  # ✅ Browser im Hauptprozess öffnen
-  utils::browseURL(url)
+  if (ready) {
+    utils::browseURL(shiny_url)
+    message("Dashboard running at ", shiny_url)
+  } else {
+    p$kill()
+    stop(paste("Dashboard failed to start within", max_startup_time, "seconds."), call. = FALSE)
+  }
 
   invisible(NULL)
 }
-
-# port anpingen
-# Info:
-# Da du jetzt einen neuen Prozess startest:
-# options() wird nicht automatisch übernommen
-# arum übergeben wir obj explizit:
-#
-# Du kannst dir sogar den Prozess zurückgeben lassen:
-#   p <- callr::r_bg(...)
-# Dann kannst du:
-#   p$kill()
-
-
-# # Andre Option:
-# # läuft blocking, d.h.:
-# #   R startet einen HTTP-Server
-# # wartet aktiv auf Requests
-# # kehrt nicht zurück, solange die App läuft# createDashboard <- function(x) {
-# #
-#   if (is.null(x)) {
-#     stop("No object provided")
-#   }
-#
-#   # Objekt global verfügbar machen (clean Lösung)
-#   options(persephone.dashboard.object = x)
-#
-#   app_dir <- system.file("app", package = "persephone3")
-#
-#   if (app_dir == "") {
-#     stop("App directory not found in package.")
-#   }
-#
-#   shiny::runApp(
-#     appDir = app_dir,
-#     launch.browser = TRUE,  # Popup
-#     quiet = TRUE
-#   )
-# }

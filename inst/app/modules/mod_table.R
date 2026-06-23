@@ -10,24 +10,6 @@ mod_table_ui <- function(id) {
 }
 
 # Server
-get_all_series <- function(x, prefix = NULL) {
-  out <- c()
-
-  #current_name <- if (is.null(prefix)) "aggregate" else prefix
-
-  current_name <- if (is.null(prefix)) "total aggregate" else prefix
-
-  out <- c(out, current_name)
-
-  if (!is.null(x$components)) {
-    for (n in names(x$components)) {
-      child_name <- if (is.null(prefix)) n else paste0(prefix, "/", n)
-      out <- c(out, get_all_series(x$components[[n]], child_name))
-    }
-  }
-
-  out
-}
 
 mod_table_server <- function(id, hts) {
   cat("mod_table_server gestartet\n")
@@ -64,35 +46,65 @@ mod_table_server <- function(id, hts) {
     )
 
     # Checkbox-Spalte
-    df$selected <- sprintf(
+    # df$selected <- sprintf(
+    #   '<input type="checkbox" class="row-select" data-id="%s">',
+    #   df$series
+    # )
+    checkboxes <- sprintf(
       '<input type="checkbox" class="row-select" data-id="%s">',
       df$series
     )
 
-    #df <- df[, c("selected", "series")]
+    df$quality <- sapply(df$series, function(s) {
+      tryCatch(
+        get_quality(hts, s),
+        error = function(e) NA_character_
+      )
+    })
 
-    # df <- df[, c("selected", "display", "series")]
-    # colnames(df) <- c("", "Series", "id")
+    df$quality <- tolower(trimws(df$quality))
+
+    quality_map <- c(
+      "good" = 3,
+      "ok" = 2,
+      "warning" = 1,
+      "bad" = 0
+    )
+
+    df$quality_score <- quality_map[df$quality]
+
+    df$quality_score <- quality_map[df$quality]
+    df$quality_score[is.na(df$quality_score)] <- -1
+
+    #df$quality <- runif(length(series_names))
+
     df <- data.frame(
-      selected = df$selected,
-      series_display = df$display, # ← NEUER NAME
-      series_id = df$series,
+      #selected = df$selected,
+      Series = df$display, # ← NEUER NAME
+      #series_id = df$series,
+      Quality = df$quality,
+      #score = df$quality_score,
       stringsAsFactors = FALSE
     )
 
+    #Checkbox separat vorne einfügen
+    df <- cbind(selected = checkboxes, df)
+
+    # DataTables zählt ab 0, nicht ab 1!
     output$tbl <- DT::renderDT({
       DT::datatable(
         df,
         escape = FALSE,
         selection = "none",
-        colnames = c("", "Series", "id"),
+        colnames = c("","Series", "Quality"),
         options = list(
           pageLength = 10,
           dom = "tip",
+          #order = list(list(3, "asc")),
           columnDefs = list(
-            list(orderable = FALSE, targets = 0),
-            list(visible = FALSE, targets = 3)
-            )
+            list(orderable = FALSE, targets = 0) # Die erste Spalte soll NICHT sortierbar sein.
+            #list(visible = FALSE, targets = 3) # score hidden
+          )
         ),
         callback = DT::JS(sprintf(
           "
@@ -148,48 +160,50 @@ mod_table_server <- function(id, hts) {
       )
     })
 
-    # User Event
-    # ---------- User klickt ----------
-    observeEvent(input$row_event, {
-      if (updating()) {
-        return()
-      } # wichtig!
 
-      id <- input$row_event$id
-      checked <- input$row_event$checked
+  # User Event
+  # ---------- User klickt ----------
+  observeEvent(input$row_event, {
+    if (updating()) {
+      return()
+    } # wichtig!
+
+    id <- input$row_event$id
+    checked <- input$row_event$checked
+
+    current <- selected()
+
+    if (checked) {
+      current <- unique(c(current, id))
+    } else {
+      current <- setdiff(current, id)
+    }
+
+    selected(current)
+  })
+
+  # Server Event
+  # ---------- Server zwingt uncheck ----------
+  observeEvent(
+    input$uncheckRow_event,
+    {
+      updating(TRUE) # blockiert Loop
+
+      id <- input$uncheckRow_event
 
       current <- selected()
-
-      if (checked) {
-        current <- unique(c(current, id))
-      } else {
-        current <- setdiff(current, id)
-      }
+      current <- setdiff(current, id)
 
       selected(current)
-    })
 
-    # Server Event
-    # ---------- Server zwingt uncheck ----------
-    observeEvent(
-      input$uncheckRow_event,
-      {
-        updating(TRUE) # blockiert Loop
+      updating(FALSE) # wieder freigeben
+    },
+    ignoreInit = TRUE
+  )
 
-        id <- input$uncheckRow_event
-
-        current <- selected()
-        current <- setdiff(current, id)
-
-        selected(current)
-
-        updating(FALSE) # wieder freigeben
-      },
-      ignoreInit = TRUE
-    )
-
-    return(selected) # GANZ WICHTIG
+  return(selected) # GANZ WICHTIG
   }) # schließt moduleServer
 } # schließt mod_table_server
+
 
 # bewusst vereinfacht – du kannst deine Checkbox-Logik später wieder einbauen
