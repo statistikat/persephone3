@@ -1,0 +1,16 @@
+perX13      perTramo
+   │           │
+   └────┬──────┘
+        ↓
+     perBatch
+        ↓
+     perHts
+
+persephone (R6)
+   │
+   ├── persephoneSingle
+   │       ├── x13Single
+   │       └── tramoseatsSingle
+   │
+   └── multipleTimeSeries
+           └── hierarchicalTimeSeries

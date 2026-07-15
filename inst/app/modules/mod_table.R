@@ -1,28 +1,38 @@
 # UI
 
+#library(shinycssloaders)
+
 mod_table_ui <- function(id) {
   ns <- NS(id)
 
   tagList(
     h4("Select series"),
-    DT::DTOutput(ns("tbl"))
+    shinycssloaders::withSpinner(
+      DT::DTOutput(ns("tbl")),
+      type = 5,
+      color = "#0066CC",
+      caption = "Loading series ..."
+    )
   )
 }
 
 # Server
 
 mod_table_server <- function(id, hts) {
-  cat("mod_table_server gestartet\n")
+  cat("mod_table_server started\n")
+  cat("hts class:", class(hts), "\n")
+
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # STATE
-    updating <- reactiveVal(FALSE) # HIER !!!
-    selected <- reactiveVal(character()) # bleibt auch hier
+    updating <- reactiveVal(FALSE)
+    selected <- reactiveVal(character())
 
-    # series_names <- c("aggregate", names(hts$components))
-
+    cat("Getting series names...\n")
     series_names <- get_all_series(hts)
+    cat("Found", length(series_names), "series\n")
+    cat("Series:", paste(series_names, collapse = ", "), "\n")
 
     # 1. DataFrame zuerst anlegen
     df <- data.frame(
@@ -34,11 +44,6 @@ mod_table_server <- function(id, hts) {
     df$level <- stringr::str_count(df$series, "/")
 
     # 3. Anzeige-Spalte (Einrückung + schöner Name)
-    # df$display <- paste0(
-    #   strrep("&nbsp;&nbsp;&nbsp;&nbsp;", df$level),
-    #   ifelse(df$level > 0, "▸ ", ""),
-    #   sub(".*/", "", df$series)
-    # )
     df$display <- paste0(
       strrep("&nbsp;&nbsp;", df$level),
       ifelse(df$level > 0, "▸ ", ""),
@@ -46,10 +51,6 @@ mod_table_server <- function(id, hts) {
     )
 
     # Checkbox-Spalte
-    # df$selected <- sprintf(
-    #   '<input type="checkbox" class="row-select" data-id="%s">',
-    #   df$series
-    # )
     checkboxes <- sprintf(
       '<input type="checkbox" class="row-select" data-id="%s">',
       df$series
@@ -58,7 +59,10 @@ mod_table_server <- function(id, hts) {
     df$quality <- sapply(df$series, function(s) {
       tryCatch(
         get_quality(hts, s),
-        error = function(e) NA_character_
+        error = function(e) {
+          cat("Error getting quality for", s, ":", conditionMessage(e), "\n")
+          NA_character_
+        }
       )
     })
 
@@ -72,43 +76,43 @@ mod_table_server <- function(id, hts) {
     )
 
     df$quality_score <- quality_map[df$quality]
-
-    df$quality_score <- quality_map[df$quality]
     df$quality_score[is.na(df$quality_score)] <- -1
 
-    #df$quality <- runif(length(series_names))
-
     df <- data.frame(
-      #selected = df$selected,
-      Series = df$display, # ← NEUER NAME
-      #series_id = df$series,
+      Series = df$display,
       Quality = df$quality,
-      #score = df$quality_score,
       stringsAsFactors = FALSE
     )
 
     #Checkbox separat vorne einfügen
     df <- cbind(selected = checkboxes, df)
 
+    cat("DataFrame created with", nrow(df), "rows\n")
+    print(df)
+
     # DataTables zählt ab 0, nicht ab 1!
     output$tbl <- DT::renderDT({
+      cat("Rendering DT table...\n")
       DT::datatable(
         df,
         escape = FALSE,
         selection = "none",
-        colnames = c("","Series", "Quality"),
+        colnames = c("", "Series", "Quality"),
         options = list(
           pageLength = 10,
           dom = "tip",
-          #order = list(list(3, "asc")),
           columnDefs = list(
-            list(orderable = FALSE, targets = 0) # Die erste Spalte soll NICHT sortierbar sein.
-            #list(visible = FALSE, targets = 3) # score hidden
+            list(orderable = FALSE, targets = 0)
           )
         ),
         callback = DT::JS(sprintf(
           "
   var tbl = table;
+
+  // Double-click on column header to reset sorting
+  $(document).on('dblclick', 'table.dataTable thead th', function() {
+    tbl.order([]).draw();
+  });
 
   // Row Click
   tbl.on('click', 'tbody tr', function(e) {
@@ -160,50 +164,48 @@ mod_table_server <- function(id, hts) {
       )
     })
 
+    # User Event
+    # ---------- User klickt ----------
+    observeEvent(input$row_event, {
+      if (updating()) {
+        return()
+      }
 
-  # User Event
-  # ---------- User klickt ----------
-  observeEvent(input$row_event, {
-    if (updating()) {
-      return()
-    } # wichtig!
-
-    id <- input$row_event$id
-    checked <- input$row_event$checked
-
-    current <- selected()
-
-    if (checked) {
-      current <- unique(c(current, id))
-    } else {
-      current <- setdiff(current, id)
-    }
-
-    selected(current)
-  })
-
-  # Server Event
-  # ---------- Server zwingt uncheck ----------
-  observeEvent(
-    input$uncheckRow_event,
-    {
-      updating(TRUE) # blockiert Loop
-
-      id <- input$uncheckRow_event
+      id <- input$row_event$id
+      checked <- input$row_event$checked
 
       current <- selected()
-      current <- setdiff(current, id)
+
+      if (checked) {
+        current <- unique(c(current, id))
+      } else {
+        current <- setdiff(current, id)
+      }
 
       selected(current)
+    })
 
-      updating(FALSE) # wieder freigeben
-    },
-    ignoreInit = TRUE
-  )
+    # Server Event
+    # ---------- Server zwingt uncheck ----------
+    observeEvent(
+      input$uncheckRow_event,
+      {
+        updating(TRUE)
 
-  return(selected) # GANZ WICHTIG
-  }) # schließt moduleServer
-} # schließt mod_table_server
+        id <- input$uncheckRow_event
 
+        current <- selected()
+        current <- setdiff(current, id)
+
+        selected(current)
+
+        updating(FALSE)
+      },
+      ignoreInit = TRUE
+    )
+
+    return(selected)
+  })
+}
 
 # bewusst vereinfacht – du kannst deine Checkbox-Logik später wieder einbauen

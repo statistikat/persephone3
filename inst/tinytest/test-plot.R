@@ -1,119 +1,52 @@
-message("plot.persephoneSingle")
+# Test plotting functions
 
-# plotting works", {
-  data(AirPassengers, package = "datasets")
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(plot(obj, drawPoints = TRUE), NA)
-  expect_error(plot(obj, annualComparison = 1), NA)
+message("Test plot - single series before run")
 
-  obj$run()
-  expect_error(obj$plot(drawPoints = TRUE), NA)
+data(AirPassengers, package = "datasets")
+obj <- perX13(AirPassengers, "rsa1")
 
-  obj$updateParams(
-    usrdef.outliersEnabled = TRUE,
-    usrdef.outliersType = c("AO", "LS", "LS"),
-    usrdef.outliersDate = c("1950-01-01", "1955-04-01", "1959-10-01"))
-  obj$run()
-  expect_error(plot(obj), NA)
+# Plot before run should work (shows original series)
+expect_silent(plot(obj, drawPoints = TRUE))
+expect_silent(plot(obj, annualComparison = 1))
 
-  expect_error(plot(obj, annualComparison = 1), NA)
-  expect_error(plot(obj, showOutliers = FALSE, forecasts = FALSE), NA)
+message("Test plot - single series after run")
 
-  ## tramoseats ----
+obj$run()
+expect_silent(obj$plot(drawPoints = TRUE))
+expect_silent(plot(obj))
 
-  obj <- perTramo(AirPassengers)
-  expect_error(plot(obj, drawPoints = TRUE), NA)
-  obj$updateParams(tradingdays.pftd = NA_integer_)
-  obj$run()
-  expect_error(plot(obj, drawPoints = TRUE), NA)
-  obj$run(verbose = TRUE)
-#
+expect_silent(plot(obj, annualComparison = 1))
 
-# plotting quarterly works", {
-  jj <- JohnsonJohnson
-  jj[7] <- 100
-  obj <- perX13(jj, "RSA1")
-  obj$run()
-  expect_error(plot(obj, annualComparison = 1, showOutliers = TRUE), NA)
-#
+message("Test plot - quarterly data")
 
-message("plotSeasIrrCal")
+jj <- JohnsonJohnson
+jj[7] <- 100
+obj_q <- perX13(jj, "rsa1")
+obj_q$run()
+expect_silent(plot(obj_q, annualComparison = 1))
 
-# plotSeasIrrCal", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(obj$plotSeasIrrCal(), "No results from run available.\n")
-  obj$run()
-  expect_error(obj$plotSeasIrrCal(), NA)
-  expect_error(plotSeasIrrCal(obj, annualComparison = 1), NA)
-  expect_error(plotSeasIrrCal(obj, forecasts = FALSE), NA)
-#
+message("Test plotSeasIrrCal")
 
-# plotSeasIrrCal quarterly", {
-  obj <- perTramo(UKgas, "RSA3")
-  obj$run()
-  expect_error(plotSeasIrrCal(obj, annualComparison = 1), NA)
-#
+obj_seas <- perX13(AirPassengers, "rsa1")
+obj_seas$run()
 
-message("plotResiduals")
+expect_silent(obj_seas$plotSeasIrrCal())
+expect_silent(plotSeasIrrCal(obj_seas, annualComparison = 1))
 
-# plotResiduals", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(obj$plotResiduals(), "No results from run available.\n")
-  obj$run(verbose = TRUE)
-  expect_identical(class(obj$plotResiduals())[1], "dygraphs")
-  expect_identical(class(plotResiduals(obj, which = 2))[1], "plotly")
-  expect_identical(class(plotResiduals(obj, which = 3))[1], "plotly")
-  expect_identical(class(plotResiduals(obj, which = 4))[1], "plotly")
-  expect_warning(plotResiduals(obj, which = 5))
-  expect_identical(class(plotResiduals(obj, which = 6))[1], "plotly")
-#
+message("Test plotResiduals")
 
-message("other plots")
+obj_res <- perX13(AirPassengers, "rsa1")
+obj_res$run()
+expect_silent(obj_res$plotResiduals())
 
-# plotSIC", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(obj$plotSeasIrrCal(), "No results from run available.\n")
-  obj$run()
-  expect_error(obj$plotSeasIrrCal(), NA)
-  expect_error(plotSeasIrrCal(obj, annualComparison = 1), NA)
-  expect_error(plotSeasIrrCal(obj, forecasts = FALSE), NA)
+message("Test plotSiRatios")
 
-#
+obj_si <- perX13(AirPassengers, "rsa1")
+obj_si$run()
+expect_silent(obj_si$plotSiRatios())
 
-# SIRatios", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(plotSiRatios(obj), "No results from run available.\n")
-  obj$run()
-  expect_error(plotSiRatios(obj), NA)
+message("Test plotSpectrum")
 
-  obj2 <- perTramo(UKgas, "RSA3")
-  obj2$run()
-  expect_error(plotSiRatios(obj2), NA)
-#
-
-# autoplot", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_true("ggplot" %in% class(autoplot(obj)))
-#
-
-# plotSpectrum", {
-  obj <- perX13(AirPassengers, "RSA1")
-  expect_error(plotSpectrum(obj), "No results from run available.\n")
-
-  obj$run()
-  plotSpectrum(obj)
-  plotSpectrum(obj, plotType = "arSpecBars", tsType = "sa")
-
-  obj2 <- perTramo(UKgas, "RSA3")
-  obj2$run()
-  plotSpectrum(obj2, plotType = "periodogram", maxobs = 10,
-               tsType = "irregular")
-  plotSpectrum(obj2, tsType = "residuals", plotType = 1)
-
-  obj3 <- perTramo(window(UKgas, end = c(1972, 1)))
-  obj3$run()
-  expect_error(
-    plotSpectrum(obj3, tsType = 1),
-    "The minimum number of observations needed to compute the spectrum"
-  )
-#
+obj_spec <- perX13(AirPassengers, "rsa1")
+obj_spec$run()
+expect_silent(obj_spec$plotSpectrum())

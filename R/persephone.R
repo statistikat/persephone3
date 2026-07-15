@@ -319,6 +319,12 @@ userdefined_default <- c(
   "diagnostics.td-sa-last",
   "diagnostics.td-i-all",
   "diagnostics.td-i-last",
+  "diagnostics.seas-res-periodogram",
+  "diagnostics.seas-sa-periodogram",
+  "diagnostics.seas-i-periodogram",
+  "diagnostics.seas-res-spectralpeaks",
+  "diagnostics.seas-sa-spectralpeaks",
+  "diagnostics.seas-i-spectralpeaks",
   "m-statistics.q",
   "m-statistics.q-m2",
   "quality.summary"

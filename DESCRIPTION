@@ -29,7 +29,17 @@ Imports:
     timeDate,
     magrittr,
     zoo,
-    lubridate
+    lubridate,
+    shiny (>= 1.7.0),
+    httpuv,
+    callr,
+    devtools,
+    DT,
+    shinycssloaders,
+    rlang (>= 1.2.0),
+    stringr,
+    base64enc,
+    htmltools
 Suggests:
     knitr,
     rmarkdown,
@@ -38,7 +48,8 @@ Suggests:
     forecast,
     bookdown,
     base64enc,
-    htmltools
+    htmltools,
+    shinycssloaders
 Remotes:
      github::rjdverse/rjd3toolkit@*release,
      github::rjdverse/rjd3tramoseats@*release,

@@ -1,0 +1,312 @@
+---
+title: "Persephone3 Dashboard"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+runtime: shiny
+params:
+  hts_object: NULL
+  hts_name: NULL
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(DT)
+library(shiny)
+library(dplyr)
+devtools::load_all()
+
+syntaxDir <- usethis::proj_get()
+#source(system.file("tests", "dashboard.R", package = "deinPackage"))
+
+# 👉 Objekt aus Parameter holen
+hts_object <- params$hts_object
+hts_name <- params$hts_name
+
+# Basis-Check
+if (is.null(hts_object)) {
+  stop("hts_object wurde nicht übergeben!")
+}
+
+# qr_table <- data.frame(
+#   series = names(hts_object),
+#   quality = runif(length(hts_object))
+# )
+
+# Aggregate + Komponenten
+components <- hts_object$components
+
+# series_names <- c("aggregate", names(components))
+# 
+# qr_table <- data.frame(
+#   series = series_names,
+#   quality = runif(length(series_names))
+# )
+
+# Aggregate + Komponenten
+components <- hts_object$components
+
+series_names <- c("aggregate", names(components))
+
+# Diagnostics holen
+diag <- hts_object$diagnosticsTable()
+
+# suche die Spalte, die die Seriennamen enthält
+name_col <- setdiff(names(diag), c("Q", "Q2", "TotalQ", "seasonality"))[1]
+
+# Mapping
+qr_table <- data.frame(
+  series = series_names,
+  seasonality = NA,
+  Q = NA,
+  Q2 = NA,
+  TotalQ = NA,
+  stringsAsFactors = FALSE
+)
+
+# Child-Serien befüllen über echten Namen
+for (i in seq_len(nrow(diag))) {
+  
+  sn <- diag[[name_col]][i]
+  
+  if (sn %in% qr_table$series) {
+    qr_table$seasonality[qr_table$series == sn] <- diag$seasonality[i]
+    qr_table$Q[qr_table$series == sn]          <- diag$Q[i]
+    qr_table$Q2[qr_table$series == sn]         <- diag$Q2[i]
+    qr_table$TotalQ[qr_table$series == sn]     <- diag$TotalQ[i]
+  }
+}
+
+tags$style(HTML("
+table.dataTable tbody tr {
+  transition: all 0.2s ease;
+}
+table.dataTable tbody tr:hover {
+  background-color: #e3f2fd !important;
+  transform: scale(1.01);
+}
+table.dataTable tbody tr.selected {
+  background-color: #1976D2 !important;
+  color: white;
+  font-weight: bold;
+}
+"))
+# oder alternativ blaues Highlight enfernen, dafür
+# tags$style(HTML("
+# table.dataTable tbody tr.selected {
+#   background-color: transparent !important;
+# }
+# "))
+
+dashboard_cache <- reactiveValues()
+```
+
+Row
+-------------------------------------
+
+
+### Overview: `r hts_name`
+
+```{r}
+h4("Please select one or more series (click on a row)")
+
+qr_table_view <- qr_table
+
+# qr_table_view$selected <- sprintf(
+#   '<input type="checkbox" class="row-select" data-id="%s">',
+#   qr_table_view$series
+# )
+qr_table_view$selected <- sprintf(
+  '<input type="checkbox" class="row-select" data-id="%s" style="transform: scale(1.2); cursor:pointer;">',
+  qr_table_view$series
+)
+
+#qr_table_view <- qr_table_view[c("selected", "series", "quality")]
+qr_table_view <- qr_table_view[c("selected", "series", "seasonality","Q", "Q2", "TotalQ")]
+
+output$table <- renderDT({
+  datatable(
+    qr_table_view,
+    rownames = FALSE,
+    escape = FALSE,
+    selection = "none",
+    options = list(
+      pageLength = 10,
+      dom = "tip"
+    ),
+callback = JS("
+
+  // 👉 Klick auf ganze Zeile toggelt Checkbox
+  table.on('click', 'tbody tr', function(e) {
+    if ($(e.target).is('input')) return;
+    
+    var checkbox = $(this).find('input.row-select');
+    checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+  });
+
+  // 👉 Checkbox Event → Shiny + Blau markieren
+  table.on('change', '.row-select', function() {
+    
+    var id = $(this).data('id');
+    var checked = $(this).is(':checked');
+    var row = $(this).closest('tr');
+    
+    if (checked) {
+      row.addClass('selected');
+    } else {
+      row.removeClass('selected');
+    }
+    
+    Shiny.setInputValue('row_checkbox', {
+      id: id,
+      checked: checked,
+      nonce: Math.random()
+    });
+  });
+
+  // ✅ NEU: Checkbox zurücksetzen von Shiny
+  Shiny.addCustomMessageHandler('uncheckRow', function(id) {
+    
+    $('input.row-select[data-id=\"' + id + '\"]')
+      .prop('checked', false)
+      .closest('tr')
+      .removeClass('selected');
+  });
+
+"),
+    class = "stripe hover compact"
+  )
+})
+
+div(
+  style = "height: calc(100vh - 200px); overflow-y: auto;",
+  DTOutput("table")
+)
+```
+
+Row
+-------------------------------------
+
+### Details
+
+```{r}
+div(
+  style = "height: 100%; overflow-y:auto;",
+  tabsetPanel(
+    id = "details_tabs",
+    tabPanel("Start", "Please select a series")
+  )
+)
+```
+
+```{r}
+# hält offene Tabs
+open_tabs <- reactiveValues(tabs = character())
+
+# close handler
+# observeEvent(
+#   input$close_tab,
+#   {
+#     tab_id <- input$close_tab
+#     
+#     req(tab_id %in% open_tabs$tabs)
+#     
+#     removeTab("details_tabs", target = tab_id)
+#     open_tabs$tabs <- setdiff(open_tabs$tabs, tab_id)
+#   },
+#   ignoreInit = TRUE
+# )
+observeEvent(
+  input$close_tab,
+  {
+    tab_id <- input$close_tab
+    
+    req(tab_id %in% open_tabs$tabs)
+    
+    removeTab("details_tabs", target = tab_id)
+    open_tabs$tabs <- setdiff(open_tabs$tabs, tab_id)
+    
+    # Seriennamen wieder extrahieren
+    series_name <- sub("^tab_", "", tab_id)
+    
+    # Checkbox + Highlight im Table zurücksetzen
+    session$sendCustomMessage("uncheckRow", series_name)
+  },
+  ignoreInit = TRUE
+)
+
+last_selected <- reactiveVal(NULL)
+
+observeEvent(input$row_checkbox, {
+  
+  series_name <- input$row_checkbox$id
+  checked <- input$row_checkbox$checked
+  
+  tab_id <- paste0("tab_", series_name)
+  
+  if (checked) {
+    
+    # Tab existiert → nur aktivieren
+    if (tab_id %in% open_tabs$tabs) {
+      updateTabsetPanel(session, "details_tabs", selected = tab_id)
+      return()
+    }
+    
+    # neuen Tab erstellen
+    insertTab(
+      inputId = "details_tabs",
+      target = "Start",
+      position = "after",
+      select = TRUE,
+      
+      tabPanel(
+        title = tagList(
+          series_name,
+          tags$span(
+            onclick = sprintf(
+              "Shiny.setInputValue('close_tab', '%s', {priority: 'event'})",
+              tab_id
+            ),
+            style = "margin-left:8px; color:#bbb; cursor:pointer;",
+            "✕"
+          )
+        ),
+        value = tab_id,
+        fluidRow(column(12, uiOutput(paste0("dash_", series_name))))
+      )
+    )
+    
+    open_tabs$tabs <- c(open_tabs$tabs, tab_id)
+    
+    local({
+      sn <- series_name
+      
+      output[[paste0("dash_", sn)]] <- renderUI({
+        if (!is.null(dashboard_cache[[sn]])) {
+          return(dashboard_cache[[sn]])
+        }
+        
+        obj <- if (sn == "aggregate") {
+          hts_object
+        } else {
+          hts_object$components[[sn]]
+        }
+        
+        ui <- persephone_dashboard(obj)
+        dashboard_cache[[sn]] <- ui
+        ui
+      })
+    })
+    
+  } else {
+    
+    # Checkbox deaktiviert → Tab schließen
+    if (tab_id %in% open_tabs$tabs) {
+      removeTab("details_tabs", target = tab_id)
+      open_tabs$tabs <- setdiff(open_tabs$tabs, tab_id)
+    }
+  }
+})
+
+```
+

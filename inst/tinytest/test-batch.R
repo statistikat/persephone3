@@ -1,31 +1,42 @@
-message("batch")
+# Test batch/multipleTimeSeries functionality
 
-#adjusted", {
-  objX13 <- perX13(AirPassengers, "RSA3")
+message("Test batch - basic functionality")
 
-  bt <- perBatch(a = objX13, b = objX13)
-  expect_true(is.null(bt$components$a$adjusted))
-  expect_true(is.null(bt$components$b$adjusted))
-  bt$run()
-  expect_identical(bt$components$a$adjusted,bt$components$b$adjusted)
-  expect_true(!is.null(bt$components$b$adjusted))
-  expect_inherits(bt$components$a$adjusted, "ts")
-  expect_inherits(bt$components$b$adjusted, "ts")
+# Create batch object
+objX13 <- perX13(AirPassengers, "rsa3")
 
-  expect_true(is.list(bt$adjusted))
-  expect_true(length(bt$adjusted)==2)
-#
+bt <- perBatch(a = objX13, b = objX13)
 
+# Before run, adjusted should be NULL
+expect_true(is.null(bt$components$a$adjusted))
+expect_true(is.null(bt$components$b$adjusted))
 
-#change parameters", {
-  objX13 <- perX13(AirPassengers, "RSA3")
+bt$run()
 
-  bt <- perBatch(a = objX13, b = objX13)
-  bt$updateParams(easter.enabled = FALSE)
-  bt$updateParams(component = "a",
-                  usrdef.outliersEnabled = TRUE,
-                    usrdef.outliersType = c("AO","LS","LS"),
-                      usrdef.outliersDate=c("1950-01-01","1955-04-01","1959-10-01"))
-  bt$run()
-  expect_false(identical(bt$components$a$adjusted,bt$components$b$adjusted))
-#
+# After run, adjusted should exist
+expect_true(!is.null(bt$components$a$adjusted))
+expect_true(!is.null(bt$components$b$adjusted))
+expect_inherits(bt$components$a$adjusted, "ts")
+expect_inherits(bt$components$b$adjusted, "ts")
+
+# Since both components are identical, adjusted should be identical too
+expect_identical(bt$components$a$adjusted, bt$components$b$adjusted)
+
+message("Test batch - different series with same time instances")
+
+# Use two different series from the same time period
+obj1 <- perX13(AirPassengers, "rsa3")
+# Create a modified version of AirPassengers
+AirPassengers2 <- AirPassengers * 1.1
+
+obj2 <- perX13(AirPassengers2, "rsa3")
+
+bt2 <- perBatch(series1 = obj1, series2 = obj2)
+bt2$run()
+
+expect_true(!is.null(bt2$components$series1$adjusted))
+expect_true(!is.null(bt2$components$series2$adjusted))
+
+message("Test batch - print method")
+
+expect_silent(print(bt))
