@@ -36,7 +36,7 @@ remotes::install_github("rjdverse/rjd3x13@*release")
 remotes::install_github("rjdverse/rjd3tramoseats@*release")
 
 # install the package from GitHub
-remotes::install_github("statistikat/persephone/tree/persephone3")
+remotes::install_github("statistikat/persephone3")
 ```
 
 ## Usage
@@ -46,7 +46,7 @@ the `run()` method runs the model and `output` gives access to the output object
 `rjd3x13::x13_fast()` or `rjd3tramoseats::tramoseats_fast()`. 
 
 ```{r, message = FALSE}
-library(persephone) #change to persephone3 at some point, still working on some issues
+library(persephone3) 
 # construct a ts-model object
 obj <- perX13(AirPassengers)
 # run the model
