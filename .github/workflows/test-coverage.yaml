@@ -21,6 +21,12 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
       - uses: r-lib/actions/setup-pandoc@v2
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Query dependencies
         run: |
           install.packages('remotes')
@@ -37,14 +43,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          install.packages(c("remotes", "covr"))
-          remotes::install_deps(dependencies = TRUE)
+          install.packages(c("remotes", "covr", "tinytest"))
+          remotes::install_deps(dependencies = TRUE, upgrade = "never")
+          # Install rjd3 packages from GitHub
+          remotes::install_github("rjdverse/rjd3toolkit@*release", upgrade = "never")
+          remotes::install_github("rjdverse/rjd3tramoseats@*release", upgrade = "never")
+          remotes::install_github("rjdverse/rjd3x13@*release", upgrade = "never")
         shell: Rscript {0}
 
       - name: Test coverage
         run: |
           covr::codecov(
-            error = FALSE,
+            error = TRUE,
             quiet = FALSE
           )
         shell: Rscript {0}
