@@ -1,8 +1,5 @@
 ---
-output:
-  github_document:
-    html_preview: true
-always_allow_html: true
+output: github_document
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -50,16 +47,24 @@ the `run()` method runs the model and `output` gives access to the output object
 
 ```{r, message = FALSE}
 library(persephone3)
-# construct a ts-model object
+```
+```{r}
+# construct a seasonal adjustment object for the AirPassengers dataset
 obj <- perX13(AirPassengers)
+
 # run the model
 obj$run()
+
 # access the preprocessing slot of the rjd3 output object
 obj$output$preprocessing
-# visualize the results
-obj$plot() # change to hchart some time
 ```
 
+```{r, message = FALSE, eval = FALSE}
+# visualize the results
+obj$plot()
+```
+
+![](man/figures/README-unnamed-chunk-1-1.png)
 
 ## Further reading
 
