@@ -5,11 +5,10 @@ library(shiny)
 # source("utils/dashboard_single.R", local = TRUE)
 source(file.path("modules", "mod_table.R"), local = TRUE)
 source(file.path("modules", "mod_series.R"), local = TRUE)
-source(file.path("utils", "dashboard_single.R"), local = TRUE)
+source(file.path("utils", "dashboard_single_wrapper.R"), local = TRUE)
 source(file.path("helpers.R"), local = TRUE)
 
 server <- function(input, output, session) {
-
   # 👉 R6 Objekt holen
   hts <- getOption("persephone.dashboard.object")
 
@@ -20,16 +19,17 @@ server <- function(input, output, session) {
   # 👉 Table Modul
   selected_series <- mod_table_server("table", hts)
 
-  prev_selected <- reactiveVal(character())   # ✅ HIER HIN
+  prev_selected <- reactiveVal(character()) # ✅ HIER HIN
 
   # open_tabs <- reactiveVal(character())
 
   observeEvent(
     selected_series(),
     {
-
       current <- selected_series()
-      if (is.null(current)) current <- character()
+      if (is.null(current)) {
+        current <- character()
+      }
 
       previous <- prev_selected()
 
@@ -55,7 +55,7 @@ server <- function(input, output, session) {
               )
             ),
             value = tab_id,
-            div(mod_series_ui(tab_id))   # ✅ HIER
+            div(mod_series_ui(tab_id)) # ✅ HIER
           ),
           target = "Start",
           position = "after",
@@ -87,47 +87,46 @@ server <- function(input, output, session) {
       }
 
       prev_selected(current)
-
     },
     ignoreInit = TRUE
   )
 
-  observeEvent(input$close_tab, {
+  observeEvent(
+    input$close_tab,
+    {
+      tab_id <- input$close_tab
+      sn <- sub("^tab_", "", tab_id)
 
-    tab_id <- input$close_tab
-    sn <- sub("^tab_", "", tab_id)
+      current <- prev_selected()
 
-    current <- prev_selected()
+      # 👉 Position des Tabs
+      idx <- match(sn, current)
 
-    # 👉 Position des Tabs
-    idx <- match(sn, current)
+      next_tab <- "Start" # fallback
 
-    next_tab <- "Start"   # fallback
-
-    if (!is.na(idx) && length(current) > 1) {
-
-      if (idx < length(current)) {
-        # ✅ zuerst rechts
-        next_tab <- paste0("tab_", current[idx + 1])
-      } else {
-        # ✅ sonst links
-        next_tab <- paste0("tab_", current[idx - 1])
+      if (!is.na(idx) && length(current) > 1) {
+        if (idx < length(current)) {
+          # ✅ zuerst rechts
+          next_tab <- paste0("tab_", current[idx + 1])
+        } else {
+          # ✅ sonst links
+          next_tab <- paste0("tab_", current[idx - 1])
+        }
       }
-    }
 
-    # ✅ Tab entfernen
-    removeTab("details_tabs", target = tab_id)
+      # ✅ Tab entfernen
+      removeTab("details_tabs", target = tab_id)
 
-    # ✅ Tabelle sync
-    session$sendCustomMessage("table-uncheckRow", sn)
+      # ✅ Tabelle sync
+      session$sendCustomMessage("table-uncheckRow", sn)
 
-    # ✅ State updaten
-    current <- setdiff(current, sn)
-    prev_selected(current)
+      # ✅ State updaten
+      current <- setdiff(current, sn)
+      prev_selected(current)
 
-    # ✅ neues aktives Tab
-    updateTabsetPanel(session, "details_tabs", selected = next_tab)
-
-  }, ignoreInit = TRUE)
-
+      # ✅ neues aktives Tab
+      updateTabsetPanel(session, "details_tabs", selected = next_tab)
+    },
+    ignoreInit = TRUE
+  )
 }

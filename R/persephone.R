@@ -208,11 +208,11 @@ persephone <- R6::R6Class(
     adjustedDirect = function() {
       self$output$user_defined$sa
     },
-    #' #' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
-    #' #'   `$run()` method is invoked
-    #' spec = function() {
-    #'   private$params_internal
-    #' },
+    # # ' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
+    # # '   `$run()` method is invoked
+    # spec = function() {
+    #   private$params_internal
+    # },
     #' @field forecasts get forecasts from the model
     forecasts = function() {
       self$output$final$forecasts

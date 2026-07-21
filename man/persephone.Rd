@@ -77,12 +77,7 @@ the first time.}
 
 \item{\code{adjusted}}{get the adjusted series}
 
-\item{\code{adjustedDirect}}{see \link{perHts}
-#' @field spec specifications passed to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} when the
-#'   \verb{$run()} method is invoked
-spec = function() {
-private$params_internal
-},}
+\item{\code{adjustedDirect}}{see \link{perHts}}
 
 \item{\code{forecasts}}{get forecasts from the model}
 

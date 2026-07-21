@@ -51,11 +51,7 @@ ht2
 \describe{
 \item{\code{ts}}{the aggregated time series}
 
-\item{\code{params}}{of all components and the aggregated series
-#' @field methodDirect SA method used for the aggregated series
-methodDirect = function() {
-private$method
-},}
+\item{\code{params}}{of all components and the aggregated series}
 
 \item{\code{paramsDirect}}{params of the aggregated series}
 

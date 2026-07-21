@@ -64,18 +64,6 @@ createDashboard_single <- function(
   file = NULL,
   ...
 ) {
-  # Source the internal implementation from inst/app/utils
-  dashboard_file <- system.file(
-    "app/utils/dashboard_single.R",
-    package = "persephone3"
-  )
-  if (dashboard_file == "") {
-    # Fallback for development with devtools::load_all()
-    dashboard_file <- "inst/app/utils/dashboard_single.R"
-  }
-  source(dashboard_file, local = TRUE)
-
-  # Call the internal implementation
   dashboard_single(x, file = file, title = title)
 }
 
@@ -152,17 +140,5 @@ createDashboard_compare <- function(
   file = NULL,
   ...
 ) {
-  # Source the internal implementation from inst/app/utils
-  compare_file <- system.file(
-    "app/utils/dashboard_compare.R",
-    package = "persephone3"
-  )
-  if (compare_file == "") {
-    # Fallback for development with devtools::load_all()
-    compare_file <- "inst/app/utils/dashboard_compare.R"
-  }
-  source(compare_file, local = TRUE)
-
-  # Call the internal implementation
   dashboard_compare(x, y, file = file, title = title)
 }

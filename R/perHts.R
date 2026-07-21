@@ -430,10 +430,10 @@ hierarchicalTimeSeries <- R6::R6Class(
     params = function() {
       c(list(aggregate = private$params_internal), super$params)
     },
-    #' #' @field methodDirect SA method used for the aggregated series
-    #' methodDirect = function() {
-    #'   private$method
-    #' },
+    # # ' @field methodDirect SA method used for the aggregated series
+    # methodDirect = function() {
+    #   private$method
+    # },
     #' @field paramsDirect params of the aggregated series
     paramsDirect = function() {
       private$params_internal
