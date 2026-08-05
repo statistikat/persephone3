@@ -381,7 +381,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @param ... named arguments to be changed (spec options forwarded to updateFun)
     updateParams = function(
       component = "",
-      iterate = FALSE,
+      iterate = TRUE,
       speclist = NULL,
       ...
     ) {

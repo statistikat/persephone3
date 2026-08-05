@@ -1,6 +1,5 @@
 ---
 title: "Hierarchical time series - construction and weights"
-author: "Alexander Kowarik, Gregor de Cillia"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
@@ -9,7 +8,7 @@ vignette: >
   %\VignetteIndexEntry{Hierarchical time series - construction and weights}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -22,29 +21,40 @@ knitr::opts_chunk$set(
 ```
 
 Hierarchical time series are time series that can be divided into sub-series.
-In `persephone`, such objects are created similar to a nested list. The
-following example creates a series with European aggregate based on another aggregate of south and north European countries or their IPI respectively.
+In `persephone3`, such objects are created similar to a nested list. The
+following example creates a series with European aggregates based on export data from different European countries.
 
-First we load the data from the `RJDemetra` and remove the EU aggregate.
+First we load the `Exports` data from `rjd3toolkit`:
 ```{r}
-library(persephone)
-data(ipi_c_eu, package = "RJDemetra")
-ipi_eu <- ipi_c_eu[, -c(28:34)]
+library(persephone3)
+
+data(Exports, package = "rjd3toolkit")
 ```
 
 For all countries' time series we now want to generate a persephone object with Tramo as method.
+
 ```{r}
-ts_28 <- lapply(ipi_eu, perTramo)
+# EU countries only (27 member states, excluding UK and non-EU countries)
+eu_countries <- c("France", "Luxembourg", "Netherlands", "Germany", "Italy",
+                  "Ireland", "Denmark", "Greece", "Portugal",
+                  "Spain", "Sweden", "Finland", "Austria", "Malta", "Estonia",
+                  "Latvia", "Lithuania", "Poland", "Czech.Republic", "Slovakia",
+                  "Hungary", "Slovenia", "Cyprus", "Bulgaria", "Romania", "Croatia")
+
+ts_28 <- lapply(Exports[eu_countries], perTramo)
 ```
 
-We generate a additional layer based on a certain regional grouping of the countries
+We generate a additional layer based on a certain regional grouping of the countries.
 
 ```{r}
-south_eastern_europe <- c("BG","EL","CY","RO")
-northern_europe <- c("DK","FI","SE")
-central_europe <- c("HR","DE","CZ","SK","HU","AT","SI","LU","EE","LT","LV","PL")
-southern_europe <- c("IT","ES","PT","MT")
-western_europe <- c("FR","BE","NL","UK") # without IE (missing from the dataset)
+# Define regional groupings using the actual country names from the dataset
+south_eastern_europe <- c("Greece", "Cyprus", "Bulgaria", "Romania")
+northern_europe <- c("Denmark", "Finland", "Sweden", "Ireland")
+central_europe <- c("Croatia", "Germany", "Czech.Republic", "Slovakia", "Hungary",
+                    "Austria", "Slovenia", "Luxembourg", "Estonia", "Lithuania",
+                    "Latvia", "Poland")
+southern_europe <- c("Italy", "Spain", "Portugal", "Malta")
+western_europe <- c("France", "Netherlands")
 ```
 
 The list argument can be used to create a hierachical persephone object based on a list of persephone objects.
@@ -92,13 +102,13 @@ Weights can be used to customize the aggregation step, so the hierachical time s
 
 The weights parameter will be set as numeric vector with length equal to the number of components.
 
-Almost the same call, but with weights, one for each component and one for all time points.
+Almost the same call, but with weights, one for each component.
 ```{r}
 hts_see <- perHts(list = ts_28[south_eastern_europe], weights=c(1,2,3,4))
-hts_ne <- perHts(list = ts_28[northern_europe], weights = c(5,6,7))
+hts_ne <- perHts(list = ts_28[northern_europe], weights = c(5,6,7,8)) # 4 countries: Denmark, Finland, Sweden, Ireland
 hts_ce <- perHts(list = ts_28[central_europe], weights = rep(1,12))
 hts_se <- perHts(list = ts_28[southern_europe], weights = c(8,9,10,10.5))
-hts_we <- perHts(list = ts_28[western_europe], weights = c(11,12,13,14)) # without IE
+hts_we <- perHts(list = ts_28[western_europe], weights = c(11,12)) # 2 countries: France, Netherlands
 ```
 
 In additional aggregation steps, the weight is automatically summed up. So e.g. the weight for central europe is 12, the sum of 12 times 1.
@@ -127,12 +137,13 @@ knitr::kable(head(ht_europe$weights))
 
 In many scenarios weights are not fixed over time, but change, e.g. if the turnover is used to aggregate a certain production index. In these scenarios weights can be provided as lists of time series or as a mts object.
 
-We are starting with weights equal to 1 and then only change the weight of Austria over time.
+We are starting with weights equal to 1 and then only change the weight of Germany over time.
 
 ```{r}
-weights_eu <- ipi_eu * 0 + 1
+# Convert list to mts (multi-time series) object
+weights_eu <- do.call(cbind, Exports[eu_countries]) * 0 + 1
 weights_eu[is.na(weights_eu)] <- 1
-weights_eu[,"AT"] <- weights_eu[,"AT"]+rlnorm(weights_eu[,"AT"])
+weights_eu[,"Germany"] <- weights_eu[,"Germany"] + rlnorm(nrow(weights_eu))
 ```
 
 
@@ -171,3 +182,13 @@ ht_europe <- perHts(north_part = hts_np,
 
 knitr::kable(head(ht_europe$weights))
 ```
+
+# Next Steps
+
+- See `vignette("persephone3")` for basic usage and template options
+- See `vignette("persephone-plotting")` for visualization methods for hierarchical objects
+- Check `?perHts` for complete documentation on hierarchical time series
+
+# Repository
+
+Source code and issue tracker: [https://github.com/statistikat/persephone3](https://github.com/statistikat/persephone3)

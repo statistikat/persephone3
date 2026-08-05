@@ -8,3 +8,11 @@ docs
 doc
 Meta
 Dev
+/doc/
+/Meta/
+.Rcheck
+*check/
+.posit/
+*.tar.gz
+*.tar.gz.asc
+*.Rout

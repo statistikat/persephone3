@@ -1,0 +1,149 @@
+---
+title: "Hierarchical time series with persephone3"
+description: >
+  Working with hierarchical time series: creating, adjusting, and iterating
+  over multiple levels of aggregation.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Hierarchical time series with persephone3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\VignettePackage{persephone3}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/persephone-hierarchical-",
+  out.width = "100%"
+)
+```
+
+# Introduction
+
+Hierarchical time series are time series that can be divided into sub-series with different levels of aggregation. In `persephone3`, such objects are created similar to a nested list structure.
+
+The following example creates a hierarchical object with two subseries `a` and `b`:
+
+```{r}
+library(persephone3)
+
+hts <- perHts(
+  a = perX13(AirPassengers),
+  b = perTramo(AirPassengers)
+)
+hts
+```
+
+## Running the Model
+
+When the `run()` method of `hts` is invoked, the following adjustments are performed:
+
+1. The aggregate series `a+b` is adjusted and the results are saved in `hts$output`
+2. `a` is adjusted using X-13ARIMA-SEATS
+3. `b` is adjusted using TRAMO/SEATS
+
+The results can be viewed as follows:
+
+```{r}
+display_result <- function(ts) {
+  window(ts, end = c(1949, 6))
+}
+
+hts$run()
+
+# Direct adjustment (seasonally adjusted aggregate series)
+display_result(hts$adjusted)
+
+# Seasonally adjusted component series "a"
+display_result(hts$components$a$adjusted)
+
+# Indirect adjustment (sum of seasonally adjusted components)
+display_result(hts$adjustedIndirect)
+```
+
+The last line displays the results of an indirect adjustment, which amounts to `a$adjusted` + `b$adjusted` in this case.
+
+## Multiple Levels of Hierarchies
+
+For more complex structures with multiple hierarchy levels, `perHts` calls can be nested:
+
+```{r}
+hts_nested <- perHts(
+  hts = hts,
+  hts_child = perHts(
+    a = perX13(AirPassengers)
+  ),
+  b = perTramo(AirPassengers)
+)
+
+hts_nested
+```
+
+As you can see, the structure of `hts` is available within this nested object.
+
+## Iterating Over the Hierarchy Tree
+
+To iterate over all components of a `perHts` object, the `iterate()` method can be used. It behaves similarly to `lapply()` and allows you to apply custom functions to each node in the hierarchy:
+
+```{r, warning=FALSE}
+# Run the model first
+hts_nested$run()
+
+# Apply custom function to get mean and standard deviation
+hts_nested$iterate(asTable = TRUE, function(obj) {
+  list(
+    mean = mean(obj$adjusted),
+    sd = sd(obj$adjusted)
+  )
+})
+```
+
+## Setting Options Recursively
+
+When creating a `perHts` object, you can pass specification parameters that will be applied to the aggregate series. With `iterate = TRUE` (the default), these parameters are also applied to all components recursively:
+
+```{r, warning=FALSE}
+# Create hierarchical object with custom parameters applied to all nodes
+hts_custom <- perHts(
+  a = perX13(AirPassengers),
+  b = perTramo(AirPassengers),
+  template = "rsa1",
+  automdl.enabled = FALSE
+)
+
+hts_custom$run()
+hts_custom
+```
+
+The `automdl.enabled = FALSE` setting was applied to both the aggregate series and both components (`a` and `b`). You can verify this by inspecting the specifications:
+
+```{r}
+# Check aggregate spec
+hts_custom$paramsDirect$automdl.enabled
+
+# Check component a spec
+hts_custom$components$a$paramsDirect$automdl.enabled
+
+# Check component b spec
+hts_custom$components$b$paramsDirect$automdl.enabled
+```
+
+To modify individual components after creation, access them directly:
+
+```{r, warning=FALSE}
+# Re-enable automdl for component a only
+hts_custom$components$a$updateParams(automdl.enabled = TRUE)
+hts_custom$components$a$paramsDirect$automdl.enabled
+```
+
+# Next Steps
+
+- See `vignette("persephone3")` for basic usage and template options
+- See `vignette("persephone-plotting")` for visualization methods for hierarchical objects
+- Check `?perHts` for complete documentation on hierarchical time series
+
+# Repository
+
+Source code and issue tracker: [https://github.com/statistikat/persephone3](https://github.com/statistikat/persephone3)

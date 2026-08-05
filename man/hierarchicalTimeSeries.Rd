@@ -254,7 +254,7 @@ change parameters of components or aggregate
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{hierarchicalTimeSeries$updateParams(
   component = "",
-  iterate = FALSE,
+  iterate = TRUE,
   speclist = NULL,
   ...
 )}\if{html}{\out{</div>}}

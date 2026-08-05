@@ -14,11 +14,11 @@ knitr::opts_chunk$set(
 ```
 # persephone3
 
-[![Travis-CI Build Status](https://img.shields.io/travis/statistikat/persephone.svg?logo=travis)](https://travis-ci.org/statistikat/persephone)
-[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg?logo=github)](https://www.tidyverse.org/lifecycle/#experimental)
-[![](https://img.shields.io/github/languages/code-size/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone)
-[![](https://img.shields.io/github/last-commit/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone/commits/master)
- [![Coverage status](https://coveralls.io/repos/github/statistikat/persephone/badge.svg)](https://coveralls.io/r/statistikat/persephone?branch=master&service=github)
+[![R-CMD-check](https://github.com/statistikat/persephone3/workflows/R-CMD-check/badge.svg)](https://github.com/statistikat/persephone3/actions)
+[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![](https://img.shields.io/github/languages/code-size/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3)
+[![](https://img.shields.io/github/last-commit/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3/commits/master)
+[![Codecov test coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
 
 
 Object oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/).
@@ -79,8 +79,6 @@ More information can be found on the [github-pages site] for persephone.
   [hierarchical timeseries vignette].
 
 [rjdverse]: https://github.com/rjdverse
-[JDemetra+]: https://github.com/jdemetra
-[github-pages site]: https://statistikat.github.io/persephone/
-[useR!2019 slides]: https://statistikat.github.io/persephone/articles/persephone-useR.pdf
-[plotting vignette]: https://statistikat.github.io/persephone/articles/persephone-plotting.html
-[hierarchical timeseries vignette]: https://statistikat.github.io/persephone/articles/persephone-hierarchical.html
+[github-pages site]: https://statistikat.github.io/persephone3/
+[plotting vignette]: https://statistikat.github.io/persephone3/articles/persephone-plotting.html
+[hierarchical timeseries vignette]: https://statistikat.github.io/persephone3/articles/persephone-hierarchical.html

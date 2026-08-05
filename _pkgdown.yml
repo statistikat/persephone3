@@ -1,3 +1,5 @@
+url: https://statistikat.github.io/persephone3/
+
 template:
   bootstrap: 5
   bootswatch: flatly
@@ -6,9 +8,7 @@ code:
   width: 70
 
 development:
-  mode: unreleased
-
-url: https://statistikat.github.io/persephone3/
+  mode: auto
 
 authors:
   sidebar:
@@ -20,7 +20,7 @@ authors:
   Markus Fröhlich:
     href: https://github.com/froehmar
   Gregor de Cillia:
-    href: https://github.com/GregorDeCillia
+    role: ctb
 
 navbar:
   type: default
@@ -30,19 +30,34 @@ navbar:
     href: reference/
   - text: Quickstart
     icon: fas fa-bolt
-    href: articles/persephone.html
+    href: articles/persephone3.html
   - text: Plots
     icon: fas fa-chart-line
-    href: articles/charts.html
+    href: articles/persephone-plotting.html
   - text: Hierarchies
     icon: fas fa-layer-group
-    href: articles/hierarchies.html
+    href: articles/persephone-hierarchical.html
   - text: News
     icon: fas fa-newspaper
     href: news/
   right:
   - icon: fas fa-github fa-lg
-    href: https://github.com/GregorDeCillia/persephone3
+    href: https://github.com/statistikat/persephone3
     aria-label: github
-  - icon: fab fa-java fa-lg
-    href: https://jdemetra-new-documentation.netlify.app
+
+reference:
+  - title: "Main Functions"
+    contents:
+      - starts_with("per")
+  - title: "Dashboard"
+    contents:
+      - starts_with("dashboard")
+
+articles:
+  - title: "User Guides"
+    navbar: ~
+    contents:
+      - persephone3
+      - persephone-plotting
+      - persephone-hierarchical
+      - persephone-hierarchicalEU

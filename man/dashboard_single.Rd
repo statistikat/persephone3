@@ -21,10 +21,8 @@ Creates an interactive HTML diagnostic dashboard for a single hierarchical
 time series object, showing model diagnostics, plots, and quality metrics.
 }
 \examples{
-obj <- perX13(AirPassengers, "rsa3")
-obj$run()
-dashboard_single(obj)
-
-# Save as HTML file
-# dashboard_single(obj, file = "dashboard.html")
+# This is an internal function; use createDashboard() instead
+# obj <- perX13(AirPassengers, "rsa3")
+# obj$run()
+# createDashboard(obj)
 }

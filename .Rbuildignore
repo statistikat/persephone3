@@ -5,9 +5,10 @@
 ^README\.Rmd$
 ^\.travis\.yml$
 .lintr
-pkgdown
-^doc$
-^Meta$
-^docs$
-^.github$
-^\.github$
+^inst/devel/
+^inst/devel_vignettes/
+^doc/
+^Meta/
+^docs/
+^.github/
+^\.github/

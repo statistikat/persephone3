@@ -8,12 +8,10 @@
 #' @param file Optional file path to save HTML output
 #' @return Browsable HTML UI containing the diagnostic dashboard
 #' @examples
-#' obj <- perX13(AirPassengers, "rsa3")
-#' obj$run()
-#' dashboard_single(obj)
-#'
-#' # Save as HTML file
-#' # dashboard_single(obj, file = "dashboard.html")
+#' # This is an internal function; use createDashboard() instead
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # createDashboard(obj)
 dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")

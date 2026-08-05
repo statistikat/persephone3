@@ -1,27 +1,26 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+
 # persephone3
 
-[![Travis-CI Build
-Status](https://img.shields.io/travis/statistikat/persephone.svg?logo=travis)](https://travis-ci.org/statistikat/persephone)
-[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg?logo=github)](https://www.tidyverse.org/lifecycle/#experimental)
-[![](https://img.shields.io/github/languages/code-size/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone)
-[![](https://img.shields.io/github/last-commit/statistikat/persephone.svg?logo=github)](https://github.com/statistikat/persephone/commits/master)
-[![Coverage
-status](https://coveralls.io/repos/github/statistikat/persephone/badge.svg)](https://coveralls.io/r/statistikat/persephone?branch=master&service=github)
+[![R-CMD-check](https://github.com/statistikat/persephone3/workflows/R-CMD-check/badge.svg)](https://github.com/statistikat/persephone3/actions)
+[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![](https://img.shields.io/github/languages/code-size/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3)
+[![](https://img.shields.io/github/last-commit/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3/commits/master)
+[![Codecov test coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
 
-Object oriented wrapper around the seasonal adjustment packages in the
-[rjdverse](https://github.com/rjdverse/). The package performs time
-series adjustments with the java library
-[JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses
-on batch processing, hierarchical time series and analytic charts.
+
+Object oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/).
+The package performs time series adjustments with the java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses on batch processing,
+hierarchical time series and analytic charts.
 
 ## Installation
 
-The following commands install `persephone3` as well as the packages
-from the [rjdverse](https://github.com/rjdverse/) that talk with the
-java interface.
+The following commands install `persephone3` as well as the packages from the [rjdverse](https://github.com/rjdverse/) that talk with the java interface.
 
 ``` r
 # install dependencies
@@ -35,10 +34,10 @@ remotes::install_github("statistikat/persephone3")
 
 ## Usage
 
-Objects can be constructed with `perX13()` or `perTramo()`.
-Subsequently, the `run()` method runs the model and `output` gives
-access to the output object from `rjd3x13::x13_fast()` or
-`rjd3tramoseats::tramoseats_fast()`.
+Objects can be constructed with `perX13()` or `perTramo()`. Subsequently,
+the `run()` method runs the model and `output` gives access to the output object from
+`rjd3x13::x13_fast()` or `rjd3tramoseats::tramoseats_fast()`.
+
 
 ``` r
 library(persephone3)
@@ -65,6 +64,7 @@ obj$output$preprocessing
 #> For a more detailed output, use the 'summary()' function.
 ```
 
+
 ``` r
 # visualize the results
 obj$plot()
@@ -76,15 +76,15 @@ obj$plot()
 
 This section still needs an update to persephone3.
 
-More information can be found on the [github-pages
-site](https://statistikat.github.io/persephone/) for persephone.
+More information can be found on the [github-pages site] for persephone.
 
-- An overview of the package is available in the [useR!2019
-  slides](https://statistikat.github.io/persephone/articles/persephone-useR.pdf).
-- The [plotting
-  vignette](https://statistikat.github.io/persephone/articles/persephone-plotting.html)
-  contains examples of interactive plots htat can be created with
-  `persephone`.
-- More information about hierarchical time series can be found in the
-  [hierarchical timeseries
-  vignette](https://statistikat.github.io/persephone/articles/persephone-hierarchical.html).
+* An overview of the package is available in the [useR!2019 slides].
+* The [plotting vignette] contains examples of interactive plots htat can be
+  created with `persephone`.
+* More information about hierarchical time series can be found in the
+  [hierarchical timeseries vignette].
+
+[rjdverse]: https://github.com/rjdverse
+[github-pages site]: https://statistikat.github.io/persephone3/
+[plotting vignette]: https://statistikat.github.io/persephone3/articles/persephone-plotting.html
+[hierarchical timeseries vignette]: https://statistikat.github.io/persephone3/articles/persephone-hierarchical.html

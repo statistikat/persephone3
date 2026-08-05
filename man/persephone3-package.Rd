@@ -4,7 +4,7 @@
 \name{persephone3-package}
 \alias{persephone3}
 \alias{persephone3-package}
-\title{persephone3: Object-Oriented Wrappers for the Seasonal Adjustment Functionality of the JDemetra+ R Ecosystem}
+\title{persephone3: Object-Oriented Wrappers for the Seasonal Adjustment Functionality of the JDemetra+ R Ecosystem rjdverse}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
@@ -20,11 +20,6 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Angelika Meraner \email{angelika.meraner@statistik.gv.at}
-
-Authors:
-\itemize{
-  \item Gregor de Cillia \email{gregor.decillia@statistik.gv.at}
-}
 
 Other contributors:
 \itemize{
