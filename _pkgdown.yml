@@ -52,6 +52,39 @@ reference:
   - title: "Dashboard"
     contents:
       - starts_with("dashboard")
+  - title: "Diagnostic & Utilities"
+    contents:
+      - diagnosticsTable
+      - eaDist_approx
+      - eaDist_exact
+      - fixModel
+      - fixOutlier
+      - genTd
+      - generateQrTable
+      - is.persephone
+      - iterate
+  - title: "Example Data"
+    contents:
+      - pi_caladj
+      - pi_sa
+      - pi_unadj
+      - weights_pi_eu28
+  - title: "Plotting"
+    contents:
+      - hchart.persephoneSingle
+      - plot
+      - plotResiduals
+      - plotSeasIrrCal
+      - plotSpectrum
+      - plotSiRatios
+  - title: "Internal Functions"
+    contents:
+      - generate_diagnostics_table
+      - generate_Qr_List
+      - hc_add_forecast
+      - persephone
+      - persephoneSingle
+      - x13Single
 
 articles:
   - title: "User Guides"
