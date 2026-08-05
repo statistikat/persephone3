@@ -46,12 +46,21 @@ navbar:
     aria-label: github
 
 reference:
+  - title: "Classes"
+    contents:
+      - hierarchicalTimeSeries
+      - multipleTimeSeries
+      - tramoseatsSingle
+      - x13Single
+      - persephone
+      - persephoneSingle
   - title: "Main Functions"
     contents:
       - starts_with("per")
   - title: "Dashboard"
     contents:
       - starts_with("dashboard")
+      - createDashboard
   - title: "Diagnostic & Utilities"
     contents:
       - diagnosticsTable
@@ -69,22 +78,26 @@ reference:
       - pi_sa
       - pi_unadj
       - weights_pi_eu28
+      - weights_pi_ea19
   - title: "Plotting"
     contents:
       - hchart.persephoneSingle
       - plot
       - plotResiduals
       - plotSeasIrrCal
+      - plotSeasIrrCalDygraph
+      - plotSeasIrrCalHc
       - plotSpectrum
+      - plotSpectrumGgplot
+      - plotSpectrumHc
       - plotSiRatios
+      - plotSiRatiosGgplot
+      - plotSiRatiosHc
   - title: "Internal Functions"
     contents:
       - generate_diagnostics_table
       - generate_Qr_List
       - hc_add_forecast
-      - persephone
-      - persephoneSingle
-      - x13Single
 
 articles:
   - title: "User Guides"
