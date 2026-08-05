@@ -41,14 +41,37 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libprotobuf-dev protobuf-compiler libprotoc-dev pkg-config
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install protobuf
+
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install protoc -y
+        shell: pwsh
+
+      - name: Install RProtoBuf
+        run: |
+          install.packages("RProtoBuf")
+        shell: Rscript {0}
+
       - name: Install dependencies
         run: |
           install.packages(c("remotes", "covr", "tinytest"))
-          remotes::install_deps(dependencies = TRUE, upgrade = "never")
-          # Install rjd3 packages from GitHub
+          # Install rjd3 packages from GitHub first
           remotes::install_github("rjdverse/rjd3toolkit@*release", upgrade = "never")
           remotes::install_github("rjdverse/rjd3tramoseats@*release", upgrade = "never")
           remotes::install_github("rjdverse/rjd3x13@*release", upgrade = "never")
+          remotes::install_deps(dependencies = TRUE, upgrade = "never")
         shell: Rscript {0}
 
       - name: Test coverage
