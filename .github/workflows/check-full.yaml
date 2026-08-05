@@ -70,6 +70,9 @@ jobs:
       - name: Install system dependencies
         if: runner.os == 'Linux'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libprotobuf-dev protobuf-compiler libprotoc-dev
+          # optional: install other common build deps if you need them
           while read -r cmd
           do
             eval sudo $cmd
