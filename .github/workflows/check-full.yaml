@@ -55,7 +55,7 @@ jobs:
 
       - name: Cache R packages
         if: runner.os != 'Windows'
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
           key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
@@ -71,6 +71,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Install GitHub dependencies first
+          remotes::install_github("rjdverse/rjd3toolkit@*release", upgrade = "never")
+          remotes::install_github("rjdverse/rjd3tramoseats@*release", upgrade = "never")
+          remotes::install_github("rjdverse/rjd3x13@*release", upgrade = "never")
           remotes::install_deps(dependencies = TRUE)
           remotes::install_cran("rcmdcheck")
         shell: Rscript {0}
