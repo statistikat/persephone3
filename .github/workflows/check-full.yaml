@@ -71,11 +71,24 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libprotobuf-dev protobuf-compiler libprotoc-dev pkg-config
+          sudo apt-get install --no-install-recommends -y \
+            libprotobuf-dev \
+            protobuf-compiler \
+            libprotoc-dev \
+            pkg-config \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev
           while read -r cmd
           do
             eval sudo $cmd
           done < <(Rscript -e 'writeLines(remotes::system_requirements("ubuntu", "22.04"))')
+
+      - name: Install RProtoBuf
+        if: runner.os == 'Linux'
+        run: |
+          install.packages("RProtoBuf")
+        shell: Rscript {0}
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'

@@ -23,7 +23,7 @@ Creates a side-by-side comparison view of two hierarchical time series,
 displaying their individual diagnostics alongside a comparison panel.
 }
 \note{
-This is an internal function; use \link{createDashboard(x, y)} instead for the public API.
+This is an internal function; use \code{createDashboard(x, y)} instead for the public API.
 }
 \examples{
 obj1 <- perX13(AirPassengers, "rsa3")

@@ -16,7 +16,7 @@
 #' @param file Optional file path to save HTML output
 #' @return browsable HTML UI for comparison
 #' @export
-#' @note This is an internal function; use [createDashboard(x, y)] instead for the public API.
+#' @note This is an internal function; use `createDashboard(x, y)` instead for the public API.
 #' @examples
 #' obj1 <- perX13(AirPassengers, "rsa3")
 #' obj1$run()

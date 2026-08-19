@@ -1,5 +1,28 @@
-# x <- obj$clone()
-
+#' Extract outlier information from a Persephone object
+#'
+#' This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
+#' model, including coefficients, standard errors, t-statistics, and p-values.
+#' It processes the raw output from X-13ARIMA-SEATS or TRAMO/SEATS into a clean
+#' data frame with formatted dates and names.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
+#'   completed model run
+#' @return A data frame with columns:
+#'   \item{name}{Formatted outlier name (e.g., "AO1953.7" for additive outlier)}
+#'   \item{type}{Outlier type: AO (Additive Outlier), LS (Level Shift), or TC (Transient Change)}
+#'   \item{coef.value}{Estimated coefficient value}
+#'   \item{stde}{Standard error of the coefficient}
+#'   \item{t}{T-statistic}
+#'   \item{pvalue}{Two-sided p-value}
+#'   \item{date}{Date of the outlier as Date object}
+#'   \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
+#'
+#' @note This is an internal function used by other get* functions and diagnostics.
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # getOutliers(obj)
 getOutliers <- function(x) {
   if (is.null(x$output)) {
     stop("No results from run available.\n")
@@ -59,27 +82,28 @@ getOutliers <- function(x) {
   outliers
 }
 
-# we now have a userdefined output available for outliers
-
-# sp <- x13_spec("rsa5c")
-# sp <- rjd3toolkit::add_outlier(sp,
-#                                type = c("AO"), c("2015-01-01", "2010-01-01")
-# )
-# sp <- rjd3toolkit::set_transform(
-#   rjd3toolkit::set_tradingdays(
-#     rjd3toolkit::set_easter(sp, enabled = FALSE),
-#     option = "workingdays"
-#   ),
-#   fun = "None"
-# )
-# x13(y, spec = sp)
-# sp <- set_x11(sp,
-#               henderson.filter = 13
-# )
-# q <- x13_fast(y, spec = sp)
-# q <- q$preprocessing
-
-#regarimaCoefTable <- function(x) {
+#' Extract ARIMA regression coefficients from a Persephone object
+#'
+#' This function retrieves all regression and ARIMA coefficients from a fitted
+#' Persephone model, including outliers, trading day effects, Easter effects,
+#' and other regressors. It calculates standard errors, t-statistics, and
+#' p-values for estimated coefficients.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
+#'   completed model run
+#' @return A data frame with columns:
+#'   \item{name}{Variable name (e.g., "AO1953.7", "td", "easter")}
+#'   \item{value}{Coefficient estimate}
+#'   \item{stde}{Standard error (NA for non-estimated types)}
+#'   \item{t}{T-statistic for estimated coefficients}
+#'   \item{pvalue}{Two-sided p-value for estimated coefficients}
+#'
+#' @note This is an internal function used by diagnostics and reporting.
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # getArimaCoef(obj)
 getArimaCoef <- function(x) {
   if (is.null(x$output)) {
     stop("No results from run available.\n")
@@ -142,16 +166,26 @@ getArimaCoef <- function(x) {
 }
 
 
-# arimaCoefTable.print <- function(xregs) {
-#   xregs.print <- xregs[,c("value","stde","t","pvalue")]
-#   rownames(xregs.print) <- xregs$name
-#   colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
-#
-#   printCoefmat(xregs.print)
-# }
-
+#' Get formatted ARIMA coefficient table for printing
+#'
+#' This function provides a human-readable, formatted printout of ARIMA
+#' coefficients using R's standard coefficient matrix formatting. It is
+#' primarily used for console output and reporting.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
+#' @return Character vector of formatted coefficient table lines (invisible)
+#'
+#' @note This is an internal function for console output.
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # getArimaCoef_formatted(obj)
 getArimaCoef_formatted <- function(x) {
-  xregs <- regarimaCoefTable(x)
+  xregs <- getArimaCoef(x)
+  if (is.null(xregs)) {
+    return(character(0))
+  }
   xregs.print <- xregs[, c("value", "stde", "t", "pvalue")]
   rownames(xregs.print) <- xregs$name
   colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
@@ -169,34 +203,34 @@ getArimaCoef_formatted <- function(x) {
 ########################################
 ###         from rdj3toolkit         ###
 ########################################
-# x <- obj$output$preprocessing
-# x <- rs$preprocessing
-#
-# .regarima_coef_table.default <- function(x, ...) {
-#   q <- x
-#   if (length(q$description$variables) > 0) {
-#     regs <- do.call("rbind", lapply(q$description$variables, function(z) {
-#       z$coef
-#     }))
-#     xregs <- cbind(regs, stde = NA, t = NA, pvalue = NA)
-#     stde <- sqrt(diag(q$estimation$bvar))
-#     sel <- xregs$type == "ESTIMATED"
-#     t <- xregs$value[sel] / stde
-#     ndf <- q$estimation$likelihood$neffectiveobs - q$estimation$likelihood$nparams
-#     pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
-#     xregs$stde[sel] <- stde
-#     xregs$t[sel] <- t
-#     xregs$pvalue[sel] <- pval
-#     colnames(xregs) <- c(
-#       "Estimate", "Type", "Std. Error",
-#       "T-stat", "Pr(>|t|)"
-#     )
-#     xregs
-#   } else {
-#     NULL
-#   }
-# }
+# Note: .regarima_coef_table.default is a legacy function from rdj3toolkit
+# that was replaced by getArimaCoef(). Kept here for reference.
 
+#' Extract outliers and create time series for plotting
+#'
+#' This function processes outlier information from a Persephone object and
+#' creates time series objects that can be used for plotting outliers on graphs.
+#' It is primarily used internally by plot functions to display outlier events
+#' (AO, LS, TC) on time series visualizations.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
+#' @return A list with two elements:
+#'   \item{`[[1]]`}{A `ts` object with columns for each outlier type (otlAO, otlLS, otlTC).
+#'                Values at outlier dates contain the original series values,
+#'                all other dates are NA.}
+#'   \item{`[[2]]`}{A named list of Date objects, one per outlier type (AO, LS, TC),
+#'                containing the dates where outliers occurred. Used for dygraph
+#'                event annotations.}
+#'
+#' @export
+#' @note This is an internal function; use it only if you know what you're doing.
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # otl <- gettsout(obj)
+#' # otl[[1]]  # time series with outlier values
+#' # otl[[2]]  # dates for event annotations
 gettsout <- function(x) {
   outliers <- getOutliers(x)
   if (frequency(x$ts) == 12) {
@@ -267,6 +301,24 @@ gettsout <- function(x) {
   return(list(tsout, dateout))
 }
 
+#' Run multiple diagnostic extraction functions on a Persephone object
+#'
+#' This convenience function allows running several diagnostic extraction
+#' functions at once and printing their results. It is primarily used for
+#' interactive exploration and debugging.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
+#' @param ... Additional functions to run (passed as character strings)
+#' @param funcs Character vector of function names to run (default: `c("getOutliers", "getArimaCoef")`)
+#' @return Invisible list of results from each function
+#'
+#' @note This is an internal function for interactive diagnostics.
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj$run()
+#' # getDiagnostics(obj)
+#' # getDiagnostics(obj, funcs = c("getOutliers", "getArimaCoef", "gettsout"))
 getDiagnostics <- function(x, ..., funcs = c("getOutliers", "getArimaCoef")) {
   # Combine default functions with additional ones
   all_funcs <- c(funcs, c(...))
