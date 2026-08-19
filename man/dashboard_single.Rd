@@ -20,9 +20,11 @@ Browsable HTML UI containing the diagnostic dashboard
 Creates an interactive HTML diagnostic dashboard for a single hierarchical
 time series object, showing model diagnostics, plots, and quality metrics.
 }
+\note{
+This is an internal function; use \code{\link[=createDashboard]{createDashboard()}} instead for the public API.
+}
 \examples{
-# This is an internal function; use createDashboard() instead
-# obj <- perX13(AirPassengers, "rsa3")
-# obj$run()
-# createDashboard(obj)
+obj <- perX13(AirPassengers, "rsa3")
+obj$run()
+createDashboard(obj)  # preferred
 }

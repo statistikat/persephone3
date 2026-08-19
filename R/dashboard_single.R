@@ -7,11 +7,12 @@
 #' @param title Main title for the dashboard (default: "Diagnostics")
 #' @param file Optional file path to save HTML output
 #' @return Browsable HTML UI containing the diagnostic dashboard
+#' @export
+#' @note This is an internal function; use [createDashboard()] instead for the public API.
 #' @examples
-#' # This is an internal function; use createDashboard() instead
-#' # obj <- perX13(AirPassengers, "rsa3")
-#' # obj$run()
-#' # createDashboard(obj)
+#' obj <- perX13(AirPassengers, "rsa3")
+#' obj$run()
+#' createDashboard(obj)  # preferred
 dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")

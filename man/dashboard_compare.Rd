@@ -22,12 +22,14 @@ browsable HTML UI for comparison
 Creates a side-by-side comparison view of two hierarchical time series,
 displaying their individual diagnostics alongside a comparison panel.
 }
+\note{
+This is an internal function; use \link{createDashboard(x, y)} instead for the public API.
+}
 \examples{
-# This is an internal function; use createDashboard() for comparison
-# obj1 <- perX13(AirPassengers, "rsa3")
-# obj1$run()
-# obj2 <- perX13(AirPassengers, "rsa1")
-# obj2$run()
-# createDashboard(obj1, obj2)
+obj1 <- perX13(AirPassengers, "rsa3")
+obj1$run()
+obj2 <- perX13(AirPassengers, "rsa1")
+obj2$run()
+createDashboard(obj1, obj2)  # preferred
 
 }

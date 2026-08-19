@@ -15,14 +15,14 @@
 #' @param title Main title for the comparison (default: "Series Comparison")
 #' @param file Optional file path to save HTML output
 #' @return browsable HTML UI for comparison
-#'
+#' @export
+#' @note This is an internal function; use [createDashboard(x, y)] instead for the public API.
 #' @examples
-#' # This is an internal function; use createDashboard() for comparison
-#' # obj1 <- perX13(AirPassengers, "rsa3")
-#' # obj1$run()
-#' # obj2 <- perX13(AirPassengers, "rsa1")
-#' # obj2$run()
-#' # createDashboard(obj1, obj2)
+#' obj1 <- perX13(AirPassengers, "rsa3")
+#' obj1$run()
+#' obj2 <- perX13(AirPassengers, "rsa1")
+#' obj2$run()
+#' createDashboard(obj1, obj2)  # preferred
 #'
 dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
   # ---- required packages ----
