@@ -32,3 +32,4 @@ This is an internal function used by diagnostics and reporting.
 # obj$run()
 # getArimaCoef(obj)
 }
+\keyword{internal}

@@ -14,6 +14,7 @@ This package is an object oriented wrapper around the R Packages rjd3x13 and rjd
 Useful links:
 \itemize{
   \item \url{https://github.com/statistikat/persephone3}
+  \item \url{https://statistikat.github.io/persephone3}
   \item Report bugs at \url{https://github.com/statistikat/persephone3/issues}
 }
 

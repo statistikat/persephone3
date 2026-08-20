@@ -18,6 +18,7 @@
 #'   \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
 #'
 #' @note This is an internal function used by other get* functions and diagnostics.
+#' @keywords internal
 #'
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
@@ -99,6 +100,7 @@ getOutliers <- function(x) {
 #'   \item{pvalue}{Two-sided p-value for estimated coefficients}
 #'
 #' @note This is an internal function used by diagnostics and reporting.
+#' @keywords internal
 #'
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
@@ -176,6 +178,7 @@ getArimaCoef <- function(x) {
 #' @return Character vector of formatted coefficient table lines (invisible)
 #'
 #' @note This is an internal function for console output.
+#' @keywords internal
 #'
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
@@ -222,8 +225,8 @@ getArimaCoef_formatted <- function(x) {
 #'                containing the dates where outliers occurred. Used for dygraph
 #'                event annotations.}
 #'
-#' @export
 #' @note This is an internal function; use it only if you know what you're doing.
+#' @keywords internal
 #'
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
@@ -313,6 +316,7 @@ gettsout <- function(x) {
 #' @return Invisible list of results from each function
 #'
 #' @note This is an internal function for interactive diagnostics.
+#' @keywords internal
 #'
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")

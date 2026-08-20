@@ -34,3 +34,4 @@ This is an internal function; use it only if you know what you're doing.
 # otl[[1]]  # time series with outlier values
 # otl[[2]]  # dates for event annotations
 }
+\keyword{internal}

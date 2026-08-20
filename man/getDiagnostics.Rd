@@ -30,3 +30,4 @@ This is an internal function for interactive diagnostics.
 # getDiagnostics(obj)
 # getDiagnostics(obj, funcs = c("getOutliers", "getArimaCoef", "gettsout"))
 }
+\keyword{internal}

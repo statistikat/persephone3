@@ -25,3 +25,4 @@ This is an internal function for console output.
 # obj$run()
 # getArimaCoef_formatted(obj)
 }
+\keyword{internal}

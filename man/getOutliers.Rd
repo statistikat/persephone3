@@ -35,3 +35,4 @@ This is an internal function used by other get* functions and diagnostics.
 # obj$run()
 # getOutliers(obj)
 }
+\keyword{internal}
