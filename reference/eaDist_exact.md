@@ -1,0 +1,19 @@
+# Distribution of the dates for Easter (Exact)
+
+The date of Easter (Sunday) varies between March 22nd and April 25th.
+The sequence of Easter is periodic with a period of 5.7 mio years.
+
+## Usage
+
+``` r
+data(eaDist_exact)
+```
+
+## Format
+
+Theoretical Distribution of Easter Dates over the span of 5.7 mio years
+
+## References
+
+Extracted on 15.02.20 from
+<https://ec.europa.eu/eurostat/cros/system/files/jd__calendars_0.docx>

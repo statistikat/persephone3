@@ -1,0 +1,240 @@
+# persephone3
+
+[![R-CMD-check](https://github.com/statistikat/persephone3/workflows/R-CMD-check/badge.svg)](https://github.com/statistikat/persephone3/actions)
+[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![](https://img.shields.io/github/languages/code-size/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3)
+[![](https://img.shields.io/github/last-commit/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3/commits/master)
+[![Codecov test
+coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
+
+Object oriented wrapper around the seasonal adjustment packages in the
+[rjdverse](https://github.com/rjdverse/). The package performs time
+series adjustments with the java library
+[JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses
+on batch processing, hierarchical time series and analytic charts.
+
+## Installation
+
+The following commands install `persephone3` as well as the packages
+from the [rjdverse](https://github.com/rjdverse/) that talk with the
+java interface.
+
+``` r
+
+# install dependencies
+remotes::install_github("rjdverse/rjd3toolkit@*release")
+remotes::install_github("rjdverse/rjd3x13@*release")
+remotes::install_github("rjdverse/rjd3tramoseats@*release")
+
+# install the package from GitHub
+remotes::install_github("statistikat/persephone3")
+```
+
+## Usage
+
+Objects can be constructed with
+[`perX13()`](https://statistikat.github.io/persephone3/reference/perX13.md)
+or
+[`perTramo()`](https://statistikat.github.io/persephone3/reference/perTramo.md).
+Subsequently, the `run()` method runs the model and `output` gives
+access to the output object from
+[`rjd3x13::x13_fast()`](https://rjdverse.github.io/rjd3x13/reference/x13.html)
+or
+[`rjd3tramoseats::tramoseats_fast()`](https://rjdverse.github.io/rjd3tramoseats/reference/tramoseats.html).
+
+``` r
+
+library(persephone3)
+```
+
+``` r
+
+# construct a seasonal adjustment object for the AirPassengers dataset
+obj <- perX13(AirPassengers)
+
+# run the model
+obj$run()
+
+# access the preprocessing slot of the rjd3 output object
+obj$output$preprocessing
+#> Log-transformation: yes 
+#> SARIMA model: (0,1,1) (0,1,1)
+#> 
+#> SARIMA coefficients:
+#>  theta(1) btheta(1) 
+#>   -0.4018   -0.5569 
+#> 
+#> No regression variables
+#> 
+#> For a more detailed output, use the 'summary()' function.
+```
+
+``` r
+
+# visualize the results
+obj$plot()
+```
+
+![](reference/figures/README-unnamed-chunk-1-1.png)
+
+## Further reading
+
+This section still needs an update to persephone3.
+
+More information can be found on the [github-pages
+site](https://statistikat.github.io/persephone3/) for persephone.
+
+- An overview of the package is available in the \[useR!2019 slides\].
+- The [plotting
+  vignette](https://statistikat.github.io/persephone3/articles/persephone-plotting.html)
+  contains examples of interactive plots htat can be created with
+  `persephone`.
+- More information about hierarchical time series can be found in the
+  [hierarchical timeseries
+  vignette](https://statistikat.github.io/persephone3/articles/persephone-hierarchical.html).
+
+# Package index
+
+## Classes
+
+- [`hierarchicalTimeSeries`](https://statistikat.github.io/persephone3/reference/hierarchicalTimeSeries.md)
+  : R6 Class for hierarchical time series
+- [`multipleTimeSeries`](https://statistikat.github.io/persephone3/reference/multipleTimeSeries.md)
+  : R6 Class for a batch of time series
+- [`tramoseatsSingle`](https://statistikat.github.io/persephone3/reference/tramoseatsSingle.md)
+  : tramoseats class
+- [`x13Single`](https://statistikat.github.io/persephone3/reference/x13Single.md)
+  : x13 class
+- [`persephone`](https://statistikat.github.io/persephone3/reference/persephone.md)
+  : persephone class
+- [`persephoneSingle`](https://statistikat.github.io/persephone3/reference/persephoneSingle.md)
+  : Class for single time series
+
+## Main Functions
+
+- [`perBatch()`](https://statistikat.github.io/persephone3/reference/perBatch.md)
+  : Define a multiple time series
+- [`perHts()`](https://statistikat.github.io/persephone3/reference/perHts.md)
+  : Define a hierarchical time series
+- [`perTramo()`](https://statistikat.github.io/persephone3/reference/perTramo.md)
+  : tramoseats class
+- [`perX13()`](https://statistikat.github.io/persephone3/reference/perX13.md)
+  : x13 class
+- [`persephone`](https://statistikat.github.io/persephone3/reference/persephone.md)
+  : persephone class
+- [`persephoneSingle`](https://statistikat.github.io/persephone3/reference/persephoneSingle.md)
+  : Class for single time series
+
+## Dashboard
+
+- [`dashboard_compare()`](https://statistikat.github.io/persephone3/reference/dashboard_compare.md)
+  : Compare two single series dashboards
+- [`dashboard_single()`](https://statistikat.github.io/persephone3/reference/dashboard_single.md)
+  : Generate diagnostic dashboard for single time series
+- [`createDashboard()`](https://statistikat.github.io/persephone3/reference/createDashboard.md)
+  [`createDashboard_single()`](https://statistikat.github.io/persephone3/reference/createDashboard.md)
+  [`createDashboard_hts()`](https://statistikat.github.io/persephone3/reference/createDashboard.md)
+  [`createDashboard_compare()`](https://statistikat.github.io/persephone3/reference/createDashboard.md)
+  : Create diagnostic dashboard for time series objects
+
+## Diagnostic & Utilities
+
+- [`diagnosticsTable()`](https://statistikat.github.io/persephone3/reference/diagnosticsTable.md)
+  : Diagnostics table for persephone objects
+- [`eaDist_approx`](https://statistikat.github.io/persephone3/reference/eaDist_approx.md)
+  : Distribution of the dates for Easter (Approximation)
+- [`eaDist_exact`](https://statistikat.github.io/persephone3/reference/eaDist_exact.md)
+  : Distribution of the dates for Easter (Exact)
+- [`fixModel()`](https://statistikat.github.io/persephone3/reference/fixModel.md)
+  : Fix ARIMA model parameters
+- [`fixOutlier()`](https://statistikat.github.io/persephone3/reference/fixOutlier.md)
+  : Fix outliers in the model
+- [`genTd()`](https://statistikat.github.io/persephone3/reference/genTd.md)
+  : Generation of trading day regressors
+- [`generateQrTable()`](https://statistikat.github.io/persephone3/reference/generateQrTable.md)
+  : Generate figures from the EUROSTAT quality report
+- [`is.persephone()`](https://statistikat.github.io/persephone3/reference/is.persephone.md)
+  [`as.persephone()`](https://statistikat.github.io/persephone3/reference/is.persephone.md)
+  : is.persephone
+- [`iterate()`](https://statistikat.github.io/persephone3/reference/iterate.md)
+  : Iterate over a hierarchical persephone object
+
+## Example Data
+
+- [`pi_caladj`](https://statistikat.github.io/persephone3/reference/pi_caladj.md)
+  : Production in industry - Calendar adjusted, not seasonally adjusted
+- [`pi_sa`](https://statistikat.github.io/persephone3/reference/pi_sa.md)
+  : Production in industry - Seasonally and calendar adjusted
+- [`pi_unadj`](https://statistikat.github.io/persephone3/reference/pi_unadj.md)
+  : Production in industry - Unadjusted data (i.e. neither seasonally
+  adjusted nor calendar adjusted data)
+- [`weights_pi_eu28`](https://statistikat.github.io/persephone3/reference/weights_pi_eu28.md)
+  : Production Weightings: Countries' share as a \\ (except
+  construction)
+- [`weights_pi_ea19`](https://statistikat.github.io/persephone3/reference/weights_pi_ea19.md)
+  : Production Weightings: Countries' share as a \\ (except
+  construction)
+
+## Plotting
+
+- [`hchart(`*`<persephoneSingle>`*`)`](https://statistikat.github.io/persephone3/reference/hchart.persephoneSingle.md)
+  : Interactive Highcharts plot for single persephone objects
+- [`plot(`*`<hierarchicalTimeSeries>`*`)`](https://statistikat.github.io/persephone3/reference/plot.md)
+  [`plot(`*`<persephoneSingle>`*`)`](https://statistikat.github.io/persephone3/reference/plot.md)
+  : Interactive time series plot for a persephone object
+- [`plotResiduals()`](https://statistikat.github.io/persephone3/reference/plotResiduals.md)
+  : Several interactive plots in connection with residuals for a
+  persephone object
+- [`plotSeasIrrCal()`](https://statistikat.github.io/persephone3/reference/plotSeasIrrCal.md)
+  : Interactive Seasonal, Irregular, and Calendar Effects Plot
+- [`plotSeasIrrCalDygraph()`](https://statistikat.github.io/persephone3/reference/plotSeasIrrCalDygraph.md)
+  : Interactive Seasonal, Irregular, and Calendar Effects Plot
+- [`plotSeasIrrCalHc()`](https://statistikat.github.io/persephone3/reference/plotSeasIrrCalHc.md)
+  : Interactive Seasonal, Irregular, and Calendar Effects Plot
+- [`plotSpectrum()`](https://statistikat.github.io/persephone3/reference/plotSpectrum.md)
+  : Spectral Plots
+- [`plotSpectrumGgplot()`](https://statistikat.github.io/persephone3/reference/plotSpectrumGgplot.md)
+  : Spectral Plots (ggplot2 version)
+- [`plotSpectrumHc()`](https://statistikat.github.io/persephone3/reference/plotSpectrumHc.md)
+  : Spectral Plots (Interactive)
+- [`plotSiRatios()`](https://statistikat.github.io/persephone3/reference/plotSiRatios.md)
+  : SI-Ratio Plot
+- [`plotSiRatiosGgplot()`](https://statistikat.github.io/persephone3/reference/plotSiRatiosGgplot.md)
+  : SI-Ratio Plot (ggplot2 version)
+- [`plotSiRatiosHc()`](https://statistikat.github.io/persephone3/reference/plotSiRatiosHc.md)
+  : SI-Ratio Plot (Interactive)
+
+## Internal Functions
+
+- [`generate_diagnostics_table()`](https://statistikat.github.io/persephone3/reference/generate_diagnostics_table.md)
+  : Generate diagnostics table for persephone objects (internal)
+- [`generate_Qr_List()`](https://statistikat.github.io/persephone3/reference/generate_Qr_List.md)
+  : Generates a list containing the figures for a EUROSTAT quality
+  report
+- [`hc_add_forecast()`](https://statistikat.github.io/persephone3/reference/hc_add_forecast.md)
+  : Add forecast to highchart (internal helper)
+
+# Articles
+
+### User Guides
+
+- [Get started with
+  persephone3](https://statistikat.github.io/persephone3/articles/persephone3.md):
+
+  A comprehensive introduction to seasonal adjustment with persephone3,
+  covering installation, basic usage, and parameter customization.
+
+- [Plotting with
+  persephone3](https://statistikat.github.io/persephone3/articles/persephone-plotting.md):
+
+  Interactive visualizations for seasonal adjustment results using
+  dygraphs, plotly, and highcharter.
+
+- [Hierarchical time series with
+  persephone3](https://statistikat.github.io/persephone3/articles/persephone-hierarchical.md):
+
+  Working with hierarchical time series: creating, adjusting, and
+  iterating over multiple levels of aggregation.
+
+- [Hierarchical time series - construction and
+  weights](https://statistikat.github.io/persephone3/articles/persephone-hierarchicalEU.md):

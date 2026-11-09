@@ -1,0 +1,12 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  persephone-hierarchical: persephone-hierarchical.html
+  persephone-hierarchicalEU: persephone-hierarchicalEU.html
+  persephone-plotting: persephone-plotting.html
+  persephone3: persephone3.html
+last_built: 2026-11-09T15:26Z
+urls:
+  reference: https://statistikat.github.io/persephone3/reference
+  article: https://statistikat.github.io/persephone3/articles
