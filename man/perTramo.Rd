@@ -6,7 +6,7 @@
 \usage{
 perTramo(
   ts,
-  template = c("rsafull", "rsa0", "rsa1", "rsa2", "rsa3", "rsa4", "rsa5"),
+  template = c("rsa3", "rsafull", "rsa0", "rsa1", "rsa2", "rsa4", "rsa5"),
   context = NULL,
   userdefined = NULL,
   speclist = NULL,

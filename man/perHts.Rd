@@ -58,7 +58,10 @@ points or a list of ts objects or a mts object if the weight varies for
 different time points. They must have the same length as the number of
 components.}
 
-\item{iterate}{logical, if TRUE apply the given spec/params also to all components recursively}
+\item{iterate}{logical, if TRUE apply the given spec/params also to all components recursively
+(only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
+method and template only if iterate is TRUE; otherwise they are created with the
+method-specific defaults of \code{\link[=perTramo]{perTramo()}} / \code{\link[=perX13]{perX13()}}.}
 }
 \description{
 Combine mutliple objects of persephone objects into a new persephone object.

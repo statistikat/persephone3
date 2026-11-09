@@ -109,7 +109,6 @@ create a new hierarchical time series
   userdefined = NULL,
   spec = NULL,
   weights = NULL,
-  recursive = TRUE,
   iterate = TRUE,
   speclist = NULL
 )}\if{html}{\out{</div>}}
@@ -154,10 +153,8 @@ points or a list of ts objects or a mts object if the weight varies
 for different time points. They must have the same length as the
 number of components.}
 
-\item{\code{recursive}}{logical, if TRUE, apply this setting to all subseries as well. If FALSE,
-only apply to aggregate}
-
-\item{\code{iterate}}{logical, if TRUE apply the given ... spec/params also to all components}
+\item{\code{iterate}}{logical, if TRUE apply the given ... spec/params also to all components.
+For plain ts/mts components, method and template are inherited only if iterate is TRUE.}
 
 \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}

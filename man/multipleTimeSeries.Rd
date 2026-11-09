@@ -101,7 +101,6 @@ create a new multiple time series object
   userdefined = NULL,
   speclist = NULL,
   spec = NULL,
-  iterate = FALSE,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -129,8 +128,6 @@ passed to the rjd3 specification functions internally. As alternative input to \
 
 \item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
 
-\item{\code{iterate}}{logical, whether to iterate over components (currently not used)}
-
 \item{\code{...}}{one or more objects which are either of class persephone or
 can be coerced to persephone objects with asPersephone. If more than
 one element is supplied, the underlying time series must have the same
@@ -140,6 +137,11 @@ In addition to the ts/mts/persephone objects,
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Details}{
+A batch has no aggregate series, so \code{method}, \code{template} and any spec
+arguments in \code{...}/\code{speclist} always apply to all components.
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-run"></a>}}

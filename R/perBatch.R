@@ -70,43 +70,42 @@ multipleTimeSeries <- R6::R6Class(
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #'   passed to the rjd3 specification functions internally. As alternative input to `...`
     #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
-    #' @param iterate logical, whether to iterate over components (currently not used)
+    #' @details A batch has no aggregate series, so `method`, `template` and any spec
+    #'   arguments in `...`/`speclist` always apply to all components.
     #' @param ... one or more objects which are either of class persephone or
     #'   can be coerced to persephone objects with asPersephone. If more than
     #'   one element is supplied, the underlying time series must have the same
     #'   time instances. All elements supplied in ... must be named.
     #'   In addition to the ts/mts/persephone objects,
     #'   `...` accepts arguments for customizing the model specifications as alternative input to speclist
-    initialize = function(list = NULL,
-                          method = c("tramoseats", "x13"),
-                          template = NULL,
-                          context = NULL,
-                          userdefined = NULL,
-                          speclist = NULL,
-                          spec = NULL,
-                          iterate = FALSE,
-                          ...) {
+    initialize = function(
+      list = NULL,
+      method = c("tramoseats", "x13"),
+      template = NULL,
+      context = NULL,
+      userdefined = NULL,
+      speclist = NULL,
+      spec = NULL,
+      ...
+    ) {
       #browser()
       private$method <- match.arg(method)
+      # A batch has no aggregate series, so there is no `iterate`: method,
+      # template and spec arguments always apply to every component.
+      if ("iterate" %in% names(list(...))) {
+        stop(
+          "'iterate' is not supported by 'perBatch'. A batch has no aggregate ",
+          "series, so method, template and spec arguments always apply to all ",
+          "components. Use perHts() if you need to separate aggregate and ",
+          "sub-series.",
+          call. = FALSE
+        )
+      }
       # template default and validation depending on method
       if (missing(template) || is.null(template)) {
         template <- "rsa3"
       }
-      # allowed template sets per method
-      x13_templates <- c("rsa0", "rsa1", "rsa2c", "rsa3", "rsa4", "rsa5c")
-      tramoseats_templates <- c("rsafull", "rsa0", "rsa1", "rsa2", "rsa3", "rsa4", "rsa5")
-
-      if (private$method == "x13") {
-        if (!template %in% x13_templates) {
-          stop(sprintf("Invalid template '%s' for method 'x13'. Allowed values: %s",
-                       template, paste(x13_templates, collapse = ", ")))
-        }
-      } else { # tramoseats
-        if (!template %in% tramoseats_templates) {
-          stop(sprintf("Invalid template '%s' for method 'tramoseats'. Allowed values: %s",
-                       template, paste(tramoseats_templates, collapse = ", ")))
-        }
-      }
+      check_template(template, private$method)
       private$template <- template
       # keep context and userdefined in private state for runDirect
       private$context <- context
@@ -119,7 +118,7 @@ multipleTimeSeries <- R6::R6Class(
         if (is.null(names(components))) {
           names(components) <- paste0("ts", seq_along(components))
         }
-        if(is.null(speclist)) {
+        if (is.null(speclist)) {
           spec_list <- list(...)
         } else {
           spec_list <- speclist
@@ -134,11 +133,18 @@ multipleTimeSeries <- R6::R6Class(
         } else {
           # detect and separate potential spec arguments passed in dots via naming convention
           sel_spec <- integer(0)
-          if (exists("specfun_list", envir = asNamespace("persephone3"), inherits = FALSE)) {
+          if (
+            exists(
+              "specfun_list",
+              envir = asNamespace("persephone3"),
+              inherits = FALSE
+            )
+          ) {
             for (cp in paste0(names(specfun_list), ".")) {
               sel_spec <- c(sel_spec, which(startsWith(names(components), cp)))
             }
-            for (cp in p3_spec_names) { #p3_spec_names werden auch in helpers.R definiert
+            for (cp in p3_spec_names) {
+              #p3_spec_names werden auch in helpers.R definiert
               sel_spec <- c(sel_spec, which(startsWith(names(components), cp)))
             }
           }
@@ -153,7 +159,14 @@ multipleTimeSeries <- R6::R6Class(
         }
       }
 
-      components <- lapply(components, as.persephone)
+      # perBatch kennt keine Aggregatsreihe, daher gilt method fuer alle Reihen
+      components <- lapply(
+        components,
+        as.persephone,
+        method = private$method,
+        template = private$template
+      )
+      check_component_method(components, private$method)
       private$check_classes(components)
       names(components) <- private$coerce_component_names(components)
       private$tsp_internal <- private$check_time_instances(components)
@@ -170,7 +183,6 @@ multipleTimeSeries <- R6::R6Class(
         })
       }
       invisible(NULL)
-
     },
     #' @description run the model
     #' @param verbose if `FALSE` (the default), the results of the run will
@@ -186,8 +198,9 @@ multipleTimeSeries <- R6::R6Class(
     #' @description print mutliple timeseries to screen
     print = function() {
       tbl <- private$printTable()
-      if (all(!tbl$run))
+      if (all(!tbl$run)) {
         tbl <- tbl[, 1:3]
+      }
       print(tbl, right = FALSE, row.names = FALSE)
     },
     #' @description iterate over all components
@@ -217,8 +230,8 @@ multipleTimeSeries <- R6::R6Class(
     #' @description extract a component series
     #' @param componentId the id of a component
     getComponent = function(componentId) {
-      if(!componentId%in%names(self$components)){
-        stop(componentId," not found.")
+      if (!componentId %in% names(self$components)) {
+        stop(componentId, " not found.")
       }
       self$components[[componentId]]
     },
@@ -232,19 +245,21 @@ multipleTimeSeries <- R6::R6Class(
     #' @param ... named arguments to be changed
     updateParams = function(component = NULL, ...) {
       #browser()
-      if(is.null(component)){
+      if (is.null(component)) {
         invisible(lapply(self$components, function(x) x$updateParams(...)))
-      }else{
-        invisible(lapply(self$components[component], function(x) x$updateParams(...)))
+      } else {
+        invisible(lapply(self$components[component], function(x) {
+          x$updateParams(...)
+        }))
       }
     },
     #' @description Generate a table for the eurostat quality report
     #' @param component (optional) a sub-component to create the report for
     #' @param ... additional arguments for the generate qr table function
     generateQrTable = function(component = "", ...) {
-      if(component!=""){
+      if (component != "") {
         self$getComponent(component)$generateQrTable(...)
-      }else{
+      } else {
         self$iterate(generate_Qr_List, asTable = TRUE)
       }
     }
@@ -253,27 +268,27 @@ multipleTimeSeries <- R6::R6Class(
   active = list(
     #' @field ts the time series (inherited from persephone)
     ts = function() {
-      lapply(self$components,function(x)x$ts)
+      lapply(self$components, function(x) x$ts)
     },
     #' @field adjusted results from the seasonal adjustment
     adjusted = function() {
-      lapply(self$components,function(x)x$adjusted)
+      lapply(self$components, function(x) x$adjusted)
     },
     #' @field params of all components
     params = function() {
-      lapply(self$components,function(x)x$params)
+      lapply(self$components, function(x) x$params)
     },
     #' @field forecasts get forecasts
     forecasts = function() {
-      lapply(self$components,function(x)x$forecasts)
+      lapply(self$components, function(x) x$forecasts)
     }
   ),
   # ---- Private Methods ----
   private = list(
     template = NULL, # one of c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4", "rsa5c")
-    method = NULL,   # one of c("tramoseats","x13")
+    method = NULL, # one of c("tramoseats","x13")
     spec_list = NULL,
-    spec = NULL,     # rjd3 spec object (if used directly)
+    spec = NULL, # rjd3 spec object (if used directly)
     context = NULL,
     userdefined = NULL,
 
@@ -289,21 +304,22 @@ multipleTimeSeries <- R6::R6Class(
       tsps <- lapply(components, function(component) {
         component$tsp
       })
-      if (length(unique(tsps)) != 1)
+      if (length(unique(tsps)) != 1) {
         stop("All components need to have the same time instances")
+      }
       tsps[[1]]
     },
     coerce_component_names = function(components) {
       lapply(seq_along(components), function(i) {
         parname <- names(components)[i]
-        if (!is.null(parname) && parname != "")
+        if (!is.null(parname) && parname != "") {
           return(parname)
-        else
+        } else {
           stop("all components in 'multipleTimeSeries' must be named")
+        }
       })
-    }#,
+    } #,
   )
-
 )
 
 #' Define a multiple time series
@@ -338,11 +354,24 @@ multipleTimeSeries <- R6::R6Class(
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #' @export
-perBatch <- function(..., list = NULL,
-                     method = c("tramoseats", "x13"),
-                     template = "rsa3",
-                     context = NULL, userdefined = NULL, speclist = NULL, spec = NULL) {
-  multipleTimeSeries$new(..., list = list, method = method, template = template,
-                         context = context, userdefined = userdefined,
-                         speclist = speclist, spec = spec)
+perBatch <- function(
+  ...,
+  list = NULL,
+  method = c("tramoseats", "x13"),
+  template = "rsa3",
+  context = NULL,
+  userdefined = NULL,
+  speclist = NULL,
+  spec = NULL
+) {
+  multipleTimeSeries$new(
+    ...,
+    list = list,
+    method = method,
+    template = template,
+    context = context,
+    userdefined = userdefined,
+    speclist = speclist,
+    spec = spec
+  )
 }

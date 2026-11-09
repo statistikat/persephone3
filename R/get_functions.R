@@ -58,7 +58,31 @@ getOutliers <- function(x) {
     }
     outliers$name <- paste0(outliers$type, outliers$name)
 
-    stde <- sqrt(diag(x$output$preprocessing$estimation$bvar))[otlind]
+    # bvar only covers the ESTIMATED coefficients, in the order of all
+    # regression variables. FIXED ones (e.g. manually specified outliers
+    # outside the estimation range) get no standard error. Same mapping as
+    # in getArimaCoef().
+    coef_type <- vapply(
+      variables,
+      function(v) {
+        if (is.null(v$coef$type)) NA_character_ else as.character(v$coef$type)
+      },
+      ""
+    )
+    stde_all <- rep(NA_real_, length(variables))
+    bvar <- x$output$preprocessing$estimation$bvar
+    if (length(bvar) > 0) {
+      sel <- coef_type == "ESTIMATED"
+      if (nrow(bvar) == sum(sel)) {
+        stde_all[sel] <- sqrt(diag(bvar))
+      } else {
+        warning(
+          "bvar does not match the number of estimated regression ",
+          "variables. Standard errors are unreliable."
+        )
+      }
+    }
+    stde <- stde_all[otlind]
     t <- outliers$coef.value / stde
     ndf <- x$output$preprocessing$estimation$likelihood$neffectiveobs -
       x$output$preprocessing$estimation$likelihood$nparams
@@ -81,6 +105,69 @@ getOutliers <- function(x) {
     outliers <- NA
   }
   outliers
+}
+
+#' Extract automatically detected outliers from a Persephone object
+#'
+#' Returns only the outliers that were detected automatically by
+#' X-13ARIMA-SEATS or TRAMO/SEATS, that is all outliers reported in the model
+#' output minus the ones specified manually with the `outliers` argument. The
+#' manual ones are read from the model specification
+#' (`regarima$regression$outliers` for x13, `tramo$regression$outliers` for
+#' tramoseats), because the output of the run does not distinguish manually
+#' specified from automatically detected outliers.
+#'
+#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
+#'   completed model run
+#' @return A data frame with the columns of [getOutliers()], restricted to the
+#'   automatically detected outliers. It has zero rows if the model contains no
+#'   such outlier.
+#'
+#' @note This is an internal function. Unlike [getOutliers()] it works on single
+#'   series objects only.
+#' @keywords internal
+#'
+#' @examples
+#' # obj <- perX13(AirPassengers, "rsa3", outliers = "AO1960.5")
+#' # obj$run()
+#' # getOutliers(obj)     # all outliers
+#' # getNewOutliers(obj)  # without the manually specified one
+getNewOutliers <- function(x) {
+  all_outliers <- getOutliers(x)
+  spec <- unclass(x$params)
+  spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
+  spec_outliers <- spec$regression$outliers
+  manual <- if (length(spec_outliers) == 0) {
+    NULL
+  } else {
+    data.frame(
+      type = vapply(spec_outliers, function(o) as.character(o$code), ""),
+      date = as.Date(
+        vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
+        origin = "1970-01-01"
+      )
+    )
+  }
+  if (length(all_outliers) == 1 && is.na(all_outliers)) {
+    return(data.frame(
+      name = character(0),
+      type = character(0),
+      coef.value = numeric(0),
+      stde = numeric(0),
+      t = numeric(0),
+      pvalue = numeric(0),
+      date = as.Date(character(0)),
+      coef.type = character(0)
+    ))
+  }
+  if (is.null(manual)) {
+    return(all_outliers)
+  }
+  keep <- !(paste(all_outliers$type, all_outliers$date) %in%
+    paste(manual$type, manual$date))
+  new_outliers <- all_outliers[keep, , drop = FALSE]
+  rownames(new_outliers) <- NULL
+  new_outliers
 }
 
 #' Extract ARIMA regression coefficients from a Persephone object

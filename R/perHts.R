@@ -63,9 +63,8 @@ hierarchicalTimeSeries <- R6::R6Class(
     #'   points or a list of ts objects or a mts object if the weight varies
     #'   for different time points. They must have the same length as the
     #'   number of components.
-    #' @param recursive logical, if TRUE, apply this setting to all subseries as well. If FALSE,
-    #'   only apply to aggregate
-    #' @param iterate logical, if TRUE apply the given ... spec/params also to all components
+    #' @param iterate logical, if TRUE apply the given ... spec/params also to all components.
+    #'   For plain ts/mts components, method and template are inherited only if iterate is TRUE.
     initialize = function(
       ...,
       list = NULL,
@@ -75,7 +74,6 @@ hierarchicalTimeSeries <- R6::R6Class(
       userdefined = NULL,
       spec = NULL,
       weights = NULL,
-      recursive = TRUE,
       iterate = TRUE,
       speclist = NULL
     ) {
@@ -85,36 +83,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       if (missing(template) || is.null(template)) {
         template <- "rsa3"
       }
-      # allowed template sets per method
-      x13_templates <- c("rsa0", "rsa1", "rsa2c", "rsa3", "rsa4", "rsa5c")
-      tramoseats_templates <- c(
-        "rsafull",
-        "rsa0",
-        "rsa1",
-        "rsa2",
-        "rsa3",
-        "rsa4",
-        "rsa5"
-      )
-
-      if (private$method == "x13") {
-        if (!template %in% x13_templates) {
-          stop(sprintf(
-            "Invalid template '%s' for method 'x13'. Allowed values: %s",
-            template,
-            paste(x13_templates, collapse = ", ")
-          ))
-        }
-      } else {
-        # tramoseats
-        if (!template %in% tramoseats_templates) {
-          stop(sprintf(
-            "Invalid template '%s' for method 'tramoseats'. Allowed values: %s",
-            template,
-            paste(tramoseats_templates, collapse = ", ")
-          ))
-        }
-      }
+      check_template(template, private$method)
       private$template <- template
       # keep context and userdefined in private state for runDirect
       private$context <- context
@@ -168,7 +137,19 @@ hierarchicalTimeSeries <- R6::R6Class(
         }
       }
 
-      components <- lapply(components, as.persephone)
+      # Nur wenn iterate = TRUE gilt die Konfiguration der Aggregatsreihe auch
+      # fuer die Subreihen; sonst erhalten rohe ts-Objekte die Paket-Defaults.
+      if (isTRUE(iterate)) {
+        components <- lapply(
+          components,
+          as.persephone,
+          method = private$method,
+          template = private$template
+        )
+        check_component_method(components, private$method, iterate)
+      } else {
+        components <- lapply(components, as.persephone)
+      }
       componentsHts <- sapply(
         components,
         function(x) "hierarchicalTimeSeries" %in% class(x)
@@ -804,6 +785,9 @@ hierarchicalTimeSeries <- R6::R6Class(
 #'   different time points. They must have the same length as the number of
 #'   components.
 #' @param iterate logical, if TRUE apply the given spec/params also to all components recursively
+#'   (only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
+#'   method and template only if iterate is TRUE; otherwise they are created with the
+#'   method-specific defaults of [perTramo()] / [perX13()].
 #' @examples
 #' \dontrun{
 #' objX13 <- perX13(AirPassengers, "rsa3")

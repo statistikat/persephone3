@@ -7,10 +7,17 @@
 \usage{
 is.persephone(x)
 
-as.persephone(x)
+as.persephone(x, method = c("tramoseats", "x13"), template = NULL)
 }
 \arguments{
 \item{x}{R object to be tested or converted.}
+
+\item{method}{SA method used when coercing a bare ts object, i.e.
+"tramoseats" (default) or "x13". Ignored for existing persephone objects,
+whose method is fixed by their class.}
+
+\item{template}{template name passed to the corresponding spec function;
+if NULL, the method-specific default is used.}
 }
 \description{
 Check if an R object is of or derives from the class \code{persephone} or convert
@@ -20,4 +27,6 @@ an object to persephone with method "tramoseats" as default.
 is.persephone(2)
 obj <- as.persephone(AirPassengers)
 obj$run()
+obj <- as.persephone(AirPassengers)
+obj_x13 <- as.persephone(AirPassengers, method = "x13", template = "rsa3")
 }
