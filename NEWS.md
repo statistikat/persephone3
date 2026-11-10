@@ -10,6 +10,11 @@
   `genTd()`); the previous uncentered regressors were nearly collinear with
   the regression constant, which made x13 often estimate the model in logs
   with the trend and s.a. series returned on the log scale.
+* `plot()` and the hierarchical plots now use the highcharter engine by
+  default (`plotEngine = "hc"`), in the style of `plotSeasIrrCal()`:
+  Highcharts stock chart, spline smoothing, default Highcharts colours and
+  the forecast with confidence band; the dygraphs style is still available
+  with `plotEngine = "dygraph"`.
 * Time series plots (`plot()`) are drawn with smoothed lines by default; the
   new logical arguments `smooth` and `rangeSelector` control the smoothing
   and the range selector. The range selector is now off by default. The
@@ -18,9 +23,9 @@
   which previously blew up at the end of the plot when forecasts were shown
   and ruined the scaling of the y-axis. The widgets resize with their
   container instead of keeping the fixed 960px width.
-* The series of the time series plots (`plot()`) are drawn in fixed,
-  distinguishable colours and the time axis of the monthly and quarterly
-  series shows the exact month/quarter starts.
+* In the dygraphs style the series are drawn in fixed, distinguishable
+  colours and the time axis of the monthly and quarterly series shows the
+  exact month/quarter starts.
 * Outliers in the time series plots are marked with coloured dots only and
   the legend (explaining the outlier colours) stays visible, instead of
   dashed vertical lines and labels that overlapped the title in small

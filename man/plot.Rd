@@ -13,6 +13,7 @@
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
+  plotEngine = c("hc", "dygraph"),
   ...
 )
 
@@ -25,6 +26,7 @@
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
+  plotEngine = c("hc", "dygraph"),
   ...
 )
 }
@@ -48,6 +50,10 @@ addition to a line going through the point.}
 \item{annualComparison}{integer corresponding to the month or quarter which
 should be highlighted in the plot for every year.}
 
+\item{plotEngine}{character. Either \code{"hc"} (default, interactive
+highcharter plots in the style of \code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}, with Highcharts
+splines and colours) or \code{"dygraph"} (dygraphs plots).}
+
 \item{...}{other plotting parameters to affect the plot. Not currently used.}
 
 \item{forecasts}{logical flag indicating if forecasts should be plotted}
@@ -56,12 +62,13 @@ should be highlighted in the plot for every year.}
 in the plot}
 }
 \value{
-Returns an object of class \code{dygraphs}.
+Returns a \code{highchart} (if \code{plotEngine="hc"}) or \code{dygraphs} object.
 }
 \description{
-Produces a dygraph (see the
-\href{https://rstudio.github.io/dygraphs/}{online documentation} for more detail)
-for objects of class \link{persephone}.
+Produces an interactive time series plot for objects of class \link{persephone},
+by default with the highcharter engine (\code{plotEngine = "hc"}, see
+\code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}) or with the dygraphs engine (\code{plotEngine = "dygraph"},
+see the \href{https://rstudio.github.io/dygraphs/}{online documentation} for more detail).
 In case of \code{persephoneSingle} objects,
 the function generates an interactive time series plot
 of the original series, the seasonally adjusted (SA) series and the trend as

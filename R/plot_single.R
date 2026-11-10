@@ -47,8 +47,23 @@ plot.persephoneSingle <- function(
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
+  plotEngine = c("hc", "dygraph"),
   ...
 ) {
+  plotEngine <- match.arg(plotEngine)
+  if (plotEngine == "hc") {
+    return(plotSingleHc(
+      x,
+      main = main,
+      forecasts = forecasts,
+      showOutliers = showOutliers,
+      rangeSelector = rangeSelector,
+      smooth = smooth,
+      drawPoints = drawPoints,
+      annualComparison = annualComparison,
+      ...
+    ))
+  }
   # Helper function for annual comparison
   annComp <- function(ts, annualComparison) {
     annCompVec <- format(time(ts)[cycle(ts) == annualComparison])

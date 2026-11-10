@@ -1,8 +1,10 @@
 #' Interactive time series plot for a persephone object
 #'
-#' Produces a dygraph (see the
-#' [online documentation](https://rstudio.github.io/dygraphs/) for more detail)
-#' for objects of class [persephone].
+#' Produces an interactive time series plot for objects of class [persephone],
+#' by default with the highcharter engine (`plotEngine = "hc"`, see
+#' [plotSeasIrrCal()]) or with the dygraphs engine (`plotEngine = "dygraph"`,
+#' see the [online
+#' documentation](https://rstudio.github.io/dygraphs/) for more detail).
 #' In case of ``persephoneSingle`` objects,
 #' the function generates an interactive time series plot
 #' of the original series, the seasonally adjusted (SA) series and the trend as
@@ -31,9 +33,12 @@
 #'   addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which
 #'   should be highlighted in the plot for every year.
+#' @param plotEngine character. Either `"hc"` (default, interactive
+#'   highcharter plots in the style of [plotSeasIrrCal()], with Highcharts
+#'   splines and colours) or `"dygraph"` (dygraphs plots).
 #' @param ... other plotting parameters to affect the plot. Not currently used.
 #'
-#' @return Returns an object of class `dygraphs`.
+#' @return Returns a `highchart` (if `plotEngine="hc"`) or `dygraphs` object.
 #'
 #' @examples
 #' # Plotting hierarchicalTimeSeries objects
@@ -68,7 +73,44 @@
 #' @export
 plot.hierarchicalTimeSeries <- function(x, main=NULL,
                             rangeSelector=FALSE, smooth=TRUE, drawPoints=FALSE,
-                            annualComparison=NULL, ...){
+                            annualComparison=NULL,
+                            plotEngine = c("hc", "dygraph"), ...){
+
+  plotEngine <- match.arg(plotEngine)
+  if (plotEngine == "hc") {
+    seriesType <- if (smooth) "spline" else "line"
+    marker <- list(enabled = drawPoints, radius = 2)
+    hc <- highcharter::highchart(type = "stock")
+    if (is.null(x$output$user_defined)) {
+      hc <- hc %>%
+        add_ts(x$ts, "Original", id = "original",
+               type = seriesType, marker = marker)
+    } else {
+      hc <- hc %>%
+        add_ts(x$ts, "Original", id = "original",
+               type = seriesType, marker = marker) %>%
+        add_ts(x$adjustedDirect, "Direct SA", id = "sa_dir",
+               type = seriesType, marker = marker) %>%
+        add_ts(x$adjustedIndirect, "Indirect SA", id = "sa_indir",
+               type = seriesType, marker = marker)
+    }
+    if (!is.null(main)) {
+      hc <- hc %>% highcharter::hc_title(text = main)
+    }
+    return(
+      hc %>%
+        highcharter::hc_legend(enabled = TRUE) %>%
+        highcharter::hc_chart(zoomType = "x") %>%
+        highcharter::hc_chart(events = list(
+          load = highcharter::JS(
+            "function() { this.container.ondblclick = _ => this.zoomOut(); }"
+          )
+        )) %>%
+        highcharter::hc_rangeSelector(enabled = rangeSelector) %>%
+        highcharter::hc_navigator(enabled = FALSE) %>%
+        highcharter::hc_scrollbar(enabled = FALSE)
+    )
+  }
 
   # Helper function for annual comparison
   annComp <- function(ts, annualComparison){

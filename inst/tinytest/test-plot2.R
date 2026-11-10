@@ -1,27 +1,51 @@
-# Test plot changes: smoothed lines, optional range selector, overlaid spectra
+# Test plot changes: smoothed lines, optional range selector, plot engines,
+# overlaid spectra
 
 data(AirPassengers, package = "datasets")
 
-message("Test plot - smoothed lines and range selector")
+message("Test plot - highcharter engine (default)")
 
 obj <- perX13(AirPassengers, "rsa1")
 
-# pre-run plot is smoothed by default (finer time grid than the observations)
-g0 <- plot(obj)
-expect_true(length(g0$x$data[[1]]) > length(AirPassengers))
-
-# the range selector is off by default and can be switched on
-g_no <- plot(obj)
-expect_true(!isTRUE(g_no$x$attrs$showRangeSelector))
-g_yes <- plot(obj, rangeSelector = TRUE)
-expect_true(isTRUE(g_yes$x$attrs$showRangeSelector))
+# pre-run and post-run plots work, the series are drawn with Highcharts
+# splines
+g_hc0 <- plot(obj)
+expect_true(inherits(g_hc0, "highchart"))
+expect_true(all(vapply(g_hc0$x$hc_opts$series, function(s) s$type, "") ==
+  "spline"))
 
 obj$run()
 
 n <- length(obj$output$user_defined$y)
 
+g_hc <- plot(obj)
+expect_true(inherits(g_hc, "highchart"))
+nm <- vapply(g_hc$x$hc_opts$series, function(s) s$name, "")
+expect_true(all(c("Original", "Trend", "Seasonally Adjusted") %in% nm))
+# the range selector at the bottom is off by default
+expect_false(isTRUE(g_hc$x$hc_opts$rangeSelector$enabled))
+# smooth = FALSE draws plain lines
+g_hc_lin <- plot(obj, smooth = FALSE)
+expect_true(all(vapply(g_hc_lin$x$hc_opts$series, function(s) s$type, "") ==
+  "line"))
+# rangeSelector = TRUE switches it on
+g_hc_rs <- plot(obj, rangeSelector = TRUE)
+expect_true(isTRUE(g_hc_rs$x$hc_opts$rangeSelector$enabled))
+
+message("Test plot - dygraph engine")
+
+# pre-run plot is smoothed by default (finer time grid than the observations)
+g0 <- plot(obj, plotEngine = "dygraph")
+expect_true(length(g0$x$data[[1]]) > length(AirPassengers))
+
+# the range selector is off by default and can be switched on
+g_no <- plot(obj, plotEngine = "dygraph")
+expect_true(!isTRUE(g_no$x$attrs$showRangeSelector))
+g_yes <- plot(obj, rangeSelector = TRUE, plotEngine = "dygraph")
+expect_true(isTRUE(g_yes$x$attrs$showRangeSelector))
+
 # smoothed plot: 8 segments per observation interval
-g <- plot(obj, forecasts = FALSE)
+g <- plot(obj, forecasts = FALSE, plotEngine = "dygraph")
 expect_equal(length(g$x$data[[1]]), (n - 1) * 8 + 1)
 
 # the spline passes through the observations
@@ -37,7 +61,7 @@ expect_equal(length(unique(cols)), length(cols))
 expect_true(all(startsWith(cols, "#")))
 
 # smooth = FALSE keeps the original observations
-g2 <- plot(obj, smooth = FALSE, forecasts = FALSE)
+g2 <- plot(obj, smooth = FALSE, forecasts = FALSE, plotEngine = "dygraph")
 expect_equal(length(g2$x$data[[1]]), n)
 vals2 <- vapply(g2$x$data[[2]], function(z) z[1], 0)
 expect_equal(as.numeric(vals2), as.numeric(obj$output$user_defined$y),
@@ -47,7 +71,7 @@ expect_equal(as.numeric(vals2), as.numeric(obj$output$user_defined$y),
 # the forecast horizon; the smoothed estimated series must end with the last
 # observation and must not be extrapolated over the forecast horizon (the
 # extrapolated spline blew up there and determined the y-axis scaling)
-g3 <- plot(obj)
+g3 <- plot(obj, plotEngine = "dygraph")
 nf <- n + length(obj$output$user_defined$y_f)
 expect_equal(length(g3$x$data[[1]]), (nf - 1) * 8 + 1)
 last <- 8 * n - 7 # grid point of the last observation
@@ -64,7 +88,7 @@ for (j in 2:4) {
 # vertical lines; the legend stays visible for the outlier colours
 obj$updateParams(addout.type = "AO", addout.date = "1950-01-01")
 obj$run()
-g4 <- plot(obj)
+g4 <- plot(obj, plotEngine = "dygraph")
 expect_true(!inherits(try(print(g4), silent = TRUE), "try-error"))
 expect_true(length(g4$x$annotations) == 0)
 expect_equal(length(g4$x$events), 0)
@@ -78,7 +102,7 @@ expect_true(!is.null(g4$x$sizingPolicy))
 # values between two observations may exceed them only slightly (a cubic
 # spline, like the smoothed lines of Highcharts, rounds the peaks a bit)
 y <- as.numeric(obj$output$user_defined$y)
-g5 <- plot(obj, forecasts = FALSE)
+g5 <- plot(obj, forecasts = FALSE, plotEngine = "dygraph")
 vals3 <- vapply(g5$x$data[[2]],
                 function(z) if (length(z)) as.numeric(z[1]) else NA_real_,
                 NA_real_)
@@ -91,6 +115,16 @@ ok <- is.na(vals3) |
   (vals3 >= pmin(y[seg_lo], y[seg_hi]) - tol &
    vals3 <= pmax(y[seg_lo], y[seg_hi]) + tol)
 expect_true(all(ok))
+
+message("Test plot - outliers in the highcharter engine")
+
+# outliers are scatter series (coloured dots), not vertical plotLines; the
+# forecast is a dashed spline with an area band
+g6 <- plot(obj, plotEngine = "hc")
+types <- vapply(g6$x$hc_opts$series, function(s) s$type, "")
+expect_true("scatter" %in% types)
+expect_true("areasplinerange" %in% types)
+expect_equal(length(g6$x$hc_opts$xAxis$plotLines), 0)
 
 message("Test plotSiRatios - marker size")
 

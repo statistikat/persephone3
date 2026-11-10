@@ -9,27 +9,28 @@
 \arguments{
 \item{object}{A persephone object of class \code{persephoneSingle}}
 
-\item{...}{Additional arguments (currently unused)}
+\item{...}{passed to \code{\link[=plotSingleHc]{plotSingleHc()}}}
 }
 \value{
 A \code{highchart} object
 }
 \description{
 Creates an interactive time series plot showing the original series, trend,
-seasonally adjusted series, and forecast with confidence intervals.
-Outliers are marked with vertical lines.
+seasonally adjusted series, and forecast with confidence interval, in the
+style of \code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}} (Highcharts splines and colours, see
+\code{\link[=plotSingleHc]{plotSingleHc()}}). Outliers are marked with coloured dots.
 }
 \details{
 The plot includes:
 \itemize{
-\item Original series (blue)
-\item Trend (orange)
-\item Seasonally adjusted series (green)
-\item Forecast with 95\\% confidence interval (grey)
-\item Outliers marked with pink dashed lines
+\item Original series, trend and seasonally adjusted series
+(default Highcharts colours, smoothed with Highcharts splines)
+\item Forecast with 95\\% confidence interval (grey dashed line)
+\item Outliers marked with coloured dots
 }
 
-The plot is interactive with zoom functionality (double-click to reset zoom).
+The plot is interactive with zoom functionality (double-click to reset
+zoom).
 }
 \examples{
 \dontrun{
