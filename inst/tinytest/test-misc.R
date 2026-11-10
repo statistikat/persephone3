@@ -45,3 +45,16 @@ obj_diag$run()
 # diagnosticsTable should work
 diag_table <- obj_diag$diagnosticsTable()
 expect_true(!is.null(diag_table))
+
+# the default is still a plain data.frame
+expect_true(is.data.frame(diag_table))
+
+# view = TRUE returns the interactive DT widget instead
+w_diag <- obj_diag$diagnosticsTable(view = TRUE)
+expect_true(inherits(w_diag, "datatables"))
+expect_true(inherits(w_diag, "htmlwidget"))
+# the widget contains the friendly column headers of diagColumnMeta()
+html_diag <- as.character(htmltools::as.tags(w_diag))
+expect_true(grepl("QS seasonality", html_diag))
+# the unrun object gives an all-NA row without error
+expect_true(is.data.frame(perX13(AirPassengers, "rsa3")$diagnosticsTable()))

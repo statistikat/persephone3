@@ -1,4 +1,9 @@
 # persephone3 (development version)
+* `diagnosticsTable()` and the `$diagnosticsTable()` method gained a `view`
+  argument: with `view = TRUE` the diagnostics are shown as an interactive
+  table (DT) in the viewer pane, with readable column headers and explanatory
+  tooltips and traffic light colours for the quality classes; the default
+  (`view = FALSE`) still returns the plain data.frame.
 * New function `perTd()`: seasonal adjustment with user-defined trading day
   regressors (from a `rjd3toolkit` national calendar or from precomputed
   regressors such as `genTd()[[3]]`), for both x13 and tramoseats.

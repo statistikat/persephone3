@@ -290,9 +290,18 @@ display a persephone object in the console
 
 create a table for the eurostat quality report
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$diagnosticsTable()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{persephone$diagnosticsTable(view = FALSE, ...)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{view}}{passed to \code{\link[=diagnosticsTable]{diagnosticsTable()}}}
+
+\item{\code{...}}{passed to \code{\link[=diagnosticsTable]{diagnosticsTable()}}}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-iterate"></a>}}

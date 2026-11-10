@@ -174,6 +174,176 @@ generate_diagnostics_table <- function(x) {
   )
 }
 
+# labels of the columns of the diagnostics table: friendly names (the DT
+# column headers) and, in the header tooltip, a short explanation of what a
+# "Good" result means for the test
+diagColumnMeta <- function() {
+  list(
+    component = list(label = "Component", title = ""),
+    method = list(label = "Method", title = ""),
+    arimaMdl = list(
+      label = "ARIMA",
+      title = "reg-ARIMA model of the pre-transformed series"
+    ),
+    logTransform = list(
+      label = "Log", title = "the model was estimated in logs"
+    ),
+    seasonality = list(
+      label = "Seasonality",
+      title = "combined seasonality test (SI ratios): Present / Absent"
+    ),
+    normality = list(
+      label = "Normality",
+      title = "Doornik-Hansen test on the residuals; Good: p >= 0.1"
+    ),
+    independence = list(
+      label = "Independence",
+      title = "Ljung-Box test on the residuals; Good: p >= 0.1"
+    ),
+    QS_seas = list(
+      label = "QS seasonality",
+      title = "QS test of residual seasonality in the s.a. series;
+      Good: p >= 0.1"
+    ),
+    F_seas = list(
+      label = "F seasonality",
+      title = "F test of residual seasonality in the s.a. series;
+      Good: p >= 0.1"
+    ),
+    combSA_all = list(
+      label = "Calendar in SA (all)",
+      title = "combined test of the significance of the calendar effects
+      left in the s.a. series, all observations; Good: p < 0.05"
+    ),
+    combSA_last = list(
+      label = "Calendar in SA (last y.)",
+      title = "combined test of the calendar effects left in the s.a.
+      series, last year; Good: p < 0.05"
+    ),
+    combI_all = list(
+      label = "Calendar in Irregular (all)",
+      title = "combined test of the calendar effects left in the
+      irregular component, all observations; Good: p < 0.05"
+    ),
+    combI_last = list(
+      label = "Calendar in Irregular (last y.)",
+      title = "combined test of the calendar effects left in the
+      irregular component, last year; Good: p < 0.05"
+    ),
+    fTestSA_td = list(
+      label = "TD in SA",
+      title = "F test of the significance of the trading day effects left
+      in the s.a. series; Good: p >= 0.1"
+    ),
+    TD_Ftest = list(
+      label = "TD p-value",
+      title = "p-value of the regression F test for the trading day
+      regressors"
+    ),
+    nOutliers = list(
+      label = "Outliers",
+      title = "share of observations flagged as outliers;
+      Good: < 3%, Uncertain: 3-5%, Severe: > 5%"
+    ),
+    Q = list(label = "Q", title = "M-statistic Q (0 = perfect model)"),
+    Q2 = list(label = "Q2", title = "modified M-statistic Q-M2"),
+    TotalQ = list(label = "Quality", title = "overall quality summary")
+  )
+}
+
+# order of the columns of the viewer table (grouped by topic); columns not
+# listed keep their position at the end
+diagColumnOrder <- c(
+  "component", "method", "arimaMdl", "logTransform",
+  "seasonality", "normality", "independence", "QS_seas", "F_seas",
+  "combSA_all", "combSA_last", "combI_all", "combI_last",
+  "fTestSA_td", "TD_Ftest", "nOutliers",
+  "Q", "Q2", "TotalQ"
+)
+
+# interactive viewer table of the diagnostics table of diagnosticsTable():
+# readable column headers with explanatory tooltips, traffic light colours
+# for the quality classes, columns grouped by topic; DT shows it in the
+# viewer pane (RStudio) or the browser
+#' @importFrom DT datatable formatStyle
+diagnosticsDatatable <- function(df, ...) {
+  meta <- diagColumnMeta()
+  # drop the columns that are uninformative in the viewer: run (rows are
+  # only shown for objects that were run) and type (all series of one call
+  # have the same type)
+  drop <- intersect(c("run", "type"), names(df))
+  for (dc in drop) {
+    if (all(!is.na(df[[dc]])) && all(df[[dc]] %in% c(TRUE, "single"))) {
+      df[[dc]] <- NULL
+    }
+  }
+  ord <- c(intersect(diagColumnOrder, names(df)),
+           setdiff(names(df), diagColumnOrder))
+  df <- df[, ord, drop = FALSE]
+
+  labels <- vapply(ord, function(cn) {
+    if (is.null(meta[[cn]])) cn else meta[[cn]]$label
+  }, "")
+  titles <- vapply(ord, function(cn) {
+    if (is.null(meta[[cn]]) || is.null(meta[[cn]]$title)) {
+      ""
+    } else {
+      gsub("[[:space:]]+", " ", trimws(meta[[cn]]$title))
+    }
+  }, "")
+
+  # one tooltip per column: DataTables' "title" option replaces the column
+  # header on the client side and is inserted as HTML (DT itself escapes
+  # colnames), so the span with the tooltip has to be built here
+  colDefs <- unname(lapply(which(titles != ""), function(i) {
+    list(
+      targets = i - 1L,
+      title = paste0(
+        '<span title="', htmltools::htmlEscape(titles[i], attribute = TRUE),
+        '">', labels[i], "</span>"
+      )
+    )
+  }))
+  dt <- DT::datatable(
+    df,
+    rownames = FALSE,
+    filter = if (nrow(df) > 1) "top" else "none",
+    colnames = unname(labels),
+    options = list(
+      scrollX = TRUE,
+      paging = FALSE,
+      searching = nrow(df) > 1,
+      info = nrow(df) > 1,
+      ordering = TRUE,
+      columnDefs = colDefs
+    )
+  )
+  # traffic light colours for the quality classes
+  classes <- c(
+    Good = "#c6efce", Uncertain = "#ffeb9c",
+    Bad = "#ffc7ce", Severe = "#ff8080", Undefined = "#eeeeee"
+  )
+  coloured <- c(
+    "seasonality", "normality", "independence", "QS_seas", "F_seas",
+    "combSA_all", "combSA_last", "combI_all", "combI_last",
+    "fTestSA_td", "nOutliers", "TotalQ"
+  )
+  for (cn in intersect(coloured, ord)) {
+    dt <- dt %>% DT::formatStyle(
+      cn, `background-color` = DT::styleEqual(
+        names(classes), unname(classes)
+      )
+    )
+  }
+  # right alignment of the numeric columns
+  for (cn in ord) {
+    if (is.numeric(df[[cn]])) {
+      dt <- dt %>% DT::formatStyle(cn, textAlign = "right")
+    }
+  }
+  dt
+}
+
 #' Diagnostics table for persephone objects
 #'
 #' Creates a comprehensive table of diagnostic statistics and quality indicators
@@ -182,9 +352,15 @@ generate_diagnostics_table <- function(x) {
 #'
 #' @param x a persephone object created with \code{\link{perX13}},
 #'   \code{\link{perTramo}}, or \code{\link{perHts}}
+#' @param view logical. If `TRUE`, the table is shown as an interactive
+#'   widget (sortable columns, explanatory tooltips in the headers and
+#'   traffic light colours for the quality classes), displayed in the RStudio
+#'   viewer pane or the browser, instead of being returned as a data.frame.
+#' @param ... passed to [DT::datatable()] if `view = TRUE`
 #'
-#' @return A data.frame with diagnostic statistics. For hierarchical objects,
-#'   includes a 'component' column identifying each series.
+#' @return A data.frame with diagnostic statistics if `view = FALSE` (for
+#'   hierarchical objects, includes a 'component' column identifying each
+#'   series), otherwise a `datatables` htmlwidget.
 #'
 #' @details
 #' The diagnostics table provides an overview of key quality indicators:
@@ -208,6 +384,9 @@ generate_diagnostics_table <- function(x) {
 #' obj <- perX13(AirPassengers, template = "rsa3")
 #' obj$run()
 #' diagnosticsTable(obj)
+#' # interactive table with tooltips and traffic light colours, shown in
+#' # the RStudio viewer pane
+#' diagnosticsTable(obj, view = TRUE)
 #'
 #' # Hierarchical series
 #' obj1 <- perX13(AirPassengers, "rsa3")
@@ -218,12 +397,18 @@ generate_diagnostics_table <- function(x) {
 #'
 #' # R6 method
 #' obj$diagnosticsTable()
+#' obj$diagnosticsTable(view = TRUE)
 #' }
 #'
 #' @export
-diagnosticsTable <- function(x) {
+diagnosticsTable <- function(x, view = FALSE, ...) {
   if (!inherits(x, "persephone")) {
     stop("x must be a persephone object", call. = FALSE)
   }
-  x$iterate(generate_diagnostics_table, asTable = TRUE)
+  res <- x$iterate(generate_diagnostics_table, asTable = TRUE)
+  if (view) {
+    diagnosticsDatatable(res, ...)
+  } else {
+    res
+  }
 }

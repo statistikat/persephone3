@@ -4,15 +4,23 @@
 \alias{diagnosticsTable}
 \title{Diagnostics table for persephone objects}
 \usage{
-diagnosticsTable(x)
+diagnosticsTable(x, view = FALSE, ...)
 }
 \arguments{
 \item{x}{a persephone object created with \code{\link{perX13}},
 \code{\link{perTramo}}, or \code{\link{perHts}}}
+
+\item{view}{logical. If \code{TRUE}, the table is shown as an interactive
+widget (sortable columns, explanatory tooltips in the headers and
+traffic light colours for the quality classes), displayed in the RStudio
+viewer pane or the browser, instead of being returned as a data.frame.}
+
+\item{...}{passed to \code{\link[DT:datatable]{DT::datatable()}} if \code{view = TRUE}}
 }
 \value{
-A data.frame with diagnostic statistics. For hierarchical objects,
-includes a 'component' column identifying each series.
+A data.frame with diagnostic statistics if \code{view = FALSE} (for
+hierarchical objects, includes a 'component' column identifying each
+series), otherwise a \code{datatables} htmlwidget.
 }
 \description{
 Creates a comprehensive table of diagnostic statistics and quality indicators
@@ -38,6 +46,9 @@ based on commonly used thresholds in seasonal adjustment diagnostics.
 obj <- perX13(AirPassengers, template = "rsa3")
 obj$run()
 diagnosticsTable(obj)
+# interactive table with tooltips and traffic light colours, shown in
+# the RStudio viewer pane
+diagnosticsTable(obj, view = TRUE)
 
 # Hierarchical series
 obj1 <- perX13(AirPassengers, "rsa3")
@@ -48,6 +59,7 @@ diagnosticsTable(ht)
 
 # R6 method
 obj$diagnosticsTable()
+obj$diagnosticsTable(view = TRUE)
 }
 
 }
