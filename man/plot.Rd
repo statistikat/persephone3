@@ -13,7 +13,7 @@
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
-  plotEngine = c("hc", "dygraph"),
+  plotEngine = c("dygraph", "plotly"),
   ...
 )
 
@@ -26,7 +26,7 @@
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
-  plotEngine = c("hc", "dygraph"),
+  plotEngine = c("dygraph", "plotly"),
   ...
 )
 }
@@ -50,9 +50,9 @@ addition to a line going through the point.}
 \item{annualComparison}{integer corresponding to the month or quarter which
 should be highlighted in the plot for every year.}
 
-\item{plotEngine}{character. Either \code{"hc"} (default, interactive
-highcharter plots in the style of \code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}, with Highcharts
-splines and colours) or \code{"dygraph"} (dygraphs plots).}
+\item{plotEngine}{character. Either \code{"dygraph"} (default, interactive
+dygraphs plots) or \code{"plotly"} (plotly plots); both in the style of
+\code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}} with smoothed lines and Highcharts colours.}
 
 \item{...}{other plotting parameters to affect the plot. Not currently used.}
 
@@ -62,13 +62,13 @@ splines and colours) or \code{"dygraph"} (dygraphs plots).}
 in the plot}
 }
 \value{
-Returns a \code{highchart} (if \code{plotEngine="hc"}) or \code{dygraphs} object.
+Returns a \code{dygraphs} (if \code{plotEngine="dygraph"}) or \code{plotly}
+object.
 }
 \description{
-Produces an interactive time series plot for objects of class \link{persephone},
-by default with the highcharter engine (\code{plotEngine = "hc"}, see
-\code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}) or with the dygraphs engine (\code{plotEngine = "dygraph"},
-see the \href{https://rstudio.github.io/dygraphs/}{online documentation} for more detail).
+Produces an interactive time series plot for objects of class \link{persephone}
+with the dygraphs engine (\code{plotEngine = "dygraph"}, see the \href{https://rstudio.github.io/dygraphs/}{online documentation} for more detail) or
+with the plotly engine (\code{plotEngine = "plotly"}).
 In case of \code{persephoneSingle} objects,
 the function generates an interactive time series plot
 of the original series, the seasonally adjusted (SA) series and the trend as

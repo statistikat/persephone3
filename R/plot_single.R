@@ -47,12 +47,12 @@ plot.persephoneSingle <- function(
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
-  plotEngine = c("hc", "dygraph"),
+  plotEngine = c("dygraph", "plotly"),
   ...
 ) {
   plotEngine <- match.arg(plotEngine)
-  if (plotEngine == "hc") {
-    return(plotSingleHc(
+  if (plotEngine == "plotly") {
+    return(plotSinglePlotly(
       x,
       main = main,
       forecasts = forecasts,
@@ -195,10 +195,25 @@ plot.persephoneSingle <- function(
     if (forecasts & !is.null(ppm_y_f) & !is.null(ppm_y_ef)) {
       lowerci <- ppm_y_f - 1.96 * ppm_y_ef
       upperci <- ppm_y_f + 1.96 * ppm_y_ef
+      fcastSeries <- function(graphObj) {
+        graphObj %>%
+          dySeries(
+            "ppm_y_f",
+            label = "Forecasts",
+            color = p3_series_colors[["Forecasts"]],
+            strokePattern = "dashed",
+            drawPoints = drawPoints
+          ) %>%
+          p3_band_series()
+      }
       if (!otlTF) {
         ts <- cbind(y, t, sa, ppm_y_f, lowerci, upperci)
         graphObj <- dygraph(
-          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          dyData(
+            ts,
+            smooth = smooth,
+            smooth_cols = c("y", "t", "sa", "ppm_y_f", "lowerci", "upperci")
+          ),
           main = main
         ) %>%
           dySeries(
@@ -217,19 +232,17 @@ plot.persephoneSingle <- function(
             label = "Trend",
             color = p3_series_colors[["Trend"]]
           ) %>%
-          dySeries(
-            c("lowerci", "ppm_y_f", "upperci"),
-            label = "Forecasts",
-            color = p3_series_colors[["Forecasts"]],
-            strokePattern = "dashed",
-            drawPoints = drawPoints
-          ) %>%
+          fcastSeries() %>%
           dyLegend(width = 400)
       } else {
         ts <- cbind(y, t, sa, otl[[1]], ppm_y_f, lowerci, upperci)
 
         graphObj <- dygraph(
-          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          dyData(
+            ts,
+            smooth = smooth,
+            smooth_cols = c("y", "t", "sa", "ppm_y_f", "lowerci", "upperci")
+          ),
           main = main
         ) %>%
           dySeries(
@@ -264,13 +277,7 @@ plot.persephoneSingle <- function(
           graphObj = graphObj
         )
         graphObj <- graphObj %>%
-          dySeries(
-            c("lowerci", "ppm_y_f", "upperci"),
-            label = "Forecasts",
-            color = p3_series_colors[["Forecasts"]],
-            strokePattern = "dashed",
-            drawPoints = drawPoints
-          ) %>%
+          fcastSeries() %>%
           dyLegend(width = 300) #300 bei nouttype=3
       }
     } else {

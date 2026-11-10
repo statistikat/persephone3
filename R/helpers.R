@@ -140,19 +140,85 @@ specfun_list <- list(
 # persephone3 internal spec names
 p3_spec_names <- c("outliers")
 
-# default colours for the series of the dygraph plots (Okabe-Ito palette,
-# colour-blind friendly); named by the dySeries() labels
+# default colours for the series of the time series plots; the first five
+# entries are the default colours of Highcharts (the style of
+# plotSeasIrrCal()), so that the dygraph and plotly plots look like its
+# highcharter plots; named by the series labels of the plots
 p3_series_colors <- c(
-  Original = "#0072B2",
-  `Seasonally Adjusted` = "#D55E00",
-  Trend = "#009E73",
-  Forecasts = "#CC79A7",
-  `Direct SA` = "#D55E00",
-  `Indirect SA` = "#009E73"
+  Original = "#7cb5ec",
+  Trend = "#434348",
+  `Seasonally Adjusted` = "#90ed7d",
+  Forecasts = "#808080",
+  `Confidence Band` = "#7cb5ec",
+  `Direct SA` = "#434348",
+  `Indirect SA` = "#90ed7d"
 )
 
 # default colours of the outlier types in the time series plots
 p3_outlier_colors <- list(AO = "red", LS = "orange", TC = "#8055A4")
+
+# JS plotter for the confidence band of the forecasts in the dygraph plots:
+# fills the polygon between the "lowerci" column and the column of the
+# series it is attached to ("upperci", its own column is opts.seriesIndex +
+# 1 because the series label renames the column of getLabels()), like the
+# band of the forecasts in the highcharter plots. The two columns are drawn
+# with strokeWidth 0, so only the band between them is visible.
+p3_band_plotter <- htmlwidgets::JS(paste0(
+  "function(opts) {",
+  "  var g = opts.dygraph, ctx = opts.drawingContext, area = opts.plotArea;",
+  "  var labels = g.getLabels();",
+  "  var loCol = labels.indexOf('lowerci');",
+  "  var hiCol = opts.seriesIndex + 1;",
+  "  var rows = [], i, j, lo, hi;",
+  "  if (loCol >= 0) {",
+  "    for (i = 0; i < g.numRows(); i++) {",
+  "      lo = g.getValue(i, loCol); hi = g.getValue(i, hiCol);",
+  "      if (lo === null || hi === null || isNaN(lo) || isNaN(hi)) continue;",
+  "      rows.push([g.toDomXCoord(g.getValue(i, 0)),",
+  "                 g.toDomYCoord(hi), g.toDomYCoord(lo)]);",
+  "    }",
+  "  }",
+  "  if (rows.length > 1) {",
+  "    ctx.save();",
+  "    ctx.beginPath(); ctx.rect(area.x, area.y, area.w, area.h); ctx.clip();",
+  "    ctx.fillStyle = 'rgba(124, 181, 236, 0.25)';",
+  "    ctx.beginPath();",
+  "    ctx.moveTo(rows[0][0], rows[0][1]);",
+  "    for (j = 1; j < rows.length; j++) ctx.lineTo(rows[j][0], rows[j][1]);",
+  "    for (j = rows.length - 1; j >= 0; j--) ctx.lineTo(rows[j][0], rows[j][2]);",
+  "    ctx.closePath(); ctx.fill(); ctx.restore();",
+  "  }",
+  "}"
+))
+
+# CSS that hides the legend entries of the two confidence limit columns
+# (their colour is the transparent band colour); the forecast itself has its
+# own entry in the legend
+p3_band_css <- paste0(
+  ".dygraph-legend span[style*='124, 181, 236'] {\n",
+  "  display: none !important;\n",
+  "}\n"
+)
+
+# the two invisible series of the confidence band, to be added to a dygraph
+# after the series of the central forecast ("ppm_y_f")
+p3_band_series <- function(graphObj) {
+  graphObj <- graphObj %>%
+    dySeries(
+      "lowerci",
+      label = "lowerci",
+      color = "rgba(124, 181, 236, 0.01)",
+      strokeWidth = 0
+    ) %>%
+    dySeries(
+      "upperci",
+      label = "Confidence Band",
+      color = "rgba(124, 181, 236, 0.01)",
+      strokeWidth = 0,
+      plotter = p3_band_plotter
+    )
+  graphObj %>% dyCSS(textConnection(p3_band_css))
+}
 
 # fluid sizing for the dygraph widgets: without it the htmlwidgets sizing
 # policy keeps the fixed 960px default width of dygraphs, so in small windows

@@ -3,49 +3,27 @@
 
 data(AirPassengers, package = "datasets")
 
-message("Test plot - highcharter engine (default)")
+message("Test plot - dygraph engine (default)")
 
 obj <- perX13(AirPassengers, "rsa1")
 
-# pre-run and post-run plots work, the series are drawn with Highcharts
-# splines
-g_hc0 <- plot(obj)
-expect_true(inherits(g_hc0, "highchart"))
-expect_true(all(vapply(g_hc0$x$hc_opts$series, function(s) s$type, "") ==
-  "spline"))
+# pre-run plot is smoothed by default (finer time grid than the observations)
+g0 <- plot(obj)
+expect_true(inherits(g0, "dygraphs"))
+expect_true(length(g0$x$data[[1]]) > length(AirPassengers))
+
+# the range selector is off by default and can be switched on
+g_no <- plot(obj)
+expect_true(!isTRUE(g_no$x$attrs$showRangeSelector))
+g_yes <- plot(obj, rangeSelector = TRUE)
+expect_true(isTRUE(g_yes$x$attrs$showRangeSelector))
 
 obj$run()
 
 n <- length(obj$output$user_defined$y)
 
-g_hc <- plot(obj)
-expect_true(inherits(g_hc, "highchart"))
-nm <- vapply(g_hc$x$hc_opts$series, function(s) s$name, "")
-expect_true(all(c("Original", "Trend", "Seasonally Adjusted") %in% nm))
-# the range selector at the bottom is off by default
-expect_false(isTRUE(g_hc$x$hc_opts$rangeSelector$enabled))
-# smooth = FALSE draws plain lines
-g_hc_lin <- plot(obj, smooth = FALSE)
-expect_true(all(vapply(g_hc_lin$x$hc_opts$series, function(s) s$type, "") ==
-  "line"))
-# rangeSelector = TRUE switches it on
-g_hc_rs <- plot(obj, rangeSelector = TRUE)
-expect_true(isTRUE(g_hc_rs$x$hc_opts$rangeSelector$enabled))
-
-message("Test plot - dygraph engine")
-
-# pre-run plot is smoothed by default (finer time grid than the observations)
-g0 <- plot(obj, plotEngine = "dygraph")
-expect_true(length(g0$x$data[[1]]) > length(AirPassengers))
-
-# the range selector is off by default and can be switched on
-g_no <- plot(obj, plotEngine = "dygraph")
-expect_true(!isTRUE(g_no$x$attrs$showRangeSelector))
-g_yes <- plot(obj, rangeSelector = TRUE, plotEngine = "dygraph")
-expect_true(isTRUE(g_yes$x$attrs$showRangeSelector))
-
 # smoothed plot: 8 segments per observation interval
-g <- plot(obj, forecasts = FALSE, plotEngine = "dygraph")
+g <- plot(obj, forecasts = FALSE)
 expect_equal(length(g$x$data[[1]]), (n - 1) * 8 + 1)
 
 # the spline passes through the observations
@@ -55,13 +33,14 @@ expect_equal(as.numeric(vals[grid]),
              as.numeric(obj$output$user_defined$y),
              tolerance = 1e-6)
 
-# the plotted series have distinct colours
+# the plotted series have the Highcharts style colours
 cols <- g$x$attrs$colors
 expect_equal(length(unique(cols)), length(cols))
-expect_true(all(startsWith(cols, "#")))
+expect_true(all(startsWith(cols, "#") | startsWith(cols, "rgb")))
+expect_true("#7cb5ec" %in% cols) # Original
 
 # smooth = FALSE keeps the original observations
-g2 <- plot(obj, smooth = FALSE, forecasts = FALSE, plotEngine = "dygraph")
+g2 <- plot(obj, smooth = FALSE, forecasts = FALSE)
 expect_equal(length(g2$x$data[[1]]), n)
 vals2 <- vapply(g2$x$data[[2]], function(z) z[1], 0)
 expect_equal(as.numeric(vals2), as.numeric(obj$output$user_defined$y),
@@ -71,7 +50,7 @@ expect_equal(as.numeric(vals2), as.numeric(obj$output$user_defined$y),
 # the forecast horizon; the smoothed estimated series must end with the last
 # observation and must not be extrapolated over the forecast horizon (the
 # extrapolated spline blew up there and determined the y-axis scaling)
-g3 <- plot(obj, plotEngine = "dygraph")
+g3 <- plot(obj)
 nf <- n + length(obj$output$user_defined$y_f)
 expect_equal(length(g3$x$data[[1]]), (nf - 1) * 8 + 1)
 last <- 8 * n - 7 # grid point of the last observation
@@ -83,12 +62,20 @@ for (j in 2:4) {
   expect_true(all(is.na(vj[(last + 1):length(vj)])))
 }
 
+# the confidence band of the forecasts: two additional series with the
+# 95% limits, drawn without a line; the band is filled by the plotter of the
+# upper limit series
+expect_true("lowerci" %in% names(g3$x$attrs$series))
+expect_true("Confidence Band" %in% names(g3$x$attrs$series))
+expect_equal(g3$x$attrs$series[["lowerci"]]$strokeWidth, 0)
+expect_true(!is.null(g3$x$attrs$series[["Confidence Band"]]$plotter))
+
 # plots with outliers and forecasts still work (unsmoothed overlay series);
 # the outliers are marked with coloured dots only, without annotations or
 # vertical lines; the legend stays visible for the outlier colours
 obj$updateParams(addout.type = "AO", addout.date = "1950-01-01")
 obj$run()
-g4 <- plot(obj, plotEngine = "dygraph")
+g4 <- plot(obj)
 expect_true(!inherits(try(print(g4), silent = TRUE), "try-error"))
 expect_true(length(g4$x$annotations) == 0)
 expect_equal(length(g4$x$events), 0)
@@ -102,7 +89,7 @@ expect_true(!is.null(g4$x$sizingPolicy))
 # values between two observations may exceed them only slightly (a cubic
 # spline, like the smoothed lines of Highcharts, rounds the peaks a bit)
 y <- as.numeric(obj$output$user_defined$y)
-g5 <- plot(obj, forecasts = FALSE, plotEngine = "dygraph")
+g5 <- plot(obj, forecasts = FALSE)
 vals3 <- vapply(g5$x$data[[2]],
                 function(z) if (length(z)) as.numeric(z[1]) else NA_real_,
                 NA_real_)
@@ -116,15 +103,32 @@ ok <- is.na(vals3) |
    vals3 <= pmax(y[seg_lo], y[seg_hi]) + tol)
 expect_true(all(ok))
 
-message("Test plot - outliers in the highcharter engine")
+message("Test plot - plotly engine")
 
-# outliers are scatter series (coloured dots), not vertical plotLines; the
-# forecast is a dashed spline with an area band
-g6 <- plot(obj, plotEngine = "hc")
-types <- vapply(g6$x$hc_opts$series, function(s) s$type, "")
-expect_true("scatter" %in% types)
-expect_true("areasplinerange" %in% types)
-expect_equal(length(g6$x$hc_opts$xAxis$plotLines), 0)
+p1 <- plot(obj, plotEngine = "plotly")
+expect_true(inherits(p1, "plotly"))
+tr <- p1$x$data
+nms <- vapply(tr, function(s) s$name, "")
+expect_true(all(c("Original", "Trend", "Seasonally Adjusted") %in% nms))
+expect_true("Forecasts" %in% nms)
+# the outliers are marker traces with the outlier colours
+expect_true(all(c("AO") %in% nms))
+mk <- Filter(function(s) identical(s$mode, "markers"), tr)
+expect_true(length(mk) >= 1)
+# the confidence band: the lower limit is filled to the upper limit
+fills <- Filter(function(s) identical(s$fill, "tonexty"), tr)
+expect_equal(length(fills), 1)
+# Highcharts colours
+lineTr <- Filter(function(s) !is.null(s$line$color) &&
+                   identical(s$mode, "lines"), tr)
+expect_true(any(vapply(lineTr, function(s) s$line$color == "#7cb5ec", TRUE)))
+# pre-run plot works
+p2 <- plot(perX13(AirPassengers, "rsa1"), plotEngine = "plotly")
+expect_true(inherits(p2, "plotly"))
+# drawPoints adds markers to the line traces
+p3 <- plot(obj, plotEngine = "plotly", smooth = FALSE, drawPoints = TRUE)
+modes <- vapply(p3$x$data, function(s) s$mode, "")
+expect_true(any(modes == "lines+markers"))
 
 message("Test plotSiRatios - marker size")
 
@@ -158,23 +162,23 @@ for (pt in c("arSpec", "arSpecBars", "periodogram")) {
 }
 
 # overlaid spectra of the three series types, highcharter engine
-g3 <- plotSpectrum(x, tsType = c("sa", "irregular", "residuals"))
-expect_equal(length(g3$x$hc_opts$series), 3)
+gs3 <- plotSpectrum(x, tsType = c("sa", "irregular", "residuals"))
+expect_equal(length(gs3$x$hc_opts$series), 3)
 expect_equal(
-  vapply(g3$x$hc_opts$series, function(s) s$name, ""),
+  vapply(gs3$x$hc_opts$series, function(s) s$name, ""),
   c("sa", "irregular", "residuals")
 )
 
 # overlaid spectra, ggplot engine (one coloured line per series type)
-g4 <- plotSpectrum(x, plotEngine = "ggplot",
-                   tsType = c("sa", "irregular", "residuals"))
-d4 <- ggplot2::ggplot_build(g4)$data[[1]]
-expect_equal(length(unique(d4$group)), 3)
-expect_equal(length(unique(d4$colour)), 3)
+gs4 <- plotSpectrum(x, plotEngine = "ggplot",
+                    tsType = c("sa", "irregular", "residuals"))
+ds4 <- ggplot2::ggplot_build(gs4)$data[[1]]
+expect_equal(length(unique(ds4$group)), 3)
+expect_equal(length(unique(ds4$colour)), 3)
 
 # numeric codes work as well
-g5 <- plotSpectrum(x, tsType = c(2, 3))
-expect_equal(length(g5$x$hc_opts$series), 2)
+gs5 <- plotSpectrum(x, tsType = c(2, 3))
+expect_equal(length(gs5$x$hc_opts$series), 2)
 
 # overlay is not available for the bar plot type
 expect_error(plotSpectrum(x, tsType = c("sa", "irregular"),
