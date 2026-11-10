@@ -105,11 +105,13 @@ plotSiRatiosGgplot <- function(x, main = NULL, interactive = FALSE, ...) {
     p <- ggplot() +
       geom_point(
         data = subset(dat, variable == "SI-Ratio"),
+        size = 1,
         aes(x = year, y = value, colour = variable)
       ) +
       geom_point(
         data = subset(dat, variable == "Replaced SI-Ratio"),
         na.rm = TRUE,
+        size = 1,
         aes(x = year, y = value, colour = variable)
       ) +
       geom_line(
@@ -185,6 +187,7 @@ plotSiRatiosGgplot <- function(x, main = NULL, interactive = FALSE, ...) {
     p <- ggplot() +
       geom_point(
         data = subset(dat, variable == "SI-Ratio"),
+        size = 1,
         aes(x = year, y = value, colour = variable)
       ) +
       geom_line(

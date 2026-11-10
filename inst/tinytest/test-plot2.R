@@ -31,6 +31,11 @@ expect_equal(as.numeric(vals[grid]),
              as.numeric(obj$output$user_defined$y),
              tolerance = 1e-6)
 
+# the plotted series have distinct colours
+cols <- g$x$attrs$colors
+expect_equal(length(unique(cols)), length(cols))
+expect_true(all(startsWith(cols, "#")))
+
 # smooth = FALSE keeps the original observations
 g2 <- plot(obj, smooth = FALSE, forecasts = FALSE)
 expect_equal(length(g2$x$data[[1]]), n)
@@ -38,10 +43,58 @@ vals2 <- vapply(g2$x$data[[2]], function(z) z[1], 0)
 expect_equal(as.numeric(vals2), as.numeric(obj$output$user_defined$y),
              tolerance = 1e-6)
 
-# plots with outliers and forecasts still work (unsmoothed overlay series)
+# default plot with forecasts: the forecast columns extend the time index by
+# the forecast horizon; the smoothed estimated series must end with the last
+# observation and must not be extrapolated over the forecast horizon (the
+# extrapolated spline blew up there and determined the y-axis scaling)
+g3 <- plot(obj)
+nf <- n + length(obj$output$user_defined$y_f)
+expect_equal(length(g3$x$data[[1]]), (nf - 1) * 8 + 1)
+last <- 8 * n - 7 # grid point of the last observation
+for (j in 2:4) {
+  vj <- vapply(g3$x$data[[j]],
+               function(z) if (length(z)) as.numeric(z[1]) else NA_real_,
+               NA_real_)
+  expect_false(is.na(vj[last]))
+  expect_true(all(is.na(vj[(last + 1):length(vj)])))
+}
+
+# plots with outliers and forecasts still work (unsmoothed overlay series);
+# the outliers are marked by dots and annotation ticks, not vertical lines
 obj$updateParams(addout.type = "AO", addout.date = "1950-01-01")
 obj$run()
-expect_error(print(plot(obj)), NA)
+g4 <- plot(obj)
+expect_true(!inherits(try(print(g4), silent = TRUE), "try-error"))
+expect_equal(length(g4$x$annotations), 1)
+expect_equal(g4$x$annotations[[1]]$shortText, "AO")
+expect_equal(g4$x$annotations[[1]]$series, "AO")
+expect_equal(length(g4$x$events), 0)
+expect_true(grepl("p3-outlier-ann", g4$x$css, fixed = TRUE))
+
+# the smoothed series never exceed their observations (the spline is clipped
+# to the range of the bracketing observations)
+y <- as.numeric(obj$output$user_defined$y)
+vals3 <- vapply(g$x$data[[2]],
+                function(z) if (length(z)) as.numeric(z[1]) else NA_real_,
+                NA_real_)
+expect_true(max(vals3, na.rm = TRUE) <= max(y) + 1e-6)
+expect_true(min(vals3, na.rm = TRUE) >= min(y) - 1e-6)
+
+message("Test plotSiRatios - marker size")
+
+# highcharter engine: the SI-ratio dots are small (radius 2), so that the
+# seasonal factor lines remain visible
+hs <- plotSiRatios(obj, plotEngine = "hc")
+mk <- Filter(function(s) is.list(s$marker) && !is.null(s$marker$radius),
+             hs$x$hc_opts$series)
+expect_true(length(mk) > 0)
+expect_true(all(vapply(mk, function(s) s$marker$radius, 0) <= 2))
+
+# ggplot engine: the points are drawn with size 1
+pg <- plotSiRatios(obj, plotEngine = "ggplot")
+bd <- ggplot2::ggplot_build(pg)
+sizes <- unique(unlist(lapply(bd$data, function(d) d$size)))
+expect_true(length(sizes) == 0 || max(sizes) <= 1)
 
 message("Test plot - overlaid spectra")
 
@@ -50,8 +103,12 @@ x$run()
 
 # one spectrum per engine, all plot types
 for (pt in c("arSpec", "arSpecBars", "periodogram")) {
-  expect_error(plotSpectrum(x, plotType = pt), NA)
-  expect_error(plotSpectrum(x, plotEngine = "ggplot", plotType = pt), NA)
+  expect_true(!inherits(try(plotSpectrum(x, plotType = pt), silent = TRUE),
+                        "try-error"))
+  expect_true(!inherits(
+    try(plotSpectrum(x, plotEngine = "ggplot", plotType = pt), silent = TRUE),
+    "try-error"
+  ))
 }
 
 # overlaid spectra of the three series types, highcharter engine

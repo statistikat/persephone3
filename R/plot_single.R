@@ -90,7 +90,12 @@ plot.persephoneSingle <- function(
       dyData(ts, smooth = smooth, smooth_cols = "V1"),
       main = main
     ) %>%
-      dySeries("V1", label = "Original", drawPoints = dp)
+      dySeries(
+        "V1",
+        label = "Original",
+        color = p3_series_colors[["Original"]],
+        drawPoints = dp
+      )
 
     if (rangeSelector) {
       graphObj <- graphObj %>%
@@ -118,7 +123,7 @@ plot.persephoneSingle <- function(
   includeOutGraphically <- function(otlType, otlColor = NULL, otl, graphObj) {
     if (any(grepl(otlType, names(otl[[2]])))) {
       if (is.null(otlColor)) {
-        otlColors <- list(AO = "red", LS = "orange", TC = "dodgerblue")
+        otlColors <- list(AO = "red", LS = "orange", TC = "#8055A4")
         otlColor <- otlColors[[otlType]]
       }
       if (is.null(dim(otl[[1]]))) {
@@ -133,19 +138,27 @@ plot.persephoneSingle <- function(
           drawPoints = TRUE,
           color = otlColor,
           pointShape = "dot",
-          pointSize = 2.5
+          pointSize = 3,
+          strokeWidth = 0
         )
+      # a coloured dot on the observation, a short tick above it and the
+      # outlier type as label pinned at the top of the plot (dyCSS pins the
+      # annotation labels to the top instead of the position of the series
+      # point); instead of a vertical line across the whole plot
       dateout <- otl[[2]][grepl(otlType, names(otl[[2]]))]
       for (i in seq_along(dateout)) {
         graphObj <- graphObj %>%
-          dyEvent(
-            dateout[[i]],
-            label = NULL,
-            labelLoc = "bottom",
-            strokePattern = "dashed",
-            color = otlColor
+          dyAnnotation(
+            x = dateout[[i]],
+            text = otlType,
+            tooltip = paste(otlType, format(dateout[[i]], "%Y-%m-%d")),
+            series = otlType,
+            tickHeight = 12,
+            attachAtBottom = FALSE,
+            cssClass = "p3-outlier-ann"
           )
       }
+      graphObj <- graphObj %>% dyCSS(textConnection(p3_outlier_css))
     }
     return(graphObj)
   }
@@ -190,12 +203,26 @@ plot.persephoneSingle <- function(
           dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
           main = main
         ) %>%
-          dySeries("y", label = "Original", drawPoints = dp) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend") %>%
+          dySeries(
+            "y",
+            label = "Original",
+            color = p3_series_colors[["Original"]],
+            drawPoints = dp
+          ) %>%
+          dySeries(
+            "sa",
+            label = "Seasonally Adjusted",
+            color = p3_series_colors[["Seasonally Adjusted"]]
+          ) %>%
+          dySeries(
+            "t",
+            label = "Trend",
+            color = p3_series_colors[["Trend"]]
+          ) %>%
           dySeries(
             c("lowerci", "ppm_y_f", "upperci"),
             label = "Forecasts",
+            color = p3_series_colors[["Forecasts"]],
             strokePattern = "dashed",
             drawPoints = drawPoints
           ) %>%
@@ -207,9 +234,22 @@ plot.persephoneSingle <- function(
           dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
           main = main
         ) %>%
-          dySeries("y", label = "Original", drawPoints = dp) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend")
+          dySeries(
+            "y",
+            label = "Original",
+            color = p3_series_colors[["Original"]],
+            drawPoints = dp
+          ) %>%
+          dySeries(
+            "sa",
+            label = "Seasonally Adjusted",
+            color = p3_series_colors[["Seasonally Adjusted"]]
+          ) %>%
+          dySeries(
+            "t",
+            label = "Trend",
+            color = p3_series_colors[["Trend"]]
+          )
         graphObj <- includeOutGraphically(
           otlType = "AO",
           otl = otl,
@@ -229,6 +269,7 @@ plot.persephoneSingle <- function(
           dySeries(
             c("lowerci", "ppm_y_f", "upperci"),
             label = "Forecasts",
+            color = p3_series_colors[["Forecasts"]],
             strokePattern = "dashed",
             drawPoints = drawPoints
           ) %>%
@@ -241,9 +282,22 @@ plot.persephoneSingle <- function(
           dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
           main = main
         ) %>%
-          dySeries("y", label = "Original", drawPoints = dp) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend") %>%
+          dySeries(
+            "y",
+            label = "Original",
+            color = p3_series_colors[["Original"]],
+            drawPoints = dp
+          ) %>%
+          dySeries(
+            "sa",
+            label = "Seasonally Adjusted",
+            color = p3_series_colors[["Seasonally Adjusted"]]
+          ) %>%
+          dySeries(
+            "t",
+            label = "Trend",
+            color = p3_series_colors[["Trend"]]
+          ) %>%
           dyLegend(width = 290)
       } else {
         ts <- cbind(y, t, sa, otl[[1]])
@@ -251,9 +305,22 @@ plot.persephoneSingle <- function(
           dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
           main = main
         ) %>%
-          dySeries("y", label = "Original", drawPoints = dp) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend")
+          dySeries(
+            "y",
+            label = "Original",
+            color = p3_series_colors[["Original"]],
+            drawPoints = dp
+          ) %>%
+          dySeries(
+            "sa",
+            label = "Seasonally Adjusted",
+            color = p3_series_colors[["Seasonally Adjusted"]]
+          ) %>%
+          dySeries(
+            "t",
+            label = "Trend",
+            color = p3_series_colors[["Trend"]]
+          )
         graphObj <- includeOutGraphically(
           otlType = "AO",
           otl = otl,

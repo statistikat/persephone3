@@ -103,7 +103,12 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       dyData(ts, smooth = smooth, smooth_cols = "V1"),
       main = main
     ) %>%
-      dySeries("V1", label = "Original", drawPoints = dp)
+      dySeries(
+        "V1",
+        label = "Original",
+        color = p3_series_colors[["Original"]],
+        drawPoints = dp
+      )
 
     if (rangeSelector) {
       graphObj <- graphObj %>%
@@ -165,9 +170,22 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
         dyData(ts, smooth = smooth, smooth_cols = c("y", "sa_dir", "sa_indir")),
         main = main
       ) %>%
-        dySeries("y", label = "Original", drawPoints = dp) %>%
-        dySeries("sa_dir", label = "Direct SA") %>%
-        dySeries("sa_indir", label = "Indirect SA") %>%
+        dySeries(
+          "y",
+          label = "Original",
+          color = p3_series_colors[["Original"]],
+          drawPoints = dp
+        ) %>%
+        dySeries(
+          "sa_dir",
+          label = "Direct SA",
+          color = p3_series_colors[["Direct SA"]]
+        ) %>%
+        dySeries(
+          "sa_indir",
+          label = "Indirect SA",
+          color = p3_series_colors[["Indirect SA"]]
+        ) %>%
         dyLegend(width = 290)
     # }
 

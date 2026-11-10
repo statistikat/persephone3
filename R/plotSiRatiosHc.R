@@ -109,7 +109,7 @@ plotSiRatiosHc <- function(x) {
         name = "SI-Ratio",
         color = "#00643C",
         lineWidth = 0,
-        marker = list(symbol = "circle")
+        marker = list(symbol = "circle", radius = 2)
       )
 
     for (x2 in split(dat, dat$cycleName)) {
@@ -125,11 +125,13 @@ plotSiRatiosHc <- function(x) {
           #findNearestPointBy = "x",
           marker = list(
             enabled = TRUE,
-            symbol = "circle"
+            symbol = "circle",
+            radius = 2
           ),
           states = list(
             hover = list(
-              lineWidthPlus = 0
+              lineWidthPlus = 0,
+              radius = 3
             )
           )
         )
@@ -141,7 +143,7 @@ plotSiRatiosHc <- function(x) {
         name = "Replaced SI-Ratio",
         color = "red",
         lineWidth = 0,
-        marker = list(symbol = "circle")
+        marker = list(symbol = "circle", radius = 2)
       )
 
     for (x2 in split(dat, dat$cycleName)) {
@@ -157,11 +159,13 @@ plotSiRatiosHc <- function(x) {
           #findNearestPointBy = "x",
           marker = list(
             enabled = TRUE,
-            symbol = "circle"
+            symbol = "circle",
+            radius = 2
           ),
           states = list(
             hover = list(
-              lineWidthPlus = 0
+              lineWidthPlus = 0,
+              radius = 3
             )
           )
         )
@@ -244,7 +248,7 @@ plotSiRatiosHc <- function(x) {
         data = list(),
         name = "SI-Ratio",
         color = "#00643C",
-        marker = list(symbol = "circle")
+        marker = list(symbol = "circle", radius = 2)
       )
 
     for (x2 in split(dat, dat$cycleName)) {
@@ -257,11 +261,13 @@ plotSiRatiosHc <- function(x) {
 
           marker = list(
             enabled = TRUE,
-            symbol = "circle"
+            symbol = "circle",
+            radius = 2
           ),
           states = list(
             hover = list(
-              lineWidthPlus = 0
+              lineWidthPlus = 0,
+              radius = 3
             )
           )
         )
