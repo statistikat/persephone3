@@ -151,20 +151,37 @@ p3_series_colors <- c(
   `Indirect SA` = "#009E73"
 )
 
-# CSS for the outlier annotation labels of the dygraph plots: the dygraphs
-# annotation plugin positions the label at the data point of the series,
-# here it is pinned to the top of the plot area instead (below the title);
-# the border colour of the label follows the colour of its series
-p3_outlier_css <- paste0(
-  ".p3-outlier-ann {\n",
-  "  top: 22px !important;\n",
-  "  width: auto !important;\n",
-  "  font-size: 10px;\n",
-  "  line-height: 14px;\n",
-  "  padding: 0 1px;\n",
-  "  white-space: nowrap;\n",
-  "}"
-)
+# default colours of the outlier types in the time series plots
+p3_outlier_colors <- list(AO = "red", LS = "orange", TC = "#8055A4")
+
+# fluid sizing for the dygraph widgets: without it the htmlwidgets sizing
+# policy keeps the fixed 960px default width of dygraphs, so in small windows
+# (dashboard panels, small viewers) the chart does not shrink with its
+# container and the right part of the plot is cut off
+p3_fluid <- function(graphObj) {
+  graphObj$width <- "100%"
+  graphObj$height <- NULL
+  graphObj$x$sizingPolicy <- htmlwidgets::sizingPolicy(
+    defaultWidth = "100%", defaultHeight = "auto",
+    viewer.defaultWidth = "100%", viewer.defaultHeight = "auto",
+    browser.defaultWidth = "100%", browser.defaultHeight = "auto",
+    knitr.defaultWidth = "100%", knitr.defaultHeight = "auto",
+    padding = 0, browser.fill = TRUE, viewer.fill = TRUE,
+    knitr.figure = FALSE
+  )
+  graphObj
+}
+
+# cubic interpolation of the observations: a cubic spline (not-a-knot type,
+# the same family of curves as the smoothed lines of Highcharts with
+# curveType = "spline") evaluated on a finer grid. Like in Highcharts the
+# spline may slightly overshoot the data at the sharpest peaks (about 1.5%
+# for monthly data), which is what gives the line its smooth appearance;
+# large excursions are avoided by evaluating each column only inside its own
+# observation window (see dyData)
+dySmooth <- function(x, y, xout) {
+  stats::spline(x, y, xout = xout)$y
+}
 
 # decimal time (as in time(ts)) to Date: the observation times map to the
 # first day of the respective month/quarter/half year, points in between are
@@ -193,14 +210,11 @@ timesToDates <- function(tt, freq) {
 # bands) keep their original values, placed on the corresponding points of
 # the finer grid.
 # Each smoothed column is evaluated only inside its own non-missing time
-# window: the cubic spline is not extrapolated beyond the first and last
+# window: the interpolation is not extrapolated beyond the first and last
 # observation of that column. Otherwise, columns that are shorter than the
 # common time index (as the estimated series next to the forecasts, which
 # extend the index by the forecast horizon) would blow up at the ends of the
-# plot and determine the scaling of the y-axis. Within the window the
-# interpolated values are clipped to the range of the two bracketing
-# observations, so that the spline does not invent maxima above (or minima
-# below) the data at the seasonal peaks.
+# plot and determine the scaling of the y-axis.
 dyData <- function(m, smooth = TRUE, smooth_cols = NULL, n = 8) {
   ti <- as.numeric(stats::time(m))
   freq <- stats::frequency(m)
@@ -227,15 +241,9 @@ dyData <- function(m, smooth = TRUE, smooth_cols = NULL, n = 8) {
       if (colnames(m)[j] %in% smooth_cols && sum(!is.na(yj)) > 3) {
         tj <- ti[!is.na(yj)]
         yjv <- yj[!is.na(yj)]
-        # no extrapolation: keep the spline within the non-missing range
+        # no extrapolation: keep the interpolation within the non-missing range
         inw <- tnew >= min(tj) - 1e-9 & tnew <= max(tj) + 1e-9
-        sm <- stats::spline(tj, yjv, xout = tnew[inw])$y
-        # clip to the range of the two bracketing observations
-        seg <- pmax(findInterval(tnew[inw], tj), 1L)
-        seg1 <- pmin(seg + 1L, length(tj))
-        sm <- pmin(pmax(sm, pmin(yjv[seg], yjv[seg1])),
-                   pmax(yjv[seg], yjv[seg1]))
-        out[inw, j] <- sm
+        out[inw, j] <- dySmooth(tj, yjv, tnew[inw])
       } else {
         out[grid, j] <- yj
       }

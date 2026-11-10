@@ -48,9 +48,10 @@ Only used if \code{calendar} is given.}
 \item{holiday}{integer passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, the day
 considered as holiday. Only used if \code{calendar} is given.}
 
-\item{contrasts}{logical passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. If
-\code{FALSE} (default), one regressor per group is used. Only used if
-\code{calendar} is given.}
+\item{contrasts}{logical passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. If \code{TRUE}
+(default), one regressor less than the number of groups is used and the
+regressors are centered, as in \code{\link[=genTd]{genTd()}}. Only used if \code{calendar} is
+given. See the remark on the log transformation under \code{\link[=td_context]{td_context()}}.}
 
 \item{name}{name under which the regressors are registered in the
 modelling context; the individual regressors are addressed as

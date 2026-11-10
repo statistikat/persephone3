@@ -5,18 +5,26 @@
 * `perX13()`, `perTramo()` and `$updateParams()` gained a `td` argument that
   takes a calendar, precomputed trading day regressors or a `td_context()`
   list and wires them up like `perTd()`.
-* Time series plots (`plot()`) are drawn with smoothed lines (cubic spline
-  interpolation) by default; the new logical arguments `smooth` and
-  `rangeSelector` control the smoothing and the range selector. The range
-  selector is now off by default. The smoothed series are no longer
-  extrapolated beyond their observations and no longer overshoot the
-  observations at the seasonal peaks, which previously blew up at the end of
-  the plot when forecasts were shown and ruined the scaling of the y-axis.
+* The default of the `contrasts` argument of `perTd()`/`td_context()` is now
+  `TRUE` (centered regressors, as in `rjd3toolkit::calendar_td()` and
+  `genTd()`); the previous uncentered regressors were nearly collinear with
+  the regression constant, which made x13 often estimate the model in logs
+  with the trend and s.a. series returned on the log scale.
+* Time series plots (`plot()`) are drawn with smoothed lines by default; the
+  new logical arguments `smooth` and `rangeSelector` control the smoothing
+  and the range selector. The range selector is now off by default. The
+  smoothing uses a cubic spline like the smoothed lines of Highcharts, and
+  the smoothed series are no longer extrapolated beyond their observations,
+  which previously blew up at the end of the plot when forecasts were shown
+  and ruined the scaling of the y-axis. The widgets resize with their
+  container instead of keeping the fixed 960px width.
 * The series of the time series plots (`plot()`) are drawn in fixed,
   distinguishable colours and the time axis of the monthly and quarterly
   series shows the exact month/quarter starts.
-* Outliers in the time series plots are marked with coloured dots and a
-  short label at the top of the plot instead of dashed vertical lines.
+* Outliers in the time series plots are marked with coloured dots only and
+  the legend (explaining the outlier colours) stays visible, instead of
+  dashed vertical lines and labels that overlapped the title in small
+  windows.
 * The SI-ratio dots of `plotSiRatios()` are drawn smaller (both engines) so
   that the underlying seasonal factor lines remain visible.
 * `plotSpectrum()` (both engines) can overlay the spectra of several series

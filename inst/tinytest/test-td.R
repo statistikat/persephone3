@@ -101,7 +101,7 @@ obj2$run()
 spec <- unclass(obj2$params)$regarima
 expect_equal(spec$transform$fn, "LOG")
 expect_equal(spec$regression$easter$type, "UNUSED")
-expect_equal(length(spec$regression$td$users), 7)
+expect_equal(length(spec$regression$td$users), 6)
 
 message("Test perTd - merging with an existing modelling context")
 
@@ -168,6 +168,24 @@ message("Test td argument of updateParams")
 obj11 <- perX13(AirPassengers, "rsa3")
 obj11$updateParams(td = AT)
 expect_true("REGS_TD" %in% names(obj11$context$variables))
-expect_equal(length(unclass(obj11$params)$regarima$regression$td$users), 7)
+expect_equal(length(unclass(obj11$params)$regarima$regression$td$users), 6)
 obj11$run()
 expect_true(!is.null(obj11$output))
+
+message("Test perTd - centered regressors and series levels")
+
+# the calendar regressors are centered by default (contrasts = TRUE, as in
+# rjd3toolkit::calendar_td() and genTd()); otherwise they are nearly
+# collinear with the regression constant and x13 may estimate the model in
+# logs, so that the trend and s.a. series are returned on the log scale and
+# no longer overlay the original series in plot()
+obj12 <- perTd(AirPassengers, calendar = AT, method = "x13")
+obj12$run()
+tdv <- rjd3toolkit::calendar_td(calendar = AT, s = AirPassengers)
+expect_equal(ncol(tdv), 6)
+expect_true(all(abs(colMeans(tdv)) < 0.1))
+yr <- range(obj12$output$user_defined$y, na.rm = TRUE)
+tr_ <- range(obj12$output$user_defined$t, na.rm = TRUE)
+sar <- range(obj12$output$user_defined$sa, na.rm = TRUE)
+expect_true(tr_[1] < yr[2] && tr_[2] > yr[1])
+expect_true(sar[1] < yr[2] && sar[2] > yr[1])

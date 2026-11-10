@@ -20,9 +20,14 @@
 #'   Only used if `calendar` is given.
 #' @param holiday integer passed to [rjd3toolkit::calendar_td()], the day
 #'   considered as holiday. Only used if `calendar` is given.
-#' @param contrasts logical passed to [rjd3toolkit::calendar_td()]. If
-#'   `FALSE` (default), one regressor per group is used (`group_0` to
-#'   `group_6` in the default grouping). Only used if `calendar` is given.
+#' @param contrasts logical passed to [rjd3toolkit::calendar_td()]. If `TRUE`
+#'   (default), one regressor less than the number of groups is used and the
+#'   regressors are centered, as in [genTd()]. Only used if `calendar` is
+#'   given. With `FALSE` (one regressor per group, `group_0` to `group_6` in
+#'   the default grouping) the regressors are nearly collinear with the
+#'   regression constant, which may make x13 estimate the model with a log
+#'   transformation whose result is returned on the log scale (the trend and
+#'   seasonally adjusted series then do not overlay the original series).
 #' @param name name under which the regressors are registered in the
 #'   modelling context; the individual regressors are then addressed as
 #'   `name.column`.
@@ -46,7 +51,7 @@ td_context <- function(ts,
                        td = NULL,
                        groups = c(1, 2, 3, 4, 5, 6, 0),
                        holiday = 7,
-                       contrasts = FALSE,
+                       contrasts = TRUE,
                        name = "REGS_TD",
                        method = c("x13", "tramoseats"),
                        test = NULL) {
@@ -157,9 +162,10 @@ resolve_td_input <- function(ts, td, method) {
 #'   Only used if `calendar` is given.
 #' @param holiday integer passed to [rjd3toolkit::calendar_td()], the day
 #'   considered as holiday. Only used if `calendar` is given.
-#' @param contrasts logical passed to [rjd3toolkit::calendar_td()]. If
-#'   `FALSE` (default), one regressor per group is used. Only used if
-#'   `calendar` is given.
+#' @param contrasts logical passed to [rjd3toolkit::calendar_td()]. If `TRUE`
+#'   (default), one regressor less than the number of groups is used and the
+#'   regressors are centered, as in [genTd()]. Only used if `calendar` is
+#'   given. See the remark on the log transformation under [td_context()].
 #' @param name name under which the regressors are registered in the
 #'   modelling context; the individual regressors are addressed as
 #'   `name.column`.

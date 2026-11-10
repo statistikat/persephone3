@@ -162,6 +162,6 @@ font-size: 10px;
   graphObj <- graphObj %>%
     dyCSS(cssString)
 
-  graphObj
+  p3_fluid(graphObj)
 
 }

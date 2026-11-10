@@ -218,15 +218,15 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       main = main, rangeSelector = rangeSelector, drawPoints = drawPoints,
       annualComparison = annualComparison
     )
-    graphObj
+    p3_fluid(graphObj)
 
   }else{
     ts <- x$ts
-    preRunPlot(
+    p3_fluid(preRunPlot(
       ts = ts,
       rangeSelector = rangeSelector,
       drawPoints = drawPoints,
       annualComparison = annualComparison
-    )
+    ))
   }
 }

@@ -23,6 +23,7 @@ Imports:
     cli,
     highcharter,
     dygraphs,
+    htmlwidgets,
     plotly,
     ggplot2,
     scales,

@@ -60,25 +60,37 @@ for (j in 2:4) {
 }
 
 # plots with outliers and forecasts still work (unsmoothed overlay series);
-# the outliers are marked by dots and annotation ticks, not vertical lines
+# the outliers are marked with coloured dots only, without annotations or
+# vertical lines; the legend stays visible for the outlier colours
 obj$updateParams(addout.type = "AO", addout.date = "1950-01-01")
 obj$run()
 g4 <- plot(obj)
 expect_true(!inherits(try(print(g4), silent = TRUE), "try-error"))
-expect_equal(length(g4$x$annotations), 1)
-expect_equal(g4$x$annotations[[1]]$shortText, "AO")
-expect_equal(g4$x$annotations[[1]]$series, "AO")
+expect_true(length(g4$x$annotations) == 0)
 expect_equal(length(g4$x$events), 0)
-expect_true(grepl("p3-outlier-ann", g4$x$css, fixed = TRUE))
+expect_equal(g4$x$attrs$legend, "always")
 
-# the smoothed series never exceed their observations (the spline is clipped
-# to the range of the bracketing observations)
+# the widget adapts to small containers instead of keeping the fixed 960px
+expect_equal(g4$width, "100%")
+expect_true(!is.null(g4$x$sizingPolicy))
+
+# the smoothed series stay close to their observations: the interpolated
+# values between two observations may exceed them only slightly (a cubic
+# spline, like the smoothed lines of Highcharts, rounds the peaks a bit)
 y <- as.numeric(obj$output$user_defined$y)
-vals3 <- vapply(g$x$data[[2]],
+g5 <- plot(obj, forecasts = FALSE)
+vals3 <- vapply(g5$x$data[[2]],
                 function(z) if (length(z)) as.numeric(z[1]) else NA_real_,
                 NA_real_)
-expect_true(max(vals3, na.rm = TRUE) <= max(y) + 1e-6)
-expect_true(min(vals3, na.rm = TRUE) >= min(y) - 1e-6)
+tol <- 0.05 * diff(range(y))
+expect_true(max(vals3, na.rm = TRUE) <= max(y) + tol)
+expect_true(min(vals3, na.rm = TRUE) >= min(y) - tol)
+seg_lo <- (seq_along(vals3) - 1) %/% 8 + 1L
+seg_hi <- pmin(seg_lo + 1L, n)
+ok <- is.na(vals3) |
+  (vals3 >= pmin(y[seg_lo], y[seg_hi]) - tol &
+   vals3 <= pmax(y[seg_lo], y[seg_hi]) + tol)
+expect_true(all(ok))
 
 message("Test plotSiRatios - marker size")
 

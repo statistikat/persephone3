@@ -10,7 +10,7 @@ td_context(
   td = NULL,
   groups = c(1, 2, 3, 4, 5, 6, 0),
   holiday = 7,
-  contrasts = FALSE,
+  contrasts = TRUE,
   name = "REGS_TD",
   method = c("x13", "tramoseats"),
   test = NULL
@@ -35,9 +35,14 @@ Only used if \code{calendar} is given.}
 \item{holiday}{integer passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, the day
 considered as holiday. Only used if \code{calendar} is given.}
 
-\item{contrasts}{logical passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. If
-\code{FALSE} (default), one regressor per group is used (\code{group_0} to
-\code{group_6} in the default grouping). Only used if \code{calendar} is given.}
+\item{contrasts}{logical passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. If \code{TRUE}
+(default), one regressor less than the number of groups is used and the
+regressors are centered, as in \code{\link[=genTd]{genTd()}}. Only used if \code{calendar} is
+given. With \code{FALSE} (one regressor per group, \code{group_0} to \code{group_6} in
+the default grouping) the regressors are nearly collinear with the
+regression constant, which may make x13 estimate the model with a log
+transformation whose result is returned on the log scale (the trend and
+seasonally adjusted series then do not overlay the original series).}
 
 \item{name}{name under which the regressors are registered in the
 modelling context; the individual regressors are then addressed as

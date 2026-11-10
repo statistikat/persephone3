@@ -123,14 +123,15 @@ plot.persephoneSingle <- function(
   includeOutGraphically <- function(otlType, otlColor = NULL, otl, graphObj) {
     if (any(grepl(otlType, names(otl[[2]])))) {
       if (is.null(otlColor)) {
-        otlColors <- list(AO = "red", LS = "orange", TC = "#8055A4")
-        otlColor <- otlColors[[otlType]]
+        otlColor <- p3_outlier_colors[[otlType]]
       }
       if (is.null(dim(otl[[1]]))) {
         seriesName <- "otl[[1]]"
       } else {
         seriesName <- paste0("otl[[1]].otl", otlType)
       }
+      # the outliers are marked with coloured dots only (the hover legend
+      # explains the colour of the outlier types); the tooltip shows the date
       graphObj <- graphObj %>%
         dySeries(
           seriesName,
@@ -141,24 +142,6 @@ plot.persephoneSingle <- function(
           pointSize = 3,
           strokeWidth = 0
         )
-      # a coloured dot on the observation, a short tick above it and the
-      # outlier type as label pinned at the top of the plot (dyCSS pins the
-      # annotation labels to the top instead of the position of the series
-      # point); instead of a vertical line across the whole plot
-      dateout <- otl[[2]][grepl(otlType, names(otl[[2]]))]
-      for (i in seq_along(dateout)) {
-        graphObj <- graphObj %>%
-          dyAnnotation(
-            x = dateout[[i]],
-            text = otlType,
-            tooltip = paste(otlType, format(dateout[[i]], "%Y-%m-%d")),
-            series = otlType,
-            tickHeight = 12,
-            attachAtBottom = FALSE,
-            cssClass = "p3-outlier-ann"
-          )
-      }
-      graphObj <- graphObj %>% dyCSS(textConnection(p3_outlier_css))
     }
     return(graphObj)
   }
@@ -366,6 +349,13 @@ plot.persephoneSingle <- function(
         highlightSeriesBackgroundAlpha = 0.5
       )
 
+    if (otlTF) {
+      # show the legend permanently (top right), so that the colours of the
+      # outlier types can be looked up without hovering
+      graphObj <- graphObj %>%
+        dyLegend(show = "always", width = 330)
+    }
+
     graphObj
   }
 
@@ -378,15 +368,15 @@ plot.persephoneSingle <- function(
       drawPoints = drawPoints,
       annualComparison = annualComparison
     )
-    graphObj
+    p3_fluid(graphObj)
   } else {
     ts <- x$ts
-    preRunPlot(
+    p3_fluid(preRunPlot(
       ts = ts,
       rangeSelector = rangeSelector,
       drawPoints = drawPoints,
       annualComparison = annualComparison
-    )
+    ))
   }
 }
 
