@@ -61,24 +61,33 @@ getOutliers <- function(x) {
     # bvar only covers the ESTIMATED coefficients, in the order of all
     # regression variables. FIXED ones (e.g. manually specified outliers
     # outside the estimation range) get no standard error. Same mapping as
-    # in getArimaCoef().
-    coef_type <- vapply(
+    # in getArimaCoef(). Note that some variables carry more than one
+    # coefficient (a TD variable has one per trading day group), so the
+    # number of coefficients and the number of variables must be kept apart.
+    n_est <- vapply(
       variables,
       function(v) {
-        if (is.null(v$coef$type)) NA_character_ else as.character(v$coef$type)
+        if (is.null(v$coef$type)) {
+          0L
+        } else {
+          sum(as.character(v$coef$type) == "ESTIMATED")
+        }
       },
-      ""
+      integer(1)
     )
     stde_all <- rep(NA_real_, length(variables))
     bvar <- x$output$preprocessing$estimation$bvar
     if (length(bvar) > 0) {
-      sel <- coef_type == "ESTIMATED"
-      if (nrow(bvar) == sum(sel)) {
-        stde_all[sel] <- sqrt(diag(bvar))
+      sel <- n_est > 0
+      if (nrow(bvar) == sum(n_est)) {
+        se <- sqrt(diag(bvar))
+        # position of the first estimated coefficient of each variable
+        first_est <- cumsum(c(0L, head(n_est, -1))) + 1L
+        stde_all[sel] <- se[first_est[sel]]
       } else {
         warning(
           "bvar does not match the number of estimated regression ",
-          "variables. Standard errors are unreliable."
+          "coefficients. Standard errors are unreliable."
         )
       }
     }
