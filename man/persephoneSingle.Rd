@@ -53,6 +53,7 @@ create a new single object
   context = NULL,
   userdefined = NULL,
   speclist = NULL,
+  td = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -73,6 +74,15 @@ create a new single object
 
 \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{\code{td}}{trading day regressors for the regression model. Either a
+national calendar of class \code{JD3_CALENDAR}
+(\code{\link[rjd3toolkit:national_calendar]{rjd3toolkit::national_calendar()}}), from which the regressors are
+computed with \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, a precomputed \code{mts} object
+(e.g. \code{genTd()[[3]][, 1:6]}), or a list as returned by
+\code{\link[=td_context]{td_context()}}. The regressors are added to \code{context} and the trading
+days spec block is set to \code{"UserDefined"} (see \code{\link[=perTd]{perTd()}}). \verb{td.*}
+arguments in \code{...} or \code{speclist} override the generated defaults.}
 
 \item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}} if no speclist parameter is set.}
 }

@@ -58,6 +58,10 @@ persephone <- R6::R6Class(
     #' @param speclist a list of additional arguments for customizing the model specifications
     #' @param spec a specification object to use as starting point
     #' @param context a list of external regressors (calendar or other) to be used for estimation
+    #' @param td trading day regressors, see [perTd()]; the regressors are
+    #'   merged into the current context and the trading days spec block is set
+    #'   to `"UserDefined"`. `NULL` (the default) leaves the trading day
+    #'   specification unchanged.
     #' @param userdefined character vector of user-defined output variables
     #' @param iterate logical, whether to iterate (for hierarchical objects)
     #' @param component character, component id for hierarchical objects
@@ -68,6 +72,7 @@ persephone <- R6::R6Class(
       spec = NULL,
       context = NULL,
       userdefined = NULL,
+      td = NULL,
       iterate = FALSE,
       component = "",
       ...
@@ -79,18 +84,41 @@ persephone <- R6::R6Class(
       if (!missing(userdefined)) {
         private$userdefined <- union(userdefined, userdefined_default)
       }
+      dots <- list(...)
+      if (!is.null(td)) {
+        td_obj <- resolve_td_input(private$ts_internal, td, private$.method)
+        if (!is.null(private$context_internal)) {
+          td_obj$context <- modifyList(
+            private$context_internal,
+            list(variables = td_obj$context$variables)
+          )
+        }
+        private$context_internal <- td_obj$context
+        if (is.null(speclist)) {
+          speclist <- modifyList(td_obj$speclist, dots)
+          dots <- list()
+        } else {
+          speclist <- modifyList(modifyList(td_obj$speclist, dots), speclist)
+          dots <- list()
+        }
+      }
       init_spec <- if (!missing(spec) && !is.null(spec)) {
         spec
       } else {
         private$params_internal
       }
 
-      private$params_internal <- private$updateFun(
-        name = template,
-        freq = frequency(private$ts_internal),
-        init_spec = init_spec,
-        spec_list = speclist,
-        ...
+      private$params_internal <- do.call(
+        private$updateFun,
+        c(
+          list(
+            name = template,
+            freq = frequency(private$ts_internal),
+            init_spec = init_spec,
+            spec_list = speclist
+          ),
+          dots
+        )
       )
     },
     #' @description visualize the results of an adjustment

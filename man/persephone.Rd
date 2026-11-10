@@ -150,6 +150,7 @@ update parameters for the adjustment
   spec = NULL,
   context = NULL,
   userdefined = NULL,
+  td = NULL,
   iterate = FALSE,
   component = "",
   ...
@@ -168,6 +169,11 @@ update parameters for the adjustment
 \item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation}
 
 \item{\code{userdefined}}{character vector of user-defined output variables}
+
+\item{\code{td}}{trading day regressors, see \code{\link[=perTd]{perTd()}}; the regressors are
+merged into the current context and the trading days spec block is set
+to \code{"UserDefined"}. \code{NULL} (the default) leaves the trading day
+specification unchanged.}
 
 \item{\code{iterate}}{logical, whether to iterate (for hierarchical objects)}
 

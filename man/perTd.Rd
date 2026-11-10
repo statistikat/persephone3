@@ -66,7 +66,7 @@ further variables or calendars), to which the trading day regressors are
 added.}
 
 \item{userdefined}{passed as the \code{userdefined} argument of
-\code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}.}
+\code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
 
 \item{speclist}{an optional list of additional specification arguments as
 in \code{\link[=perX13]{perX13()}} or \code{\link[=perTramo]{perTramo()}}. Arguments for the trading day spec block
@@ -86,8 +86,8 @@ either derived from a national calendar using
 example from \code{\link[=genTd]{genTd()}}. Internally, the regressors are registered in a
 \code{\link[rjd3toolkit:modelling_context]{rjd3toolkit::modelling_context()}} and the trading days spec block is set
 to \code{option = "UserDefined"}, equivalent to using \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays()}}
-and passing \code{context} to \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}.
+and passing \code{context} to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.
 }
 \details{
 The returned object is an ordinary \code{\link{x13Single}} or \code{\link{tramoseatsSingle}}

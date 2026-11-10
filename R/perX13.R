@@ -71,6 +71,15 @@ x13Single <- R6::R6Class(
 #' Defaults to `"rsa3"`.
 #' @param context a list of external regressors (calendar or other) to be used for estimation,
 #' passed as the `context` argument of [rjd3x13::x13_fast()].
+#' @param td trading day regressors to be used as user-defined regression
+#' variables. Either a national calendar of class `JD3_CALENDAR` created with
+#' [rjd3toolkit::national_calendar()], from which the regressors are computed
+#' with [rjd3toolkit::calendar_td()], a precomputed `mts` object (e.g.
+#' `genTd()[[3]][, 1:6]` or the output of [rjd3toolkit::calendar_td()]), or a
+#' list as returned by [td_context()]. The regressors are registered in
+#' `context` and the trading days spec block is set to `option =
+#' "UserDefined"`, see [perTd()]. Arguments `td.*` given in `...` or `speclist`
+#' override the automatically generated ones.
 #' @param userdefined a character vector of user-defined variables to be included in the output,
 #' passed as the `userdefined` argument to [rjd3x13::x13_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
@@ -153,6 +162,14 @@ x13Single <- R6::R6Class(
 #' obj2$run()
 #' obj2$output
 #'
+#' # user-defined trading day regressors, see also perTd()
+#' library(rjd3toolkit)
+#' AT <- national_calendar(list(special_day("NEWYEAR"), fixed_day(1, 6),
+#'                              special_day("EASTERMONDAY")))
+#' obj3 <- perX13(AirPassengers, "rsa3", td = AT)
+#' obj3$run()
+#' obj3$output$diagnostics$td.ftest
+#'
 #' @seealso [rjd3x13::x13_spec()], [rjd3x13::x13_fast()]
 #' @references
 #' For more details on x13 specifications and the underlying implementation,
@@ -164,6 +181,7 @@ perX13 <- function(ts,
                    context = NULL,
                    userdefined = NULL,
                    speclist = NULL,
+                   td = NULL,
                    ...) {
-  x13Single$new(ts, match.arg(template), context, userdefined, speclist, ...)
+  x13Single$new(ts, match.arg(template), context, userdefined, speclist, td, ...)
 }

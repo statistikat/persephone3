@@ -61,8 +61,8 @@ under \code{name}}
 }
 \description{
 Helper that constructs user-defined trading day regressors and registers
-them in a modelling context for \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}. It combines the three manual steps
+them in a modelling context for \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}. It combines the three manual steps
 shown in the rjd3 workflow - building the regressors, wrapping them in a
 \code{\link[rjd3toolkit:modelling_context]{rjd3toolkit::modelling_context()}} and setting the trading days spec block
 with \code{option = "UserDefined"} - into one call.

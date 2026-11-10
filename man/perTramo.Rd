@@ -10,6 +10,7 @@ perTramo(
   context = NULL,
   userdefined = NULL,
   speclist = NULL,
+  td = NULL,
   ...
 )
 }
@@ -29,6 +30,15 @@ passed as the \code{userdefined} argument to \code{\link[rjd3tramoseats:tramosea
 
 \item{speclist}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+
+\item{td}{trading day regressors to be used as user-defined regression
+variables. Either a national calendar of class \code{JD3_CALENDAR} created with
+\code{\link[rjd3toolkit:national_calendar]{rjd3toolkit::national_calendar()}}, from which the regressors are computed
+with \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, a precomputed \code{mts} object (e.g.
+\code{genTd()[[3]][, 1:6]} or the output of \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}), or a
+list as returned by \code{\link[=td_context]{td_context()}}. The regressors are registered in
+\code{context} and the trading days spec block is set to \code{option = "UserDefined"}, see \code{\link[=perTd]{perTd()}}. Arguments \verb{td.*} given in \code{...} or \code{speclist}
+override the automatically generated ones.}
 
 \item{...}{additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally.

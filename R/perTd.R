@@ -102,6 +102,29 @@ td_context <- function(ts,
   list(td = td, context = context, speclist = speclist)
 }
 
+# resolve the `td` argument of perX13()/perTramo() into the list returned by
+# td_context(). Accepts a JD3 calendar, precomputed regressors (ts/mts) or an
+# already built td_context() list.
+resolve_td_input <- function(ts, td, method) {
+  if (is.null(td)) {
+    return(NULL)
+  }
+  if (inherits(td, "JD3_CALENDARDEFINITION")) {
+    return(td_context(ts = ts, calendar = td, method = method))
+  }
+  if (stats::is.ts(td)) {
+    return(td_context(ts = ts, td = td, method = method))
+  }
+  if (is.list(td) && all(c("context", "speclist") %in% names(td))) {
+    return(td)
+  }
+  stop(
+    "'td' must be a JD3 calendar (rjd3toolkit::national_calendar()), a ts/mts ",
+    "object with trading day regressors, or a list as returned by td_context().",
+    call. = FALSE
+  )
+}
+
 #' Seasonal adjustment with user-defined trading day regressors
 #'
 #' @description
@@ -232,45 +255,26 @@ perTd <- function(ts,
     test = test
   )
 
-  # merge the trading day variables into an existing context, if any
-  if (!is.null(context)) {
-    if (!is.list(context) || !all(c("calendars", "variables") %in% names(context))) {
-      stop(
-        "'context' must be a modelling context created with ",
-        "rjd3toolkit::modelling_context()",
-        call. = FALSE
-      )
-    }
-    td_obj$context <- modifyList(context, list(variables = td_obj$context$variables))
-  }
-
-  # user-supplied td.* arguments take precedence over the generated ones;
-  # since perX13()/perTramo() ignore ... once a speclist is given, the dots
-  # are merged into the speclist as well (speclist entries winning, as in
-  # perX13()/perTramo())
-  dots <- list(...)
-  if (is.null(speclist)) {
-    speclist <- modifyList(td_obj$speclist, dots)
-  } else {
-    speclist <- modifyList(modifyList(td_obj$speclist, dots), speclist)
-  }
-
+  # the actual work (registering the context and setting the trading days
+  # spec block) is done by the td argument of perX13()/perTramo()
   if (method == "x13") {
     perX13(
       ts,
       template = template,
-      context = td_obj$context,
+      context = context,
       userdefined = userdefined,
       speclist = speclist,
+      td = td_obj,
       ...
     )
   } else {
     perTramo(
       ts,
       template = template,
-      context = td_obj$context,
+      context = context,
       userdefined = userdefined,
       speclist = speclist,
+      td = td_obj,
       ...
     )
   }

@@ -125,3 +125,49 @@ obj4 <- perTd(AirPassengers, calendar = AT, method = "x13",
 expect_equal(unclass(obj4$params)$regarima$regression$td$test, "ADD")
 obj4$run()
 expect_true(!is.null(obj4$output))
+
+message("Test td argument of perX13 and perTramo")
+
+# calendar object
+obj5 <- perX13(AirPassengers, "rsa3", td = AT)
+obj5$run()
+vars5 <- obj5$output$preprocessing$description$variables
+expect_true("TD" %in% unlist(lapply(vars5, function(v) as.character(v$type))))
+expect_true(all(c("td.ftest.i", "td.ftest.sa") %in%
+  names(obj5$output$diagnostics)))
+
+# precomputed regressors, tramoseats
+obj6 <- perTramo(AirPassengers, "rsa3", td = tdAT)
+obj6$run()
+expect_true(!is.null(obj6$output))
+expect_true(length(unclass(obj6$params)$tramo$regression$users) == ncol(tdAT))
+
+# td_context list
+obj7 <- perX13(AirPassengers, "rsa3",
+               td = persephone3:::td_context(AirPassengers, calendar = AT,
+                                             method = "x13"))
+obj7$run()
+expect_true(!is.null(obj7$output))
+
+# additional spec arguments in ... are not dropped
+obj8 <- perX13(AirPassengers, "rsa3", td = AT, transform.fun = "Log",
+               easter.enabled = FALSE)
+expect_equal(unclass(obj8$params)$regarima$transform$fn, "LOG")
+expect_equal(unclass(obj8$params)$regarima$regression$easter$type, "UNUSED")
+# user td.* arguments override the generated ones
+obj9 <- perX13(AirPassengers, "rsa3", td = AT, td.test = "Add")
+expect_equal(unclass(obj9$params)$regarima$regression$td$test, "ADD")
+# user context is preserved
+obj10 <- perX13(AirPassengers, "rsa3", context = ctx, td = AT)
+expect_true(all(c("EXTRA", "REGS_TD") %in% names(obj10$context$variables)))
+# invalid td input
+expect_error(perX13(AirPassengers, "rsa3", td = "AT"))
+
+message("Test td argument of updateParams")
+
+obj11 <- perX13(AirPassengers, "rsa3")
+obj11$updateParams(td = AT)
+expect_true("REGS_TD" %in% names(obj11$context$variables))
+expect_equal(length(unclass(obj11$params)$regarima$regression$td$users), 7)
+obj11$run()
+expect_true(!is.null(obj11$output))
