@@ -261,12 +261,63 @@ diagColumnOrder <- c(
   "Q", "Q2", "TotalQ"
 )
 
+# colours of the quality classes: font colours on the dark page (dark =
+# TRUE) or their darker counterparts for a light page
+diagClassColors <- function(dark = TRUE) {
+  if (dark) {
+    c(
+      Good = "#4bd464", Uncertain = "#ffb340",
+      Bad = "#ff6a3d", Severe = "#ff4040", Undefined = "#9e9e9e"
+    )
+  } else {
+    c(
+      Good = "#1a803c", Uncertain = "#b26a00",
+      Bad = "#c93c00", Severe = "#cc0000", Undefined = "#888888"
+    )
+  }
+}
+
+# style sheet of the page of the widget when dark = TRUE: black background
+# with bright text, DT's controls (search field, filter inputs, sorting
+# arrows, info text) adapted to the dark page
+diagDarkCss <- function() {
+  paste(
+    "body { background: #141414; color: #dddddd; }",
+    ".dataTables_wrapper { color: #dddddd; }",
+    "table.dataTable th, table.dataTable td { color: #dddddd;",
+    "  border-bottom-color: #3a3a3a !important; }",
+    "table.dataTable thead th, table.dataTable thead td,",
+    "table.dataTable tfoot th, table.dataTable tfoot td { color: #dddddd;",
+    "  border-bottom-color: #5a5a5a !important;",
+    "  border-top-color: #5a5a5a !important; }",
+    "table.dataTable tbody tr { background-color: #141414; }",
+    "table.dataTable tbody tr.odd, table.dataTable.stripe tbody tr.odd,",
+    "table.dataTable.display tbody tr.odd { background-color: #1c1c1c; }",
+    "table.dataTable.hover tbody tr:hover,",
+    "table.dataTable.display tbody tr:hover { background-color: #2a2a2a; }",
+    ".dataTables_wrapper .dataTables_filter input,",
+    ".dataTables_wrapper .dataTables_length select,",
+    "input[type=\"search\"], select.form-control {",
+    "  background: #262626 !important; color: #dddddd !important;",
+    "  border: 1px solid #555 !important; border-radius: 3px; }",
+    ".dataTables_wrapper .dataTables_info,",
+    ".dataTables_wrapper .dataTables_filter, .dataTables_wrapper label {",
+    "  color: #cccccc; }",
+    ".dataTables_wrapper .dataTables_paginate .paginate_button { color:",
+    "  #cccccc !important; }",
+    "::-webkit-scrollbar { background: #1c1c1c; }",
+    "::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }",
+    "::-webkit-scrollbar-corner { background: #1c1c1c; }",
+    sep = " "
+  )
+}
+
 # interactive viewer table of the diagnostics table of diagnosticsTable():
-# readable column headers with explanatory tooltips, traffic light colours
-# for the quality classes, columns grouped by topic; DT shows it in the
+# readable column headers with explanatory tooltips, the quality classes in
+# traffic light font colours, columns grouped by topic; DT shows it in the
 # viewer pane (RStudio) or the browser
 #' @importFrom DT datatable formatStyle
-diagnosticsDatatable <- function(df, ...) {
+diagnosticsDatatable <- function(df, dark = TRUE, ...) {
   meta <- diagColumnMeta()
   # drop the columns that are uninformative in the viewer: run (rows are
   # only shown for objects that were run) and type (all series of one call
@@ -304,9 +355,23 @@ diagnosticsDatatable <- function(df, ...) {
       )
     )
   }))
+  # style sheet injected into the page of the widget for a black background
+  # (dark = TRUE); the widget remains self contained, it also works when
+  # saved to a file or embedded in a dashboard
+  container <- paste0(
+    if (dark) paste0("<style>", diagDarkCss(), "</style>") else "",
+    "<table class=\"display\">",
+    "<thead><tr>",
+    paste0(
+      "<th>", htmltools::htmlEscape(unname(labels)), "</th>",
+      collapse = ""
+    ),
+    "</tr></thead><tbody></tbody></table>"
+  )
   dt <- DT::datatable(
     df,
     rownames = FALSE,
+    container = container,
     filter = if (nrow(df) > 1) "top" else "none",
     colnames = unname(labels),
     options = list(
@@ -318,11 +383,8 @@ diagnosticsDatatable <- function(df, ...) {
       columnDefs = colDefs
     )
   )
-  # traffic light colours for the quality classes
-  classes <- c(
-    Good = "#c6efce", Uncertain = "#ffeb9c",
-    Bad = "#ffc7ce", Severe = "#ff8080", Undefined = "#eeeeee"
-  )
+  # quality classes as coloured fonts
+  classes <- diagClassColors(dark)
   coloured <- c(
     "seasonality", "normality", "independence", "QS_seas", "F_seas",
     "combSA_all", "combSA_last", "combI_all", "combI_last",
@@ -330,7 +392,7 @@ diagnosticsDatatable <- function(df, ...) {
   )
   for (cn in intersect(coloured, ord)) {
     dt <- dt %>% DT::formatStyle(
-      cn, `background-color` = DT::styleEqual(
+      cn, color = DT::styleEqual(
         names(classes), unname(classes)
       )
     )
@@ -353,9 +415,13 @@ diagnosticsDatatable <- function(df, ...) {
 #' @param x a persephone object created with \code{\link{perX13}},
 #'   \code{\link{perTramo}}, or \code{\link{perHts}}
 #' @param view logical. If `TRUE`, the table is shown as an interactive
-#'   widget (sortable columns, explanatory tooltips in the headers and
-#'   traffic light colours for the quality classes), displayed in the RStudio
+#'   widget (sortable columns, explanatory tooltips in the headers and the
+#'   quality classes in coloured fonts), displayed in the RStudio
 #'   viewer pane or the browser, instead of being returned as a data.frame.
+#' @param dark if `view = TRUE`: logical, draw the page of the widget with a
+#'   black background and bright text (the colours of the quality classes
+#'   are adapted accordingly). Use `dark = FALSE` for the standard light
+#'   page.
 #' @param ... passed to [DT::datatable()] if `view = TRUE`
 #'
 #' @return A data.frame with diagnostic statistics if `view = FALSE` (for
@@ -384,8 +450,9 @@ diagnosticsDatatable <- function(df, ...) {
 #' obj <- perX13(AirPassengers, template = "rsa3")
 #' obj$run()
 #' diagnosticsTable(obj)
-#' # interactive table with tooltips and traffic light colours, shown in
-#' # the RStudio viewer pane
+#' # interactive table with tooltips and coloured quality classes on a
+#' # black page (dark = FALSE for a light page), shown in the RStudio
+#' # viewer pane
 #' diagnosticsTable(obj, view = TRUE)
 #'
 #' # Hierarchical series
@@ -401,13 +468,13 @@ diagnosticsDatatable <- function(df, ...) {
 #' }
 #'
 #' @export
-diagnosticsTable <- function(x, view = FALSE, ...) {
+diagnosticsTable <- function(x, view = FALSE, dark = TRUE, ...) {
   if (!inherits(x, "persephone")) {
     stop("x must be a persephone object", call. = FALSE)
   }
   res <- x$iterate(generate_diagnostics_table, asTable = TRUE)
   if (view) {
-    diagnosticsDatatable(res, ...)
+    diagnosticsDatatable(res, dark = dark, ...)
   } else {
     res
   }

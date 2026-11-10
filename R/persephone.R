@@ -163,10 +163,10 @@ persephone <- R6::R6Class(
     },
     #' @description display a persephone object in the console
     #' @description create a table for the eurostat quality report
-    #' @param view passed to [diagnosticsTable()]
+    #' @param view,dark passed to [diagnosticsTable()]
     #' @param ... passed to [diagnosticsTable()]
-    diagnosticsTable = function(view = FALSE, ...) {
-      diagnosticsTable(self, view = view, ...)
+    diagnosticsTable = function(view = FALSE, dark = TRUE, ...) {
+      diagnosticsTable(self, view = view, dark = dark, ...)
     },
     #' @description see [perHts]
     #' @param fun see [perHts]
