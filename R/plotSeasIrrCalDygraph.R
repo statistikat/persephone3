@@ -11,6 +11,8 @@
 #' @param forecasts logical flag indicating if forecasts should be plotted
 #' @param rangeSelector logical flag specifying if a range selector should be
 #'   included in the plot
+#' @param smooth logical flag specifying if the series should be drawn as
+#'   smoothed lines (cubic spline like the smoothed lines of Highcharts)
 #' @param drawPoints logical flag indicating if a small dot should be drawn at
 #'   each point, in addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which
@@ -29,7 +31,7 @@
 #'
 #' @export
 plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TRUE,
-                    drawPoints=FALSE, annualComparison=NULL){
+                    smooth=TRUE, drawPoints=FALSE, annualComparison=NULL){
 
   if (is.null(x$output$user_defined)) {
     stop("No results from run available.\n")
@@ -57,6 +59,8 @@ plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TR
     main <- "Seasonal Comp., Irregular Comp. and Calendar Eff."
   }
 
+  dp <- drawPoints && !smooth
+
   s <- x$output$user_defined$s
   s_f <- x$output$user_defined$s_f
   i <- x$output$user_defined$i
@@ -69,64 +73,76 @@ plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TR
   if (forecasts & !is.null(s_f) & !is.null(i_f)) {
 
     ts <- cbind(s, i, s_f, i_f, cal, cal_f)
+    smooth_cols <- c("s", "i", "s_f", "i_f")
+    if (!is.null(cal)) {
+      smooth_cols <- c(smooth_cols, "cal", "cal_f")
+    }
 
-    graphObj <- dygraph(ts, main = main) %>%
-      dySeries("s", label = "Seasonal Component", drawPoints = drawPoints,
-               color = "rgb(0,128,0)") %>%
+    graphObj <- dygraph(
+      dyData(ts, smooth = smooth, smooth_cols = smooth_cols),
+      main = main
+    ) %>%
+      dySeries("s", label = "Seasonal Component",
+               drawPoints = dp,
+               color = p3_series_colors[["Seasonal Component"]]) %>%
       dySeries("i",
                label = "Irregular Component",
-               drawPoints = drawPoints,
-               color = "rgb(0,0,128)") %>%
+               drawPoints = dp,
+               color = p3_series_colors[["Irregular Component"]]) %>%
       dySeries(
         "s_f",
         label = "Forecasts Seasonal Comp.",
         strokePattern = "dashed",
-        drawPoints = drawPoints,
-        color = "rgb(0,128,0)"
+        drawPoints = dp,
+        color = p3_series_colors[["Seasonal Component"]]
       ) %>%
       dySeries(
         "i_f",
         label = "Forecasts Irregular Comp.",
         strokePattern = "dashed",
-        drawPoints = drawPoints,
-        color = "rgb(0,0,128)"
+        drawPoints = dp,
+        color = p3_series_colors[["Irregular Component"]]
       )
     if (!is.null(cal) & !is.null(cal_f)) {
       graphObj <- graphObj %>%
         dySeries("cal",
                  label = "Calendar Effects",
-                 drawPoints = drawPoints,
-                 color = "rgb(128,0,0)") %>%
+                 drawPoints = dp,
+                 color = p3_series_colors[["Calendar Effects"]]) %>%
         dySeries(
           "cal_f",
           label = "Forecasts Calendar Eff.",
           strokePattern = "dashed",
-          drawPoints = drawPoints,
-          color = "rgb(128,0,0)"
+          drawPoints = dp,
+          color = p3_series_colors[["Calendar Effects"]]
         )
     }
-    #graphObj <- graphObj %>% dyOptions(rightGap=10)
+    graphObj <- graphObj %>% dyLegend(width = 470)
 
   }else{
     ts <- cbind(s, i, cal)
 
-    graphObj <- dygraph(ts, main = main) %>%
+    graphObj <- dygraph(
+      dyData(ts, smooth = smooth,
+             smooth_cols = intersect(c("s", "i", "cal"), colnames(ts))),
+      main = main
+    ) %>%
       dySeries("s",
-               label = "Seasonal Componenet",
-               drawPoints = drawPoints,
-               color = "rgb(0,128,0)") %>%
+               label = "Seasonal Component",
+               drawPoints = dp,
+               color = p3_series_colors[["Seasonal Component"]]) %>%
       dySeries("i",
                label = "Irregular Component",
-               drawPoints = drawPoints,
-               color = "rgb(0,0,128)")
+               drawPoints = dp,
+               color = p3_series_colors[["Irregular Component"]])
     if (!is.null(cal)) {
       graphObj <- graphObj %>%
         dySeries("cal",
                  label = "Calendar Effects",
-                 drawPoints = drawPoints,
-                 color = "rgb(128,0,0)")
+                 drawPoints = dp,
+                 color = p3_series_colors[["Calendar Effects"]])
     }
-    #graphObj <- graphObj %>% dyLegend(width=400)
+    graphObj <- graphObj %>% dyLegend(width = 400)
 
   }
 
@@ -144,23 +160,6 @@ plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TR
                 labelLoc = "bottom", color = "lightgrey")
     }
   }
-
-  # graphObj <- graphObj %>%
-  #   dyHighlight(highlightSeriesOpts = list(strokeWidth = 2),
-  #               highlightCircleSize = 4,
-  #               highlightSeriesBackgroundAlpha = 0.5)
-  # graphObj <- graphObj %>%
-  #   dyOptions(titleHeight=3)
-  #
-  cssString <- textConnection(".dygraph-title {
-font-size: 14px;
-}
-.dygraph-legend > span {
-font-size: 10px;
-}")
-
-  graphObj <- graphObj %>%
-    dyCSS(cssString)
 
   p3_fluid(graphObj)
 

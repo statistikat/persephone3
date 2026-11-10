@@ -10,9 +10,14 @@
   `genTd()`); the previous uncentered regressors were nearly collinear with
   the regression constant, which made x13 often estimate the model in logs
   with the trend and s.a. series returned on the log scale.
-* `plot()` and the hierarchical plots use dygraphs again by default (highcharter
-  is no longer used for them); with the new argument
-  `plotEngine = "plotly"` the same plots can also be drawn with plotly.
+* Highcharter is no longer used by the package: `plot()`,
+  `plotSeasIrrCal()`, `plotSiRatios()` and `plotSpectrum()` now draw their
+  interactive plots with dygraphs and/or plotly (`plotEngine` argument,
+  dygraphs is the default for the time series plots, plotly for the SI-ratio
+  and spectral plots; `hchart()` and the `plotSeasIrrCalHc()`,
+  `plotSiRatiosHc()` and `plotSpectrumHc()` functions are no longer
+  available). The plots keep the style of the former highcharter plots:
+  smoothed lines and the default Highcharts colours.
 * Time series plots (`plot()`) are drawn with smoothed lines by default; the
   new logical arguments `smooth` and `rangeSelector` control the smoothing
   and the range selector. The range selector is now off by default. The

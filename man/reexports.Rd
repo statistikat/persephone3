@@ -4,8 +4,6 @@
 \name{reexports}
 \alias{reexports}
 \alias{autoplot}
-\alias{hchart}
-\alias{hc_title}
 \alias{\%>\%}
 \title{Objects exported from other packages}
 \keyword{internal}
@@ -16,6 +14,6 @@ below to see their documentation.
 \describe{
   \item{ggplot2}{\code{\link[ggplot2]{autoplot}}}
 
-  \item{highcharter}{\code{\link[highcharter:highcharter-exports]{\%>\%}}, \code{\link[highcharter]{hc_title}}, \code{\link[highcharter]{hchart}}}
+  \item{magrittr}{\code{\link[magrittr:pipe]{\%>\%}}}
 }}
 

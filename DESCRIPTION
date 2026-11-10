@@ -21,7 +21,6 @@ Imports:
     rjd3x13 (>= 3.5.0),
     rjd3tramoseats (>= 3.5.0),
     cli,
-    highcharter,
     dygraphs,
     htmlwidgets,
     plotly,

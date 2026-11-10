@@ -1,13 +1,6 @@
-#' @importFrom highcharter hchart hc_title
+#' @importFrom magrittr %>%
 #' @export
-highcharter::hchart
-
-#' @export
-highcharter::hc_title
-
-#' @importFrom highcharter %>%
-#' @export
-highcharter::`%>%`
+magrittr::`%>%`
 
 #' @keywords internal
 "_PACKAGE"
@@ -141,9 +134,9 @@ specfun_list <- list(
 p3_spec_names <- c("outliers")
 
 # default colours for the series of the time series plots; the first five
-# entries are the default colours of Highcharts (the style of
-# plotSeasIrrCal()), so that the dygraph and plotly plots look like its
-# highcharter plots; named by the series labels of the plots
+# entries are the default colours of Highcharts, so that the plots have the
+# style of the Highcharts plots of the JDmetra+ web application; named by
+# the series labels of the plots
 p3_series_colors <- c(
   Original = "#7cb5ec",
   Trend = "#434348",
@@ -151,7 +144,10 @@ p3_series_colors <- c(
   Forecasts = "#808080",
   `Confidence Band` = "#7cb5ec",
   `Direct SA` = "#434348",
-  `Indirect SA` = "#90ed7d"
+  `Indirect SA` = "#90ed7d",
+  `Seasonal Component` = "#7cb5ec",
+  `Irregular Component` = "#434348",
+  `Calendar Effects` = "#90ed7d"
 )
 
 # default colours of the outlier types in the time series plots

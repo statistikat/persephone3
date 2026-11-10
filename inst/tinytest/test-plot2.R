@@ -130,15 +130,26 @@ p3 <- plot(obj, plotEngine = "plotly", smooth = FALSE, drawPoints = TRUE)
 modes <- vapply(p3$x$data, function(s) s$mode, "")
 expect_true(any(modes == "lines+markers"))
 
-message("Test plotSiRatios - marker size")
+message("Test plotSiRatios")
 
-# highcharter engine: the SI-ratio dots are small (radius 2), so that the
-# seasonal factor lines remain visible
-hs <- plotSiRatios(obj, plotEngine = "hc")
-mk <- Filter(function(s) is.list(s$marker) && !is.null(s$marker$radius),
-             hs$x$hc_opts$series)
-expect_true(length(mk) > 0)
-expect_true(all(vapply(mk, function(s) s$marker$radius, 0) <= 2))
+# plotly engine (default): one legend entry per series, the SI-ratios as
+# small dots, the seasonal factors and their mean as lines
+sp <- plotly::plotly_build(plotSiRatios(obj))
+expect_true(inherits(sp, "plotly"))
+nms <- vapply(sp$x$data, function(s) s$name, "")
+expect_true(all(c("SI-Ratio", "Replaced SI-Ratio", "Seasonal Factor",
+                  "SF Mean") %in% nms))
+legendEntries <- unique(vapply(sp$x$data, function(s) {
+  if (isTRUE(s$showlegend)) s$name else NA_character_
+}, ""))
+expect_true(setequal(stats::na.omit(legendEntries),
+                     c("SI-Ratio", "Replaced SI-Ratio", "Seasonal Factor",
+                       "SF Mean")))
+mk <- Filter(function(s) identical(s$mode, "markers"), sp$x$data)
+expect_true(length(mk) >= 1)
+expect_true(all(vapply(mk, function(s) s$marker$size <= 3, TRUE)))
+ln <- Filter(function(s) identical(s$mode, "lines"), sp$x$data)
+expect_true(length(ln) > 0)
 
 # ggplot engine: the points are drawn with size 1
 pg <- plotSiRatios(obj, plotEngine = "ggplot")
@@ -161,11 +172,12 @@ for (pt in c("arSpec", "arSpecBars", "periodogram")) {
   ))
 }
 
-# overlaid spectra of the three series types, highcharter engine
+# overlaid spectra of the three series types, plotly engine (default)
 gs3 <- plotSpectrum(x, tsType = c("sa", "irregular", "residuals"))
-expect_equal(length(gs3$x$hc_opts$series), 3)
+expect_true(inherits(gs3, "plotly"))
+expect_equal(length(gs3$x$data), 3)
 expect_equal(
-  vapply(gs3$x$hc_opts$series, function(s) s$name, ""),
+  vapply(gs3$x$data, function(s) s$name, ""),
   c("sa", "irregular", "residuals")
 )
 
@@ -178,7 +190,7 @@ expect_equal(length(unique(ds4$colour)), 3)
 
 # numeric codes work as well
 gs5 <- plotSpectrum(x, tsType = c(2, 3))
-expect_equal(length(gs5$x$hc_opts$series), 2)
+expect_equal(length(gs5$x$data), 2)
 
 # overlay is not available for the bar plot type
 expect_error(plotSpectrum(x, tsType = c("sa", "irregular"),

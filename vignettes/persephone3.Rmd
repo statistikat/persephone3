@@ -134,8 +134,8 @@ obj_x13$diagnosticsTable()
 # dygraphs plot method
 obj_x13$plot()
 
-# Highcharter interactive plot
-hchart(obj_x13)
+# interactive plot with plotly
+obj_x13$plot(plotEngine = "plotly")
 ```
 
 ## Other Available Plots

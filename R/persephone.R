@@ -127,12 +127,6 @@ persephone <- R6::R6Class(
     plot = function(...) {
       plot(self, ...)
     },
-    #' @description visualize the results of an adjustment
-    #' @param ...  passed to [hchart()]
-    #'   see the hchart method for persephoneSingle or hierarchicalTimeSeries objects
-    hchart = function(...) {
-      hchart(self, ...)
-    },
     #' @description visualize residuals
     #' @param ... passed to [plotResiduals()]
     plotResiduals = function(...) {

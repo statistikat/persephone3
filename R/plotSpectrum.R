@@ -1,11 +1,12 @@
 #' Spectral Plots
 #'
-#' Create spectral plots using either highcharter (interactive) or ggplot2 (static).
-#' This is a unified interface for [plotSpectrumHc] and [plotSpectrumGgplot].
+#' Create spectral plots using plotly (interactive) or ggplot2 (static).
+#' This is a unified interface for [plotSpectrumPlotly] and
+#' [plotSpectrumGgplot].
 #'
 #' @param x an object of class [persephone].
-#' @param plotEngine character. Either `"hc"` (default, interactive highcharter plots)
-#'   or `"ggplot"` (static ggplot2 plots).
+#' @param plotEngine character. Either `"plotly"` (default, interactive
+#'   plotly plots) or `"ggplot"` (static ggplot2 plots).
 #' @param tsType character vector with one or more of
 #'   (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
 #'   selecting the preferred type(s) of time series to plot. If more than one
@@ -24,16 +25,16 @@
 #'   and `n.freq=61` for plotType `"arSpecBars"`.
 #' @param order order of the AR model.
 #' @param interactive if `plotEngine="ggplot"`, whether to wrap in plotly for
-#'   basic interactivity. Ignored for highcharter plots.
+#'   basic interactivity. Ignored for `plotEngine="plotly"`.
 #' @param ... other parameters passed to the underlying plot function.
 #'
-#' @return A highchart object (if `plotEngine="hc"`) or a ggplot/plotly object
-#'   (if `plotEngine="ggplot"`).
+#' @return A plotly object (if `plotEngine="plotly"`) or a ggplot/plotly
+#'   object (if `plotEngine="ggplot"`).
 #'
 #' @examples
 #' x <- perX13(AirPassengers)
 #' x$run()
-#' plotSpectrum(x, plotEngine = "hc")
+#' plotSpectrum(x, plotEngine = "plotly")
 #' plotSpectrum(x, plotEngine = "ggplot")
 #' plotSpectrum(x, plotEngine = "ggplot", interactive = TRUE)
 #' # all three spectra (s.a., irregular and residuals) in one plot
@@ -42,7 +43,7 @@
 #' @export
 plotSpectrum <- function(
     x,
-    plotEngine = c("hc", "ggplot"),
+    plotEngine = c("plotly", "ggplot"),
     tsType = "original",
     plotType = c("arSpec", "arSpecBars", "periodogram"),
     maxobs = NULL,
@@ -55,15 +56,16 @@ plotSpectrum <- function(
   stopifnot(inherits(x, "persephone"))
   plotEngine <- match.arg(plotEngine)
 
-  if (plotEngine == "hc") {
-    plotSpectrumHc(
+  if (plotEngine == "plotly") {
+    plotSpectrumPlotly(
       x,
       tsType = tsType,
       plotType = plotType,
       maxobs = maxobs,
       main = main,
       n.freq = n.freq,
-      order = order
+      order = order,
+      ...
     )
   } else {
     plotSpectrumGgplot(

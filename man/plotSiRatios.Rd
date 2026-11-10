@@ -6,7 +6,7 @@
 \usage{
 plotSiRatios(
   x,
-  plotEngine = c("hc", "ggplot"),
+  plotEngine = c("plotly", "ggplot"),
   main = NULL,
   interactive = FALSE,
   ...
@@ -15,23 +15,24 @@ plotSiRatios(
 \arguments{
 \item{x}{an object of class \link{persephone}.}
 
-\item{plotEngine}{character. Either \code{"hc"} (default, interactive highcharter plots)
-or \code{"ggplot"} (static ggplot2 plots).}
+\item{plotEngine}{character. Either \code{"plotly"} (default, interactive plotly
+plots) or \code{"ggplot"} (static ggplot2 plots).}
 
-\item{main}{if \code{plotEngine="ggplot"}, plot title. Ignored for highcharter plots.}
+\item{main}{plot title.}
 
 \item{interactive}{If \code{plotEngine="ggplot"}, whether to wrap in plotly for
-basic interactivity. Ignored for highcharter plots.}
+basic interactivity. Ignored for \code{plotEngine="plotly"}.}
 
-\item{...}{other parameters passed to the underlying plot function. Not currently used.}
+\item{...}{other parameters passed to the underlying plot function.}
 }
 \value{
-A highchart object (if \code{plotEngine="hc"}) or a ggplot/plotly object
-(if \code{plotEngine="ggplot"}).
+A plotly object (if \code{plotEngine="plotly"}) or a ggplot/plotly
+object (if \code{plotEngine="ggplot"}).
 }
 \description{
-Create SI-ratio plots using either highcharter (interactive) or ggplot2 (static).
-This is a unified interface for \link{plotSiRatiosHc} and \link{plotSiRatiosGgplot}.
+Create SI-ratio plots using either plotly (interactive) or ggplot2 (static).
+This is a unified interface for \link{plotSiRatiosPlotly} and
+\link{plotSiRatiosGgplot}.
 }
 \details{
 For \code{x13Single} objects, displays SI-ratios, replaced SI-ratios, seasonal
@@ -41,7 +42,7 @@ and their mean.
 \examples{
 x <- perX13(AirPassengers)
 x$run()
-plotSiRatios(x, plotEngine = "hc")
+plotSiRatios(x, plotEngine = "plotly")
 plotSiRatios(x, plotEngine = "ggplot")
 plotSiRatios(x, plotEngine = "ggplot", interactive = TRUE)
 

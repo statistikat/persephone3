@@ -6,7 +6,7 @@
 \usage{
 plotSpectrum(
   x,
-  plotEngine = c("hc", "ggplot"),
+  plotEngine = c("plotly", "ggplot"),
   tsType = "original",
   plotType = c("arSpec", "arSpecBars", "periodogram"),
   maxobs = NULL,
@@ -20,8 +20,8 @@ plotSpectrum(
 \arguments{
 \item{x}{an object of class \link{persephone}.}
 
-\item{plotEngine}{character. Either \code{"hc"} (default, interactive highcharter plots)
-or \code{"ggplot"} (static ggplot2 plots).}
+\item{plotEngine}{character. Either \code{"plotly"} (default, interactive
+plotly plots) or \code{"ggplot"} (static ggplot2 plots).}
 
 \item{tsType}{character vector with one or more of
 (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
@@ -47,22 +47,23 @@ and \code{n.freq=61} for plotType \code{"arSpecBars"}.}
 \item{order}{order of the AR model.}
 
 \item{interactive}{if \code{plotEngine="ggplot"}, whether to wrap in plotly for
-basic interactivity. Ignored for highcharter plots.}
+basic interactivity. Ignored for \code{plotEngine="plotly"}.}
 
 \item{...}{other parameters passed to the underlying plot function.}
 }
 \value{
-A highchart object (if \code{plotEngine="hc"}) or a ggplot/plotly object
-(if \code{plotEngine="ggplot"}).
+A plotly object (if \code{plotEngine="plotly"}) or a ggplot/plotly
+object (if \code{plotEngine="ggplot"}).
 }
 \description{
-Create spectral plots using either highcharter (interactive) or ggplot2 (static).
-This is a unified interface for \link{plotSpectrumHc} and \link{plotSpectrumGgplot}.
+Create spectral plots using plotly (interactive) or ggplot2 (static).
+This is a unified interface for \link{plotSpectrumPlotly} and
+\link{plotSpectrumGgplot}.
 }
 \examples{
 x <- perX13(AirPassengers)
 x$run()
-plotSpectrum(x, plotEngine = "hc")
+plotSpectrum(x, plotEngine = "plotly")
 plotSpectrum(x, plotEngine = "ggplot")
 plotSpectrum(x, plotEngine = "ggplot", interactive = TRUE)
 # all three spectra (s.a., irregular and residuals) in one plot

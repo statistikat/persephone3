@@ -2,7 +2,7 @@
 title: "Plotting with persephone3"
 description: >
   Interactive visualizations for seasonal adjustment results using dygraphs,
-  plotly, and highcharter.
+  plotly, and ggplot2.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Plotting with persephone3}
@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-`persephone3` provides multiple ways to visualize seasonal adjustment results. The plotting functions return interactive HTML widgets using `dygraphs`, `plotly`, and `highcharter`.
+`persephone3` provides multiple ways to visualize seasonal adjustment results. The plotting functions return interactive HTML widgets using `dygraphs` and `plotly` (see the `plotEngine` argument of the plot functions).
 
 **Note:** The appearance of plots depends on whether `run()` has been called. Before running, only the raw time series is available. After `run()`, additional components (seasonally adjusted, trend-cycle, forecasts) become accessible.
 
@@ -71,12 +71,15 @@ plotResiduals(obj, which = "acf")
 plotResiduals(obj, which = "pacf")
 ```
 
-# Highcharter Alternative
+# Plotly Engine
 
-For alternative styling, use `hchart()` which leverages the `highcharter` package:
+For alternative styling, the plot functions with an interactive engine accept
+`plotEngine = "plotly"` (see `?plot`):
 
-```{r hchart-plot}
-hchart(obj)
+```{r plotly-plot, eval = FALSE}
+plot(obj, plotEngine = "plotly")
+plotSiRatios(obj)  # plotly is the default engine here
+plotSpectrum(obj)  # plotly is the default engine here
 ```
 
 # Plotly Integration

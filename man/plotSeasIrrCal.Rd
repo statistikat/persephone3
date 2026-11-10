@@ -6,47 +6,56 @@
 \usage{
 plotSeasIrrCal(
   x,
-  plotEngine = c("hc", "dygraph"),
+  plotEngine = c("dygraph", "plotly"),
   main = NULL,
   forecasts = TRUE,
   rangeSelector = TRUE,
+  smooth = TRUE,
   drawPoints = FALSE,
-  annualComparison = NULL
+  annualComparison = NULL,
+  ...
 )
 }
 \arguments{
 \item{x}{an object of class \link{persephone}.}
 
-\item{plotEngine}{character. Either \code{"hc"} (default, highcharter) or
-\code{"dygraph"} (dygraphs).}
+\item{plotEngine}{character. Either \code{"dygraph"} (default, dygraphs) or
+\code{"plotly"} (plotly).}
 
-\item{main}{if \code{plotEngine="dygraph"}: plot title}
+\item{main}{plot title}
 
-\item{forecasts}{if \code{plotEngine="dygraph"}: logical flag indicating if forecasts should be plotted}
+\item{forecasts}{logical flag indicating if forecasts should be plotted}
 
 \item{rangeSelector}{if \code{plotEngine="dygraph"}: logical flag specifying if a range selector should be
-included in the plot}
+included in the plot; if \code{plotEngine="plotly"}: logical flag specifying if
+a range slider should be shown below the plot}
+
+\item{smooth}{logical flag specifying if the series should be drawn as
+smoothed lines (cubic spline like the smoothed lines of Highcharts)}
 
 \item{drawPoints}{if \code{plotEngine="dygraph"}: logical flag indicating if a small dot should be drawn at
 each point, in addition to a line going through the point.}
 
-\item{annualComparison}{if \code{plotEngine="dygraph"}: integer corresponding to the month or quarter which
+\item{annualComparison}{integer corresponding to the month or quarter which
 should be highlighted in the plot for every year. If NULL (default), no
 annual comparison is shown.}
+
+\item{...}{passed to the underlying plot function (for
+\code{plotEngine="plotly"} to \code{\link[plotly:plot_ly]{plotly::plot_ly()}})}
 }
 \value{
-A highchart object (if \code{plotEngine="hc"}) or a dygraph object
-(if \code{plotEngine="dygraph"}).
+A dygraph object (if \code{plotEngine="dygraph"}) or a plotly object
+(if \code{plotEngine="plotly"}).
 }
 \description{
 Create interactive plots of seasonal, irregular, and calendar effects using
-either highcharter or dygraphs. This is a unified interface for
-\link{plotSeasIrrCalHc} and \link{plotSeasIrrCalDygraph}.
+either dygraphs or plotly. This is a unified interface for
+\link{plotSeasIrrCalDygraph} and \link{plotSeasIrrCalPlotly}.
 }
 \examples{
 x <- perX13(AirPassengers)
 x$run()
-plotSeasIrrCal(x, plotEngine = "hc")
 plotSeasIrrCal(x, plotEngine = "dygraph")
+plotSeasIrrCal(x, plotEngine = "plotly")
 
 }
