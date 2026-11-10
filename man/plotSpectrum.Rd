@@ -7,7 +7,7 @@
 plotSpectrum(
   x,
   plotEngine = c("hc", "ggplot"),
-  tsType = c("original", "sa", "irregular", "residuals"),
+  tsType = "original",
   plotType = c("arSpec", "arSpecBars", "periodogram"),
   maxobs = NULL,
   main = NULL,
@@ -23,8 +23,11 @@ plotSpectrum(
 \item{plotEngine}{character. Either \code{"hc"} (default, interactive highcharter plots)
 or \code{"ggplot"} (static ggplot2 plots).}
 
-\item{tsType}{character (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
-selecting the preferred type of time series to plot. A numeric
+\item{tsType}{character vector with one or more of
+(\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
+selecting the preferred type(s) of time series to plot. If more than one
+type is given, the spectra are overlaid in one plot (not available for
+plotType \code{"arSpecBars"}). A numeric
 value (\code{1:4}) corresponding to one of these characters is also accepted.}
 
 \item{plotType}{character (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
@@ -62,5 +65,7 @@ x$run()
 plotSpectrum(x, plotEngine = "hc")
 plotSpectrum(x, plotEngine = "ggplot")
 plotSpectrum(x, plotEngine = "ggplot", interactive = TRUE)
+# all three spectra (s.a., irregular and residuals) in one plot
+plotSpectrum(x, tsType = c("sa", "irregular", "residuals"))
 
 }

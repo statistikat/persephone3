@@ -6,8 +6,11 @@
 #' @param x an object of class [persephone].
 #' @param plotEngine character. Either `"hc"` (default, interactive highcharter plots)
 #'   or `"ggplot"` (static ggplot2 plots).
-#' @param tsType character (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
-#'   selecting the preferred type of time series to plot. A numeric
+#' @param tsType character vector with one or more of
+#'   (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
+#'   selecting the preferred type(s) of time series to plot. If more than one
+#'   type is given, the spectra are overlaid in one plot (not available for
+#'   plotType `"arSpecBars"`). A numeric
 #'   value (`1:4`) corresponding to one of these characters is also accepted.
 #' @param plotType character (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
 #'   selecting the preferred type of plot. A numeric value (`1:3`)
@@ -33,12 +36,14 @@
 #' plotSpectrum(x, plotEngine = "hc")
 #' plotSpectrum(x, plotEngine = "ggplot")
 #' plotSpectrum(x, plotEngine = "ggplot", interactive = TRUE)
+#' # all three spectra (s.a., irregular and residuals) in one plot
+#' plotSpectrum(x, tsType = c("sa", "irregular", "residuals"))
 #'
 #' @export
 plotSpectrum <- function(
     x,
     plotEngine = c("hc", "ggplot"),
-    tsType = c("original", "sa", "irregular", "residuals"),
+    tsType = "original",
     plotType = c("arSpec", "arSpecBars", "periodogram"),
     maxobs = NULL,
     main = NULL,

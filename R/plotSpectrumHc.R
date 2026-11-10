@@ -5,8 +5,11 @@
 #' For static plots with ggplot2, see [plotSpectrumGgplot].
 #'
 #' @param x an object of class [persephone].
-#' @param tsType character (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
-#' selecting the preferred type of time series to plot. A numeric
+#' @param tsType character vector with one or more of
+#' (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
+#' selecting the preferred type(s) of time series to plot. If more than one
+#' type is given, the spectra are overlaid in one plot (not available for
+#' plotType `"arSpecBars"`). A numeric
 #' value (`1:4`) corresponding to one of these characters is also accepted.
 #' @param plotType character (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
 #' selecting the preferred type of plot, see Details. A numeric
@@ -25,10 +28,12 @@
 #' plotSpectrumHc(x)
 #' plotSpectrumHc(x, plotType = "periodogram")
 #' plotSpectrumHc(x, tsType = "irregular")
+#' # all three spectra in one plot
+#' plotSpectrumHc(x, tsType = c("sa", "irregular", "residuals"))
 #' @export
 plotSpectrumHc <- function(
   x,
-  tsType = c("original", "sa", "irregular", "residuals"),
+  tsType = "original",
   plotType = c("arSpec", "arSpecBars", "periodogram"),
   maxobs = NULL,
   main = NULL,
@@ -36,7 +41,16 @@ plotSpectrumHc <- function(
   order = 30
 ) {
   stopifnot(inherits(x, "persephone"))
-  series <- plotSpectrum_series(x, tsType)
+  tsType <- spec_tsTypes(tsType)
+  plotType <- match.arg(plotType)
+  if (length(tsType) > 1 && plotType == "arSpecBars") {
+    stop(
+      "overlaid spectra are not available for plotType \"arSpecBars\"",
+      call. = FALSE
+    )
+  }
+  series_list <- lapply(tsType, function(tt) plotSpectrum_series(x, tt))
+  series <- series_list[[1]]
   freq <- switch(
     as.character(stats::frequency(series$ts)),
     `4` = list(
@@ -54,15 +68,16 @@ plotSpectrumHc <- function(
     stop("invalid frequency")
   )
 
-  if (length(series$ts) <= freq$minobs) {
-    stop(
-      "The minimum number of observations needed to compute the spectrum",
-      " is ",
-      freq$minobs,
-      "."
-    )
+  for (s in series_list) {
+    if (length(s$ts) <= freq$minobs) {
+      stop(
+        "The minimum number of observations needed to compute the spectrum",
+        " is ",
+        freq$minobs,
+        "."
+      )
+    }
   }
-  plotType <- match.arg(plotType)
   if (is.null(maxobs)) {
     if (plotType %in% c("arSpec", "periodogram")) {
       # Default settings in JD+
@@ -74,20 +89,24 @@ plotSpectrumHc <- function(
       maxobs <- length(series$ts)
     }
   }
-  if (length(series$ts) > maxobs) {
-    series$d <- stats::window(
-      series$d,
-      start = stats::start(stats::lag(
-        stats::ts(
-          end = stats::end(series$d),
-          frequency = stats::frequency(series$d)
-        ),
-        maxobs - 2
-      ))
-    )
+  windowIfLong <- function(s) {
+    if (length(s$ts) > maxobs) {
+      s$d <- stats::window(
+        s$d,
+        start = stats::start(stats::lag(
+          stats::ts(
+            end = stats::end(s$d),
+            frequency = stats::frequency(s$d)
+          ),
+          maxobs - 2
+        ))
+      )
+    }
+    s
   }
+  series_list <- lapply(series_list, windowIfLong)
   plot_args <- list(
-    series = series,
+    series = series_list,
     maxobs = maxobs,
     freq = freq,
     main = main,
@@ -95,7 +114,7 @@ plotSpectrumHc <- function(
     order = order
   )
   switch(
-    match.arg(plotType),
+    plotType,
     periodogram = plotSpectrum_periodogram(plot_args),
     arSpec = plotSpectrum_arSpec(plot_args),
     arSpecBars = plotSpectrum_arSpecBars(plot_args),
@@ -103,64 +122,123 @@ plotSpectrumHc <- function(
   )
 }
 
-plotSpectrum_periodogram <- function(args) {
-  main <- args$main %||%
-    paste0("Periodogram of the ", args$series$type, " series")
-  d1s <- stats::spec.pgram(args$series$d, plot = FALSE)
-  d1s <- data.frame(
-    freq = d1s$freq / stats::frequency(args$series$d),
-    spec = d1s$spec
-  )
-  create_spectral_plot(x = d1s$freq, y = d1s$spec, title = main) %>%
-    highcharter::hc_xAxis(
-      plotLines = c(
-        lapply(args$freq$seas, function(x) {
-          list(value = x)
-        }),
-        lapply(args$freq$td, function(x) {
-          list(value = x, color = "#ff000044")
-        })
-      )
+# validate and expand the tsType argument (character or numeric codes)
+spec_tsTypes <- function(tsType) {
+  all_types <- c("original", "sa", "irregular", "residuals")
+  if (is.numeric(tsType)) {
+    tsType <- all_types[tsType]
+  }
+  tsType <- unique(tsType)
+  bad <- setdiff(tsType, all_types)
+  if (length(bad) > 0) {
+    stop(
+      "invalid tsType: ", paste(sQuote(bad), collapse = ", "),
+      "; allowed are: ", paste(all_types, collapse = ", "),
+      call. = FALSE
     )
+  }
+  tsType
+}
+
+plotSpectrum_periodogram <- function(args) {
+  series_labels <- vapply(args$series, function(s) s$type, "")
+  main <- args$main %||%
+    paste0(
+      "Periodogram of the ",
+      paste(series_labels, collapse = ", "),
+      " series"
+    )
+  vals <- lapply(
+    args$series,
+    specValues,
+    plotType = "periodogram",
+    n.freq = NULL,
+    order = args$order
+  )
+  names(vals) <- series_labels
+  specPlotLines(create_spectral_plot_multi(vals, title = main), args$freq)
 }
 
 
 plotSpectrum_arSpec <- function(args) {
-  order <- args$order
+  series_labels <- vapply(args$series, function(s) s$type, "")
   main <- args$main %||%
-    paste0("Autoregressive spectrum of the ", args$series$type, " series")
-  n.freq <- args$n.freq %||% length(args$series$ts)
-  d2s <- stats::spec.ar(
-    args$series$d,
-    n.freq = n.freq,
-    order = order,
-    plot = FALSE
+    paste0(
+      "Autoregressive spectrum of the ",
+      paste(series_labels, collapse = ", "),
+      " series"
+    )
+  vals <- lapply(
+    args$series,
+    specValues,
+    plotType = "arSpec",
+    n.freq = args$n.freq,
+    order = args$order
   )
-  d2s <- data.frame(
-    freq = d2s$freq / stats::frequency(args$series$d),
-    spec = 10 * log10(2 * d2s$spec)
-  )
-  d1s <- d2s
+  names(vals) <- series_labels
+  specPlotLines(create_spectral_plot_multi(vals, title = main), args$freq)
+}
 
-  create_spectral_plot(x = d1s$freq, y = d1s$spec, title = main) %>%
+# spectrum of a single series prepared for plotting: data.frame(freq, spec)
+specValues <- function(s, plotType, n.freq, order) {
+  if (plotType == "periodogram") {
+    sp <- stats::spec.pgram(s$d, plot = FALSE)
+    data.frame(
+      freq = sp$freq / stats::frequency(s$d),
+      spec = sp$spec
+    )
+  } else {
+    sp <- stats::spec.ar(
+      s$d,
+      n.freq = n.freq %||% length(s$ts),
+      order = order,
+      plot = FALSE
+    )
+    data.frame(
+      freq = sp$freq / stats::frequency(s$d),
+      spec = 10 * log10(2 * sp$spec)
+    )
+  }
+}
+
+# common axis setup with seasonal (grey) and trading day (red) markers
+specPlotLines <- function(p, freq) {
+  p %>%
     highcharter::hc_xAxis(
       plotLines = c(
-        lapply(args$freq$seas, function(x) {
+        lapply(freq$seas, function(x) {
           list(value = x)
         }),
-        lapply(args$freq$td, function(x) {
+        lapply(freq$td, function(x) {
           list(value = x, color = "#ff000044")
         })
       )
     )
 }
 
+# one or more overlaid spectra as line series
+create_spectral_plot_multi <- function(vals, title) {
+  p <- highcharter::highchart() %>%
+    highcharter::hc_xAxis(title = list(text = "Frequency")) %>%
+    highcharter::hc_yAxis(title = list(text = "Spectrum")) %>%
+    highcharter::hc_title(text = title, align = "left")
+  for (nm in names(vals)) {
+    p <- p %>%
+      highcharter::hc_add_series(
+        data.frame(x = vals[[nm]]$freq, y = vals[[nm]]$spec),
+        type = "line",
+        name = nm
+      )
+  }
+  p %>% highcharter::hc_legend(align = "left", verticalAlign = "top")
+}
+
 plotSpectrum_arSpecBars <- function(args) {
   main <- args$main %||%
-    paste0("Autoregressive spectrum of the ", args$series$type, " series")
+    paste0("Autoregressive spectrum of the ", args$series[[1]]$type, " series")
   n.freq <- args$n.freq %||% 61
   order <- args$order
-  d1 <- args$series$d
+  d1 <- args$series[[1]]$d
   d3s <- stats::spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
   d3s <- data.frame(
     freq = d3s$freq / stats::frequency(d1),
@@ -197,34 +275,11 @@ plotSpectrum_arSpecBars <- function(args) {
     highcharter::hc_xAxis(title = list(text = "Frequency"))
 }
 
-create_spectral_plot <- function(
-  x,
-  y,
-  title = "spectral Plot",
-  type = "line",
-  name = "spectrum"
-) {
-  highcharter::highchart() %>%
-    highcharter::hc_add_series(
-      data.frame(x = x, y = y),
-      showInLegend = FALSE,
-      type = type,
-      name = name
-    ) %>%
-    highcharter::hc_xAxis(title = list(text = "Frequency")) %>%
-    highcharter::hc_yAxis(title = list(text = "Spectrum")) %>%
-    highcharter::hc_title(text = title, align = "left")
-}
-
 plotSpectrum_series <- function(
   x,
   tsType = c("original", "sa", "irregular", "residuals")
 ) {
-  if (is.numeric(tsType)) {
-    tsType <- c("original", "sa", "irregular", "residuals")[tsType]
-  } else {
-    tsType <- match.arg(tsType)
-  }
+  tsType <- spec_tsTypes(tsType)[1]
 
   if (tsType == "original") {
     tsobj <- x$ts
@@ -238,7 +293,7 @@ plotSpectrum_series <- function(
     tsobj <- x$output$user_defined$i
     d1 <- tsobj
   } else if (tsType == "residuals") {
-    tsobj <- x$output$regarima$residuals
+    tsobj <- x$output$user_defined$residuals.tsres
     d1 <- tsobj
   }
   list(ts = tsobj, d = d1, type = tsType)

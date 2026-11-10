@@ -139,3 +139,57 @@ specfun_list <- list(
 
 # persephone3 internal spec names
 p3_spec_names <- c("outliers")
+
+# decimal time (as in time(ts)) to Date, linearly within the year; needed
+# because smoothed series are evaluated on a finer time grid
+timesToDates <- function(tt) {
+  y <- floor(tt + 1e-9)
+  frac <- pmin(pmax(tt - y, 0), 1 - 1e-9)
+  d0 <- as.Date(paste0(y, "-01-01"))
+  d1 <- as.Date(paste0(y + 1L, "-01-01"))
+  as.Date(d0 + frac * as.numeric(d1 - d0))
+}
+
+# Prepare input for dygraphs::dygraph() from a ts/mts object: optionally
+# cubic spline interpolation of the columns in smooth_cols on a finer time
+# grid (smoothed lines between the observations), and conversion of the time
+# index to dates. Columns that are not smoothed (outlier markers, forecast
+# bands) keep their original values, placed on the corresponding points of
+# the finer grid.
+dyData <- function(m, smooth = TRUE, smooth_cols = NULL, n = 8) {
+  ti <- as.numeric(stats::time(m))
+  if (!stats::is.ts(m)) {
+    stop("dyData() expects a ts/mts object")
+  }
+  if (!stats::is.mts(m)) {
+    nm <- colnames(m)[1]
+    if (is.null(nm) || is.na(nm)) {
+      nm <- "V1"
+    }
+    m <- matrix(as.numeric(m), ncol = 1, dimnames = list(NULL, nm))
+  }
+  if (is.null(colnames(m))) {
+    colnames(m) <- paste0("V", seq_len(ncol(m)))
+  }
+  if (smooth && length(ti) > 4) {
+    tnew <- seq(ti[1], ti[length(ti)], length.out = (length(ti) - 1) * n + 1)
+    grid <- 1 + n * (seq_along(ti) - 1) # index of the original points in tnew
+    out <- matrix(NA_real_, nrow = length(tnew), ncol = ncol(m),
+                  dimnames = list(NULL, colnames(m)))
+    for (j in seq_len(ncol(m))) {
+      yj <- as.numeric(m[, j])
+      if (colnames(m)[j] %in% smooth_cols && sum(!is.na(yj)) > 3) {
+        out[, j] <- stats::spline(ti[!is.na(yj)], yj[!is.na(yj)],
+                                  xout = tnew)$y
+      } else {
+        out[grid, j] <- yj
+      }
+    }
+    ti <- tnew
+    m <- out
+  }
+  cbind(
+    data.frame(Date = timesToDates(ti)),
+    as.data.frame(m, check.names = FALSE)
+  )
+}

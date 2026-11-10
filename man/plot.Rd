@@ -9,7 +9,8 @@
 \method{plot}{hierarchicalTimeSeries}(
   x,
   main = NULL,
-  rangeSelector = TRUE,
+  rangeSelector = FALSE,
+  smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
   ...
@@ -20,7 +21,8 @@
   main = NULL,
   forecasts = TRUE,
   showOutliers = TRUE,
-  rangeSelector = TRUE,
+  rangeSelector = FALSE,
+  smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
   ...
@@ -32,7 +34,12 @@
 \item{main}{plot title}
 
 \item{rangeSelector}{logical flag specifying if a range selector should be
-included in the plot}
+included in the plot (default: \code{FALSE})}
+
+\item{smooth}{logical flag specifying if the series should be drawn as
+smoothed lines (cubic spline interpolation between the observations)
+instead of straight line segments (default: \code{TRUE}). Outlier markers and
+forecast bands are never smoothed.}
 
 \item{drawPoints}{logical flag indicating if a small dot should be drawn at
 each point, in

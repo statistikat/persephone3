@@ -43,7 +43,8 @@ plot.persephoneSingle <- function(
   main = NULL,
   forecasts = TRUE,
   showOutliers = TRUE,
-  rangeSelector = TRUE,
+  rangeSelector = FALSE,
+  smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
   ...
@@ -73,6 +74,7 @@ plot.persephoneSingle <- function(
     return(list(annCompVec = annCompVec, annCompLab = annCompLab))
   }
 
+
   preRunPlot <- function(
     ts,
     rangeSelector = rangeSelector,
@@ -83,8 +85,12 @@ plot.persephoneSingle <- function(
       main <- "Original Time Series"
     }
 
-    graphObj <- dygraph(ts, main = main) %>%
-      dySeries("V1", label = "Original", drawPoints = drawPoints)
+    dp <- drawPoints && !smooth
+    graphObj <- dygraph(
+      dyData(ts, smooth = smooth, smooth_cols = "V1"),
+      main = main
+    ) %>%
+      dySeries("V1", label = "Original", drawPoints = dp)
 
     if (rangeSelector) {
       graphObj <- graphObj %>%
@@ -108,66 +114,6 @@ plot.persephoneSingle <- function(
 
     graphObj
   }
-
-  # gettsout <- function(outliers, y) {
-  #
-  #   names(outliers) <- sapply(outliers, function(x) x[1])
-  #
-  #   if (frequency(x$ts) == 12) {
-  #     #Date format für dyevent
-  #     dateout <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-  #                       function(z) paste0(
-  #                         z[[2]], "-", stringfix(z[[1]], 2, "0"), "-01"))
-  #
-  #     outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-  #                        function(z) as.numeric(c( z[[2]],z[[1]])))
-  #   } else {
-  #     dateout <- lapply(
-  #       sapply(outliers,function(x) strsplit(x[[2]], "-")),
-  #       function(z) paste0(
-  #         z[[2]], "-",
-  #         stringfix(c(1, 4, 7, 10)[as.numeric(utils::as.roman(z[[1]]))],
-  #                   2, "0"), "-01"))
-  #     outliers <- lapply(sapply(outliers, function(x) strsplit(x[[2]], "-")),
-  #                        function(z) as.numeric(c( z[[2]], as.numeric(utils::as.roman(z[[1]])))))
-  #   }
-  #
-  #   outliersAO <- outliers[names(outliers) %in% "AO"]
-  #   outliersLS <- outliers[names(outliers) %in% "LS"]
-  #   outliersTC <- outliers[names(outliers) %in% "TC"]
-  #
-  #   tsout <- list()
-  #   if(length(outliersAO)>0){
-  #     otlAO <- ts(start = start(y), end = end(y), frequency = frequency(y))
-  #     for(i in seq_along(outliersAO)) {
-  #       window(otlAO, start=outliersAO[[i]], end=outliersAO[[i]]) <- window(y, start=outliersAO[[i]], end=outliersAO[[i]])
-  #     }
-  #     tsout[[length(tsout)+1]] <- otlAO
-  #     names(tsout)[length(tsout)] <- "otlAO"
-  #   }
-  #
-  #   if(length(outliersLS)>0){
-  #     otlLS <- ts(start = start(y), end = end(y), frequency = frequency(y))
-  #     for(i in seq_along(outliersLS)) {
-  #       window(otlLS, start=outliersLS[[i]], end=outliersLS[[i]]) <- window(y, start=outliersLS[[i]], end=outliersLS[[i]])
-  #     }
-  #     tsout[[length(tsout)+1]] <- otlLS
-  #     names(tsout)[length(tsout)] <- "otlLS"
-  #   }
-  #
-  #   if(length(outliersTC)>0){
-  #     otlTC <- ts(start = start(y), end = end(y), frequency = frequency(y))
-  #     for(i in seq_along(outliersTC)) {
-  #       window(otlTC, start=outliersTC[[i]], end=outliersTC[[i]]) <- window(y, start=outliersTC[[i]], end=outliersTC[[i]])
-  #     }
-  #     tsout[[length(tsout)+1]] <- otlTC
-  #     names(tsout)[length(tsout)] <- "otlTC"
-  #   }
-  #
-  #   tsout <- do.call(cbind, tsout)
-  #
-  #   return(list(tsout, dateout))
-  # }
 
   includeOutGraphically <- function(otlType, otlColor = NULL, otl, graphObj) {
     if (any(grepl(otlType, names(otl[[2]])))) {
@@ -231,6 +177,8 @@ plot.persephoneSingle <- function(
         otlTF <- TRUE
       }
 
+    dp <- drawPoints && !smooth
+
     # Initialize Graph Object
     # Back-/Forecasts
     if (forecasts & !is.null(ppm_y_f) & !is.null(ppm_y_ef)) {
@@ -238,8 +186,11 @@ plot.persephoneSingle <- function(
       upperci <- ppm_y_f + 1.96 * ppm_y_ef
       if (!otlTF) {
         ts <- cbind(y, t, sa, ppm_y_f, lowerci, upperci)
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+        graphObj <- dygraph(
+          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          main = main
+        ) %>%
+          dySeries("y", label = "Original", drawPoints = dp) %>%
           dySeries("sa", label = "Seasonally Adjusted") %>%
           dySeries("t", label = "Trend") %>%
           dySeries(
@@ -252,8 +203,11 @@ plot.persephoneSingle <- function(
       } else {
         ts <- cbind(y, t, sa, otl[[1]], ppm_y_f, lowerci, upperci)
 
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+        graphObj <- dygraph(
+          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          main = main
+        ) %>%
+          dySeries("y", label = "Original", drawPoints = dp) %>%
           dySeries("sa", label = "Seasonally Adjusted") %>%
           dySeries("t", label = "Trend")
         graphObj <- includeOutGraphically(
@@ -283,15 +237,21 @@ plot.persephoneSingle <- function(
     } else {
       if (!otlTF) {
         ts <- cbind(y, t, sa)
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+        graphObj <- dygraph(
+          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          main = main
+        ) %>%
+          dySeries("y", label = "Original", drawPoints = dp) %>%
           dySeries("sa", label = "Seasonally Adjusted") %>%
           dySeries("t", label = "Trend") %>%
           dyLegend(width = 290)
       } else {
         ts <- cbind(y, t, sa, otl[[1]])
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+        graphObj <- dygraph(
+          dyData(ts, smooth = smooth, smooth_cols = c("y", "t", "sa")),
+          main = main
+        ) %>%
+          dySeries("y", label = "Original", drawPoints = dp) %>%
           dySeries("sa", label = "Seasonally Adjusted") %>%
           dySeries("t", label = "Trend")
         graphObj <- includeOutGraphically(
@@ -320,7 +280,7 @@ plot.persephoneSingle <- function(
     }
 
     if (!is.null(annualComparison)) {
-      annCompRes <- annComp(ts, annualComparison)
+      annCompRes <- annComp(cbind(y, t, sa), annualComparison)
       for (i in 1:length(annCompRes[["annCompVec"]])) {
         graphObj <- graphObj %>%
           dyEvent(

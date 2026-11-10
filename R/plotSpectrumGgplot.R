@@ -8,8 +8,11 @@
 #' Produces a `ggplot`/`plotly` object for objects of class [persephone].
 #'
 #' @param x an object of class [persephone].
-#' @param tsType character (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
-#' selecting the preferred type of time series to plot. A numeric
+#' @param tsType character vector with one or more of
+#' (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
+#' selecting the preferred type(s) of time series to plot. If more than one
+#' type is given, the spectra are overlaid in one plot (not available for
+#' plotType `"arSpecBars"`). A numeric
 #' value (`1:4`) corresponding to one of these characters is also accepted.
 #' @param plotType character (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
 #' selecting the preferred type of plot, see Details. A numeric
@@ -90,7 +93,7 @@
 #' @export
 plotSpectrumGgplot <- function(
   x,
-  tsType = c("original", "sa", "irregular", "residuals"),
+  tsType = "original",
   plotType = c("arSpec", "arSpecBars", "periodogram"),
   maxobs = NULL,
   n.freq = NULL,
@@ -99,7 +102,7 @@ plotSpectrumGgplot <- function(
   interactive = FALSE,
   ...
 ) {
-  freq <- spec <- spec_new1 <- NULL # nolint
+  freq <- spec <- spec_new1 <- type <- NULL # nolint
 
   if (is.null(x$output$user_defined)) {
     stop("No results from run available.\n")
@@ -110,10 +113,12 @@ plotSpectrumGgplot <- function(
   } else {
     plotType <- match.arg(plotType)
   }
-  if (is.numeric(tsType)) {
-    tsType <- c("original", "sa", "irregular", "residuals")[tsType]
-  } else {
-    tsType <- match.arg(tsType)
+  tsType <- spec_tsTypes(tsType)
+  if (length(tsType) > 1 && plotType == "arSpecBars") {
+    stop(
+      "overlaid spectra are not available for plotType \"arSpecBars\"",
+      call. = FALSE
+    )
   }
   if (is.null(n.freq)) {
     if (plotType %in% c("arSpec", "periodogram")) {
@@ -123,29 +128,33 @@ plotSpectrumGgplot <- function(
     }
   }
 
-  if (tsType == "original") {
-    tsobj <- x$ts
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "sa") {
-    tsobj <- x$output$user_defined$sa
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "irregular") {
-    tsobj <- x$output$user_defined$i
-    d1 <- tsobj
-  } else if (tsType == "residuals") {
-    tsobj <- x$output$user_defined$residuals.tsres
-    d1 <- tsobj
+  specSeries <- function(tsType) {
+    if (tsType == "original") {
+      tsobj <- x$ts
+      # First differences -> stationary ts
+      d1 <- diff(tsobj, 1)
+    } else if (tsType == "sa") {
+      tsobj <- x$output$user_defined$sa
+      # First differences -> stationary ts
+      d1 <- diff(tsobj, 1)
+    } else if (tsType == "irregular") {
+      tsobj <- x$output$user_defined$i
+      d1 <- tsobj
+    } else if (tsType == "residuals") {
+      tsobj <- x$output$user_defined$residuals.tsres
+      d1 <- tsobj
+    }
+    list(ts = tsobj, d = d1, type = tsType)
   }
+  series_list <- lapply(tsType, function(tt) specSeries(tt))
 
   # Seasonal and trading day frequencies
-  if (frequency(tsobj) == 4) {
+  if (frequency(series_list[[1]]$ts) == 4) {
     td_freq <- c(0.044375, 0.08875, 0.294375, 0.33875, 0.38125)
     seas_freq <- 1 / 4
     seas_freq_lab <- c("1/4")
     minobs <- 60
-  } else if (frequency(tsobj) == 12) {
+  } else if (frequency(series_list[[1]]$ts) == 12) {
     td_freq <- c(0.348, 0.432)
     seas_freq <- c(1 / 12, 2 / 12, 3 / 12, 4 / 12, 5 / 12, 6 / 12)
     seas_freq_lab <- c("1/12", "2/12", "3/12", "4/12", "5/12", "6/12")
@@ -153,13 +162,15 @@ plotSpectrumGgplot <- function(
   }
 
   # minobs error (minobs=60 for quartlery data, minobs=80 for monthly data)
-  if (length(tsobj) <= minobs) {
-    stop(
-      "The minimum number of observations needed to compute the spectrum",
-      " is ",
-      minobs,
-      "."
-    )
+  for (s in series_list) {
+    if (length(s$ts) <= minobs) {
+      stop(
+        "The minimum number of observations needed to compute the spectrum",
+        " is ",
+        minobs,
+        "."
+      )
+    }
   }
 
   # maxobs
@@ -171,58 +182,69 @@ plotSpectrumGgplot <- function(
   if (is.null(maxobs)) {
     if (plotType %in% c("arSpec", "periodogram")) {
       # Default settings in JD+
-      maxobs <- length(tsobj)
+      maxobs <- length(series_list[[1]]$ts)
     } else if (plotType == "arSpecBars") {
       # Default settings in X-13ARIMA-SEATS
       maxobs <- 96
     }
   }
-  if (length(tsobj) > maxobs) {
-    d1 <- window(
-      d1,
-      start = start(lag(
-        ts(end = end(d1), frequency = frequency(d1)),
-        maxobs - 2
-      ))
-    )
+  if (length(series_list[[1]]$ts) > maxobs) {
+    series_list <- lapply(series_list, function(s) {
+      s$d <- window(
+        s$d,
+        start = start(lag(
+          ts(end = end(s$d), frequency = frequency(s$d)),
+          maxobs - 2
+        ))
+      )
+      s
+    })
   }
 
-  if (plotType == "periodogram") {
-    ## Periodogram
-    if (is.null(main)) {
-      main <- paste0("Periodogram of the ", tsType, " series")
-    }
-    d1s <- spec.pgram(d1, plot = FALSE)
-    d1s <- data.frame(freq = d1s$freq / frequency(d1), spec = d1s$spec)
+  series_labels <- vapply(series_list, function(s) s$type, "")
 
-    p <- ggplot(d1s, aes(x = freq, y = spec)) +
+  if (plotType %in% c("periodogram", "arSpec")) {
+    # one (or several overlaid) spectra of the same plotType
+    if (plotType == "periodogram") {
+      main <- main %||%
+        paste0(
+          "Periodogram of the ",
+          paste(series_labels, collapse = ", "),
+          " series"
+        )
+    } else {
+      main <- main %||%
+        paste0(
+          "Autoregressive spectrum of the ",
+          paste(series_labels, collapse = ", "),
+          " series"
+        )
+    }
+    dfs <- lapply(series_list, function(s) {
+      sp <- if (plotType == "periodogram") {
+        spec.pgram(s$d, plot = FALSE)
+      } else {
+        spec.ar(s$d, n.freq = n.freq, order = order, plot = FALSE)
+      }
+      dfspec <- data.frame(freq = sp$freq / frequency(s$d))
+      dfspec$spec <- if (plotType == "periodogram") {
+        sp$spec
+      } else {
+        10 * log10(2 * sp$spec)
+      }
+      dfspec
+    })
+    d1s <- do.call(rbind, Map(function(df, lab) {
+      df$type <- lab
+      df
+    }, dfs, series_labels))
+    d1s$type <- factor(d1s$type, levels = series_labels)
+
+    p <- ggplot(d1s, aes(x = freq, y = spec, col = type)) +
       geom_line() +
       geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
       geom_vline(xintercept = seas_freq, col = "blue", alpha = 0.3) +
-      labs(title = main) +
-      theme_minimal() +
-      ylab("Spectrum") +
-      xlab("Frequency")
-  } else if (plotType == "arSpec") {
-    # Autoregressive Spectrum JD+
-
-    if (is.null(main)) {
-      main <- paste0("Autoregressive spectrum of the ", tsType, " series")
-    }
-
-    # Default settings in JD+
-    # d2s <- spec.ar(d1, n.freq = 301, order = 30, plot = FALSE)
-    d2s <- spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
-    d2s <- data.frame(
-      freq = d2s$freq / frequency(d1),
-      spec = 10 * log10(2 * d2s$spec)
-    )
-
-    p <- ggplot(d2s, aes(x = freq, y = spec)) +
-      geom_line() +
-      geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
-      geom_vline(xintercept = seas_freq, col = "blue", alpha = 0.3) +
-      labs(title = main) +
+      labs(title = main, col = NULL) +
       theme_minimal() +
       ylab("Spectrum") +
       xlab("Frequency")
@@ -230,8 +252,11 @@ plotSpectrumGgplot <- function(
     # Autoregressive Spectrum X-13ARIMA-SEATS
 
     if (is.null(main)) {
-      main <- paste0("Autoregressive spectrum of the ", tsType, " series")
+      main <- paste0(
+        "Autoregressive spectrum of the ", series_labels[1], " series"
+      )
     }
+    d1 <- series_list[[1]]$d
 
     # Default settings in X-13ARIMA-SEATS
     # d3s <- spec.ar(d1, n.freq = 61, order = 30, plot = FALSE)

@@ -6,7 +6,7 @@
 \usage{
 plotSpectrumHc(
   x,
-  tsType = c("original", "sa", "irregular", "residuals"),
+  tsType = "original",
   plotType = c("arSpec", "arSpecBars", "periodogram"),
   maxobs = NULL,
   main = NULL,
@@ -17,8 +17,11 @@ plotSpectrumHc(
 \arguments{
 \item{x}{an object of class \link{persephone}.}
 
-\item{tsType}{character (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
-selecting the preferred type of time series to plot. A numeric
+\item{tsType}{character vector with one or more of
+(\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
+selecting the preferred type(s) of time series to plot. If more than one
+type is given, the spectra are overlaid in one plot (not available for
+plotType \code{"arSpecBars"}). A numeric
 value (\code{1:4}) corresponding to one of these characters is also accepted.}
 
 \item{plotType}{character (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
@@ -48,4 +51,6 @@ x$run()
 plotSpectrumHc(x)
 plotSpectrumHc(x, plotType = "periodogram")
 plotSpectrumHc(x, tsType = "irregular")
+# all three spectra in one plot
+plotSpectrumHc(x, tsType = c("sa", "irregular", "residuals"))
 }

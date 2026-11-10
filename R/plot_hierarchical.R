@@ -21,7 +21,11 @@
 #' @param showOutliers logical flag specifying if outliers should be highlighted
 #'   in the plot
 #' @param rangeSelector logical flag specifying if a range selector should be
-#'   included in the plot
+#'   included in the plot (default: `FALSE`)
+#' @param smooth logical flag specifying if the series should be drawn as
+#'   smoothed lines (cubic spline interpolation between the observations)
+#'   instead of straight line segments (default: `TRUE`). Outlier markers and
+#'   forecast bands are never smoothed.
 #' @param drawPoints logical flag indicating if a small dot should be drawn at
 #'   each point, in
 #'   addition to a line going through the point.
@@ -63,7 +67,7 @@
 #' @import ggplot2
 #' @export
 plot.hierarchicalTimeSeries <- function(x, main=NULL,
-                            rangeSelector=TRUE, drawPoints=FALSE,
+                            rangeSelector=FALSE, smooth=TRUE, drawPoints=FALSE,
                             annualComparison=NULL, ...){
 
   # Helper function for annual comparison
@@ -94,8 +98,12 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       main <- "Original Aggregate Time Series"
     }
 
-    graphObj <- dygraph(ts, main = main) %>%
-      dySeries("V1", label = "Original", drawPoints = drawPoints)
+    dp <- drawPoints && !smooth
+    graphObj <- dygraph(
+      dyData(ts, smooth = smooth, smooth_cols = "V1"),
+      main = main
+    ) %>%
+      dySeries("V1", label = "Original", drawPoints = dp)
 
     if (rangeSelector) {
       graphObj <- graphObj %>%
@@ -152,8 +160,12 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     # }else{
       ts <- cbind(y, sa_dir, sa_indir)
 
-      graphObj <- dygraph(ts, main = main) %>%
-        dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+      dp <- drawPoints && !smooth
+      graphObj <- dygraph(
+        dyData(ts, smooth = smooth, smooth_cols = c("y", "sa_dir", "sa_indir")),
+        main = main
+      ) %>%
+        dySeries("y", label = "Original", drawPoints = dp) %>%
         dySeries("sa_dir", label = "Direct SA") %>%
         dySeries("sa_indir", label = "Indirect SA") %>%
         dyLegend(width = 290)
