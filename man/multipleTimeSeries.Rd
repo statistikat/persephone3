@@ -83,6 +83,7 @@ perX13(AirPassengers)$run()
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSeasIrrCal"><a href='../../persephone3/html/persephone.html#method-persephone-plotSeasIrrCal'><code>persephone3::persephone$plotSeasIrrCal()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone3::persephone$plotSiRatios()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone3::persephone$plotSpectrum()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="summary"><a href='../../persephone3/html/persephone.html#method-persephone-summary'><code>persephone3::persephone$summary()</code></a></span></li>
 </ul>
 </details>
 }}

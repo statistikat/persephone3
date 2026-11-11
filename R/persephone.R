@@ -175,6 +175,11 @@ persephone <- R6::R6Class(
     diagnosticsTable = function(view = FALSE, dark = TRUE, ...) {
       diagnosticsTable(self, view = view, dark = dark, ...)
     },
+    #' @description print a summary of the adjustment
+    #' @param ... passed to [summary()]
+    summary = function(...) {
+      summary(self, ...)
+    },
     #' @description see [perHts]
     #' @param fun see [perHts]
     #' @param asTable see [perHts]

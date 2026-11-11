@@ -1,4 +1,13 @@
 # persephone3 (development version)
+* New `summary()` method for single series objects (`summary(obj)` and
+  `obj$summary()`): frequency, span and number of observations, the model
+  definition (ARIMA model, transformation, leap year, number of trading day
+  regressors, Easter effect, number of outliers), the regression
+  coefficients with standard error, t value and p-value in one table per
+  group (one row per outlier, per trading day regressor and for the mean
+  and leap year), the joint F tests of the trading days and of the trading
+  days with the outliers, and the decomposition (additive or multiplicative,
+  final moving average and trend-cycle filter).
 * `diagnosticsTable()` and the `$diagnosticsTable()` method gained a `view`
   argument: with `view = TRUE` the diagnostics are shown as an interactive
   table (DT) in the viewer pane, with readable column headers and

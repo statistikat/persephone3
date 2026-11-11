@@ -98,6 +98,7 @@ the first time.}
 \item \href{#method-persephone-plotSpectrum}{\code{persephone$plotSpectrum()}}
 \item \href{#method-persephone-print}{\code{persephone$print()}}
 \item \href{#method-persephone-diagnosticsTable}{\code{persephone$diagnosticsTable()}}
+\item \href{#method-persephone-summary}{\code{persephone$summary()}}
 \item \href{#method-persephone-iterate}{\code{persephone$iterate()}}
 \item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
 \item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
@@ -299,6 +300,23 @@ create a table for the eurostat quality report
 \item{\code{view, dark}}{passed to \code{\link[=diagnosticsTable]{diagnosticsTable()}}}
 
 \item{\code{...}}{passed to \code{\link[=diagnosticsTable]{diagnosticsTable()}}}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-persephone-summary"></a>}}
+\if{latex}{\out{\hypertarget{method-persephone-summary}{}}}
+\subsection{Method \code{summary()}}{
+print a summary of the adjustment
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{persephone$summary(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{passed to \code{\link[=summary]{summary()}}}
 }
 \if{html}{\out{</div>}}
 }
