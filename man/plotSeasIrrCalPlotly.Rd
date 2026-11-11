@@ -25,8 +25,9 @@ plotSeasIrrCalPlotly(
 \item{rangeSelector}{logical flag specifying if a range selector should be
 included in the plot}
 
-\item{smooth}{logical flag specifying if the series should be drawn as
-smoothed lines (cubic spline like the smoothed lines of Highcharts)}
+\item{smooth}{logical flag or \code{"spline"} specifying if the series should be
+drawn as smoothed lines (monotone piecewise cubic interpolation, or the
+overshooting not-a-knot cubic spline for \code{"spline"})}
 
 \item{drawPoints}{logical flag indicating if a small dot should be drawn at
 each point, in addition to a line going through the point.}

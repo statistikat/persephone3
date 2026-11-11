@@ -7,7 +7,8 @@
 plotSpectrumPlotly(
   x,
   tsType = "original",
-  plotType = c("arSpec", "arSpecBars", "periodogram"),
+  plotType = "arSpec",
+  layout = c("panels", "overlay"),
   maxobs = NULL,
   main = NULL,
   n.freq = NULL,
@@ -21,13 +22,26 @@ plotSpectrumPlotly(
 \item{tsType}{character vector with one or more of
 (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
 selecting the preferred type(s) of time series to plot. If more than one
-type is given, the spectra are overlaid in one plot (not available for
-plotType \code{"arSpecBars"}). A numeric
+type is given, the spectra are shown in separate panels (one per series
+type; see \code{layout}), except for plotType \code{"arSpecBars"}, which only
+supports a single series type. A numeric
 value (\code{1:4}) corresponding to one of these characters is also accepted.}
 
-\item{plotType}{character (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
-selecting the preferred type of plot. A numeric value (\code{1:3})
-corresponding to one of these characters is also accepted.}
+\item{plotType}{character vector with one or more of
+(\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
+selecting the preferred type(s) of plot. If more than one type is given,
+the plot types are the rows and the series types the columns of the
+panel grid (e.g. \code{tsType = c("original", "sa", "irregular")} and
+\code{plotType = c("arSpec", "periodogram")} gives 6 panels: the
+autoregressive spectra above the periodograms). \code{"arSpecBars"} is only
+available for a single plotType and series type. A numeric value
+(\code{1:3}) corresponding to one of these characters is also accepted.}
+
+\item{layout}{character (\code{"panels"}, \code{"overlay"}) how to show several
+spectra: \code{"panels"} (default) arranges one spectrum per panel in a
+single figure, \code{"overlay"} draws all spectra into the same panel
+(only for a single plotType; not available for plotType
+\code{"arSpecBars"}).}
 
 \item{maxobs}{maximum number of observations of the time series. If \code{NULL},
 \code{maxobs} equals the length of the time series for plotTypes
@@ -44,14 +58,20 @@ and \code{n.freq=61} for plotType \code{"arSpecBars"}.}
 \item{...}{other parameters passed to the underlying plot function.}
 }
 \description{
-Interactive spectral plots with plotly, with overlaid spectra for several
-series types and vertical lines at the seasonal (grey) and trading day
-(red) frequencies. For static plots with ggplot2, see \link{plotSpectrumGgplot}.
+Interactive spectral plots with plotly: one spectrum per panel (default,
+\code{layout = "panels"}) or overlaid spectra in a single panel
+(\code{layout = "overlay"}) for several series types, with vertical lines at
+the seasonal (grey) and trading day (red) frequencies. For static plots
+with ggplot2, see \link{plotSpectrumGgplot}.
 }
 \examples{
 x <- perX13(AirPassengers)
 x$run()
 plotSpectrumPlotly(x)
 plotSpectrumPlotly(x, plotType = "periodogram")
-plotSpectrumPlotly(x, tsType = c("sa", "irregular", "residuals"))
+plotSpectrumPlotly(x, tsType = c("original", "sa", "irregular"))
+# six panels: the AR spectra above the periodograms
+plotSpectrumPlotly(x, tsType = c("original", "sa", "irregular"),
+                   plotType = c("arSpec", "periodogram"))
+plotSpectrumPlotly(x, tsType = c("sa", "irregular"), layout = "overlay")
 }

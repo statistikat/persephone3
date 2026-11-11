@@ -113,7 +113,8 @@ plotlyLine <- function(p, d, col, name, color,
 #' @param forecasts logical, plot the forecasts with confidence band
 #' @param showOutliers logical, mark detected outliers with dots
 #' @param rangeSelector logical, show the range slider below the plot
-#' @param smooth logical, smooth the lines (cubic spline)
+#' @param smooth logical or `"spline"`, smooth the lines (monotone piecewise
+#'   cubic interpolation; `"spline"`: the overshooting not-a-knot cubic spline)
 #' @param drawPoints logical, draw a marker at each observation
 #' @param annualComparison integer, month or quarter marked in every year
 #' @param ... passed to [plotly::plot_ly()]
@@ -131,7 +132,7 @@ plotSinglePlotly <- function(
   ...
 ) {
   # as in the dygraph plots: markers only when the line is not smoothed
-  dp <- drawPoints && !smooth
+  dp <- drawPoints && !isSmoothed(smooth)
   ud <- object$output$user_defined
   if (is.null(ud)) {
     # before the run: only the original series
@@ -252,7 +253,7 @@ plotHierPlotly <- function(
   annualComparison = NULL,
   ...
 ) {
-  dp <- drawPoints && !smooth
+  dp <- drawPoints && !isSmoothed(smooth)
   if (is.null(x$output$user_defined)) {
     if (is.null(main)) {
       main <- "Original Aggregate Series"
@@ -317,7 +318,7 @@ plotSeasIrrCalPlotly <- function(
   if (is.null(x$output$user_defined)) {
     stop("No results from run available.\n")
   }
-  dp <- drawPoints && !smooth
+  dp <- drawPoints && !isSmoothed(smooth)
   if (is.null(main)) {
     main <- "Seasonal Comp., Irregular Comp. and Calendar Eff."
   }

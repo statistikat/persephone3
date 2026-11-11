@@ -30,8 +30,9 @@ plotSeasIrrCal(
 included in the plot; if \code{plotEngine="plotly"}: logical flag specifying if
 a range slider should be shown below the plot}
 
-\item{smooth}{logical flag specifying if the series should be drawn as
-smoothed lines (cubic spline like the smoothed lines of Highcharts)}
+\item{smooth}{logical flag or \code{"spline"} specifying if the series should be
+drawn as smoothed lines (monotone piecewise cubic interpolation, or the
+overshooting not-a-knot cubic spline for \code{"spline"})}
 
 \item{drawPoints}{if \code{plotEngine="dygraph"}: logical flag indicating if a small dot should be drawn at
 each point, in addition to a line going through the point.}

@@ -7,8 +7,9 @@
 #'
 #' @param x an object of class [persephone].
 #' @param which character (`"res"`,`"acf"`,`"acf2"`, `"pacf"`,`"sreshist"`,
-#'   `"nqq"`) selecting the preferred type of plot, see Details. A numeric
-#'   value (`1:6`) corresponding to one of these characters is also accepted.
+#'   `"nqq"`, `"overview"`) selecting the preferred type of plot, see Details.
+#'   A numeric value (`1:7`) corresponding to one of these characters is also
+#'   accepted.
 #'
 #' @param main plot title
 #' @param interactive If the return value would be a `ggplot` object, wrap it in
@@ -25,6 +26,8 @@
 #' * `acf2`: autocorrelations of the squared residuals (4)
 #' * `sreshist`: histogram of standardized residuals including normal curve (5)
 #' * `nqq`: normal q-q plot of standardized residuals (6)
+#' * `overview`: residuals over time with the acf, the pacf and the
+#'   histogram of the standardized residuals below, in one figure (7)
 #'
 #' @return Returns an object of class `dygraphs`, `ggplot` or `plotly`
 #'
@@ -38,6 +41,8 @@
 #' plotResiduals(obj)
 #' # Plot the autocorrelations of the residuals
 #' plotResiduals(obj, which="acf")
+#' # Residuals, acf, pacf and the normal density in one figure
+#' plotResiduals(obj, which = "overview")
 #'
 ## TO DO:
 # maybe other theme_bw()
@@ -48,7 +53,7 @@
 #'
 #' @export
 plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
-                                         "sreshist", "nqq"),
+                                         "sreshist", "nqq", "overview"),
                             main = NULL, interactive = TRUE, ...) {
 
   y <- NULL # nolint
@@ -58,9 +63,101 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
   }
 
   if (is.numeric(which)) {
-    which <- c("res", "acf", "acf2", "pacf", "sreshist", "nqq")[which]
+    which <- c("res", "acf", "acf2", "pacf", "sreshist", "nqq",
+               "overview")[which]
   }else{
     which <- match.arg(which)
+  }
+
+  # the panels of the overview figure as ggplots (also the basis of the
+  # single panel plots) -----------------------------------------------------
+
+  # residuals over time, bar chart in the style of the dygraph "res" plot
+  resPanel <- function() {
+    r <- x$output$user_defined$residuals.tsres
+    d <- data.frame(
+      date = timesToDates(as.numeric(time(r)), frequency(r)),
+      y = as.numeric(r)
+    )
+    ggplot(d, aes(x = date, y = y)) +
+      geom_col(
+        width = 0.85 * 365.25 / frequency(r),
+        fill = p3_series_colors[["Original"]]
+      ) +
+      xlab(NULL) + ylab("Residual value") +
+      theme_bw() +
+      theme(panel.grid.minor = element_blank())
+  }
+
+  # acf/pacf of the residuals as ggplot, confidence bands as in forecast()
+  acfPanel <- function(partial = FALSE, squared = FALSE, ylab_ = "ACF") {
+    r <- x$output$user_defined$residuals.tsres
+    if (squared) {
+      r <- r^2
+    }
+    result <- if (partial) {
+      pacf(r, plot = FALSE)
+    } else {
+      acf(r, plot = FALSE)
+    }
+    ci <- qnorm((1 + 0.95) / 2) / sqrt(result$n.used)
+    # start from lag1, and show whole numbers for lags
+    lags <- result$lag
+    acfs <- result$acf
+    if (!partial) {
+      lags <- lags[-1]
+      acfs <- acfs[-1, 1, 1]
+    } else {
+      acfs <- acfs[, 1, 1]
+    }
+    d <- data.frame(lag = lags * frequency(x$ts), acf = acfs)
+    ggplot(d, aes(x = lag, y = acf)) +
+      geom_bar(stat = "identity", width = 0.1) +
+      geom_hline(yintercept = c(-ci, ci), colour = "blue",
+                 linetype = "dashed") +
+      xlab("Lag") + ylab(ylab_) +
+      theme_bw() +
+      theme(panel.grid.minor = element_blank())
+  }
+
+  # histogram of the standardized residuals with the normal curve
+  histPanel <- function() {
+    result <- x$output$user_defined$residuals.tsres /
+      x$output$user_defined$residuals.ser
+    result <- data.frame(x = as.numeric(result))
+    ggplot(result, aes(x = x)) +
+      geom_histogram(
+        binwidth = 0.5, center = 0,
+        aes(y = after_stat(density)), # nolint
+        fill = p3_series_colors[["Original"]]
+      ) +
+      stat_function(fun = dnorm, color = "red", args = list(mean = 0, sd = 1)) +
+      xlab("Standardized Residuals") +
+      ylab("Density") +
+      theme_bw() +
+      theme(panel.grid.minor = element_blank())
+  }
+
+  if (which == "overview") {
+    if (is.null(main)) {
+      main <- "Residual Diagnostics"
+    }
+    p_res <- suppressWarnings(plotly::ggplotly(resPanel()))
+    p_acf <- suppressWarnings(plotly::ggplotly(
+      acfPanel(partial = FALSE, ylab_ = "ACF")
+    ))
+    p_pacf <- suppressWarnings(plotly::ggplotly(
+      acfPanel(partial = TRUE, ylab_ = "PACF")
+    ))
+    p_hist <- suppressWarnings(plotly::ggplotly(histPanel()))
+    bottom <- plotly::subplot(p_acf, p_pacf, p_hist, nrows = 1)
+    p <- plotly::subplot(p_res, bottom, nrows = 2,
+                         heights = c(0.55, 0.45))
+    # subplot drops the individual titles: add the panel titles as
+    # annotations (top panel, bottom row from left to right)
+    p <- subplotTitles(p, c("Residuals", "ACF", "PACF", "Density"),
+                       main = main)
+    return(p)
   }
 
   if (which == "res") {
@@ -89,25 +186,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     if (is.null(main)) {
       main <- "Histogram of Standardized Residuals and Normal Curve"
     }
-
-    result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
-
-    result <- data.frame(
-      date = paste0(c(floor(time(result) + .01)), "-",
-                    stringfix(c(cycle(result)), 2, "0"), "-01"),
-      x = c(result))
-
-    p <- ggplot(result,  aes(x = x)) + ## ,stat(density)
-      geom_histogram(binwidth = 0.5, center = 0,
-                     aes(y = after_stat(density)) # nolint
-      ) +
-      # ,fill=..count..
-      stat_function(fun = dnorm, color = "red", args = list(mean = 0, sd = 1)) +
-      # geom_freqpoly(binwidth = 0.5, center=0, aes(y = after_stat(density))) +
-      xlab("Standardized Residuals") +
-      ylab("Density") +
-      ggtitle(main) +
-      theme_bw()
+    p <- histPanel() + ggtitle(main)
   }
 
   if (which == "nqq") {

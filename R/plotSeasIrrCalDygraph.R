@@ -11,8 +11,9 @@
 #' @param forecasts logical flag indicating if forecasts should be plotted
 #' @param rangeSelector logical flag specifying if a range selector should be
 #'   included in the plot
-#' @param smooth logical flag specifying if the series should be drawn as
-#'   smoothed lines (cubic spline like the smoothed lines of Highcharts)
+#' @param smooth logical flag or `"spline"` specifying if the series should be
+#'   drawn as smoothed lines (monotone piecewise cubic interpolation, or the
+#'   overshooting not-a-knot cubic spline for `"spline"`)
 #' @param drawPoints logical flag indicating if a small dot should be drawn at
 #'   each point, in addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which
@@ -59,7 +60,7 @@ plotSeasIrrCalDygraph <- function(x, main=NULL, forecasts=TRUE, rangeSelector=TR
     main <- "Seasonal Comp., Irregular Comp. and Calendar Eff."
   }
 
-  dp <- drawPoints && !smooth
+  dp <- drawPoints && !isSmoothed(smooth)
 
   s <- x$output$user_defined$s
   s_f <- x$output$user_defined$s_f

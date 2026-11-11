@@ -7,7 +7,8 @@
 plotSpectrumGgplot(
   x,
   tsType = "original",
-  plotType = c("arSpec", "arSpecBars", "periodogram"),
+  plotType = "arSpec",
+  layout = c("panels", "overlay"),
   maxobs = NULL,
   n.freq = NULL,
   order = 30,
@@ -22,13 +23,23 @@ plotSpectrumGgplot(
 \item{tsType}{character vector with one or more of
 (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
 selecting the preferred type(s) of time series to plot. If more than one
-type is given, the spectra are overlaid in one plot (not available for
-plotType \code{"arSpecBars"}). A numeric
+type is given, the spectra are shown in separate panels, one per series
+type, unless \code{layout = "overlay"} overlays them in one plot (not available
+for plotType \code{"arSpecBars"}). A numeric
 value (\code{1:4}) corresponding to one of these characters is also accepted.}
 
-\item{plotType}{character (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
-selecting the preferred type of plot, see Details. A numeric
+\item{plotType}{character vector with one or more of
+(\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
+selecting the preferred type(s) of plot, see Details. If more than one
+type is given, the plot types are the rows and the series types the
+columns of the facet grid. \code{"arSpecBars"} is only available for a single
+plotType and series type. A numeric
 value (\code{1:3}) corresponding to one of these characters is also accepted.}
+
+\item{layout}{character (\code{"panels"}, \code{"overlay"}) how to show several
+spectra: \code{"panels"} (default) arranges one spectrum per facet,
+\code{"overlay"} draws all spectra into the same panel (only for a single
+plotType; not available for plotType \code{"arSpecBars"}).}
 
 \item{maxobs}{maximum number of observations of the time series. If NULL,
 \code{maxobs} equals the length of the time series for plotTypes

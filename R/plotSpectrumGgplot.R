@@ -11,12 +11,21 @@
 #' @param tsType character vector with one or more of
 #' (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
 #' selecting the preferred type(s) of time series to plot. If more than one
-#' type is given, the spectra are overlaid in one plot (not available for
-#' plotType `"arSpecBars"`). A numeric
+#' type is given, the spectra are shown in separate panels, one per series
+#' type, unless `layout = "overlay"` overlays them in one plot (not available
+#' for plotType `"arSpecBars"`). A numeric
 #' value (`1:4`) corresponding to one of these characters is also accepted.
-#' @param plotType character (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
-#' selecting the preferred type of plot, see Details. A numeric
+#' @param plotType character vector with one or more of
+#' (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
+#' selecting the preferred type(s) of plot, see Details. If more than one
+#' type is given, the plot types are the rows and the series types the
+#' columns of the facet grid. `"arSpecBars"` is only available for a single
+#' plotType and series type. A numeric
 #' value (`1:3`) corresponding to one of these characters is also accepted.
+#' @param layout character (`"panels"`, `"overlay"`) how to show several
+#' spectra: `"panels"` (default) arranges one spectrum per facet,
+#' `"overlay"` draws all spectra into the same panel (only for a single
+#' plotType; not available for plotType `"arSpecBars"`).
 #' @param maxobs maximum number of observations of the time series. If NULL,
 #' `maxobs` equals the length of the time series for plotTypes
 #' `"arSpec"` and `"periodogram"` and `maxobs=96` for plotType `"arSpecBars"`.
@@ -94,7 +103,8 @@
 plotSpectrumGgplot <- function(
   x,
   tsType = "original",
-  plotType = c("arSpec", "arSpecBars", "periodogram"),
+  plotType = "arSpec",
+  layout = c("panels", "overlay"),
   maxobs = NULL,
   n.freq = NULL,
   order = 30,
@@ -108,23 +118,27 @@ plotSpectrumGgplot <- function(
     stop("No results from run available.\n")
   }
 
-  if (is.numeric(plotType)) {
-    plotType <- c("arSpec", "arSpecBars", "periodogram")[plotType]
-  } else {
-    plotType <- match.arg(plotType)
-  }
+  plotType <- spec_plotTypes(plotType)
+  layout <- match.arg(layout)
   tsType <- spec_tsTypes(tsType)
-  if (length(tsType) > 1 && plotType == "arSpecBars") {
+  if ("arSpecBars" %in% plotType &&
+      (length(tsType) > 1 || length(plotType) > 1)) {
     stop(
-      "overlaid spectra are not available for plotType \"arSpecBars\"",
+      "plotType \"arSpecBars\" is only available for a single series type",
+      call. = FALSE
+    )
+  }
+  if (layout == "overlay" && length(plotType) > 1) {
+    stop(
+      "overlaid spectra are only available for a single plotType",
       call. = FALSE
     )
   }
   if (is.null(n.freq)) {
-    if (plotType %in% c("arSpec", "periodogram")) {
-      n.freq <- 301
-    } else if (plotType == "arSpecBars") {
+    if ("arSpecBars" %in% plotType) {
       n.freq <- 61
+    } else {
+      n.freq <- 301
     }
   }
 
@@ -180,12 +194,12 @@ plotSpectrumGgplot <- function(
   # maxobs <- length(tsobj) # JD+
   # maxobs <- 96 # X-13ARIMA-SEATS
   if (is.null(maxobs)) {
-    if (plotType %in% c("arSpec", "periodogram")) {
-      # Default settings in JD+
-      maxobs <- length(series_list[[1]]$ts)
-    } else if (plotType == "arSpecBars") {
+    if ("arSpecBars" %in% plotType) {
       # Default settings in X-13ARIMA-SEATS
       maxobs <- 96
+    } else {
+      # Default settings in JD+
+      maxobs <- length(series_list[[1]]$ts)
     }
   }
   if (length(series_list[[1]]$ts) > maxobs) {
@@ -203,42 +217,55 @@ plotSpectrumGgplot <- function(
 
   series_labels <- vapply(series_list, function(s) s$type, "")
 
-  if (plotType %in% c("periodogram", "arSpec")) {
-    # one (or several overlaid) spectra of the same plotType
-    if (plotType == "periodogram") {
-      main <- main %||%
+  ptypes <- setdiff(plotType, "arSpecBars")
+  if (length(ptypes) > 0) {
+    # one (or several overlaid) spectra of the requested plotTypes
+    spec_main <- function(ptype) {
+      if (ptype == "periodogram") {
         paste0(
           "Periodogram of the ",
           paste(series_labels, collapse = ", "),
           " series"
         )
-    } else {
-      main <- main %||%
+      } else {
         paste0(
           "Autoregressive spectrum of the ",
           paste(series_labels, collapse = ", "),
           " series"
         )
+      }
     }
-    dfs <- lapply(series_list, function(s) {
-      sp <- if (plotType == "periodogram") {
-        spec.pgram(s$d, plot = FALSE)
+    main <- main %||%
+      if (length(ptypes) == 1) {
+        spec_main(ptypes)
       } else {
-        spec.ar(s$d, n.freq = n.freq, order = order, plot = FALSE)
+        paste(vapply(ptypes, spec_main, ""), collapse = " / ")
       }
-      dfspec <- data.frame(freq = sp$freq / frequency(s$d))
-      dfspec$spec <- if (plotType == "periodogram") {
-        sp$spec
-      } else {
-        10 * log10(2 * sp$spec)
-      }
-      dfspec
-    })
-    d1s <- do.call(rbind, Map(function(df, lab) {
-      df$type <- lab
-      df
-    }, dfs, series_labels))
+    dfs <- do.call(rbind, lapply(ptypes, function(ptype) {
+      dfr <- lapply(series_list, function(s) {
+        sp <- if (ptype == "periodogram") {
+          spec.pgram(s$d, plot = FALSE)
+        } else {
+          spec.ar(s$d, n.freq = n.freq, order = order, plot = FALSE)
+        }
+        dfspec <- data.frame(freq = sp$freq / frequency(s$d))
+        dfspec$spec <- if (ptype == "periodogram") {
+          sp$spec
+        } else {
+          10 * log10(2 * sp$spec)
+        }
+        dfspec
+      })
+      do.call(rbind, Map(function(df, lab) {
+        df$type <- lab
+        df$ptype <- specPlotTypeLabel(ptype)
+        df
+      }, dfr, series_labels))
+    }))
+    d1s <- dfs
     d1s$type <- factor(d1s$type, levels = series_labels)
+    d1s$ptype <- factor(d1s$ptype,
+                        levels = specPlotTypeLabel(unique(ptypes)))
 
     p <- ggplot(d1s, aes(x = freq, y = spec, col = type)) +
       geom_line() +
@@ -248,7 +275,16 @@ plotSpectrumGgplot <- function(
       theme_minimal() +
       ylab("Spectrum") +
       xlab("Frequency")
-  } else if (plotType == "arSpecBars") {
+    if (layout == "panels" && (length(series_labels) > 1 ||
+                               length(ptypes) > 1)) {
+      # one spectrum per panel: the plotTypes are the rows, the series
+      # types the columns (the spectra differ strongly in level, so every
+      # panel gets its own y-axis scale)
+      p <- p +
+        facet_grid(ptype ~ type, scales = "free_y") +
+        theme(legend.position = "none")
+    }
+  } else if ("arSpecBars" %in% plotType) {
     # Autoregressive Spectrum X-13ARIMA-SEATS
 
     if (is.null(main)) {

@@ -12,8 +12,9 @@
 #' @param rangeSelector if `plotEngine="dygraph"`: logical flag specifying if a range selector should be
 #'   included in the plot; if `plotEngine="plotly"`: logical flag specifying if
 #'   a range slider should be shown below the plot
-#' @param smooth logical flag specifying if the series should be drawn as
-#'   smoothed lines (cubic spline like the smoothed lines of Highcharts)
+#' @param smooth logical flag or `"spline"` specifying if the series should be
+#'   drawn as smoothed lines (monotone piecewise cubic interpolation, or the
+#'   overshooting not-a-knot cubic spline for `"spline"`)
 #' @param drawPoints if `plotEngine="dygraph"`: logical flag indicating if a small dot should be drawn at
 #'   each point, in addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which

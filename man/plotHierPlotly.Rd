@@ -21,7 +21,8 @@ plotHierPlotly(
 
 \item{rangeSelector}{logical, show the range slider below the plot}
 
-\item{smooth}{logical, smooth the lines (cubic spline)}
+\item{smooth}{logical or \code{"spline"}, smooth the lines (monotone piecewise
+cubic interpolation; \code{"spline"}: the overshooting not-a-knot cubic spline)}
 
 \item{drawPoints}{logical, draw a marker at each observation}
 

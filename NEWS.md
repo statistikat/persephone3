@@ -26,13 +26,16 @@
   available). The plots keep the style of the former highcharter plots:
   smoothed lines and the default Highcharts colours.
 * Time series plots (`plot()`) are drawn with smoothed lines by default; the
-  new logical arguments `smooth` and `rangeSelector` control the smoothing
-  and the range selector. The range selector is now off by default. The
-  smoothing uses a cubic spline like the smoothed lines of Highcharts, and
-  the smoothed series are no longer extrapolated beyond their observations,
-  which previously blew up at the end of the plot when forecasts were shown
-  and ruined the scaling of the y-axis. The widgets resize with their
-  container instead of keeping the fixed 960px width.
+  new arguments `smooth` and `rangeSelector` control the smoothing and the
+  range selector. The range selector is now off by default. The smoothing
+  uses a monotone piecewise cubic interpolation, which cannot overshoot the
+  data or oscillate between the observations (the previous not-a-knot cubic
+  spline produced small ripples, especially in wide plots; it is still
+  available with `smooth = "spline"`). The smoothed series are no longer
+  extrapolated beyond their observations, which previously blew up at the
+  end of the plot when forecasts were shown and ruined the scaling of the
+  y-axis. The widgets resize with their container instead of keeping the
+  fixed 960px width.
 * The series of the time series plots (`plot()`) are drawn in the default
   Highcharts colours (blue, dark grey, light green, grey dashed forecast)
   and the forecast is shown with its 95% confidence band, like in
@@ -44,8 +47,20 @@
   windows.
 * The SI-ratio dots of `plotSiRatios()` are drawn smaller (both engines) so
   that the underlying seasonal factor lines remain visible.
-* `plotSpectrum()` (both engines) can overlay the spectra of several series
-  types (`tsType` now accepts more than one value) in a single plot.
+* `plotSpectrum()` (both engines) accepts several series types
+  (`tsType = c("original", "sa", "irregular")`) and several plot types
+  (`plotType = c("arSpec", "periodogram")`): with the new default
+  `layout = "panels"` the spectra are shown in one panel per combination,
+  the plotTypes as rows and the series types as columns (e.g. 6 panels with
+  the AR spectra above the periodograms); with `layout = "overlay"` they are
+  overlaid in a single panel as before (only for a single plotType).
+* `plotResiduals()` gained `which = "overview"`: the residuals over time
+  with the acf, the pacf and the histogram of the standardized residuals
+  (with the normal curve, its bars now in the colour of the series lines)
+  below, in one plotly figure.
+* Repeated dates in the fine time grid of the smoothed plots (which made
+  dygraphs and plotly draw vertical lines at the month/quarter boundaries
+  when zooming in) are fixed.
 * `getOutliers()` now handles regression variables with more than one
   coefficient (e.g. a trading day variable with one coefficient per group);
   previously `print()` failed on models with user-defined trading days.

@@ -7,7 +7,7 @@ object}
 \usage{
 plotResiduals(
   x,
-  which = c("res", "acf", "acf2", "pacf", "sreshist", "nqq"),
+  which = c("res", "acf", "acf2", "pacf", "sreshist", "nqq", "overview"),
   main = NULL,
   interactive = TRUE,
   ...
@@ -17,8 +17,9 @@ plotResiduals(
 \item{x}{an object of class \link{persephone}.}
 
 \item{which}{character (\code{"res"},\code{"acf"},\code{"acf2"}, \code{"pacf"},\code{"sreshist"},
-\code{"nqq"}) selecting the preferred type of plot, see Details. A numeric
-value (\code{1:6}) corresponding to one of these characters is also accepted.}
+\code{"nqq"}, \code{"overview"}) selecting the preferred type of plot, see Details.
+A numeric value (\code{1:7}) corresponding to one of these characters is also
+accepted.}
 
 \item{main}{plot title}
 
@@ -44,6 +45,8 @@ The following options are available for the parameter \code{which}.
 \item \code{acf2}: autocorrelations of the squared residuals (4)
 \item \code{sreshist}: histogram of standardized residuals including normal curve (5)
 \item \code{nqq}: normal q-q plot of standardized residuals (6)
+\item \code{overview}: residuals over time with the acf, the pacf and the
+histogram of the standardized residuals below, in one figure (7)
 }
 }
 \examples{
@@ -56,6 +59,8 @@ obj$run()
 plotResiduals(obj)
 # Plot the autocorrelations of the residuals
 plotResiduals(obj, which="acf")
+# Residuals, acf, pacf and the normal density in one figure
+plotResiduals(obj, which = "overview")
 
 
 }

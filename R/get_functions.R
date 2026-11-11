@@ -433,3 +433,10 @@ getDiagnostics <- function(x, ..., funcs = c("getOutliers", "getArimaCoef")) {
 
   invisible(results)
 }
+
+
+
+git add -A
+git commit -m "your message"
+Also worth noting: your branch is already 11 commits ahead of master and has no upstream, so committing won't touch master at all. And if you eventually want to publish this work without merging into master locally, use:
+git push -u origin feature/trading-day-regressors

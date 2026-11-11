@@ -100,7 +100,7 @@ plot.persephoneSingle <- function(
       main <- "Original Time Series"
     }
 
-    dp <- drawPoints && !smooth
+    dp <- drawPoints && !isSmoothed(smooth)
     graphObj <- dygraph(
       dyData(ts, smooth = smooth, smooth_cols = "V1"),
       main = main
@@ -188,7 +188,7 @@ plot.persephoneSingle <- function(
         otlTF <- TRUE
       }
 
-    dp <- drawPoints && !smooth
+    dp <- drawPoints && !isSmoothed(smooth)
 
     # Initialize Graph Object
     # Back-/Forecasts

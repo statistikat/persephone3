@@ -23,9 +23,11 @@
 #'   in the plot
 #' @param rangeSelector logical flag specifying if a range selector should be
 #'   included in the plot (default: `FALSE`)
-#' @param smooth logical flag specifying if the series should be drawn as
-#'   smoothed lines (cubic spline interpolation between the observations)
-#'   instead of straight line segments (default: `TRUE`). Outlier markers and
+#' @param smooth logical flag or `"spline"` specifying if the series should be
+#'   drawn as smoothed lines instead of straight line segments (default:
+#'   `TRUE`, monotone piecewise cubic interpolation between the observations,
+#'   which cannot overshoot the data); `"spline"` uses the overshooting
+#'   not-a-knot cubic spline instead. Outlier markers and
 #'   forecast bands are never smoothed.
 #' @param drawPoints logical flag indicating if a small dot should be drawn at
 #'   each point, in
@@ -117,7 +119,7 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       main <- "Original Aggregate Time Series"
     }
 
-    dp <- drawPoints && !smooth
+    dp <- drawPoints && !isSmoothed(smooth)
     graphObj <- dygraph(
       dyData(ts, smooth = smooth, smooth_cols = "V1"),
       main = main
@@ -184,7 +186,7 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     # }else{
       ts <- cbind(y, sa_dir, sa_indir)
 
-      dp <- drawPoints && !smooth
+      dp <- drawPoints && !isSmoothed(smooth)
       graphObj <- dygraph(
         dyData(ts, smooth = smooth, smooth_cols = c("y", "sa_dir", "sa_indir")),
         main = main

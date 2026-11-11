@@ -38,9 +38,11 @@
 \item{rangeSelector}{logical flag specifying if a range selector should be
 included in the plot (default: \code{FALSE})}
 
-\item{smooth}{logical flag specifying if the series should be drawn as
-smoothed lines (cubic spline interpolation between the observations)
-instead of straight line segments (default: \code{TRUE}). Outlier markers and
+\item{smooth}{logical flag or \code{"spline"} specifying if the series should be
+drawn as smoothed lines instead of straight line segments (default:
+\code{TRUE}, monotone piecewise cubic interpolation between the observations,
+which cannot overshoot the data); \code{"spline"} uses the overshooting
+not-a-knot cubic spline instead. Outlier markers and
 forecast bands are never smoothed.}
 
 \item{drawPoints}{logical flag indicating if a small dot should be drawn at

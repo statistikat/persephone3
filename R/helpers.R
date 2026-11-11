@@ -234,25 +234,124 @@ p3_fluid <- function(graphObj) {
   graphObj
 }
 
-# cubic interpolation of the observations: a cubic spline (not-a-knot type,
-# the same family of curves as the smoothed lines of Highcharts with
-# curveType = "spline") evaluated on a finer grid. Like in Highcharts the
-# spline may slightly overshoot the data at the sharpest peaks (about 1.5%
-# for monthly data), which is what gives the line its smooth appearance;
-# large excursions are avoided by evaluating each column only inside its own
-# observation window (see dyData)
-dySmooth <- function(x, y, xout) {
-  stats::spline(x, y, xout = xout)$y
+# interpolation of the observations on a finer time grid; two methods:
+# "monotone" (default) is a monotone piecewise cubic Hermite interpolation
+# (Fritsch-Carlson, as MATLAB's pchip): smooth, but it cannot overshoot the
+# data or oscillate between observations, so the line does not wobble when
+# the plot is enlarged. "spline" is the not-a-knot cubic spline (the same
+# family of curves as the smoothed lines of Highcharts with
+# curveType = "spline"), which can slightly overshoot the sharpest peaks and
+# produce small ripples
+dySmooth <- function(x, y, xout, method = "monotone") {
+  if (identical(method, "spline")) {
+    return(stats::spline(x, y, xout = xout)$y)
+  }
+  n <- length(x)
+  if (n < 3) {
+    return(stats::approx(x, y, xout = xout)$y)
+  }
+  h <- diff(x)
+  delta <- diff(y) / h
+  # slopes at the nodes: weighted harmonic mean of the slopes of the two
+  # neighbouring intervals (Fritsch-Carlson), zero at local extrema and
+  # flat spots, one-sided at the ends
+  d <- numeric(n)
+  int <- 2:(n - 1)
+  dm1 <- delta[int - 1]
+  dm2 <- delta[int]
+  ok <- dm1 * dm2 > 0
+  w1 <- 2 * h[int] + h[int - 1]
+  w2 <- h[int] + 2 * h[int - 1]
+  d[int] <- ifelse(ok, (w1 + w2) / (w1 / dm1 + w2 / dm2), 0)
+  d[int][!is.finite(d[int])] <- 0
+  d[1] <- delta[1]
+  d[n] <- delta[n - 1]
+  # evaluate the piecewise cubic Hermite polynomial
+  j <- pmin(pmax(findInterval(xout, x), 1), n - 1)
+  s <- pmin(pmax((xout - x[j]) / h[j], 0), 1)
+  h00 <- (1 + 2 * s) * (1 - s)^2
+  h10 <- s * (1 - s)^2
+  h01 <- s^2 * (3 - 2 * s)
+  h11 <- s^2 * (s - 1)
+  h00 * y[j] + h10 * h[j] * d[j] + h01 * y[j + 1] + h11 * h[j] * d[j + 1]
+}
+
+# normalize the smooth argument of the plot functions: TRUE (monotone,
+# default), FALSE (no smoothing) or "spline" (the overshooting not-a-knot
+# spline)
+smoothMethod <- function(smooth) {
+  if (is.logical(smooth)) {
+    if (isTRUE(smooth)) "monotone" else FALSE
+  } else if (identical(smooth, "spline")) {
+    "spline"
+  } else if (identical(smooth, "monotone")) {
+    "monotone"
+  } else if (isFALSE(smooth)) {
+    FALSE
+  } else {
+    stop('smooth must be TRUE, FALSE or "spline"', call. = FALSE)
+  }
+}
+
+# is the smoothed line drawn at all (for the smooth argument of the plot
+# functions, see smoothMethod)
+isSmoothed <- function(smooth) {
+  !isFALSE(smoothMethod(smooth))
+}
+
+# add a title to each panel of a plotly::subplot() figure (subplot drops the
+# individual figure titles, so they are re-added as axis-anchored
+# annotations); titles are ordered like the panels: top row first, inside a
+# row from left to right. main is the overall title of the figure.
+subplotTitles <- function(p, titles, main = NULL, size = 14) {
+  lay <- Reduce(
+    function(a, b) utils::modifyList(a, b),
+    c(list(p$x$layout), p$x$layoutAttrs)
+  )
+  xs <- grep("^xaxis(\\d*)$", names(lay), value = TRUE)
+  # name of the layout entry of the y axis an x axis is anchored to
+  yAxisKey <- function(ax) {
+    an <- lay[[ax]]$anchor %||% "y"
+    if (identical(an, "")) "yaxis" else sub("^y", "yaxis", an)
+  }
+  # panels: rows top to bottom (start of the y axis domain descending),
+  # inside a row left to right (start of the x axis domain)
+  ord <- order(
+    -vapply(xs, function(a) lay[[yAxisKey(a)]]$domain[1], 0),
+    vapply(xs, function(a) lay[[a]]$domain[1], 0)
+  )
+  xs <- xs[ord]
+  ann <- Map(function(ax, ti) {
+    list(
+      x = mean(lay[[ax]]$domain), xref = "paper",
+      y = 1.08, yref = lay[[ax]]$anchor %||% "y",
+      text = ti, showarrow = FALSE, xanchor = "center",
+      font = list(size = size)
+    )
+  }, xs, titles)
+  p %>%
+    plotly::layout(
+      annotations = ann,
+      title = if (is.null(main)) NULL else list(text = main),
+      margin = list(t = if (is.null(main)) 50 else 75)
+    )
 }
 
 # decimal time (as in time(ts)) to Date: the observation times map to the
 # first day of the respective month/quarter/half year, points in between are
 # interpolated linearly inside the period; needed because smoothed series are
-# evaluated on a finer time grid
+# evaluated on a finer time grid. The period index is determined by flooring
+# (except for grid points equal to a period start, where the decimals of the
+# time index are not exact): rounding would send the second half of every
+# period to the start of the next one, which makes the resulting dates
+# non-monotonic (repeated dates at every period boundary) and produces
+# vertical lines in the dygraphs/plotly plots when zooming in.
 timesToDates <- function(tt, freq) {
   stopifnot(all(freq %in% c(1L, 2L, 4L, 12L)))
   months_per_period <- as.integer(12 / freq)
-  q <- round(as.numeric(tt) * freq) # index of the current period
+  v <- as.numeric(tt) * freq
+  vr <- round(v)
+  q <- ifelse(abs(v - vr) < 1e-6, vr, floor(v)) # index of the current period
   r <- as.numeric(tt) - q / freq    # offset inside the period
   y <- floor(q / freq)
   m <- q %% freq # 0-based period within the year
@@ -278,6 +377,8 @@ timesToDates <- function(tt, freq) {
 # extend the index by the forecast horizon) would blow up at the ends of the
 # plot and determine the scaling of the y-axis.
 dyData <- function(m, smooth = TRUE, smooth_cols = NULL, n = 8) {
+  method <- smoothMethod(smooth)
+  smooth <- !isFALSE(method)
   ti <- as.numeric(stats::time(m))
   freq <- stats::frequency(m)
   if (!stats::is.ts(m)) {
@@ -305,7 +406,7 @@ dyData <- function(m, smooth = TRUE, smooth_cols = NULL, n = 8) {
         yjv <- yj[!is.na(yj)]
         # no extrapolation: keep the interpolation within the non-missing range
         inw <- tnew >= min(tj) - 1e-9 & tnew <= max(tj) + 1e-9
-        out[inw, j] <- dySmooth(tj, yjv, tnew[inw])
+        out[inw, j] <- dySmooth(tj, yjv, tnew[inw], method = method)
       } else {
         out[grid, j] <- yj
       }

@@ -3,7 +3,7 @@
 message("Test plot - single series before run")
 
 data(AirPassengers, package = "datasets")
-obj <- perX13(AirPassengers, "rsa1")
+obj <- perX13(AirPassengers, "RSA1")
 
 # Plot before run should work (shows original series)
 expect_silent(plot(obj, drawPoints = TRUE))
@@ -21,7 +21,7 @@ message("Test plot - quarterly data")
 
 jj <- JohnsonJohnson
 jj[7] <- 100
-obj_q <- perX13(jj, "rsa1")
+obj_q <- perX13(jj, "RSA1")
 obj_q$run()
 expect_silent(plot(obj_q, annualComparison = 1))
 
