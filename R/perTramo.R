@@ -74,9 +74,12 @@ tramoseatsSingle <- R6::R6Class(
 #' @param td trading day regressors to be used as user-defined regression
 #' variables. Either a national calendar of class `JD3_CALENDAR` created with
 #' [rjd3toolkit::national_calendar()], from which the regressors are computed
-#' with [rjd3toolkit::calendar_td()], a precomputed `mts` object (e.g.
-#' `genTd()[[3]][, 1:6]` or the output of [rjd3toolkit::calendar_td()]), or a
-#' list as returned by [td_context()]. The regressors are registered in
+#' with [rjd3toolkit::calendar_td()] (default grouping; for other groupings
+#' pass [td_context()] with `groups`, or the output of
+#' [rjd3toolkit::calendar_td()] directly), the output of [genTd()] (the
+#' centered day regressors `[[3]][, 1:6]` are then used), a precomputed
+#' `mts` object, or a list as returned by [td_context()]. The regressors are
+#' registered in
 #' `context` and the trading days spec block is set to `option =
 #' "UserDefined"`, see [perTd()]. Arguments `td.*` given in `...` or `speclist`
 #' override the automatically generated ones.

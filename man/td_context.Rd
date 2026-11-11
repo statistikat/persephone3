@@ -25,8 +25,10 @@ with \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}} on \code{
 
 \item{td}{precomputed trading day regressors as a \code{mts} object, for example
 the third element of \code{\link[=genTd]{genTd()}} (centered regressors, usually columns 1 to
-6) or the output of \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. Exactly one of
-\code{calendar} and \code{td} must be provided.}
+6) or the output of \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. The full output of
+\code{\link[=genTd]{genTd()}} (a list of 3 regressor sets) is also accepted, its centered
+day regressors (\verb{[[3]][, 1:6]}) are then used. Exactly one of \code{calendar}
+and \code{td} must be provided.}
 
 \item{groups}{integer vector passed to \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, the
 group of each day of the week (Monday to Saturday, then the holiday).
@@ -52,9 +54,12 @@ modelling context; the individual regressors are then addressed as
 for, i.e. "x13" or "tramoseats". Only relevant for the default of \code{test}.}
 
 \item{test}{significance tests for the trading day regression coefficients,
-passed as \code{td.test} to the specification. The default depends on the
-method: \code{c("Add", "Joint_F")} for x13 and \code{"Joint_F"} for tramoseats,
-since tramoseats does not support \code{"Add"}.}
+passed as \code{td.test} to the specification. For x13, one of \code{"Add"},
+\code{"Remove"} or \code{"None"} (residual trading day test of the regression),
+optionally combined with \code{"Joint_F"} (joint F test); the default is
+\code{c("Add", "Joint_F")}. For tramoseats, one of \code{"Separate_T"},
+\code{"Joint_F"} or \code{"None"}, the default being \code{"Joint_F"}. Other values are
+rejected with an error.}
 }
 \value{
 A list with three elements:

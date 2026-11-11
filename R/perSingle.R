@@ -59,6 +59,13 @@ persephoneSingle <- R6::R6Class(
           dots <- list()
         }
       }
+      # td.test may also come from speclist or dots (it overrides the
+      # automatically generated one), so it is validated here, where all
+      # paths have been merged
+      userTest <- if (!is.null(speclist)) speclist$td.test else dots$td.test
+      if (!is.null(userTest)) {
+        check_td_test(userTest, private$.method)
+      }
       private$context_internal <- context
       private$userdefined <- union(userdefined, userdefined_default)
       # wollen wir speclist falls vorhanden doch in slot abspeichern?

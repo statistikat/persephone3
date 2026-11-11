@@ -163,6 +163,57 @@ expect_true(all(c("EXTRA", "REGS_TD") %in% names(obj10$context$variables)))
 # invalid td input
 expect_error(perX13(AirPassengers, "rsa3", td = "AT"))
 
+message("Test td argument - genTd output and error messages")
+
+# the full output of genTd() (a list of 3 regressor sets) is accepted, the
+# centered day regressors ([[3]][, 1:6]) are used
+gAT <- genTd(
+  freq = 12, firstYear = 1949, lastYear = 1961,
+  hd = list("01-01", "01-06"), weight = c(1, 1)
+)
+obj13 <- perX13(AirPassengers, "rsa3", td = gAT)
+expect_equal(
+  length(unclass(obj13$params)$regarima$regression$td$users), 6
+)
+expect_equal(
+  unclass(obj13$params)$regarima$regression$td$users,
+  paste0("REGS_TD.", colnames(gAT[[3]])[1:6])
+)
+obj13$run()
+expect_true(!is.null(obj13$output))
+obj14 <- perTd(AirPassengers, td = gAT, method = "tramoseats")
+obj14$run()
+expect_true(!is.null(obj14$output))
+
+# a regressor span not covering the series is rejected with both spans in
+# the message
+g_old <- genTd(freq = 12, firstYear = 1949, lastYear = 1955,
+               hd = list("01-01"), weight = 1)
+err <- tryCatch(perX13(AirPassengers, "rsa3", td = g_old),
+                error = function(e) e)
+expect_true(inherits(err, "error"))
+expect_true(grepl("cover its full span", err$message))
+expect_true(grepl("1949", err$message) && grepl("1961", err$message))
+
+# invalid td.test values are rejected with the list of valid values
+err <- tryCatch(perX13(AirPassengers, "rsa3", td = AT, td.test = "Joint_F"),
+                error = function(e) e)
+expect_true(inherits(err, "error"))
+expect_true(grepl('invalid td.test for method "x13"', err$message))
+expect_true(grepl('"Add", "Remove" or "None"', err$message))
+expect_error(perX13(AirPassengers, "rsa3", td = AT,
+                    td.test = c("Add", "Remove", "Joint_F")))
+err_ts <- tryCatch(perTramo(AirPassengers, "rsa3", td = AT, td.test = "Add"),
+                   error = function(e) e)
+expect_true(inherits(err_ts, "error"))
+expect_true(grepl('invalid td.test for method "tramoseats"', err_ts$message))
+expect_true(grepl("Separate_T", err_ts$message))
+# valid combinations are accepted
+obj15 <- perX13(AirPassengers, "rsa3", td = AT,
+                td.test = c("Remove", "Joint_F"), transform.fun = "Log")
+expect_equal(unclass(obj15$params)$regarima$regression$td$test, "REMOVE")
+expect_equal(unclass(obj15$params)$regarima$transform$fn, "LOG")
+
 message("Test td argument of updateParams")
 
 obj11 <- perX13(AirPassengers, "rsa3")

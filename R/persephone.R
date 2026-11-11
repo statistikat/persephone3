@@ -102,6 +102,13 @@ persephone <- R6::R6Class(
           dots <- list()
         }
       }
+      # td.test may also come from dots or speclist (it overrides the
+      # automatically generated one), so it is validated here, where all
+      # paths have been merged
+      userTest <- if (!is.null(speclist)) speclist$td.test else dots$td.test
+      if (!is.null(userTest)) {
+        check_td_test(userTest, private$.method)
+      }
       init_spec <- if (!missing(spec) && !is.null(spec)) {
         spec
       } else {

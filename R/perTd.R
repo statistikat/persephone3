@@ -13,8 +13,10 @@
 #'   with [rjd3toolkit::calendar_td()] on `ts`.
 #' @param td precomputed trading day regressors as a `mts` object, for example
 #'   the third element of [genTd()] (centered regressors, usually columns 1 to
-#'   6) or the output of [rjd3toolkit::calendar_td()]. Exactly one of
-#'   `calendar` and `td` must be provided.
+#'   6) or the output of [rjd3toolkit::calendar_td()]. The full output of
+#'   [genTd()] (a list of 3 regressor sets) is also accepted, its centered
+#'   day regressors (`[[3]][, 1:6]`) are then used. Exactly one of `calendar`
+#'   and `td` must be provided.
 #' @param groups integer vector passed to [rjd3toolkit::calendar_td()], the
 #'   group of each day of the week (Monday to Saturday, then the holiday).
 #'   Only used if `calendar` is given.
@@ -34,9 +36,12 @@
 #' @param method the seasonal adjustment method the specification is built
 #'   for, i.e. "x13" or "tramoseats". Only relevant for the default of `test`.
 #' @param test significance tests for the trading day regression coefficients,
-#'   passed as `td.test` to the specification. The default depends on the
-#'   method: `c("Add", "Joint_F")` for x13 and `"Joint_F"` for tramoseats,
-#'   since tramoseats does not support `"Add"`.
+#'   passed as `td.test` to the specification. For x13, one of `"Add"`,
+#'   `"Remove"` or `"None"` (residual trading day test of the regression),
+#'   optionally combined with `"Joint_F"` (joint F test); the default is
+#'   `c("Add", "Joint_F")`. For tramoseats, one of `"Separate_T"`,
+#'   `"Joint_F"` or `"None"`, the default being `"Joint_F"`. Other values are
+#'   rejected with an error.
 #' @return A list with three elements:
 #'   \item{td}{the trading day regressors as a `mts` object}
 #'   \item{context}{a [rjd3toolkit::modelling_context()] registering `td`
@@ -68,11 +73,29 @@ td_context <- function(ts,
       call. = FALSE
     )
   }
+  # the output of genTd(): a list of the 3 regressor sets, of which the
+  # centered day regressors (the 3rd, day columns only) are used
+  if (!is.null(td) && is.list(td) && !stats::is.ts(td) &&
+      length(td) == 3L && all(vapply(td, stats::is.ts, TRUE))) {
+    td <- td[[3]][, 1:6, drop = FALSE]
+  }
   if (!is.null(td) && !stats::is.ts(td)) {
-    stop("'td' must be a ts/mts object of trading day regressors", call. = FALSE)
+    stop(
+      "'td' must be a ts/mts object of trading day regressors or the ",
+      "output of genTd()",
+      call. = FALSE
+    )
   }
   if (!stats::is.ts(ts)) {
     stop("'ts' must be a time series", call. = FALSE)
+  }
+
+  # period of a time series as "2000.1-2019.12"
+  spanLabel <- function(s) {
+    paste0(
+      paste(stats::start(s), collapse = "."), "-",
+      paste(stats::end(s), collapse = ".")
+    )
   }
 
   if (!is.null(calendar)) {
@@ -83,11 +106,13 @@ td_context <- function(ts,
       holiday = holiday,
       contrasts = contrasts
     )
-  } else if (frequency(td) != frequency(ts) ||
-             start(td)[1] > start(ts)[1] ||
-             end(td)[1] < end(ts)[1]) {
+  } else if (stats::frequency(td) != stats::frequency(ts) ||
+             stats::start(td)[1] > stats::start(ts)[1] ||
+             stats::end(td)[1] < stats::end(ts)[1]) {
     stop(
-      "'td' must have the same frequency as 'ts' and cover its full span",
+      "'td' must have the same frequency as 'ts' and cover its full span ",
+      "(series: ", spanLabel(ts), ", regressors: ", spanLabel(td), "); ",
+      "pass matching years to genTd() or calendar_td()",
       call. = FALSE
     )
   }
@@ -95,6 +120,7 @@ td_context <- function(ts,
   if (is.null(test)) {
     test <- if (method == "x13") c("Add", "Joint_F") else "Joint_F"
   }
+  check_td_test(test, method)
 
   context <- rjd3toolkit::modelling_context(
     variables = stats::setNames(list(td), name)
@@ -107,9 +133,36 @@ td_context <- function(ts,
   list(td = td, context = context, speclist = speclist)
 }
 
+# valid values of the td.test argument of the specification, by method:
+# x13 has an enum {ADD, REMOVE, NONE} for the residual trading day test, to
+# which the joint F test can be added; tramoseats has {SEPARATE_T, JOINT_F,
+# NONE} (given as the single test to use)
+check_td_test <- function(test, method) {
+  if (method == "x13") {
+    base <- c("Add", "Remove", "None")
+    allowed <- c(base, "Joint_F")
+    ok <- all(test %in% allowed) &&
+      length(test) <= 2 && length(unique(test)) == length(test) &&
+      any(test %in% base)
+    hint <- 'valid are "Add", "Remove" or "None", optionally combined with "Joint_F" (e.g. td.test = c("Add", "Joint_F"))'
+  } else {
+    allowed <- c("Separate_T", "Joint_F", "None")
+    ok <- length(test) == 1 && test %in% allowed
+    hint <- 'valid are "Separate_T", "Joint_F" or "None"'
+  }
+  if (!ok) {
+    stop(
+      "invalid td.test for method \"", method, "\": ",
+      paste(test, collapse = ", "), "; ", hint,
+      call. = FALSE
+    )
+  }
+  invisible(test)
+}
+
 # resolve the `td` argument of perX13()/perTramo() into the list returned by
-# td_context(). Accepts a JD3 calendar, precomputed regressors (ts/mts) or an
-# already built td_context() list.
+# td_context(). Accepts a JD3 calendar, precomputed regressors (ts/mts), the
+# output of genTd() or an already built td_context() list.
 resolve_td_input <- function(ts, td, method) {
   if (is.null(td)) {
     return(NULL)
@@ -120,12 +173,17 @@ resolve_td_input <- function(ts, td, method) {
   if (stats::is.ts(td)) {
     return(td_context(ts = ts, td = td, method = method))
   }
-  if (is.list(td) && all(c("context", "speclist") %in% names(td))) {
-    return(td)
+  if (is.list(td)) {
+    # td_context() list, or the output of genTd() (handled by td_context())
+    if (all(c("context", "speclist") %in% names(td))) {
+      return(td)
+    }
+    return(td_context(ts = ts, td = td, method = method))
   }
   stop(
     "'td' must be a JD3 calendar (rjd3toolkit::national_calendar()), a ts/mts ",
-    "object with trading day regressors, or a list as returned by td_context().",
+    "object with trading day regressors, the output of genTd(), or a list as ",
+    "returned by td_context().",
     call. = FALSE
   )
 }
@@ -150,8 +208,9 @@ resolve_td_input <- function(ts, td, method) {
 #'   must be provided.
 #' @param td precomputed trading day regressors as a `mts` object, for example
 #'   `genTd()[[3]][, 1:6]` (the centered day regressors) or the output of
-#'   [rjd3toolkit::calendar_td()]. It must have the same frequency as `ts`
-#'   and cover its full span.
+#'   [rjd3toolkit::calendar_td()], or the full output of [genTd()] (its
+#'   centered day regressors `[[3]][, 1:6]` are then used). It must have the
+#'   same frequency as `ts` and cover its full span.
 #' @param method the seasonal adjustment method, i.e. "x13" or
 #'   "tramoseats".
 #' @param template the name of the predefined specification template, passed
@@ -170,9 +229,10 @@ resolve_td_input <- function(ts, td, method) {
 #'   modelling context; the individual regressors are addressed as
 #'   `name.column`.
 #' @param test significance tests for the trading day regression coefficients
-#'   (`td.test`). The default depends on the method: `c("Add", "Joint_F")`
-#'   for x13 and `"Joint_F"` for tramoseats, since tramoseats does not
-#'   support `"Add"`.
+#'   (`td.test`). For x13, one of `"Add"`, `"Remove"` or `"None"`, optionally
+#'   combined with `"Joint_F"`; the default is `c("Add", "Joint_F")`. For
+#'   tramoseats, one of `"Separate_T"`, `"Joint_F"` or `"None"`, the default
+#'   being `"Joint_F"`.
 #' @param context an optional existing modelling context (e.g. containing
 #'   further variables or calendars), to which the trading day regressors are
 #'   added.
@@ -241,7 +301,7 @@ perTd <- function(ts,
                   template = "rsa3",
                   groups = c(1, 2, 3, 4, 5, 6, 0),
                   holiday = 7,
-                  contrasts = FALSE,
+                  contrasts = TRUE,
                   name = "REGS_TD",
                   test = NULL,
                   context = NULL,

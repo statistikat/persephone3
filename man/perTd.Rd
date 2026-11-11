@@ -12,7 +12,7 @@ perTd(
   template = "rsa3",
   groups = c(1, 2, 3, 4, 5, 6, 0),
   holiday = 7,
-  contrasts = FALSE,
+  contrasts = TRUE,
   name = "REGS_TD",
   test = NULL,
   context = NULL,
@@ -31,8 +31,9 @@ must be provided.}
 
 \item{td}{precomputed trading day regressors as a \code{mts} object, for example
 \code{genTd()[[3]][, 1:6]} (the centered day regressors) or the output of
-\code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}. It must have the same frequency as \code{ts}
-and cover its full span.}
+\code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}, or the full output of \code{\link[=genTd]{genTd()}} (its
+centered day regressors \verb{[[3]][, 1:6]} are then used). It must have the
+same frequency as \code{ts} and cover its full span.}
 
 \item{method}{the seasonal adjustment method, i.e. "x13" or
 "tramoseats".}
@@ -58,9 +59,10 @@ modelling context; the individual regressors are addressed as
 \code{name.column}.}
 
 \item{test}{significance tests for the trading day regression coefficients
-(\code{td.test}). The default depends on the method: \code{c("Add", "Joint_F")}
-for x13 and \code{"Joint_F"} for tramoseats, since tramoseats does not
-support \code{"Add"}.}
+(\code{td.test}). For x13, one of \code{"Add"}, \code{"Remove"} or \code{"None"}, optionally
+combined with \code{"Joint_F"}; the default is \code{c("Add", "Joint_F")}. For
+tramoseats, one of \code{"Separate_T"}, \code{"Joint_F"} or \code{"None"}, the default
+being \code{"Joint_F"}.}
 
 \item{context}{an optional existing modelling context (e.g. containing
 further variables or calendars), to which the trading day regressors are

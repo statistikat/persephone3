@@ -11,7 +11,15 @@
   regressors such as `genTd()[[3]]`), for both x13 and tramoseats.
 * `perX13()`, `perTramo()` and `$updateParams()` gained a `td` argument that
   takes a calendar, precomputed trading day regressors or a `td_context()`
-  list and wires them up like `perTd()`.
+  list and wires them up like `perTd()`. The full output of `genTd()` can
+  now be passed directly (`td = genTd(...)`), its centered day regressors
+  are used then. A regressor span not covering the series is rejected with
+  an error showing both spans.
+* The `td.test` argument is validated against the specification's valid
+  values (`"Add"`, `"Remove"` or `"None"`, optionally with `"Joint_F"`, for
+  x13; `"Separate_T"`, `"Joint_F"` or `"None"` for tramoseats); previously,
+  an invalid value such as `td.test = "Joint_F"` for x13 failed with the
+  unhelpful java error `'arg' should be one of "REMOVE", "ADD", "NONE"`.
 * The default of the `contrasts` argument of `perTd()`/`td_context()` is now
   `TRUE` (centered regressors, as in `rjd3toolkit::calendar_td()` and
   `genTd()`); the previous uncentered regressors were nearly collinear with
