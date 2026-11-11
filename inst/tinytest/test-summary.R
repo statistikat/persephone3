@@ -36,6 +36,17 @@ expect_true(!any(grepl("Trading day regressors", out, fixed = TRUE)))
 expect_true(any(grepl("Seasonal adjustment: multiplicative", out, fixed = TRUE)))
 expect_true(any(grepl("3x3", out, fixed = TRUE)))
 expect_true(any(grepl("Henderson", out, fixed = TRUE)))
+# the ARIMA parameters of (0 1 1)(0 1 1): one row per estimated parameter
+expect_true(any(grepl("-- ARIMA parameters (0 1 1)(0 1 1)", out, fixed = TRUE)))
+expect_true(any(grepl("^ar.ma.1 ", out)))
+expect_true(any(grepl("^ar.ma.b1 ", out)))
+expect_equal(sum(grepl("^ar\\.(ar|ma)(\\.b)?[0-9]+ ", out)), 2)
+# quality: the M-statistics and the total quality indicator
+expect_true(any(grepl("-- Quality", out, fixed = TRUE)))
+expect_true(any(grepl("M-statistics:", out, fixed = TRUE)))
+expect_true(any(grepl("Q-M2 =", out, fixed = TRUE)))
+expect_true(any(grepl("Total quality:", out, fixed = TRUE)))
+expect_true(any(grepl("Total quality:        Good", out, fixed = TRUE)))
 # the R6 method gives the same output
 expect_equal(capture.output(obj$summary()), out)
 
@@ -81,9 +92,25 @@ hdr4 <- paste(out4, collapse = "\n")
 expect_true(grepl("Trading day:     6 regressors", hdr4, fixed = TRUE))
 # the mean of the regression appears in the Mean / Leap year table
 expect_true(any(grepl("^const", out4)))
+# the ARIMA parameters of the estimated model
+expect_true(any(grepl("^ar.ar.1 ", out4)))
+expect_true(any(grepl("^ar.ma.b1 ", out4)))
 # SEATS has no X-11 filters
 expect_true(any(grepl("SEATS (no X-11 filters)", out4, fixed = TRUE)))
 expect_true(!any(grepl("Final MA filter", out4, fixed = TRUE)))
+# the quality indicator is available for tramoseats as well
+expect_true(any(grepl("Total quality:", out4, fixed = TRUE)))
+
+message("Test summary - model without ARIMA parameters")
+
+obj5 <- perX13(AirPassengers, "rsa3", automdl.enabled = FALSE,
+               arima.p = 0, arima.d = 1, arima.q = 0,
+               arima.bp = 0, arima.bd = 1, arima.bq = 0)
+obj5$run()
+out5 <- capture.output(summary(obj5))
+expect_true(grepl("ARIMA model:     (0 1 0)(0 1 0)",
+                  paste(out5, collapse = "\n"), fixed = TRUE))
+expect_true(!any(grepl("ARIMA parameters", out5, fixed = TRUE)))
 
 message("Test summary - hierarchical objects")
 

@@ -5,9 +5,12 @@
   regressors, Easter effect, number of outliers), the regression
   coefficients with standard error, t value and p-value in one table per
   group (one row per outlier, per trading day regressor and for the mean
-  and leap year), the joint F tests of the trading days and of the trading
-  days with the outliers, and the decomposition (additive or multiplicative,
-  final moving average and trend-cycle filter).
+  and leap year), the estimates of the ARIMA parameters (one row per
+  estimated AR/MA and seasonal AR/MA parameter), the joint F tests of the
+  trading days and of the trading days with the outliers, the decomposition
+  (additive or multiplicative, final moving average and trend-cycle filter)
+  and, at the end, the M-statistics (Q and Q-M2) and the overall quality
+  indicator.
 * `diagnosticsTable()` and the `$diagnosticsTable()` method gained a `view`
   argument: with `view = TRUE` the diagnostics are shown as an interactive
   table (DT) in the viewer pane, with readable column headers and

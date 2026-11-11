@@ -19,11 +19,13 @@
 Prints a summary of a run of a single series: the frequency, span and
 length of the series, the model definition of the regression ARIMA model
 (ARIMA specification, transformation, leap year and trading day effects,
-Easter effect, number of outliers), the regression coefficients with
-their standard errors, t values and p-values in one table per group
-(outliers, trading day regressors, mean and leap year), the joint F
-tests of the trading day regressors and of the trading day regressors
-and outliers together, and the decomposition filters.
+Easter effect, number of outliers), the estimates of the ARIMA
+parameters, the regression coefficients with their standard errors, t
+values and p-values in one table per group (outliers, trading day
+regressors, mean and leap year), the joint F tests of the trading day
+regressors and of the trading day regressors and outliers together, the
+decomposition filters and, at the end, the M-statistics (Q and Q-M2) and
+the overall quality indicator.
 }
 \examples{
 data(AirPassengers, package = "datasets")

@@ -174,6 +174,75 @@ sumFilterName <- function(s) {
   if (length(m) == 3) paste0(m[2], "x", m[3]) else s
 }
 
+# estimates of the regression ARIMA parameters (phi, theta, bphi, btheta)
+# with standard errors from the covariance matrix of the ML estimation;
+# the names follow the JD+ convention (ar.ar.1, ar.ma.1, ar.ar.b1, ar.ma.b1)
+sumArimaTable <- function(x) {
+  pp <- x$output$preprocessing
+  ar <- pp$description$arima
+  pars <- pp$estimation$parameters
+  vals <- as.numeric(pars$val)
+  if (length(vals) == 0) {
+    return(NULL)
+  }
+  # the fields are 2 x n matrices of value and type (NULL if the block is
+  # not in the model); FIXED coefficients have no standard error and are
+  # absent from parameters$val, which is in the block order phi, theta,
+  # bphi, btheta
+  fields <- c("phi", "theta", "bphi", "btheta")
+  prefixes <- c("ar.ar.", "ar.ma.", "ar.ar.b", "ar.ma.b")
+  # number of coefficients of each block
+  counts <- vapply(fields, function(f) {
+    m <- ar[[f]]
+    if (is.null(m)) {
+      0L
+    } else if (ncol(m) > 1 || !is.null(dim(m))) {
+      ncol(m)
+    } else {
+      1L
+    }
+  }, 0L)
+  value <- type <- character(0)
+  for (f in fields) {
+    m <- ar[[f]]
+    if (is.null(m)) {
+      next
+    }
+    if (is.matrix(m)) {
+      vl <- as.character(m["value", ])
+      tp <- as.character(m["type", ])
+    } else {
+      # single coefficient: the field may collapse to a value/type pair
+      vl <- as.character(m[[1]])
+      tp <- as.character(m[[2]])
+    }
+    value <- c(value, vl)
+    type <- c(type, tp)
+  }
+  nm <- unlist(lapply(seq_along(fields), function(i) {
+    if (counts[i] == 0) character(0) else paste0(prefixes[i], seq_len(counts[i]))
+  }))
+  if (length(nm) != length(value)) {
+    return(NULL)
+  }
+  n_est <- sum(type == "ESTIMATED")
+  cov <- as.matrix(pars$cov)
+  stde <- rep(NA_real_, length(value))
+  if (n_est == length(vals) && nrow(cov) == length(vals)) {
+    stde[type == "ESTIMATED"] <- sqrt(diag(cov))
+  }
+  coef <- suppressWarnings(as.numeric(value))
+  df <- pp$estimation$likelihood$neffectiveobs -
+    pp$estimation$likelihood$nparams
+  tstat <- coef / stde
+  data.frame(
+    coef = coef, stderr = stde, t = tstat,
+    p = 2 * stats::pt(abs(tstat), df, lower.tail = FALSE),
+    row.names = nm,
+    stringsAsFactors = FALSE
+  )
+}
+
 # regression ARIMA specification "(p d q)(P D Q)" from the final parameters
 sumArimaSpec <- function(x) {
   ud <- x$output$user_defined
@@ -211,11 +280,13 @@ sumNum <- function(v) format(signif(v, 6), scientific = FALSE)
 #' Prints a summary of a run of a single series: the frequency, span and
 #' length of the series, the model definition of the regression ARIMA model
 #' (ARIMA specification, transformation, leap year and trading day effects,
-#' Easter effect, number of outliers), the regression coefficients with
-#' their standard errors, t values and p-values in one table per group
-#' (outliers, trading day regressors, mean and leap year), the joint F
-#' tests of the trading day regressors and of the trading day regressors
-#' and outliers together, and the decomposition filters.
+#' Easter effect, number of outliers), the estimates of the ARIMA
+#' parameters, the regression coefficients with their standard errors, t
+#' values and p-values in one table per group (outliers, trading day
+#' regressors, mean and leap year), the joint F tests of the trading day
+#' regressors and of the trading day regressors and outliers together, the
+#' decomposition filters and, at the end, the M-statistics (Q and Q-M2) and
+#' the overall quality indicator.
 #'
 #' @param x a `persephone` object of a single series (created with
 #'   [perX13()] or [perTramo()]) for which [run][persephone] has been called.
@@ -268,6 +339,10 @@ summary.persephone <- function(x, ...) {
   # ---- coefficient tables ----
   labelFun <- function(x, v) sumVarLabels(x, v)
   sumPrintCoef(
+    sumArimaTable(x),
+    paste("ARIMA parameters", sumArimaSpec(x))
+  )
+  sumPrintCoef(
     sumCoefTable(x, c("AO", "LS", "TC"), labelFun),
     "Outliers"
   )
@@ -311,6 +386,23 @@ summary.persephone <- function(x, ...) {
     }
   } else {
     cat("Decomposition:       SEATS (no X-11 filters)\n")
+  }
+
+  # ---- quality ----
+  q1 <- ud[["m-statistics.q"]]
+  q2 <- ud[["m-statistics.q-m2"]]
+  totalQ <- ud$quality.summary
+  if ((!is.null(q1) && !is.na(q1)) || (!is.null(totalQ) && !is.na(totalQ))) {
+    cat("\n-- Quality ", strrep("-", 54), "\n", sep = "")
+    if (!is.null(q1) && !is.na(q1)) {
+      cat("M-statistics:        ",
+          paste0("Q = ", sumNum(q1),
+                 if (!is.null(q2) && !is.na(q2))
+                   paste0("   Q-M2 = ", sumNum(q2))), "\n")
+    }
+    if (!is.null(totalQ) && !is.na(totalQ)) {
+      cat("Total quality:       ", as.character(totalQ), "\n")
+    }
   }
   invisible(x)
 }
