@@ -12,6 +12,8 @@ printDiagnostics <- function(x) {
       logTransform = NA,
       arimaMdl = NA,
       nOutliers = NA,
+      nAutoout = NA,
+      nRecentout = NA,
       Q = NA,
       Q2 = NA,
       TotalQ = NA
@@ -40,6 +42,8 @@ printDiagnostics <- function(x) {
     logTransform = preproc$description$log,
     arimaMdl = bpbdbq,
     nOutliers = ifelse(is.null(nrow(out)), NA, nrow(out)),
+    nAutoout = ifelse(is.null(nrow(out)), NA, sum(out$autoout)),
+    nRecentout = ifelse(is.null(nrow(out)), NA, sum(out$recentout)),
     Q = ifelse(is.null(qStat), NA, round(qStat, digits = 2)),
     Q2 = ifelse(is.null(qStat2), NA, round(qStat2, digits = 2)),
     TotalQ = userdef$quality.summary

@@ -27,6 +27,10 @@ effects for a persephone object, see \link{plotSeasIrrCal}
 \item \code{plotResiduals(...)}: Several interactive plots in connection with
 residuals for a persephone
 object, see \link{plotResiduals}
+\item \code{getOutliers()}: Extract outlier information from the model run, see
+\code{\link[=getOutliers]{getOutliers()}}
+\item \code{getRegressors()}: Extract the coefficients of all regression variables
+of the model run, see \code{\link[=getRegressors]{getRegressors()}}
 }
 }
 
@@ -103,6 +107,8 @@ the first time.}
 \item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
 \item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
 \item \href{#method-persephone-fixOutlier}{\code{persephone$fixOutlier()}}
+\item \href{#method-persephone-getOutliers}{\code{persephone$getOutliers()}}
+\item \href{#method-persephone-getRegressors}{\code{persephone$getRegressors()}}
 \item \href{#method-persephone-clone}{\code{persephone$clone()}}
 }
 }
@@ -373,6 +379,36 @@ create a new single object
 where outliers are not fixed}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-persephone-getOutliers"></a>}}
+\if{latex}{\out{\hypertarget{method-persephone-getOutliers}{}}}
+\subsection{Method \code{getOutliers()}}{
+extract outlier information from the model run,
+see \code{\link[=getOutliers]{getOutliers()}}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{persephone$getOutliers()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame as described in \code{\link[=getOutliers]{getOutliers()}}, \code{NA} if the model
+contains no outliers
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-persephone-getRegressors"></a>}}
+\if{latex}{\out{\hypertarget{method-persephone-getRegressors}{}}}
+\subsection{Method \code{getRegressors()}}{
+extract the coefficients of all regression variables of
+the model run, see \code{\link[=getRegressors]{getRegressors()}}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{persephone$getRegressors()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame as described in \code{\link[=getRegressors]{getRegressors()}}, \code{NULL} if the
+model contains no regression variables
 }
 }
 \if{html}{\out{<hr>}}

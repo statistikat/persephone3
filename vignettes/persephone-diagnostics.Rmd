@@ -1,0 +1,136 @@
+---
+title: "Diagnostics in persephone3"
+description: >
+  How the diagnostics table is generated and how the overall quality
+  summary (TotalQ) is computed.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Diagnostics in persephone3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\VignettePackage{persephone3}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+# Introduction
+
+`diagnosticsTable()` collects the most important diagnostic statistics of a
+seasonal adjustment object (created with `perX13()` or `perTramo()`) into a
+single data frame. Most of its columns are passed through directly from the
+JDemetra+ output — `persephone3` requests a fixed set of user-defined items
+(see `userdefined_default` in the package code) and reads them from the Java
+result object.
+
+This vignette documents how individual fields of that table are computed.
+Currently it covers the overall quality summary (`TotalQ`); further fields
+will be documented here as the diagnostics table evolves.
+
+# The `TotalQ` field
+
+`TotalQ` is the value of the JDemetra+ output node `quality.summary`. It is
+**not** computed in R: the R side only reads the node from the Java result
+and reports it unchanged. A common misconception is that `TotalQ` is based
+on the M-statistics Q and Q2 alone — in fact, Q and Q2 are just two of many
+tests that feed into it (and, for TRAMO/SEATS, they are not involved at all).
+
+The computation happens in the JDemetra+ output extractors
+([`X13Extractor.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-x13-base-parent/jdplus-x13-base-core/src/main/java/jdplus/x13/base/core/x13/extractors/X13Extractor.java)
+and
+[`TramoSeatsExtractor.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-tramoseats-base-parent/jdplus-tramoseats-base-core/src/main/java/jdplus/tramoseats/base/core/tramoseats/extractors/TramoSeatsExtractor.java),
+which work identically) in two steps:
+
+## Step 1: Classify each individual test
+
+A fixed list of diagnostic test groups is evaluated, and each individual
+test is classified into one of the quality levels `Good`, `Uncertain`, `Bad`
+or `Severe` (see
+[`X13Factory.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-x13-base-parent/jdplus-x13-base-core/src/main/java/jdplus/x13/base/core/x13/X13Factory.java)
+and
+[`TramoSeatsFactory.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-tramoseats-base-parent/jdplus-tramoseats-base-core/src/main/java/jdplus/tramoseats/base/core/tramoseats/TramoSeatsFactory.java)
+for the default lists):
+
+| Test group | X-13 | TRAMO/SEATS |
+|---|:---:|:---:|
+| Coherence of the decomposition (SA vs. components) | yes | yes |
+| Residual tests (Ljung-Box, normality, ...) | yes | yes |
+| Out-of-sample / forecasting tests | yes | yes |
+| Outliers | yes | yes |
+| Spectral test (residual seasonality at seasonal frequencies) | yes | yes |
+| Combined seasonality tests | yes | yes |
+| Advanced residual seasonality tests | yes | yes |
+| Residual trading day tests | yes | yes |
+| M-statistics summary Q and Q2 | yes | no |
+| Wiener-Kolmogorov diagnostics | no | yes |
+
+The two method-specific groups use the following thresholds:
+
+- **X-13 M-statistics**
+  ([`MDiagnostics.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-x13-base-parent/jdplus-x13-base-core/src/main/java/jdplus/x13/base/core/x13/diagnostics/MDiagnostics.java)):
+  Q and Q2 are not p-values but already quality scores — the proportion of
+  the M-statistics exceeding their critical value (Q2 excludes M7 from the
+  computation). They are classified directly by value:
+  - `Q >= 2` → `Severe`, `Q >= 1` → `Bad`, otherwise `Good`
+  - the same rule for Q2
+- **SEATS Wiener-Kolmogorov tests**
+  ([`SeatsDiagnostics.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-tramoseats-base-parent/jdplus-tramoseats-base-core/src/main/java/jdplus/tramoseats/base/core/seats/diagnostics/SeatsDiagnostics.java)):
+  genuine p-values (variance of the seasonal component, variance of the
+  irregular component, and their correlation):
+  - `p <= 0.005` → `Bad`, `p > 0.05` → `Good`, otherwise `Uncertain`
+
+## Step 2: Aggregate to an overall quality
+
+The classification of all individual tests is combined by
+`ProcDiagnostic.summary()`
+([`ProcDiagnostic.java`](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-toolkit-base-parent/jdplus-toolkit-base-api/src/main/java/jdplus/toolkit/base/api/processing/ProcDiagnostic.java)):
+
+1. If **any** test is `Error`, the overall result is `Error`. Otherwise, if
+   any test is `Severe`, the overall result is `Severe`.
+2. Otherwise the mean score over all interpretable tests is formed, with
+   `Good = 3`, `Uncertain = 2`, `Bad = 0`:
+   - mean `>= 2.5` → `Good`
+   - mean `>= 1.5` → `Uncertain`
+   - otherwise → `Bad`
+3. If no test is interpretable, the result is `Undefined`.
+
+The resulting string (`Good`, `Uncertain`, `Bad`, `Severe`, `Undefined` or
+`Error`) is what `quality.summary` — and hence the `TotalQ` column —
+contains.
+
+Note that `TotalQ` reflects the model as a whole. It can change when the
+regression model changes even if the individual values of `Q` and `Q2` move
+only slightly, because the classification of many tests contributes to the
+average. Conversely, a single `Severe` test (for example a strong residual
+trading day effect) is enough to make the overall summary `Severe`.
+
+# Example
+
+```{r example}
+library(persephone3)
+
+obj <- perX13(AirPassengers, "rsa3")
+obj$run()
+
+diagnosticsTable(obj)[, c("Q", "Q2", "TotalQ")]
+```
+
+With the default thresholds, `Q` and `Q2` values well below 1 (as is typical
+for a clean multiplicative series like `AirPassengers`) are classified as
+`Good` on their own, and if the other diagnostic groups are also unproblematic,
+the overall summary `TotalQ` is `Good` as well.
+
+# References
+
+- JDemetra+ v3 source, `jdplus-main`:
+  [X13Extractor](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-x13-base-parent/jdplus-x13-base-core/src/main/java/jdplus/x13/base/core/x13/extractors/X13Extractor.java),
+  [TramoSeatsExtractor](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-tramoseats-base-parent/jdplus-tramoseats-base-core/src/main/java/jdplus/tramoseats/base/core/tramoseats/extractors/TramoSeatsExtractor.java),
+  [ProcDiagnostic](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-toolkit-base-parent/jdplus-toolkit-base-api/src/main/java/jdplus/toolkit/base/api/processing/ProcDiagnostic.java),
+  [MDiagnostics](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-x13-base-parent/jdplus-x13-base-core/src/main/java/jdplus/x13/base/core/x13/diagnostics/MDiagnostics.java),
+  [SeatsDiagnostics](https://github.com/jdemetra/jdplus-main/blob/develop/jdplus-main-base/jdplus-tramoseats-base-parent/jdplus-tramoseats-base-core/src/main/java/jdplus/tramoseats/base/core/seats/diagnostics/SeatsDiagnostics.java)
+- JDemetra+ documentation: <https://jdemetradocumentation.github.io/JDemetra-documentation/>

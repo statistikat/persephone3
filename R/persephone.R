@@ -18,7 +18,11 @@
 #' effects for a persephone object, see [plotSeasIrrCal]
 #' - `plotResiduals(...)`: Several interactive plots in connection with
 #'   residuals for a persephone
-#' object, see [plotResiduals]
+#'   object, see [plotResiduals]
+#' - `getOutliers()`: Extract outlier information from the model run, see
+#'   [getOutliers()]
+#' - `getRegressors()`: Extract the coefficients of all regression variables
+#'   of the model run, see [getRegressors()]
 #'
 #' @section Read-Only fields:
 #'
@@ -167,6 +171,20 @@ persephone <- R6::R6Class(
     #' @param ... additional arguments passed to \code{\link{fixOutlier}}
     fixOutlier = function(...) {
       fixOutlier(self, ...)
+    },
+    #' @description extract outlier information from the model run,
+    #'   see [getOutliers()]
+    #' @return A data frame as described in [getOutliers()], `NA` if the model
+    #'   contains no outliers
+    getOutliers = function() {
+      getOutliers(self)
+    },
+    #' @description extract the coefficients of all regression variables of
+    #'   the model run, see [getRegressors()]
+    #' @return A data frame as described in [getRegressors()], `NULL` if the
+    #'   model contains no regression variables
+    getRegressors = function() {
+      getRegressors(self)
     }
   ),
   # ---- Active Bindings ----

@@ -11,19 +11,51 @@
 #'   \item{name}{Formatted outlier name (e.g., "AO1953.7" for additive outlier)}
 #'   \item{type}{Outlier type: AO (Additive Outlier), LS (Level Shift), or TC (Transient Change)}
 #'   \item{coef.value}{Estimated coefficient value}
-#'   \item{stde}{Standard error of the coefficient}
-#'   \item{t}{T-statistic}
-#'   \item{pvalue}{Two-sided p-value}
+#'   \item{stde}{Standard error of the coefficient (`NA` if `coef.type` is
+#'     "FIXED")}
+#'   \item{t}{T-statistic, `coef.value / stde`}
+#'   \item{pvalue}{Two-sided p-value of `t` under a t distribution with
+#'     `neffectiveobs - nparams` degrees of freedom}
 #'   \item{date}{Date of the outlier as Date object}
 #'   \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
+#'   \item{autoout}{Logical, TRUE for outliers detected automatically by
+#'     X-13ARIMA-SEATS or TRAMO/SEATS, FALSE for outliers that were specified
+#'     manually with the `outliers` argument}
+#'   \item{recentout}{Logical, TRUE if the outlier falls into one of the last
+#'     observations of the series: the last 5 observations for monthly series,
+#'     the last 3 for quarterly series, the last 1 for all other frequencies
+#'     (e.g., annual). Outliers before the beginning of the series or before
+#'     the estimation span are never flagged.}
+#'
+#' @details
+#' X-13ARIMA-SEATS and TRAMO/SEATS do not directly report standard errors,
+#' t-statistics, or p-values for outlier effects. These quantities are computed
+#' here from the estimated coefficients and the covariance matrix (`bvar`),
+#' following the same methodology as \pkg{rjd3toolkit}. Results can therefore
+#' be verified against `summary(x$output$preprocessing)$xregs`.
+#'
+#' Because outliers are selected only when their absolute t-statistic exceeds
+#' the critical value defined in the `outlier` specification, the reported
+#' p-values are subject to selection effects. They should be viewed as
+#' descriptive statistics for the fitted model rather than as formal evidence
+#' of adjustment quality.
+#'
+#' The output of a run does not distinguish manually specified from
+#' automatically detected outliers. `autoout` therefore compares the
+#' `type`/`date` pairs of the run output with the manually specified outliers
+#' read from the model specification (`regarima$regression$outliers` for x13,
+#' `tramo$regression$outliers` for tramoseats). `recentout` is evaluated
+#' independently of `autoout`, so a manually specified outlier close to the
+#' end of the series is flagged as well.
 #'
 #' @note This is an internal function used by other get* functions and diagnostics.
 #' @keywords internal
 #'
 #' @examples
-#' # obj <- perX13(AirPassengers, "rsa3")
+#' # obj <- perX13(AirPassengers, "rsa3", outliers = "AO1960.5")
 #' # obj$run()
-#' # getOutliers(obj)
+#' # getOutliers(obj)                  # all outliers
+#' # subset(getOutliers(obj), autoout) # without the manually specified one
 getOutliers <- function(x) {
   if (is.null(x$output)) {
     stop("No results from run available.\n")
@@ -61,15 +93,25 @@ getOutliers <- function(x) {
     # bvar only covers the ESTIMATED coefficients, in the order of all
     # regression variables. FIXED ones (e.g. manually specified outliers
     # outside the estimation range) get no standard error. Same mapping as
-    # in getArimaCoef().
-    coef_type <- vapply(
+    # in getRegressors(). One regression variable can carry several
+    # coefficients (trading days: one per weekday), so everything below is
+    # indexed per coefficient, not per variable.
+    coef_types <- lapply(
       variables,
       function(v) {
-        if (is.null(v$coef$type)) NA_character_ else as.character(v$coef$type)
-      },
-      ""
+        n <- NROW(v$coef)
+        if (n == 0) {
+          character(0)
+        } else if (is.null(v$coef$type)) {
+          rep(NA_character_, n)
+        } else {
+          as.character(v$coef$type)
+        }
+      }
     )
-    stde_all <- rep(NA_real_, length(variables))
+    coef_n <- vapply(coef_types, length, integer(1L))
+    coef_type <- unlist(coef_types, use.names = FALSE)
+    stde_all <- rep(NA_real_, length(coef_type))
     bvar <- x$output$preprocessing$estimation$bvar
     if (length(bvar) > 0) {
       sel <- coef_type == "ESTIMATED"
@@ -78,11 +120,14 @@ getOutliers <- function(x) {
       } else {
         warning(
           "bvar does not match the number of estimated regression ",
-          "variables. Standard errors are unreliable."
+          "coefficients. Standard errors are unreliable."
         )
       }
     }
-    stde <- stde_all[otlind]
+    # outliers always carry exactly one coefficient, so the index of an
+    # outlier in the flattened vector is the cumulated number of coefficients
+    # up to its variable
+    stde <- stde_all[cumsum(coef_n)[otlind]]
     t <- outliers$coef.value / stde
     ndf <- x$output$preprocessing$estimation$likelihood$neffectiveobs -
       x$output$preprocessing$estimation$likelihood$nparams
@@ -91,6 +136,45 @@ getOutliers <- function(x) {
     outliers$t <- t
     outliers$pvalue <- pval
 
+    # The output of the run does not distinguish manually specified from
+    # automatically detected outliers; only the specification knows the manual
+    # ones (regarima$regression$outliers for x13, tramo$regression$outliers
+    # for tramoseats). Matching works on the type/date pair.
+    spec <- unclass(x$params)
+    spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
+    spec_outliers <- spec$regression$outliers
+    manual <- if (length(spec_outliers) == 0) {
+      NULL
+    } else {
+      data.frame(
+        type = vapply(spec_outliers, function(o) as.character(o$code), ""),
+        date = as.Date(
+          vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
+          origin = "1970-01-01"
+        )
+      )
+    }
+    outliers$autoout <- if (is.null(manual)) {
+      TRUE
+    } else {
+      !(paste(outliers$type, outliers$date) %in% paste(manual$type, manual$date))
+    }
+
+    # recentout: outliers falling into the last 5 (monthly) or 3 (quarterly)
+    # observations of the series, regardless of how they entered the model
+    frq <- frequency(x$ts)
+    k <- if (frq == 12) 5 else if (frq == 4) 3 else 1
+    per <- if (frq == 12) {
+      lubridate::year(outliers$date) +
+        (lubridate::month(outliers$date) - 1) / 12
+    } else {
+      lubridate::year(outliers$date) +
+        (lubridate::quarter(outliers$date) - 1) / 4
+    }
+    lag_periods <- round((as.numeric(tail(time(x$ts), 1)) - per) * frq)
+    outliers$recentout <- lag_periods >= 0 & lag_periods <= k - 1
+
+    rownames(outliers) <- NULL
     outliers <- outliers[, c(
       "name",
       "type",
@@ -99,92 +183,45 @@ getOutliers <- function(x) {
       "t",
       "pvalue",
       "date",
-      "coef.type"
+      "coef.type",
+      "autoout",
+      "recentout"
     )]
+    class(outliers) <- c("persephoneOutliers", "data.frame")
   } else {
     outliers <- NA
   }
   outliers
 }
 
-#' Extract automatically detected outliers from a Persephone object
+#' Extract regression coefficients from a Persephone object
 #'
-#' Returns only the outliers that were detected automatically by
-#' X-13ARIMA-SEATS or TRAMO/SEATS, that is all outliers reported in the model
-#' output minus the ones specified manually with the `outliers` argument. The
-#' manual ones are read from the model specification
-#' (`regarima$regression$outliers` for x13, `tramo$regression$outliers` for
-#' tramoseats), because the output of the run does not distinguish manually
-#' specified from automatically detected outliers.
-#'
-#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
-#'   completed model run
-#' @return A data frame with the columns of [getOutliers()], restricted to the
-#'   automatically detected outliers. It has zero rows if the model contains no
-#'   such outlier.
-#'
-#' @note This is an internal function. Unlike [getOutliers()] it works on single
-#'   series objects only.
-#' @keywords internal
-#'
-#' @examples
-#' # obj <- perX13(AirPassengers, "rsa3", outliers = "AO1960.5")
-#' # obj$run()
-#' # getOutliers(obj)     # all outliers
-#' # getNewOutliers(obj)  # without the manually specified one
-getNewOutliers <- function(x) {
-  all_outliers <- getOutliers(x)
-  spec <- unclass(x$params)
-  spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
-  spec_outliers <- spec$regression$outliers
-  manual <- if (length(spec_outliers) == 0) {
-    NULL
-  } else {
-    data.frame(
-      type = vapply(spec_outliers, function(o) as.character(o$code), ""),
-      date = as.Date(
-        vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
-        origin = "1970-01-01"
-      )
-    )
-  }
-  if (length(all_outliers) == 1 && is.na(all_outliers)) {
-    return(data.frame(
-      name = character(0),
-      type = character(0),
-      coef.value = numeric(0),
-      stde = numeric(0),
-      t = numeric(0),
-      pvalue = numeric(0),
-      date = as.Date(character(0)),
-      coef.type = character(0)
-    ))
-  }
-  if (is.null(manual)) {
-    return(all_outliers)
-  }
-  keep <- !(paste(all_outliers$type, all_outliers$date) %in%
-    paste(manual$type, manual$date))
-  new_outliers <- all_outliers[keep, , drop = FALSE]
-  rownames(new_outliers) <- NULL
-  new_outliers
-}
-
-#' Extract ARIMA regression coefficients from a Persephone object
-#'
-#' This function retrieves all regression and ARIMA coefficients from a fitted
-#' Persephone model, including outliers, trading day effects, Easter effects,
-#' and other regressors. It calculates standard errors, t-statistics, and
-#' p-values for estimated coefficients.
+#' This function retrieves the coefficients of all regression variables of a
+#' fitted Persephone model: outliers, trading days, Easter, leap year, mean,
+#' user defined variables and any other regressor present in the model. It
+#' calculates standard errors, t-statistics, and p-values for estimated
+#' coefficients.
 #'
 #' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
 #'   completed model run
 #' @return A data frame with columns:
-#'   \item{name}{Variable name (e.g., "AO1953.7", "td", "easter")}
+#'   \item{name}{Variable name (e.g., "AO1953.7", "td1", "easter", "leap")}
+#'   \item{type}{Kind of regressor, as reported by the model (e.g. "TD",
+#'     "EASTER", "LP", "MEAN", "USER"); all outlier types (AO, LS, TC) are
+#'     summarized as "outlier"}
 #'   \item{value}{Coefficient estimate}
 #'   \item{stde}{Standard error (NA for non-estimated types)}
 #'   \item{t}{T-statistic for estimated coefficients}
 #'   \item{pvalue}{Two-sided p-value for estimated coefficients}
+#'
+#' @details
+#' One regression variable can carry several coefficients (trading days: one
+#' per weekday), so the table has one row per coefficient. Standard errors come
+#' from the covariance matrix (`bvar`), which only covers the estimated
+#' coefficients; fixed ones (e.g. manually specified outliers outside the
+#' estimation range) get `NA`. Outliers are recognized by the type of their
+#' regression variable and not by their name, so that no other regressor can be
+#' mistaken for one.
 #'
 #' @note This is an internal function used by diagnostics and reporting.
 #' @keywords internal
@@ -192,18 +229,19 @@ getNewOutliers <- function(x) {
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
 #' # obj$run()
-#' # getArimaCoef(obj)
-getArimaCoef <- function(x) {
+#' # getRegressors(obj)
+getRegressors <- function(x) {
   if (is.null(x$output)) {
     stop("No results from run available.\n")
   }
   stopifnot(inherits(x$output, c("JD3_X13_RSLTS", "JD3_TRAMOSEATS_RSLTS")))
   q <- x$output$preprocessing
+  variables <- q$description$variables
 
-  if (length(q$description$variables) > 0) {
+  if (length(variables) > 0) {
     regs <- do.call(
       "rbind",
-      lapply(q$description$variables, function(z) {
+      lapply(variables, function(z) {
         z$coef
       })
     )
@@ -215,51 +253,121 @@ getArimaCoef <- function(x) {
       pvalue = NA
     )
     rownames(xregs) <- NULL
-    stde <- sqrt(diag(q$estimation$bvar))
-    sel <- xregs$type == "ESTIMATED"
-    t <- xregs$value[sel] / stde
+    # regs$type is the type of the *coefficient* (ESTIMATED/FIXED) and is kept
+    # apart because the returned table uses `type` for the kind of regressor
+    coef_type <- as.character(xregs$type)
+    xregs$type <- NULL
+    # same mapping as in getOutliers(): bvar covers the ESTIMATED coefficients
+    # only, in the order of all regression variables and of the coefficients
+    # within a variable
+    stde <- rep(NA_real_, nrow(xregs))
+    sel <- coef_type == "ESTIMATED"
+    bvar <- q$estimation$bvar
+    if (length(bvar) > 0) {
+      if (nrow(bvar) == sum(sel)) {
+        stde[sel] <- sqrt(diag(bvar))
+      } else {
+        warning(
+          "bvar does not match the number of estimated regression ",
+          "coefficients. Standard errors are unreliable."
+        )
+      }
+    }
+    t <- xregs$value[sel] / stde[sel]
     ndf <- q$estimation$likelihood$neffectiveobs -
       q$estimation$likelihood$nparams
     pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
-    xregs$stde[sel] <- stde
+    xregs$stde[sel] <- stde[sel]
     xregs$t[sel] <- t
     xregs$pvalue[sel] <- pval
 
-    otlind <- which(grepl(c("AO|LS|TC"), xregs$name))
-    otltype <- substr(xregs[otlind, ]$name, 1, 2)
-    date <- substr(xregs[otlind, ]$name, 5, 14)
+    # outliers are recognized by the type of their regression variable, not by
+    # their name; all other regressors keep the name they are reported with
+    vartype <- unlist(lapply(variables, function(z) as.character(z$type)))
+    coef_n <- vapply(variables, function(z) NROW(z$coef), integer(1L))
+    # the type of a variable repeats for each of its coefficients
+    # (trading days: mon ... sat)
+    regtype <- rep(vartype, times = coef_n)
+    regtype[regtype %in% c("AO", "LS", "TC")] <- "outlier"
+    otlvar <- which(vartype %in% c("AO", "LS", "TC"))
+    # outliers always carry exactly one coefficient, so their row in the
+    # flattened table is the cumulated number of coefficients up to them
+    otlind <- cumsum(coef_n)[otlvar]
+    otltype <- vartype[otlvar]
+    date <- substr(xregs$name[otlind], 5, 14)
     newname <- lapply(strsplit(substr(date, 1, 7), "-"), as.numeric)
     if (frequency(x$ts) == 12) {
-      xregs[otlind, ]$name <- lapply(newname, function(nn) {
+      xregs$name[otlind] <- vapply(newname, function(nn) {
         paste0(nn, collapse = ".")
-      })
+      }, "")
     } else {
       newname <- lapply(newname, function(nn) {
         c(nn[1], ceiling(as.numeric(nn[2]) / 3))
       })
-      xregs[otlind, ]$name <- lapply(newname, function(nn2) {
+      xregs$name[otlind] <- vapply(newname, function(nn2) {
         paste0(nn2, collapse = ".")
-      })
+      }, "")
     }
-    xregs[otlind, ]$name <- paste0(otltype, xregs[otlind, ]$name)
+    xregs$name[otlind] <- paste0(otltype, xregs$name[otlind])
 
-    # colnames(xregs) <- c(
-    #   "Estimate", "Type", "Std. Error",
-    #   "T-stat", "Pr(>|t|)"
-    # )
-    xregs <- xregs[, c("name", "value", "stde", "t", "pvalue")]
+    xregs$type <- regtype
+    xregs <- xregs[, c("name", "type", "value", "stde", "t", "pvalue")]
+    class(xregs) <- c("persephoneRegressors", "data.frame")
     xregs
   } else {
     NULL
   }
 }
 
-
-#' Get formatted ARIMA coefficient table for printing
+#' Print method for the outlier table of a Persephone object
 #'
-#' This function provides a human-readable, formatted printout of ARIMA
-#' coefficients using R's standard coefficient matrix formatting. It is
-#' primarily used for console output and reporting.
+#' Prints the data frame returned by [getOutliers()] with left aligned
+#' character columns; the standard print method of [print.data.frame()]
+#' right aligns them.
+#'
+#' @param x A data frame of class `persephoneOutliers`, as returned by
+#'   [getOutliers()]
+#' @param ... further arguments passed to [print.data.frame()]
+#' @return `x`, invisibly
+#'
+#' @export
+print.persephoneOutliers <- function(x, ...) {
+  # drop only our own class, not "data.frame": row.names() does not work on a
+  # plain list, which unclass(x) would produce
+  df <- x
+  class(df) <- "data.frame"
+  print(df, right = FALSE, ...)
+  invisible(x)
+}
+
+#' Print method for the regression table of a Persephone object
+#'
+#' Prints the data frame returned by [getRegressors()] with left aligned
+#' character columns; the standard print method of [print.data.frame()]
+#' right aligns them.
+#'
+#' @param x A data frame of class `persephoneRegressors`, as returned by
+#'   [getRegressors()]
+#' @param ... further arguments passed to [print.data.frame()]
+#' @return `x`, invisibly
+#'
+#' @export
+print.persephoneRegressors <- function(x, ...) {
+  # drop only our own class, not "data.frame": row.names() does not work on a
+  # plain list, which unclass(x) would produce
+  df <- x
+  class(df) <- "data.frame"
+  print(df, right = FALSE, ...)
+  invisible(x)
+}
+
+
+#' Get formatted regression coefficient table for printing
+#'
+#' This function provides a human-readable, formatted printout of the
+#' coefficients of all regression variables of a Persephone model using R's
+#' standard coefficient matrix formatting. It is primarily used for console
+#' output and reporting.
 #'
 #' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
 #' @return Character vector of formatted coefficient table lines (invisible)
@@ -270,19 +378,20 @@ getArimaCoef <- function(x) {
 #' @examples
 #' # obj <- perX13(AirPassengers, "rsa3")
 #' # obj$run()
-#' # getArimaCoef_formatted(obj)
-getArimaCoef_formatted <- function(x) {
-  xregs <- getArimaCoef(x)
+#' # getRegressors_formatted(obj)
+getRegressors_formatted <- function(x) {
+  xregs <- getRegressors(x)
   if (is.null(xregs)) {
     return(character(0))
   }
   xregs.print <- xregs[, c("value", "stde", "t", "pvalue")]
   rownames(xregs.print) <- xregs$name
-  colnames(xregs.print) <- c("Estimate", "Std.Err", "Z value", "Pr(>z)")
-
-  printCoefmat(xregs.print)
-  # Capture formatted output as character vector
-  (formatted_output <- capture.output(printCoefmat(xregs.print)))
+  colnames(xregs.print) <- c("Estimate", "Std.Err", "T-stat", "Pr(>|t|)")
+  # print the table once and return the formatted lines invisibly
+  formatted_output <- capture.output(printCoefmat(xregs.print))
+  cat(formatted_output, sep = "\n")
+  cat("\n")
+  invisible(formatted_output)
 
   # return(list(
   #   table = xregs.print,
@@ -294,7 +403,7 @@ getArimaCoef_formatted <- function(x) {
 ###         from rdj3toolkit         ###
 ########################################
 # Note: .regarima_coef_table.default is a legacy function from rdj3toolkit
-# that was replaced by getArimaCoef(). Kept here for reference.
+# that was replaced by getRegressors(). Kept here for reference.
 
 #' Extract outliers and create time series for plotting
 #'
@@ -399,7 +508,7 @@ gettsout <- function(x) {
 #'
 #' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
 #' @param ... Additional functions to run (passed as character strings)
-#' @param funcs Character vector of function names to run (default: `c("getOutliers", "getArimaCoef")`)
+#' @param funcs Character vector of function names to run (default: `c("getOutliers", "getRegressors")`)
 #' @return Invisible list of results from each function
 #'
 #' @note This is an internal function for interactive diagnostics.
@@ -409,8 +518,8 @@ gettsout <- function(x) {
 #' # obj <- perX13(AirPassengers, "rsa3")
 #' # obj$run()
 #' # getDiagnostics(obj)
-#' # getDiagnostics(obj, funcs = c("getOutliers", "getArimaCoef", "gettsout"))
-getDiagnostics <- function(x, ..., funcs = c("getOutliers", "getArimaCoef")) {
+#' # getDiagnostics(obj, funcs = c("getOutliers", "getRegressors", "gettsout"))
+getDiagnostics <- function(x, ..., funcs = c("getOutliers", "getRegressors")) {
   # Combine default functions with additional ones
   all_funcs <- c(funcs, c(...))
 

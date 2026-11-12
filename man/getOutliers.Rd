@@ -15,11 +15,21 @@ A data frame with columns:
 \item{name}{Formatted outlier name (e.g., "AO1953.7" for additive outlier)}
 \item{type}{Outlier type: AO (Additive Outlier), LS (Level Shift), or TC (Transient Change)}
 \item{coef.value}{Estimated coefficient value}
-\item{stde}{Standard error of the coefficient}
-\item{t}{T-statistic}
-\item{pvalue}{Two-sided p-value}
+\item{stde}{Standard error of the coefficient (\code{NA} if \code{coef.type} is
+"FIXED")}
+\item{t}{T-statistic, \code{coef.value / stde}}
+\item{pvalue}{Two-sided p-value of \code{t} under a t distribution with
+\code{neffectiveobs - nparams} degrees of freedom}
 \item{date}{Date of the outlier as Date object}
 \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
+\item{autoout}{Logical, TRUE for outliers detected automatically by
+X-13ARIMA-SEATS or TRAMO/SEATS, FALSE for outliers that were specified
+manually with the \code{outliers} argument}
+\item{recentout}{Logical, TRUE if the outlier falls into one of the last
+observations of the series: the last 5 observations for monthly series,
+the last 3 for quarterly series, the last 1 for all other frequencies
+(e.g., annual). Outliers before the beginning of the series or before
+the estimation span are never flagged.}
 }
 \description{
 This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
@@ -27,12 +37,34 @@ model, including coefficients, standard errors, t-statistics, and p-values.
 It processes the raw output from X-13ARIMA-SEATS or TRAMO/SEATS into a clean
 data frame with formatted dates and names.
 }
+\details{
+X-13ARIMA-SEATS and TRAMO/SEATS do not directly report standard errors,
+t-statistics, or p-values for outlier effects. These quantities are computed
+here from the estimated coefficients and the covariance matrix (\code{bvar}),
+following the same methodology as \pkg{rjd3toolkit}. Results can therefore
+be verified against \code{summary(x$output$preprocessing)$xregs}.
+
+Because outliers are selected only when their absolute t-statistic exceeds
+the critical value defined in the \code{outlier} specification, the reported
+p-values are subject to selection effects. They should be viewed as
+descriptive statistics for the fitted model rather than as formal evidence
+of adjustment quality.
+
+The output of a run does not distinguish manually specified from
+automatically detected outliers. \code{autoout} therefore compares the
+\code{type}/\code{date} pairs of the run output with the manually specified outliers
+read from the model specification (\code{regarima$regression$outliers} for x13,
+\code{tramo$regression$outliers} for tramoseats). \code{recentout} is evaluated
+independently of \code{autoout}, so a manually specified outlier close to the
+end of the series is flagged as well.
+}
 \note{
 This is an internal function used by other get* functions and diagnostics.
 }
 \examples{
-# obj <- perX13(AirPassengers, "rsa3")
+# obj <- perX13(AirPassengers, "rsa3", outliers = "AO1960.5")
 # obj$run()
-# getOutliers(obj)
+# getOutliers(obj)                  # all outliers
+# subset(getOutliers(obj), autoout) # without the manually specified one
 }
 \keyword{internal}

@@ -70,9 +70,9 @@ compare <- function(o, label) {
   new <- suppressWarnings(getOutliers_new(o))
   cat("--- ALT ---\n"); print(old, digits = 5)
   cat("--- NEU ---\n"); print(new, digits = 5)
-  ref <- persephone3:::getArimaCoef(o)
+  ref <- persephone3:::getRegressors(o)
   ref <- ref[ref$name %in% new$name, c("name", "stde", "t", "pvalue")]
-  cat("--- NEU == getArimaCoef()?",
+  cat("--- NEU == getRegressors()?",
       isTRUE(all.equal(ref, new[, c("name", "stde", "t", "pvalue")],
                        check.attributes = FALSE)), "\n")
   if (isTRUE(all.equal(old[, c("stde", "t", "pvalue")],

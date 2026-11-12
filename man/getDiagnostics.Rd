@@ -4,14 +4,14 @@
 \alias{getDiagnostics}
 \title{Run multiple diagnostic extraction functions on a Persephone object}
 \usage{
-getDiagnostics(x, ..., funcs = c("getOutliers", "getArimaCoef"))
+getDiagnostics(x, ..., funcs = c("getOutliers", "getRegressors"))
 }
 \arguments{
 \item{x}{A Persephone object (e.g., \code{x13Single} or \code{tramoseatsSingle})}
 
 \item{...}{Additional functions to run (passed as character strings)}
 
-\item{funcs}{Character vector of function names to run (default: \code{c("getOutliers", "getArimaCoef")})}
+\item{funcs}{Character vector of function names to run (default: \code{c("getOutliers", "getRegressors")})}
 }
 \value{
 Invisible list of results from each function
@@ -28,6 +28,6 @@ This is an internal function for interactive diagnostics.
 # obj <- perX13(AirPassengers, "rsa3")
 # obj$run()
 # getDiagnostics(obj)
-# getDiagnostics(obj, funcs = c("getOutliers", "getArimaCoef", "gettsout"))
+# getDiagnostics(obj, funcs = c("getOutliers", "getRegressors", "gettsout"))
 }
 \keyword{internal}

@@ -45,3 +45,14 @@ obj_diag$run()
 # diagnosticsTable should work
 diag_table <- obj_diag$diagnosticsTable()
 expect_true(!is.null(diag_table))
+
+# with trading day regressors: getOutliers() must handle variables that carry
+# several coefficients, and the td F-test columns must be present
+obj_diag_td <- perX13(AirPassengers, "rsa3", td.option = "TradingDays")
+expect_true(inherits(obj_diag_td$run(), "JD3_X13_RSLTS"))
+diag_table_td <- obj_diag_td$diagnosticsTable()
+expect_true("TD_status" %in% names(diag_table_td))
+expect_true("td" %in% vapply(
+  obj_diag_td$output$preprocessing$description$variables,
+  function(v) v$name, ""
+))

@@ -22,6 +22,10 @@ The function classifies various diagnostic statistics into quality categories:
 "Bad" (0.001 ≤ p < 0.01), "Severe" (p < 0.001)
 \item \strong{Seasonality/TD tests:} "Good" (p ≥ 0.1), "Uncertain" (0.05 ≤ p < 0.1),
 "Bad" (0.01 ≤ p < 0.05), "Severe" (p < 0.01)
+\item \strong{TD regression F-test (\code{TD_status}):} small p indicates a
+significant trading day effect and thus justified trading-day
+regressors, i.e. the reverse direction of the residual tests:
+"Good" (p < 0.05), "Uncertain" (0.05 ≤ p < 0.1), "Bad" (p ≥ 0.1)
 \item \strong{Outliers:} "Good" (< 3\\%), "Uncertain" (3-5\\%), "Severe" (> 5\\%)
 }
 }
@@ -41,13 +45,34 @@ The function classifies various diagnostic statistics into quality categories:
 \item{combI_all}{Combined test for calendar effects in irregular (all observations)}
 \item{combI_last}{Combined test for calendar effects in irregular (last year)}
 \item{fTestSA_td}{F-test for trading day effects in SA series}
-\item{TD_Ftest}{P-value of regression F-test for trading days}
+\item{TD_Ftest}{P-value of regression F-test for trading days. \code{NA}
+if the final model contains no trading-day regressors — e.g.
+templates without calendar effects (\code{"rsa3"}) or when the
+automatic pre-test (\code{td.test = "Remove"}, as in \code{"rsa5c"})
+dropped them; use \code{td.test = "None"} to force their inclusion}
+\item{TD_status}{Classification of the regression F-test for trading days:
+"Good" if the trading day effect is significant (small p), "Bad" if
+the trading-day regressors are not justified by the data}
 \item{logTransform}{Logical indicating if log transformation was applied}
 \item{arimaMdl}{ARIMA model specification as string}
-\item{nOutliers}{Classification of outlier proportion}
+\item{nOutliers_Q}{Classification of outlier proportion}
+\item{nOutliers}{Number of outliers in the model}
+\item{nAutoout}{Number of automatically detected outliers (see the
+\code{autoout} column of \code{\link{getOutliers}})}
+\item{nRecentout}{Number of outliers falling into the last observations
+of the series (see the \code{recentout} column of
+\code{\link{getOutliers}})}
 \item{Q}{M-statistics Q value}
 \item{Q2}{M-statistics Q-M2 value}
-\item{TotalQ}{Overall quality summary}
+\item{TotalQ}{Overall quality summary (JDemetra+ node
+\code{quality.summary}): an aggregate of all standard diagnostic
+tests (residual, forecasting, outlier, spectral, seasonality and
+trading-day tests, plus the M-statistics Q/Q2 for X-13 or the
+Wiener-Kolmogorov tests for SEATS), classified as \code{Good},
+\code{Uncertain}, \code{Bad}, \code{Severe} or \code{Undefined}.
+See the
+\href{https://statistikat.github.io/persephone3/articles/persephone-diagnostics.html}{diagnostics vignette}
+for details}
 }
 }
 
