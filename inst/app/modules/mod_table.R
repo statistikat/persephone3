@@ -1,211 +1,102 @@
-# UI
-
-#library(shinycssloaders)
-
 mod_table_ui <- function(id) {
   ns <- NS(id)
-
   tagList(
     h4("Select series"),
     shinycssloaders::withSpinner(
-      DT::DTOutput(ns("tbl")),
-      type = 5,
-      color = "#0066CC",
+      DT::DTOutput(ns("tbl")), type = 5, color = "#0066CC",
       caption = "Loading series ..."
     )
   )
 }
 
-# Server
-
-mod_table_server <- function(id, hts) {
-  cat("mod_table_server started\n")
-  cat("hts class:", class(hts), "\n")
-
+mod_table_server <- function(id, hts, registry = dashboard_registry(hts)) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-
-    # STATE
-    updating <- reactiveVal(FALSE)
     selected <- reactiveVal(character())
-
-    cat("Getting series names...\n")
-    series_names <- get_all_series(hts)
-    cat("Found", length(series_names), "series\n")
-    cat("Series:", paste(series_names, collapse = ", "), "\n")
-
-    # 1. DataFrame zuerst anlegen
     df <- data.frame(
-      series = series_names,
+      selected = sprintf(
+        '<input type="checkbox" class="row-select" data-id="%s" aria-label="Select series">',
+        registry$id
+      ),
+      Series = paste0(strrep("\u2003", registry$depth),
+                      ifelse(registry$depth > 0L, "\u25b8 ", ""), registry$label),
+      Quality = vapply(registry$id, function(id) {
+        tryCatch(get_quality(dashboard_series(hts, id, registry)),
+                 error = function(e) NA_character_)
+      }, character(1)),
       stringsAsFactors = FALSE
     )
 
-    # 2. Level berechnen
-    df$level <- stringr::str_count(df$series, "/")
-
-    # 3. Anzeige-Spalte (Einrückung + schöner Name)
-    df$display <- paste0(
-      strrep("&nbsp;&nbsp;", df$level),
-      ifelse(df$level > 0, "▸ ", ""),
-      sub(".*/", "", df$series)
-    )
-
-    # Checkbox-Spalte
-    checkboxes <- sprintf(
-      '<input type="checkbox" class="row-select" data-id="%s">',
-      df$series
-    )
-
-    df$quality <- sapply(df$series, function(s) {
-      tryCatch(
-        get_quality(hts, s),
-        error = function(e) {
-          cat("Error getting quality for", s, ":", conditionMessage(e), "\n")
-          NA_character_
-        }
-      )
-    })
-
-    df$quality <- tolower(trimws(df$quality))
-
-    quality_map <- c(
-      "good" = 3,
-      "ok" = 2,
-      "warning" = 1,
-      "bad" = 0
-    )
-
-    df$quality_score <- quality_map[df$quality]
-    df$quality_score[is.na(df$quality_score)] <- -1
-
-    df <- data.frame(
-      Series = df$display,
-      Quality = df$quality,
-      stringsAsFactors = FALSE
-    )
-
-    #Checkbox separat vorne einfügen
-    df <- cbind(selected = checkboxes, df)
-
-    cat("DataFrame created with", nrow(df), "rows\n")
-    print(df)
-
-    # DataTables zählt ab 0, nicht ab 1!
     output$tbl <- DT::renderDT({
-      cat("Rendering DT table...\n")
       DT::datatable(
-        df,
-        escape = FALSE,
-        selection = "none",
+        df, rownames = FALSE, escape = 2:3, selection = "none",
         colnames = c("", "Series", "Quality"),
         options = list(
-          pageLength = 10,
-          dom = "tip",
-          columnDefs = list(
-            list(orderable = FALSE, targets = 0)
-          )
+          pageLength = 10, dom = "tip", order = list(),
+          columnDefs = list(list(orderable = FALSE, targets = 0))
         ),
-        callback = DT::JS(sprintf(
-          "
+        callback = DT::JS(sprintf("
   var tbl = table;
+  var node = $(tbl.table().node());
+  var container = document.getElementById(%s);
+  var validIds = new Set(%s);
+  var selected = container.persephoneSelected || new Set();
+  container.persephoneSelected = selected;
+  selected.forEach(function(id) { if (!validIds.has(id)) selected.delete(id); });
 
-  // Double-click on column header to reset sorting
-  $(document).on('dblclick', 'table.dataTable thead th', function() {
+  function syncRows() {
+    node.find('input.row-select').each(function() {
+      var checked = selected.has(this.getAttribute('data-id'));
+      this.checked = checked;
+      $(this).closest('tr').toggleClass('selected', checked);
+    });
+  }
+
+  node.off('.persephoneSelect');
+  node.on('draw.dt.persephoneSelect', syncRows);
+  node.on('dblclick.persephoneSelect', 'thead th', function() {
     tbl.order([]).draw();
   });
-
-  // Row Click
-  tbl.on('click', 'tbody tr', function(e) {
-
+  node.on('click.persephoneSelect', 'tbody tr', function(e) {
     if ($(e.target).is('input')) return;
-
-    var cb = $(this).find('input.row-select');
-    cb.prop('checked', !cb.prop('checked')).trigger('change');
+    var checkbox = $(this).find('input.row-select');
+    checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
   });
-
-  // Checkbox change
-  tbl.on('change', '.row-select', function() {
-
-    var id = $(this).data('id');
-    var checked = $(this).is(':checked');
-    var row = $(this).closest('tr');
-
-    if (checked) {
-      row.addClass('selected');
-    } else {
-      row.removeClass('selected');
-    }
-
-    Shiny.setInputValue('%s', {
-      id: id,
-      checked: checked,
-      nonce: Math.random()
-    });
+  node.on('change.persephoneSelect', 'input.row-select', function() {
+    var id = this.getAttribute('data-id');
+    if (!validIds.has(id)) return;
+    if (this.checked) selected.add(id); else selected.delete(id);
+    syncRows();
+    Shiny.setInputValue(%s, {id: id, checked: this.checked}, {priority: 'event'});
   });
-
-  // From server: uncheck
-  Shiny.addCustomMessageHandler('%s', function(id) {
-
-    var el = $('input.row-select[data-id=\"' + id + '\"]');
-
-    el.prop('checked', false)
-      .closest('tr')
-      .removeClass('selected');
-
-    Shiny.setInputValue('%s', id, {priority: 'event'});
+  Shiny.addCustomMessageHandler(%s, function(id) {
+    if (!validIds.has(id)) return;
+    selected.delete(id);
+    syncRows();
   });
-
-",
-          ns("row_event"),
-          ns("uncheckRow"),
-          ns("uncheckRow_event")
-        )),
+  syncRows();
+", jsonlite::toJSON(ns("tbl"), auto_unbox = TRUE),
+          jsonlite::toJSON(registry$id, auto_unbox = FALSE),
+          jsonlite::toJSON(ns("row_event"), auto_unbox = TRUE),
+          jsonlite::toJSON(ns("uncheckRow"), auto_unbox = TRUE))),
         class = "stripe hover compact"
       )
     })
 
-    # User Event
-    # ---------- User klickt ----------
     observeEvent(input$row_event, {
-      if (updating()) {
-        return()
-      }
-
-      id <- input$row_event$id
-      checked <- input$row_event$checked
-
+      event <- input$row_event
+      if (!is.list(event) || !dashboard_valid_id(event$id, registry) ||
+          !is.logical(event$checked) || length(event$checked) != 1L ||
+          is.na(event$checked)) return()
       current <- selected()
-
-      if (checked) {
-        current <- unique(c(current, id))
-      } else {
-        current <- setdiff(current, id)
-      }
-
-      selected(current)
+      selected(if (event$checked) unique(c(current, event$id)) else setdiff(current, event$id))
     })
 
-    # Server Event
-    # ---------- Server zwingt uncheck ----------
-    observeEvent(
-      input$uncheckRow_event,
-      {
-        updating(TRUE)
+    observeEvent(input$uncheckRow_event, {
+      id <- input$uncheckRow_event
+      if (dashboard_valid_id(id, registry)) selected(setdiff(selected(), id))
+    })
 
-        id <- input$uncheckRow_event
-
-        current <- selected()
-        current <- setdiff(current, id)
-
-        selected(current)
-
-        updating(FALSE)
-      },
-      ignoreInit = TRUE
-    )
-
-    return(selected)
+    selected
   })
 }
-
-# bewusst vereinfacht – du kannst deine Checkbox-Logik später wieder einbauen

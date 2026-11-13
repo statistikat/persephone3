@@ -114,18 +114,19 @@ createDashboard_hts <- function(x, title = NULL, file = NULL,
 
   ready <- FALSE
   on.exit(if (!ready && p$is_alive()) p$kill(), add = TRUE)
-  start_time <- Sys.time()
-  while (as.numeric(difftime(Sys.time(), start_time, units = "secs")) < startup.timeout) {
+  start_time <- proc.time()[["elapsed"]]
+  repeat {
+    remaining <- startup.timeout - (proc.time()[["elapsed"]] - start_time)
+    if (remaining <= 0) break
     if (!p$is_alive()) {
       stop("Dashboard process exited before startup: ", p$read_error(), call. = FALSE)
     }
-    con <- try(suppressWarnings(base::url(shiny_url, open = "rb")), silent = TRUE)
-    if (!inherits(con, "try-error")) {
-      close(con)
+    if (dashboard_probe(port, timeout = min(0.5, remaining))) {
       ready <- TRUE
       break
     }
-    Sys.sleep(0.2)
+    remaining <- startup.timeout - (proc.time()[["elapsed"]] - start_time)
+    if (remaining > 0) Sys.sleep(min(0.2, remaining))
   }
   if (!ready) {
     stop("Dashboard failed to start within ", startup.timeout, " seconds.",
@@ -135,6 +136,28 @@ createDashboard_hts <- function(x, title = NULL, file = NULL,
   if (launch.browser) utils::browseURL(shiny_url)
   message("Dashboard running at ", shiny_url)
   invisible(p)
+}
+
+# Use an explicitly bounded socket read: opening a URL can wait for the global
+# network timeout when a child accepts a connection without sending a response.
+dashboard_probe <- function(port, timeout) {
+  tryCatch(suppressWarnings({
+    deadline <- proc.time()[["elapsed"]] + timeout
+    con <- socketConnection(host = "127.0.0.1", port = port, server = FALSE,
+                            blocking = FALSE, open = "a+b", timeout = timeout)
+    on.exit(close(con), add = TRUE)
+    writeBin(charToRaw(paste0("GET / HTTP/1.0\r\nHost: 127.0.0.1\r\n",
+                             "Connection: close\r\n\r\n")), con)
+    flush(con)
+    # A select call can return early after a signal from the child process.
+    repeat {
+      remaining <- deadline - proc.time()[["elapsed"]]
+      if (remaining <= 0) return(FALSE)
+      if (socketSelect(list(con), timeout = remaining)[1L]) break
+    }
+    status <- readLines(con, n = 1L, warn = FALSE)
+    length(status) == 1L && grepl("^HTTP/[0-9.]+ 200( |$)", status)
+  }), error = function(e) FALSE)
 }
 
 #' @describeIn createDashboard Internal helper for comparing two single series dashboards

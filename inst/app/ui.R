@@ -30,9 +30,18 @@ ui <- fluidPage(
     tags$script(HTML(
       "
   $(function() {
+    $(document).off('click.persephoneClose', '.persephone-close-tab')
+      .on('click.persephoneClose', '.persephone-close-tab', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var id = this.getAttribute('data-series-id');
+        if (/^node_[0-9]+(?:_[0-9]+)*$/.test(id)) {
+          Shiny.setInputValue('close_tab', id, {priority: 'event'});
+        }
+      });
 
-    var tabs = $('.nav.nav-tabs');
-
+    var tabs = $('#details_tabs');
+    if (!$.fn.sortable) return;
     tabs.sortable({
       axis: 'x',
       stop: function() {
@@ -40,9 +49,9 @@ ui <- fluidPage(
         var order = [];
 
         tabs.find('li a').each(function() {
-          var href = $(this).attr('href');
-          if (href && href.startsWith('#tab_')) {
-            order.push(href.replace('#tab_', ''));
+          var value = $(this).attr('data-value');
+          if (value && /^tab_node_[0-9]+(?:_[0-9]+)*$/.test(value)) {
+            order.push(value.slice(4));
           }
         });
 
@@ -64,6 +73,14 @@ ui <- fluidPage(
   }
   .series-cell {
     display: inline-block;
+  }
+  .persephone-close-tab {
+    background: none;
+    border: 0;
+    color: #777;
+    cursor: pointer;
+    margin-left: 6px;
+    padding: 0 2px;
   }
 "
     ))

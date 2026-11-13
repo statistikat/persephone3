@@ -1,63 +1,59 @@
-get_series_by_path <- function(hts, path) {
-  parts <- strsplit(path, "/")[[1]]
-
-  obj <- hts
-
-  if (parts[1] != "Aggregate") {
-    for (p in parts) {
-      obj <- obj$components[[p]]
+# Freeze a session's routing separately from its display labels. Components are
+# addressed by integer position, so names never become selectors or path syntax.
+dashboard_registry <- function(x) {
+  entries <- list()
+  visit <- function(node, path = integer(), label = "Aggregate") {
+    if (length(path) || !is.null(node$output)) {
+      entries[[length(entries) + 1L]] <<- list(
+        id = if (length(path)) paste0("node_", paste(path, collapse = "_")) else "node_0",
+        label = as.character(label), depth = length(path), path = path
+      )
+    }
+    children <- node$components
+    for (i in seq_along(children)) {
+      child_label <- names(children)[i]
+      if (is.null(child_label) || is.na(child_label) || !nzchar(child_label)) {
+        child_label <- paste("Series", i)
+      }
+      visit(children[[i]], c(path, i), child_label)
     }
   }
-
-  obj
+  visit(x)
+  result <- data.frame(
+    id = vapply(entries, `[[`, character(1), "id"),
+    label = vapply(entries, `[[`, character(1), "label"),
+    depth = vapply(entries, `[[`, integer(1), "depth"),
+    stringsAsFactors = FALSE
+  )
+  result$path <- lapply(entries, `[[`, "path")
+  result
 }
 
-get_all_series <- function(x, prefix = NULL) {
-  out <- c()
+dashboard_valid_id <- function(id, registry) {
+  is.character(id) && length(id) == 1L && !is.na(id) && id %in% registry$id
+}
 
-  current_name <- if (is.null(prefix)) "Aggregate" else prefix
+dashboard_valid_selection <- function(ids, registry) {
+  is.character(ids) && !anyNA(ids) && !anyDuplicated(ids) &&
+    all(ids %in% registry$id)
+}
 
-  # Only add "total aggregate" if the object has an output (i.e., is run)
-  # For multipleTimeSeries without aggregate run, skip the root
-  has_output <- !is.null(x$output)
-
-  if (is.null(prefix) && !has_output) {
-    # Skip root for objects without output (e.g., multipleTimeSeries)
-    # but still process components
-  } else {
-    out <- c(out, current_name)
-  }
-
-  if (!is.null(x$components)) {
-    for (n in names(x$components)) {
-      child_name <- if (is.null(prefix)) n else paste0(prefix, "/", n)
-      out <- c(out, get_all_series(x$components[[n]], child_name))
+dashboard_series <- function(x, id, registry) {
+  if (!dashboard_valid_id(id, registry)) stop("Unknown dashboard series ID")
+  path <- registry$path[[match(id, registry$id)]]
+  for (i in path) {
+    if (is.null(x$components) || i > length(x$components)) {
+      stop("The dashboard series tree has changed; reopen the dashboard")
     }
+    x <- x$components[[i]]
   }
-
-  out
+  x
 }
 
-get_quality <- function(hts, path) {
-  obj <- get_series_by_path(hts, path)
-
-  # Try multiple possible locations for quality
-  quality <- NULL
-
-  # Try user_defined first
-  if (!is.null(obj$output) && !is.null(obj$output$user_defined)) {
-    quality <- obj$output$user_defined$quality.summary
-  }
-
-  # Fallback to other locations
-  if (is.null(quality) && !is.null(obj$diagnostics)) {
-    quality <- obj$diagnostics$quality
-  }
-
-  # Return default if still null
-  if (is.null(quality)) {
-    quality <- "ok" # default quality
-  }
-
-  quality
+get_quality <- function(obj) {
+  quality <- obj$output$user_defined$quality.summary
+  if (is.null(quality)) quality <- obj$diagnostics$quality
+  if (is.null(quality) || length(quality) != 1L || is.na(quality) ||
+      !nzchar(trimws(as.character(quality)))) return("unavailable")
+  tolower(trimws(as.character(quality)))
 }

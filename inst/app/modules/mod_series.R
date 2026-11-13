@@ -34,9 +34,11 @@ mod_series_ui <- function(id) {
 # @param series_reactive A reactive expression that returns a hierarchical
 #   time series object for the selected series
 # @return moduleServer instance with reactive UI rendering
-mod_series_server <- function(id, series_reactive) {
+mod_series_server <- function(id, series_reactive, active = reactive(TRUE)) {
   moduleServer(id, function(input, output, session) {
     output$content <- renderUI({
+      # Reopening invalidates cached modules, including in-place R6 updates.
+      req(active())
       # Get the series object from the reactive
       obj <- series_reactive()
 
