@@ -1,5 +1,7 @@
 #include "core/diffuse_state_space.hpp"
 #include "core/exact_history.hpp"
+#include "core/sparse_history.hpp"
+#include "core/finite_state_factor.hpp"
 
 // DLARFG is called through R's declared LAPACK ABI. Only its orthogonal
 // reflector is used; no third-party filtering implementation is incorporated.
@@ -8,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -141,6 +144,22 @@ Basis propagate(const DenseMatrix& transition, const Basis& basis,
     return result;
 }
 
+// A canonical history frame is normalized in the ORIGINAL initial-history
+// coordinates. Only its orientation changes after observations; this is not
+// a renormalization of the propagated state loading or the diffuse measure.
+Basis history_loading(const detail::SparseHistoryBasis& history, std::size_t states,
+                       std::uint64_t time, const Interrupt& interrupt) {
+    const auto k = history.dimension(), rank = history.remaining_rank();
+    if (k > states) throw std::logic_error("history frame exceeds the state dimension");
+    const auto values = history.loading(time, interrupt);
+    if (values.size() != k * rank) throw std::logic_error("history frame has inconsistent dimensions");
+    Basis result{states, rank, std::vector<double>(states * rank, 0)};
+    for (std::size_t j = 0; j < rank; ++j) {
+        for (std::size_t i = 0; i < k; ++i) result.values[states - k + i + states * j] = values[i + k * j];
+    }
+    return result;
+}
+
 // w H = [beta, 0,...,0] for an orthogonal LAPACK reflector H. Retaining the
 // remaining columns of B H removes one identified coordinate without a
 // subtractive P_inf update or an arbitrary covariance threshold.
@@ -214,7 +233,9 @@ void validate_model(const DiffuseStateSpace& model, const std::vector<double>& s
 DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& model,
                           std::vector<double> state, DenseMatrix p, Basis basis,
                           double mean, double variance, const Interrupt& interrupt,
-                          detail::CountsHistoryCertificate* history = nullptr) {
+                          detail::CountsHistoryCertificate* history = nullptr,
+                          detail::SparseHistoryBasis* stable_history = nullptr,
+                          detail::FiniteStateFactor* finite_factor = nullptr) {
     series.validate();
     validate_model(model, state, mean, variance, interrupt);
     validate_basis(basis, interrupt, "initial diffuse loading is numerically rank deficient");
@@ -228,6 +249,13 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                       "exact history certificate requires size_t to fit uint64");
         history->validate_length(static_cast<std::uint64_t>(n));
     }
+    if (stable_history && (!history || stable_history->dimension() != initial_rank ||
+                           stable_history->rank() != 0)) {
+        throw std::logic_error("stable history frame disagrees with the initial diffuse certificate");
+    }
+    if (finite_factor && (!stable_history || finite_factor->dimension() != m)) {
+        throw std::logic_error("finite factor disagrees with the canonical state dimension");
+    }
     const auto process = gram(model.noise_loading);
     const auto initial_finite = p;
     const auto initial_diffuse = gram(basis);
@@ -237,7 +265,7 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
     MaskedSeries innovations{std::vector<double>(n, 0), series.missing};
     MaskedSeries standardized{std::vector<double>(n, 0), std::vector<std::uint8_t>(n, 1)};
     std::size_t observed = 0, diffuse_count = 0, finite_count = 0, last_diffuse = 0, rank_checks = 0;
-    std::size_t exact_zero_count = 0, exact_pivot_count = 0;
+    std::size_t exact_zero_count = 0, exact_pivot_count = 0, history_reconstructions = 0;
     long double squares = 0, finite_logs = 0, diffuse_logs = 0;
     double maximum_projection_residual = 0;
     const double z_norm = norm(model.observation);
@@ -264,9 +292,16 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
         long double predicted = mean;
         for (std::size_t i = 0; i < m; ++i) predicted += static_cast<long double>(model.observation[i]) * state[i];
         predictions[t] = checked(predicted);
-        const auto pz = product(p, model.observation);
+        auto pz = std::vector<double>(m, 0);
         long double finite_f = model.observation_variance;
-        for (std::size_t i = 0; i < m; ++i) finite_f += static_cast<long double>(model.observation[i]) * pz[i];
+        if (finite_factor) {
+            auto projected = finite_factor->observation(model.observation, model.observation_variance, interrupt);
+            pz = std::move(projected.pz);
+            finite_f = projected.variance;
+        } else {
+            pz = product(p, model.observation);
+            for (std::size_t i = 0; i < m; ++i) finite_f += static_cast<long double>(model.observation[i]) * pz[i];
+        }
         finite_variances[t] = checked(finite_f);
         if (finite_variances[t] < 0) throw std::runtime_error("negative finite innovation variance: diffuse arithmetic is numerically unresolved");
         auto w = observation_loading(model.observation, basis);
@@ -307,7 +342,8 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                     for (std::size_t j = 0; j < basis.columns; ++j) total += static_cast<long double>(basis(i, j)) * (w[j] / w_norm);
                     gain[i] = checked(total / w_norm);
                 }
-                p = joseph(p, gain, model.observation, model.observation_variance);
+                if (finite_factor) finite_factor->update(gain, model.observation, model.observation_variance, interrupt);
+                else p = joseph(p, gain, model.observation, model.observation_variance);
                 basis = remove_observed_direction(basis, w, model.observation, w_norm,
                                                     maximum_projection_residual, interrupt);
                 diffuse_logs += 2 * std::log(static_cast<long double>(w_norm));
@@ -325,31 +361,43 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                 standardized.values[t] = residual;
                 standardized.missing[t] = 0;
                 for (std::size_t i = 0; i < m; ++i) gain[i] = checked(pz[i] / finite_variances[t]);
-                p = joseph(p, gain, model.observation, model.observation_variance);
+                if (finite_factor) finite_factor->update(gain, model.observation, model.observation_variance, interrupt);
+                else p = joseph(p, gain, model.observation, model.observation_variance);
                 ++finite_count;
                 if (exact_zero) ++exact_zero_count;
                 update_kind[t] = 2;
             }
             for (std::size_t i = 0; i < m; ++i) state[i] = checked(static_cast<long double>(state[i]) + static_cast<long double>(gain[i]) * innovation);
             observation_null_certified = true;
+            if (stable_history) stable_history->observe(static_cast<std::uint64_t>(t) + 1, interrupt);
         }
         rank_after[t] = basis.columns;
         if (history && basis.columns != initial_rank - history->rank()) {
             throw std::runtime_error("diffuse update disagrees with exact history rank");
         }
+        if (stable_history && stable_history->remaining_rank() != basis.columns) {
+            throw std::runtime_error("stable history frame disagrees with the exact diffuse rank");
+        }
         if (t + 1 < n) {
             if (history) history->advance();
             observation_null_certified = observation_null_certified && scalar_transition;
             state = product(model.transition, state);
-            p = sandwich(model.transition, p);
-            for (std::size_t i = 0; i < p.values().size(); ++i) p.values()[i] = checked(static_cast<long double>(p.values()[i]) + process.values()[i]);
+            if (finite_factor) finite_factor->predict(model.transition, model.noise_loading, interrupt);
+            else {
+                p = sandwich(model.transition, p);
+                for (std::size_t i = 0; i < p.values().size(); ++i) p.values()[i] = checked(static_cast<long double>(p.values()[i]) + process.values()[i]);
+            }
             if (basis.columns > 0) {
-                basis = propagate(model.transition, basis, model.observation, !series.missing[t]);
+                if (stable_history) {
+                    basis = history_loading(*stable_history, m, static_cast<std::uint64_t>(t) + 2, interrupt);
+                    ++history_reconstructions;
+                } else basis = propagate(model.transition, basis, model.observation, !series.missing[t]);
                 validate_basis(basis, interrupt, "transition loses diffuse rank or is numerically rank deficient; initial coordinates remain unidentified");
                 ++rank_checks;
             }
         }
     }
+    if (finite_factor) p = finite_factor->covariance(interrupt);
     const double sum_squares = checked(squares), sum_finite_logs = checked(finite_logs), sum_diffuse_logs = checked(diffuse_logs);
     const double unavailable = std::numeric_limits<double>::quiet_NaN();
     double fixed_loglik = unavailable, profiled_variance = unavailable, profiled_loglik = unavailable;
@@ -383,7 +431,14 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
             std::move(profile_status), std::move(state), initial_finite, initial_diffuse,
             std::move(p), gram(basis),
             {rank_tolerance, projection_tolerance, rank_checks, maximum_projection_residual,
-             history != nullptr, exact_zero_count, exact_pivot_count}};
+             history != nullptr, exact_zero_count, exact_pivot_count,
+             stable_history != nullptr, history_reconstructions,
+             stable_history ? stable_history->rebuild_count() : 0,
+             stable_history ? stable_history->normalization_residual() : 0,
+             finite_factor != nullptr,
+             finite_factor ? finite_factor->compression_count() : 0,
+             finite_factor ? finite_factor->clipped_negative_count() : 0,
+             finite_factor ? finite_factor->initialization_residual() : 0}};
 }
 
 } // namespace
@@ -435,8 +490,13 @@ SarimaLikelihood sarima_innovations(const MaskedSeries& series, const std::vecto
     }
     DiffuseStateSpace model{std::move(transition), std::move(z), std::move(loading), 0};
     detail::CountsHistoryCertificate history(d, seasonal_d, period);
+    detail::SparseHistoryBasis stable_history(d, seasonal_d, period, interrupt);
+    std::unique_ptr<detail::FiniteStateFactor> finite_factor;
+    if (k > 0) finite_factor = std::make_unique<detail::FiniteStateFactor>(initial_finite, interrupt);
     auto likelihood = filter(series, model, std::vector<double>(m, 0), std::move(initial_finite),
-                              std::move(basis), mean, variance, interrupt, k > 0 ? &history : nullptr);
+                              std::move(basis), mean, variance, interrupt,
+                              k > 0 ? &history : nullptr, k > 0 ? &stable_history : nullptr,
+                              finite_factor.get());
     return {std::move(model), std::move(arma.ar), std::move(arma.ma),
             std::move(difference), std::move(likelihood)};
 }

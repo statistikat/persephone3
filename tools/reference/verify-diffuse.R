@@ -1,13 +1,13 @@
-# Rscript tools/reference/verify-diffuse.R [--native [--source] [--second-order]]
+# Rscript tools/reference/verify-diffuse.R [--native [--source] [--second-order] [--sparse]]
 # Read-only probes. --native additionally requires an installed development
 # persephone3 containing .native_sarima_likelihood; choose its library with R_LIBS.
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[startsWith(args, "--file=")][[1]])
 tooling <- dirname(normalizePath(script))
 options <- commandArgs(trailingOnly = TRUE)
-if (any(!options %in% c("--native", "--source", "--second-order")) ||
-    (any(c("--source", "--second-order") %in% options) && !"--native" %in% options))
-  stop("Usage: verify-diffuse.R [--native [--source] [--second-order]]")
+if (any(!options %in% c("--native", "--source", "--second-order", "--sparse")) ||
+    (any(c("--source", "--second-order", "--sparse") %in% options) && !"--native" %in% options))
+  stop("Usage: verify-diffuse.R [--native [--source] [--second-order] [--sparse]]")
 source(file.path(tooling, "common.R"))
 source(file.path(tooling, "extended-fixtures.R"))
 root <- reference_root()
@@ -354,4 +354,150 @@ if ("--second-order" %in% options) {
       nonzero_corrections, "nonzero diffuse corrections;",
       checks - before_checks, "checks\n")
   print(second_errors, digits = 8)
+}
+
+
+if ("--sparse" %in% options) {
+  # This matrix was qualified against independent Gaussian integration and both
+  # fixed preprocessors before comparing native output. Its cases are declared
+  # prospectively: errors are failures, not grounds for dropping a fixture.
+  before_checks <- checks
+  sparse_cases <- sparse_direct <- unidentified_cases <- 0L
+  sparse_errors <- c(fixed = 0, profile = 0, q = 0, total_logdet = 0,
+                     direct_profile = 0, dk_profile = 0)
+  sparse_gaussian <- function(data) {
+    y <- as.numeric(data$y)
+    operator <- diag(length(y))
+    operator <- diff(operator, differences = data$d)
+    operator <- diff(operator, lag = frequency(data$y), differences = data$bd)
+    # Exact differences have the stationary ARMA(1,1) covariance. White and
+    # MA(1) are the phi=0/theta=0 special cases. This integrates missing levels
+    # directly, without an initial-variance approximation or Kalman recursion.
+    phi <- if (length(data$phi)) data$phi else 0
+    theta <- if (length(data$theta)) data$theta else 0
+    gamma0 <- (1 + theta^2 + 2 * phi * theta) / (1 - phi^2)
+    gamma1 <- phi * gamma0 + theta
+    count <- nrow(operator)
+    covariance <- toeplitz(c(gamma0, phi^(seq_len(count - 1L) - 1L) * gamma1))
+    factor <- chol(covariance)
+    whitened <- forwardsolve(t(factor), operator)
+    missing <- which(is.na(y))
+    observed <- which(!is.na(y))
+    design <- whitened[, missing, drop = FALSE]
+    signal <- drop(whitened[, observed, drop = FALSE] %*% y[observed])
+    singular <- svd(design, nu = 0, nv = 0)$d
+    assert(length(singular) == length(missing) &&
+      min(singular) > max(singular) * 1e-10,
+      "sparse Gaussian missing-coordinate design is independently well conditioned")
+    decomposition <- qr(design, LAPACK = TRUE)
+    degrees <- nrow(operator) - length(missing)
+    assert(degrees > 0, "sparse Gaussian integration has positive residual dimension")
+    complement <- qr.Q(decomposition, complete = TRUE)[,
+      length(missing) + seq_len(degrees), drop = FALSE]
+    q <- sum(crossprod(complement, signal)^2)
+    logdet <- 2 * (sum(log(diag(factor))) +
+                    sum(log(abs(diag(qr.R(decomposition))))))
+    likelihood(degrees, q, logdet)
+  }
+  for (n in c(90L, 180L, 360L)) for (period in c(4L, 12L)) for (D in 1:2) {
+    diffuse <- 2L + period * D
+    sparse_rows <- seq.int(1L, n, by = 5L * period)
+    # Same-phase observations are polynomials of degree D+1. Their independent
+    # Vandermonde rank supplies an oracle for the unresolved initial dimension.
+    knots <- sparse_rows / n
+    vandermonde <- outer(knots, 0:(D + 1L), `^`)
+    singular <- svd(vandermonde, nu = 0, nv = 0)$d
+    assert(min(singular) > max(singular) * 1e-10,
+           "sparse-only Vandermonde rows/columns have a separated full rank")
+    identified <- min(length(sparse_rows), D + 2L)
+    unresolved <- rep(NA_real_, n)
+    unresolved[sparse_rows] <- sin(sparse_rows * sqrt(2)) + cos(sparse_rows * sqrt(3)) / 2
+    value <- native(unresolved, numeric(), numeric(), numeric(), numeric(),
+                    period, 2L, D, mean = 0, variance = 1)
+    assert(value$initial_diffuse_rank == diffuse &&
+      value$remaining_diffuse_rank == diffuse - identified &&
+      value$diffuse_count == identified && value$observed_count == length(sparse_rows),
+      "sparse-only native rank agrees with the independent polynomial design")
+    assert(identical(value$likelihood_status, "unresolved_diffuse") &&
+      identical(value$profile_status, "unresolved_diffuse") &&
+      is.na(value$fixed_log_likelihood) && is.na(value$profiled_log_likelihood),
+      "sparse-only unidentified directions never produce an optimizer objective")
+    unidentified_cases <- unidentified_cases + 1L
+
+    tail_length <- if (period == 4L && D == 1L) 4L else diffuse
+    observed_rows <- sort(unique(c(sparse_rows, seq.int(n - tail_length + 1L, n))))
+    for (model in c("white", "ma", "arma")) {
+      y <- rep(NA_real_, n)
+      y[observed_rows] <- sin(observed_rows * sqrt(2)) + cos(observed_rows * sqrt(3)) / 2
+      data <- list(y = ts(y, start = c(2000L, 1L), frequency = period), d = 2L,
+        bd = D, phi = if (model == "arma") 0.3 else NULL,
+        theta = if (model != "white") 0.4 else NULL, log = FALSE)
+      id <- paste("sparse", n, period, paste0("d2-D", D), model, sep = "-")
+      expected <- sparse_gaussian(data)
+      observed <- length(observed_rows)
+      jd_fixed <- dk_likelihood(data, FALSE)
+      jd_profile <- dk_likelihood(data, TRUE)
+      assert(jd_fixed[["observed"]] == observed && jd_fixed[["diffuse"]] == diffuse &&
+        jd_fixed[["legacy"]] == 0, paste(id, "DK sample counts and normalization"))
+      close(jd_fixed[["ll"]], expected[["fixed"]], paste(id, "DK fixed density"), TRUE)
+      close(jd_profile[["ll"]], expected[["profile"]], paste(id, "DK profiled density"), TRUE)
+      close(jd_fixed[["q"]], expected[["q"]], paste(id, "DK quadratic form"), TRUE)
+      close(sum(jd_fixed[c("finite_logdet", "diffuse_logdet")]), expected[["logdet"]],
+            paste(id, "DK total determinant"), TRUE)
+      sparse_errors[["dk_profile"]] <- max(sparse_errors[["dk_profile"]],
+        abs(jd_profile[["ll"]] - expected[["profile"]]))
+      for (method in c("x13", "tramoseats")) {
+        spec <- fixed_spec(method, data)
+        result <- if (method == "x13") rjd3x13::regarima_fast(data$y, spec) else rjd3tramoseats::tramo_fast(data$y, spec)
+        assert(length(result$description$variables) == 0L && length(result$estimation$b) == 0L &&
+          length(result$estimation$parameters$val) == 0L,
+          paste(id, method, "no estimated coefficients or regression effects"))
+        arima <- result$description$arima
+        assert(arima$d == 2L && arima$bd == D && arima$period == period,
+               paste(id, method, "fixed orders"))
+        for (name in c("phi", "theta", "bphi", "btheta")) {
+          coef <- if (name %in% c("phi", "bphi")) -as.numeric(data[[name]]) else as.numeric(data[[name]])
+          actual <- arima[[name]]
+          assert(if (length(coef)) identical(as.numeric(actual["value", ]), coef) &&
+            all(as.character(actual["type", ]) == "FIXED") else is.null(actual),
+            paste(id, method, name, "fixed coefficient state"))
+        }
+        raw <- result$estimation$likelihood
+        assert(raw$nobs == observed && raw$neffectiveobs == expected[["m"]] && raw$nparams == 1L,
+               paste(id, method, "effective sample and variance-only parameter count"))
+        close(raw$ll, expected[["profile"]], paste(id, method, "independent Gaussian profile"))
+        close(raw$ssq, expected[["q"]], paste(id, method, "independent Gaussian quadratic form"))
+        close(raw$adjustedll, raw$ll, paste(id, method, "identity adjustment"))
+        sparse_errors[["direct_profile"]] <- max(sparse_errors[["direct_profile"]],
+          abs(raw$ll - expected[["profile"]]))
+        sparse_direct <- sparse_direct + 1L
+      }
+      value <- native(as.numeric(y), as.numeric(data$phi), as.numeric(data$theta),
+                      numeric(), numeric(), period, 2L, D, mean = 0, variance = 1)
+      assert(identical(value$likelihood_status, "available") &&
+        identical(value$profile_status, "available"), paste(id, "native objective status"))
+      assert(value$observed_count == observed && value$initial_diffuse_rank == diffuse &&
+        value$remaining_diffuse_rank == 0 && value$diffuse_count == diffuse &&
+        value$finite_count == expected[["m"]], paste(id, "native identified sample counts"))
+      actual <- c(fixed = value$fixed_log_likelihood, profile = value$profiled_log_likelihood,
+        q = value$sum_squared_standardized,
+        total_logdet = value$sum_log_finite_variances + value$sum_log_diffuse_variances)
+      target <- c(fixed = expected[["fixed"]], profile = expected[["profile"]],
+                  q = expected[["q"]], total_logdet = expected[["logdet"]])
+      close(actual, target, paste(id, "native independent Gaussian integration"), TRUE)
+      close(value$profiled_variance, expected[["q"]] / expected[["m"]],
+            paste(id, "native profile scale"), TRUE)
+      sparse_errors[names(actual)] <- pmax(sparse_errors[names(actual)], abs(actual - target))
+      sparse_cases <- sparse_cases + 1L
+      cat("PASS", id, "independent Gaussian density, both fixed preprocessors and public DK\n")
+    }
+  }
+  assert(sparse_cases == 36L && sparse_direct == 72L && unidentified_cases == 12L,
+         "sparse probe accounting")
+  assert(identical(parent_before, extended_parent_hashes(base_dir)),
+         "original corpus unchanged after sparse probes")
+  cat("PASS:", sparse_cases, "identified sparse native cases;", sparse_direct,
+      "direct fixed fits;", unidentified_cases, "unidentified sparse controls;",
+      checks - before_checks, "checks\n")
+  print(sparse_errors, digits = 8)
 }

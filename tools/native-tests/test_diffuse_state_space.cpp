@@ -1,5 +1,6 @@
 #include "core/diffuse_state_space.hpp"
 #include "core/exact_history.hpp"
+#include "core/finite_state_factor.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -15,6 +16,43 @@ bool rejects(Function function) {
 
 int main() {
     using namespace persephone;
+    // A singular proper covariance must retain its nonzero direction through
+    // conditioning and prediction. Expectations below are direct 2x2 Gaussian
+    // identities for P = [2,1]'[2,1], z=[1,.5], and H=.25.
+    detail::FiniteStateFactor finite(DenseMatrix(2, 2, {4, 2, 2, 1}));
+    const auto finite_observation = finite.observation({1, .5}, .25);
+    assert(std::abs(finite_observation.variance - 6.5) < 1e-12);
+    assert(std::abs(finite_observation.pz[0] - 5) < 1e-12);
+    assert(std::abs(finite_observation.pz[1] - 2.5) < 1e-12);
+    finite.update({10.0 / 13, 5.0 / 13}, {1, .5}, .25);
+    auto finite_covariance = finite.covariance();
+    assert(std::abs(finite_covariance(0, 0) - 2.0 / 13) < 1e-12);
+    assert(std::abs(finite_covariance(0, 1) - 1.0 / 13) < 1e-12);
+    assert(std::abs(finite_covariance(1, 1) - 1.0 / 26) < 1e-12);
+    finite.predict(DenseMatrix(2, 2, {1, 0, .2, .5}),
+                   DenseMatrix(2, 2, {.3, .1, 0, .4}));
+    finite_covariance = finite.covariance();
+    assert(std::abs(finite_covariance(0, 0) - (4.84 / 26 + .09)) < 1e-12);
+    assert(std::abs(finite_covariance(0, 1) - (1.1 / 26 + .03)) < 1e-12);
+    assert(std::abs(finite_covariance(1, 1) - (.25 / 26 + .17)) < 1e-12);
+
+    // Small positive covariance directions are not removed by a rank cutoff,
+    // including after rectangular QR compression during prediction.
+    detail::FiniteStateFactor tiny_finite(DenseMatrix(2, 2, {1, 0, 0, 1e-24}));
+    assert(std::abs(tiny_finite.observation({0, 1}, 0).variance / 1e-24 - 1) < 1e-12);
+    tiny_finite.predict(DenseMatrix(2, 2, {1, 0, 0, 1}), DenseMatrix(2, 1, {0, 0}));
+    assert(std::abs(tiny_finite.observation({0, 1}, 0).variance / 1e-24 - 1) < 1e-12);
+    assert(rejects([&] { detail::FiniteStateFactor bad(DenseMatrix(2, 2, {1, 0, 0, -.1})); }));
+    assert(rejects([&] { detail::FiniteStateFactor bad(DenseMatrix(2, 2, {1, 1, 0, 1})); }));
+    assert(rejects([&] { detail::FiniteStateFactor bad(DenseMatrix(1, 1,
+        {std::numeric_limits<double>::infinity()})); }));
+    assert(rejects([&] { finite.observation({1}, 0); }));
+    assert(rejects([&] { finite.observation({1, std::numeric_limits<double>::quiet_NaN()}, 0); }));
+    assert(rejects([&] { finite.observation({1, 0}, -.1); }));
+    assert(rejects([&] { finite.update({1}, {1, 0}, 0); }));
+    assert(rejects([&] { finite.predict(DenseMatrix(1, 1, {1}), DenseMatrix(2, 1, {0, 0})); }));
+    assert(rejects([&] { finite.predict(DenseMatrix(2, 2, {1, 0, 0, 1}), DenseMatrix(1, 1, {0})); }));
+
     // Equal phase sums can leave a global direction unidentified even when
     // each of two seasons has two observations: {1,9}, {3,7} both sum to 10.
     // A subsequent observation at 11 supplies a new independent direction.
@@ -162,6 +200,40 @@ int main() {
         assert(fit.numerics.exact_history_pivot_count == dimension);
         assert(fit.numerics.exact_history_zero_count > 0);
     }
+
+    // A sparse same-phase history formerly accumulated recurrence error before
+    // time 90. It has only three identified coordinates and no full density.
+    MaskedSeries sparse{std::vector<double>(90, 0), std::vector<std::uint8_t>(90, 1)};
+    for (const std::size_t index : {0U, 20U, 40U, 60U, 80U}) {
+        const auto time = static_cast<double>(index + 1);
+        sparse.values[index] = std::sin(time * std::sqrt(2.0)) + std::cos(time * std::sqrt(3.0)) / 2;
+        sparse.missing[index] = 0;
+    }
+    const auto sparse_fit = sarima_innovations(sparse, {}, {}, {}, {}, 4, 2, 1).likelihood;
+    assert(sparse_fit.remaining_diffuse_rank == 3);
+    assert(sparse_fit.diffuse_count == 3 && sparse_fit.finite_count == 2);
+    assert(sparse_fit.likelihood_status == "unresolved_diffuse");
+    assert(std::isnan(sparse_fit.fixed_log_likelihood));
+    assert(sparse_fit.numerics.stable_history_propagation);
+    assert(sparse_fit.numerics.history_reconstructions > 0);
+
+    // The final four times identify every original history coordinate. Constants
+    // below come from independent base-R differencing of I followed by Gaussian
+    // QR integration over missing coordinates (test-native-diffuse.R), not a
+    // native filter replay or a changed flat-prior normalization.
+    for (std::size_t index = 86; index < 90; ++index) {
+        const auto time = static_cast<double>(index + 1);
+        sparse.values[index] = std::sin(time * std::sqrt(2.0)) + std::cos(time * std::sqrt(3.0)) / 2;
+        sparse.missing[index] = 0;
+    }
+    const auto late = sarima_innovations(sparse, {}, {}, {}, {}, 4, 2, 1).likelihood;
+    assert(late.remaining_diffuse_rank == 0 && late.diffuse_count == 6 && late.finite_count == 3);
+    assert(late.likelihood_status == "available" && late.profile_status == "available");
+    assert(std::abs(late.fixed_log_likelihood + 24.788587348806054) < 1e-7);
+    assert(std::abs(late.profiled_log_likelihood + 16.303203434824791) < 1e-7);
+    assert(std::abs(late.sum_squared_standardized - .0038602490727738231) < 1e-10);
+    assert(std::abs(late.sum_log_finite_variances + late.sum_log_diffuse_variances -
+                    44.059683249311298) < 1e-7);
 
     int polls = 0;
     sarima_innovations(combined, {}, {}, {}, {}, 4, 1, 1, 0, 1, [&] { ++polls; });

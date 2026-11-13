@@ -28,6 +28,10 @@ It does not substitute an adapter or estimate parameters if the boundary is
 unavailable. The two complete log-transform examples remain separate evidence
 for item 20a.3's transform/regression integration.
 
+Append `--second-order` for the declared 414-case matrix, or `--sparse` for the
+36 identified sparse cases and 12 unidentified controls described below. Both
+options require `--native` and can be combined; neither recompiles the package.
+
 The 16 JD+ artifacts match published Maven Central 3.9.0 checksums, whose release
 tag resolves to commit `cd50b84773c2bdbf7a067a497954bb6d46cdb81b`.
 [NATIVE_PROVENANCE.md](NATIVE_PROVENANCE.md) records this source/release mapping
@@ -214,11 +218,75 @@ The canonical SARIMA path additionally uses an exact integer homogeneous-history
 rank certificate, independent of the stationary ARMA coefficients, to classify
 dependent observations while retaining the original floating diffuse coordinates.
 
-This finite matrix is not a general sparse-history qualification. A separate
-known long sparse propagation limit remains: quarterly `d=2,D=1`, length 90,
-observed positions 1/21/41/61/81 (also with the tail 87:90 observed), can trigger
-the explicit projection-residual guard. That is a native numerical limit for
-item 20a.2c, distinct from the nine JD+ intermediate-precision limits above.
+The 414-case matrix alone does not qualify sparse histories. Its follow-up
+20a.2c resolves the registered quarterly `d=2,D=1`, length-90 history observed
+at positions 1/21/41/61/81, including the later-identified variant with 87:90
+observed. Canonical diffuse loadings are reconstructed in the original-history
+measure, and finite covariance is propagated through square-root factors.
+The explicit rank, residual and weak-direction guards remain enforced. The
+additional sparse qualification below is distinct from the nine JD+
+intermediate-precision limits above and does not claim every extreme history.
+
+## Sparse-history oracle qualification (20a.2c)
+
+The optional `--native --source --sparse` block declares 36 identified cases
+before evaluating the new native implementation: lengths 90/180/360, periods
+4/12, `d=2` with `D=1/2`, and white, MA `+0.4` or ARMA `(+0.3,+0.4)`
+innovations. Values are `sin(t*sqrt(2)) + cos(t*sqrt(3))/2`. Observations occur
+at `1, 1+5*s, 1+10*s, ...` plus a contiguous identifying tail. That tail has
+four periods for quarterly `d=2,D=1`, and `k=2+s*D` periods otherwise. This
+includes the registered 90-period case with observations `1,21,41,61,81,87:90`.
+The remaining 12 controls retain only the same-phase sparse observations and
+are deliberately unidentified; they must return unavailable native objectives.
+
+A separate dense Gaussian calculation qualifies the numerical references before
+native comparison. Let `A` be the matrix obtained by applying ordinary and
+seasonal differences to the identity matrix. Then `A*y` has the known
+stationary ARMA covariance `Sigma`. Cholesky whitening gives
+`W = L^{-1} A`, where `Sigma=L L'`. Partition columns of `W` into missing and
+observed level positions. QR of the missing-column matrix integrates those
+coordinates directly. Its orthogonal complement gives the residual quadratic
+form; the total determinant is
+
+```
+log|Sigma| + log|W_missing' W_missing|.
+```
+
+The initial-history determinant is one in these canonical level coordinates.
+No Kalman recursion, large initial variance, native matrix, or fitted coefficient
+enters this oracle. SVD verifies full missing-coordinate column rank with a
+separated singular-value gap before accepting the density; the largest tested
+condition ratio is approximately `1.20e5`. The unresolved controls instead use
+an independently assembled, scaled Vandermonde design for the same-phase
+polynomial history and verify its rank.
+
+Before native comparison, both fixed preprocessing engines agree with the
+independent Gaussian profiled likelihood to `2.73e-12` across all 36 cases
+(72 direct fits). The public DK fixed/profile likelihoods, quadratic forms and
+total determinants also meet the unchanged `2e-8` absolute-plus-relative bound;
+its largest profile discrepancy is `9.21e-7`. Direct preprocessing and the
+Gaussian density are the primary sparse objective references. The script
+checks fixed coefficient states, absent regression effects and exact sample
+counts, and never treats a native exception as an accepted sparse result.
+The rebuilt 20a.2c implementation passes all **36 identified native cases**, the
+**72 direct fixed fits**, and **12 unidentified controls**, for **1,154 additional
+assertions**. Maximum native errors versus independent Gaussian integration are
+`1.42e-12` for the fixed likelihood, `8.94e-12` for the profiled likelihood,
+`3.61e-13` for the quadratic form, and `2.77e-12` for the total determinant.
+The existing 675 base checks and 4,064 expanded checks also pass unchanged.
+No native exception is accepted, no observation is dropped, and no comparison
+tolerance or stored reference artifact is changed.
+
+KFAS 1.6.0 is **not** a reliable oracle for this sparse extension in the tested
+canonical coordinates. For the identified quarterly 90-period fixture, its
+unit-variance likelihood is approximately `-25.3266651`, versus the independently
+verified `-24.788587349`, and it warns that the diffuse phase did not end.
+Some longer sparse cases disagree without a warning. Its ordinary-model checks
+remain useful, but these sparse results are not reinterpreted as native failures
+and its tolerance is not tuned to match the expected result. For genuinely
+unidentified sparse inputs, public DK reports `Diffuse initialization failed`
+and the fixed preprocessing wrappers can error or return no result; no finite
+oracle likelihood is asserted for those controls.
 
 ## Log adjustments and remaining work
 

@@ -35,6 +35,14 @@ struct DiffuseNumerics {
     bool exact_history_certification;
     std::size_t exact_history_zero_count;
     std::size_t exact_history_pivot_count;
+    bool stable_history_propagation;
+    std::size_t history_reconstructions;
+    std::size_t history_frame_rebuilds;
+    double maximum_history_normalization_residual;
+    bool square_root_finite_covariance;
+    std::size_t finite_factor_compressions;
+    std::size_t finite_factor_clipped_eigenvalues;
+    double finite_factor_initialization_residual;
 };
 
 struct DiffuseLikelihood {

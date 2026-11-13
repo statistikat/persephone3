@@ -1,4 +1,4 @@
-# Exact diffuse likelihood pilot (20a.2 and 20a.2b)
+# Exact diffuse likelihood pilot (20a.2–20a.2c)
 
 This independently authored implementation evaluates fixed Gaussian state-space
 parameters. It adds a bounded exact diffuse initialization and an explicit
@@ -157,16 +157,71 @@ therefore still be rejected. The pilot does not silently identify an extra
 coordinate or relax numerical thresholds. Unidentified directions produce
 `unresolved_diffuse`, rather than a finite objective.
 
-A remaining propagation limit is explicitly qualified. For a quarterly
-`d=2,D=1` series of length 90 observed only at positions `1,21,41,61,81`,
-the propagated numerical basis fails its certified-null residual check, even
-though exact rank correctly leaves three initial coordinates unidentified.
-Adding observations at `87:90` would identify all six coordinates, but the
-same earlier residual failure still prevents an objective. Both fixtures must
-raise `certified diffuse observation-null identity failed its residual check`.
-Thus a full-rank final design does not ensure numerical support through a long
-sparse prefix. A more stable propagated basis is deferred to item 20a.2c;
-20a.2b does not change the existing residual tolerance.
+The canonical SARIMA path uses the stable original-history frame described
+below. It resolves the registered quarterly `d=2,D=1`, length-90 sparse history
+observed at `1,21,41,61,81`, while correctly leaving three directions unresolved.
+Adding observations at `87:90` now identifies all coordinates and provides a
+likelihood checked by independent Gaussian integration. This does not promise
+arbitrary-length support: initial-frame conditioning, current-loading rank,
+projection residuals and finite numeric range remain explicit failure gates.
+
+### Stable canonical history frame (20a.2c)
+
+Let `beta` contain the original `k` history values at times `0,-1,...,1-k`.
+Its leading covariance is `kappa I`. Homogeneous observation rows form a design
+`H`; after the observed rows `H_S`, the leading uncertainty in `beta` is the
+Euclidean projector onto `ker(H_S)`. A finite update adds only a dependent row
+and therefore leaves this subspace unchanged.
+
+Construct independent homogeneous functions that vanish at every observed time.
+For each seasonal phase, retain its first `min(count,D)` knots. Local functions
+are products of `(t-knot)` times the remaining low-degree monomials. Global
+functions are the residuals of `t^D` and `t^(D+1)` after interpolation at those
+knots. The exact count/sum certificate imposes zero, one or two constraints on
+their coefficients. These residuals are evaluated in factored form, avoiding
+recursive propagation of small errors through repeated unit roots.
+
+Let `F0` evaluate these functions at the **original** history times, and `Ft`
+evaluate them at the current history times. Scale corresponding columns equally
+in both matrices, then use the thin QR factorization `F0 = Q R`. The current
+diffuse loading is `B_t = Ft R^-1`, computed by a triangular solve. Since the
+homogeneous transition maps `F0` to `Ft`, this is the transition of the
+orthonormal original-coordinate basis `Q`. Thus `B_t B_t'` is exactly the
+required leading covariance, and existing gains and diffuse pivot determinants
+retain their original measure. No additional likelihood Jacobian is added.
+Normalizing the loading at the current time instead would change that measure
+and is not the implemented algorithm.
+
+The frame is rebuilt only when an observation increases exact rank. The
+implementation checks initial-frame rank, original-coordinate orthonormality,
+current-loading rank and the existing observation projection residual. Integer
+time arithmetic reserves room for three positive knots and all preceding history
+positions; overflow and nonfinite/underflowing evaluations are errors. The
+`numerics` fields report stable-frame use, reconstruction/rebuild counts and
+the maximum normalization residual. Generic caller-supplied state-space models
+retain their original propagation and safeguards.
+
+### Finite covariance factors for integrated SARIMA
+
+Long sparse spans also amplify roundoff in the finite covariance even after
+the diffuse subspace is stable. The integrated canonical path therefore stores
+`P_* = C C'`. Its innovation variance is `||C' Z'||^2 + h`, and its covariance
+loading is `C (C' Z')`. The Joseph update concatenates the columns of
+`C - K (Z C)` and `sqrt(h) K`; prediction concatenates `T C` and `L`.
+QR of each concatenation's transpose produces the next covariance factor.
+All state columns are retained, including exact zero directions. Neither a
+finite-rank cutoff nor a large diffuse variance is introduced.
+
+The initial stationary covariance may be positive semidefinite. A symmetric
+LAPACK eigendecomposition retains every positive eigenvalue. Negative values
+larger than the roundoff bound are rejected; only negative roundoff within
+`512 * epsilon * state_dimension * max(abs(P))` may be set to zero, followed by
+a checked reconstruction of the supplied covariance. Diagnostics record the
+initial residual, any clipped negative values and factor compression count.
+These finite-covariance checks do not alter diffuse rank or projection tolerances.
+The generic state-space path and zero-difference stationary path retain their
+existing algorithms. Returned covariances remain on the same unit-variance
+scale and refer to the same final posterior time.
 
 ### Exact SARIMA history rank
 
@@ -258,17 +313,25 @@ The exact history certificate is independently tested by constructing the
 homogeneous basis above and computing observed-prefix ranks using base R's SVD,
 with a required clear singular-value gap. Quarterly and monthly models cover
 all nine `d,D` combinations under complete, registered, internal, edge, periodic,
-block, sparse, all-missing, and seeded random masks. Of these 162 cases, 161
-must succeed; the sparse quarterly propagation limit above must raise its
-specific residual error. A separate late-identification fixture qualifies the
-same limit when the final design has full rank. Special equal-knot-sum cases
+block, sparse, all-missing, and seeded random masks. All 162 cases now succeed,
+with the correct unavailable status when directions remain unidentified. A
+separate late-identification fixture supplies a checked finite objective.
+Special equal-knot-sum cases
 require a finite observation while one diffuse coordinate remains, followed by
 its later identification. Direct Gaussian integration checks the resulting
 likelihood constants; the test oracle does not reuse the production count/sum
 formula. A second Gaussian oracle forms the differencing operator with base R,
 then integrates missing observations using a QR factorization of its missing
 columns. This checks all identified stress-case likelihoods without state
-propagation, a large covariance matrix, or the production rank formula.
+propagation or the production rank formula. For correlated innovations it uses
+the closed-form stationary ARMA(1,1) Toeplitz covariance before integrating
+missing values. Thirty-two prospective length-180/360 designs cover every
+nonzero supported differencing combination; additional ARMA, missing-prediction,
+unidentified and homogeneous-shift cases check conditional moments and measure.
+An external development check uses fraction-free integer elimination on the
+canonical history design to verify diffuse determinants independently of both
+floating polynomial QR and filtering. Across 48 length-90/180/360 designs, the
+maximum determinant discrepancy is `5.15e-14`.
 Pinned direct JD+ comparisons are recorded separately in
 [the reference notes](../reference/diffuse-notes.md).
 
@@ -294,3 +357,7 @@ absolute fixed/profile log-likelihood difference below `5e-14`. The independent
 Gaussian integration oracle also matched KFAS on nine initial qualification
 cases to `3.6e-15`. These results qualify the tested fixed-parameter models and
 normalization convention, not arbitrary diffuse models or seasonal adjustment.
+In particular, the sparse-reference probes expose KFAS diffuse-phase failures
+for some long sparse canonical models; it is not used as the oracle for those
+new cases. Their independent Gaussian and pinned direct preprocessing checks
+are recorded in the reference notes.

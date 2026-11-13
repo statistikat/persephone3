@@ -66,7 +66,8 @@ jobs:
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
               $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
-              src/state_space.cpp src/diffuse_state_space.cpp "tools/native-tests/test_${harness}.cpp" \
+              src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
+              src/diffuse_state_space.cpp "tools/native-tests/test_${harness}.cpp" \
               $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
               $(R CMD config FLIBS) $(R CMD config --ldflags) \
               -o "$RUNNER_TEMP/persephone-${harness}"

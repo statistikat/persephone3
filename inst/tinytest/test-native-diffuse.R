@@ -522,26 +522,44 @@ rank_oracle <- function(values, period, d, seasonal_d) {
   list(kind = kind, before = before, after = after, remaining = initial - rank)
 }
 
-# An independent likelihood oracle for white-noise integrated models. Applying
-# base R's differences to I forms the innovation operator A. The full-data
-# flat-history density is proportional to exp(-||A y||^2 / (2 variance)); its
-# initial-coordinate Jacobian is one. Integrating missing y coordinates by QR
-# yields a determinant of A_missing, without a state recursion or large prior.
-missing_difference_oracle <- function(values, period, d, seasonal_d, variance = 1) {
-  operator <- diag(length(values))
+# An independent Gaussian oracle. Applying base R's differences to I forms the
+# innovation operator A. Its canonical initial-coordinate Jacobian is one. An
+# optional dense ARMA(1,1) covariance uses closed-form autocovariances, without
+# a state recursion, innovations algorithm, native model field or large prior.
+difference_gaussian_operator <- function(n, period, d, seasonal_d, ar = 0, ma = 0) {
+  operator <- diag(n)
   if (d) operator <- diff(operator, differences = d)
   if (seasonal_d) operator <- diff(operator, lag = period, differences = seasonal_d)
+  logdet <- 0
+  if (ar != 0 || ma != 0) {
+    gamma0 <- (1 + ma^2 + 2 * ar * ma) / (1 - ar^2)
+    gamma1 <- ar * gamma0 + ma
+    lag <- seq_len(nrow(operator) - 1L)
+    covariance <- toeplitz(c(gamma0, ar^(lag - 1L) * gamma1))
+    upper <- chol(covariance)
+    operator <- forwardsolve(t(upper), operator)
+    logdet <- 2 * sum(log(diag(upper)))
+  }
+  list(operator = operator, logdet = logdet)
+}
+
+# Integrating missing y coordinates by QR yields the marginal determinant and
+# remaining Gaussian residuals directly from the whitened difference operator.
+missing_difference_oracle <- function(values, period, d, seasonal_d, variance = 1,
+                                       ar = 0, ma = 0) {
+  gaussian <- difference_gaussian_operator(length(values), period, d, seasonal_d, ar, ma)
+  operator <- gaussian$operator
   missing <- which(is.na(values))
   observed <- which(!is.na(values))
   signal <- drop(operator[, observed, drop = FALSE] %*% values[observed])
   degrees <- nrow(operator) - length(missing)
-  logdet <- 0
+  logdet <- gaussian$logdet
   if (length(missing)) {
     design <- operator[, missing, drop = FALSE]
     singular <- svd(design, nu = 0, nv = 0)$d
     stopifnot(length(singular) == length(missing), min(singular) > max(singular) * 1e-10)
     decomposition <- qr(design, LAPACK = TRUE)
-    logdet <- 2 * sum(log(abs(diag(qr.R(decomposition)))))
+    logdet <- logdet + 2 * sum(log(abs(diag(qr.R(decomposition)))))
     complement <- qr.Q(decomposition, complete = TRUE)[,
       length(missing) + seq_len(degrees), drop = FALSE]
     errors <- drop(crossprod(complement, signal))
@@ -550,7 +568,27 @@ missing_difference_oracle <- function(values, period, d, seasonal_d, variance = 
   scale <- if (degrees > 0) sse / degrees else NA_real_
   list(fixed = -.5 * (degrees * log(2 * pi * variance) + logdet + sse / variance),
        profile = if (degrees > 0) -.5 * (degrees * (log(2 * pi * scale) + 1) + logdet) else NA_real_,
-       scale = scale, sse = sse, degrees = degrees)
+       scale = scale, sse = sse, logdet = logdet, degrees = degrees)
+}
+
+# Condition only on observations preceding `at`; all other coordinates,
+# including later observed values, are integrated out. Once the diffuse design
+# is identified, the missing-coordinate conditional mean is its least-squares
+# solution and covariance is A_missing^+ (A_missing^+)'. No normal equations are
+# formed. This checks finite predictions after a sparse identifying history.
+difference_prediction_oracle <- function(values, at, period, d, seasonal_d,
+                                          ar = 0, ma = 0) {
+  operator <- difference_gaussian_operator(length(values), period, d, seasonal_d, ar, ma)$operator
+  observed <- which(!is.na(values) & seq_along(values) < at)
+  missing <- setdiff(seq_along(values), observed)
+  design <- operator[, missing, drop = FALSE]
+  singular <- svd(design, nu = 0, nv = 0)$d
+  stopifnot(length(singular) == length(missing), min(singular) > max(singular) * 1e-10)
+  decomposition <- qr(design, LAPACK = TRUE)
+  center <- qr.coef(decomposition, -operator[, observed, drop = FALSE] %*% values[observed])
+  inverse <- qr.coef(decomposition, diag(nrow(operator)))
+  position <- match(at, missing)
+  c(prediction = center[position], variance = sum(inverse[position, ]^2))
 }
 local({
   had_seed <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
@@ -570,15 +608,6 @@ local({
       values <- sin(seq_len(n) * sqrt(2)) + cos(seq_len(n) * sqrt(3)) / 2
       values[mask] <- NA_real_
       expected <- rank_oracle(values, period, d, seasonal_d)
-      if (period == 4 && d == 2 && seasonal_d == 1 && mask_name == "sparse") {
-        # This valid but intentionally unidentifiable design still exceeds the
-        # floating propagated-basis residual bound. Preserve its precise limit;
-        # the exact certificate must not weaken the numerical safeguard.
-        expect_equal(expected$remaining, 3L)
-        expect_error(sarima(values, period = period, d = d, seasonal_d = seasonal_d),
-                     "certified diffuse observation-null identity failed its residual check")
-        next
-      }
       actual <- tryCatch(sarima(values, period = period, d = d, seasonal_d = seasonal_d),
         error = function(error) stop("Rank stress s=", period, ", d=", d,
           ", D=", seasonal_d, ", mask=", mask_name, ": ", conditionMessage(error)))
@@ -606,15 +635,27 @@ local({
   }
 })
 
-# The same long sparse prefix can fail its numerical residual check before
-# later observations would identify all coordinates. Final design rank alone
-# does not guarantee that floating propagation stays within supported bounds.
+# The formerly rejected long sparse prefix must now propagate successfully;
+# the late tail identifies all six original initial-history coordinates.
 late_identified <- rep(NA_real_, 90)
 late_rows <- c(1, 21, 41, 61, 81, 87:90)
 late_identified[late_rows] <- sin(late_rows * sqrt(2)) + cos(late_rows * sqrt(3)) / 2
-expect_equal(rank_oracle(late_identified, 4, 2, 1)$remaining, 0L)
-expect_error(sarima(late_identified, period = 4, d = 2, seasonal_d = 1),
-             "certified diffuse observation-null identity failed its residual check")
+late_rank <- rank_oracle(late_identified, 4, 2, 1)
+late_expected <- missing_difference_oracle(late_identified, 4, 2, 1)
+late_actual <- sarima(late_identified, period = 4, d = 2, seasonal_d = 1)
+expect_equal(late_rank$remaining, 0L)
+expect_equal(late_actual$update_kind, late_rank$kind)
+expect_equal(late_actual$rank_before, late_rank$before)
+expect_equal(late_actual$rank_after, late_rank$after)
+expect_equal(late_actual$remaining_diffuse_rank, 0L)
+expect_equal(late_actual$finite_count, 3L)
+expect_equal(late_actual$fixed_log_likelihood, late_expected$fixed, tolerance = 1e-7)
+expect_equal(late_actual$profiled_log_likelihood, late_expected$profile, tolerance = 1e-7)
+expect_equal(late_actual$profiled_variance, late_expected$scale, tolerance = 1e-7)
+expect_equal(late_actual$sum_log_finite_variances + late_actual$sum_log_diffuse_variances,
+             late_expected$logdet, tolerance = 1e-7)
+expect_true(late_actual$numerics$stable_history_propagation)
+expect_true(late_actual$numerics$history_reconstructions > 0)
 
 # Equal divided-difference knot sums across distinct seasonal phases must not
 # identify the second global polynomial coefficient prematurely. The resulting
@@ -641,3 +682,107 @@ for (settings in special_patterns) {
   expect_equal(actual$fixed_log_likelihood, expected$fixed, tolerance = 1e-7)
   expect_equal(actual$profiled_log_likelihood, expected$profile, tolerance = 1e-7)
 }
+
+# Long sparse prefixes followed by an identifying block. These prospective
+# designs exercise all supported differencing orders without assuming that
+# every arbitrary long/missing input is numerically qualified. Rank and Gaussian
+# identities are independent of the production history representation.
+long_sparse_values <- function(n, period, d, seasonal_d) {
+  degree <- d + period * seasonal_d
+  observed <- sort(unique(c(seq.int(1L, floor(.75 * n), by = 5L * period),
+                            seq.int(n - degree - 9L, n))))
+  value <- sin(seq_len(n) * sqrt(2)) + cos(seq_len(n) * sqrt(3)) / 2
+  value[-observed] <- NA_real_
+  value
+}
+for (n in c(180L, 360L)) for (period in c(4L, 12L)) {
+  for (d in 0:2) for (seasonal_d in 0:2) {
+    if (d + period * seasonal_d == 0) next
+    label <- paste("long sparse", n, period, d, seasonal_d)
+    values <- long_sparse_values(n, period, d, seasonal_d)
+    expected_rank <- rank_oracle(values, period, d, seasonal_d)
+    expected <- missing_difference_oracle(values, period, d, seasonal_d, variance = 1.7)
+    actual <- tryCatch(sarima(values, period = period, d = d,
+                              seasonal_d = seasonal_d, variance = 1.7),
+      error = function(error) stop("Long sparse n=", n, ", period=", period,
+        ", d=", d, ", D=", seasonal_d, ": ", conditionMessage(error)))
+    expect_equal(actual$update_kind, expected_rank$kind, info = label)
+    expect_equal(actual$rank_before, expected_rank$before, info = label)
+    expect_equal(actual$rank_after, expected_rank$after, info = label)
+    expect_equal(actual$remaining_diffuse_rank, 0L, info = label)
+    expect_equal(actual$finite_count, expected$degrees, info = label)
+    expect_equal(actual$likelihood_status, "available", info = label)
+    expect_equal(actual$profile_status, "available", info = label)
+    expect_equal(actual$fixed_log_likelihood, expected$fixed, tolerance = 1e-7, info = label)
+    expect_equal(actual$profiled_log_likelihood, expected$profile, tolerance = 1e-7, info = label)
+    expect_equal(actual$profiled_variance, expected$scale, tolerance = 1e-7, info = label)
+    expect_equal(actual$sum_squared_standardized, expected$sse, tolerance = 1e-7, info = label)
+    expect_equal(actual$sum_log_finite_variances + actual$sum_log_diffuse_variances,
+                 expected$logdet, tolerance = 1e-7, info = label)
+    predicted <- difference_prediction_oracle(values, n - 2L, period, d, seasonal_d)
+    expect_equal(actual$predictions[n - 2L], unname(predicted["prediction"]), tolerance = 1e-7, info = label)
+    expect_equal(actual$finite_variances[n - 2L], unname(predicted["variance"]), tolerance = 1e-7, info = label)
+  }
+}
+
+# A longer history need not identify every seasonal direction. It should return
+# the independent rank trace and unavailable objective, not a spurious density.
+for (period in c(4L, 12L)) {
+  values <- rep(NA_real_, 360)
+  observed <- seq.int(1L, length(values), by = 5L * period)
+  values[observed] <- sin(observed * sqrt(2)) + cos(observed * sqrt(3)) / 2
+  expected <- rank_oracle(values, period, 2, 1)
+  actual <- sarima(values, period = period, d = 2, seasonal_d = 1)
+  expect_equal(expected$remaining, period - 1L)
+  expect_equal(actual$update_kind, expected$kind)
+  expect_equal(actual$rank_after, expected$after)
+  expect_equal(actual$remaining_diffuse_rank, expected$remaining)
+  expect_equal(actual$likelihood_status, "unresolved_diffuse")
+  expect_equal(actual$profile_status, "unresolved_diffuse")
+  expect_true(is.na(actual$fixed_log_likelihood))
+  expect_true(is.na(actual$profiled_log_likelihood))
+}
+
+# Correlated innovations use a dense stationary ARMA(1,1) covariance. Late gaps
+# check predictions when no update is made, after a long sparse identifying span.
+for (settings in list(c(180L, 4L, 2L, 1L), c(180L, 12L, 1L, 2L),
+                      c(180L, 12L, 2L, 2L), c(360L, 4L, 2L, 2L))) {
+  n <- settings[1L]
+  period <- settings[2L]
+  d <- settings[3L]
+  seasonal_d <- settings[4L]
+  label <- paste("long sparse ARMA", paste(settings, collapse = " "))
+  values <- long_sparse_values(n, period, d, seasonal_d)
+  values[c(n - 4L, n - 2L)] <- NA_real_
+  expected <- missing_difference_oracle(values, period, d, seasonal_d,
+                                         variance = .4, ar = .3, ma = .2)
+  actual <- sarima(values, ar = .3, ma = .2, period = period, d = d,
+                   seasonal_d = seasonal_d, variance = .4)
+  expect_equal(actual$remaining_diffuse_rank, 0L, info = label)
+  expect_equal(actual$finite_count, expected$degrees, info = label)
+  expect_equal(actual$fixed_log_likelihood, expected$fixed, tolerance = 1e-7, info = label)
+  expect_equal(actual$profiled_log_likelihood, expected$profile, tolerance = 1e-7, info = label)
+  expect_equal(actual$profiled_variance, expected$scale, tolerance = 1e-7, info = label)
+  expect_equal(actual$sum_squared_standardized, expected$sse, tolerance = 1e-7, info = label)
+  expect_equal(actual$sum_log_finite_variances + actual$sum_log_diffuse_variances,
+               expected$logdet, tolerance = 1e-7, info = label)
+  predicted <- difference_prediction_oracle(values, n - 2L, period, d, seasonal_d,
+                                            ar = .3, ma = .2)
+  expect_equal(actual$update_kind[n - 2L], 0L, info = label)
+  expect_equal(actual$predictions[n - 2L], unname(predicted["prediction"]), tolerance = 1e-7, info = label)
+  expect_equal(actual$finite_variances[n - 2L], unname(predicted["variance"]), tolerance = 1e-7, info = label)
+}
+
+# Adding a homogeneous solution changes only the unknown initial history. Once
+# identified, predictions shift by that solution and both normalized likelihoods
+# stay unchanged. This checks original-coordinate measure preservation.
+values <- long_sparse_values(180L, 4L, 2L, 1L)
+shift <- drop(homogeneous_design(180L, 4L, 2L, 1L) %*% (seq_len(6L) / 6))
+actual <- sarima(values, period = 4, d = 2, seasonal_d = 1)
+shifted <- sarima(values + shift, period = 4, d = 2, seasonal_d = 1)
+identified <- which(actual$rank_before == 0L)
+expect_equal(shifted$fixed_log_likelihood, actual$fixed_log_likelihood, tolerance = 1e-7)
+expect_equal(shifted$profiled_log_likelihood, actual$profiled_log_likelihood, tolerance = 1e-7)
+expect_equal(shifted$profiled_variance, actual$profiled_variance, tolerance = 1e-7)
+expect_equal(shifted$predictions[identified] - actual$predictions[identified],
+             shift[identified], tolerance = 1e-7)

@@ -125,7 +125,8 @@ Gaussian calculation integrated over the initial-state coordinates. Optional
 external oracle scripts exercise public KFAS and pinned JD+ APIs; neither
 package is required by the native kernel or its regular test suite. The
 standalone sanitizer harness is `test_diffuse_state_space.cpp`; compile it with
-`numerics.cpp`, `linear_algebra.cpp`, `state_space.cpp`,
+`numerics.cpp`, `linear_algebra.cpp`, `state_space.cpp`, `sparse_history.cpp`,
+`finite_state_factor.cpp`,
 `diffuse_state_space.cpp` and the R LAPACK/BLAS flags above.
 
 ## Fixed-model windows and transformations (20a.3)
