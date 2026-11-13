@@ -58,3 +58,31 @@ ${CXX:-c++} -std=c++17 -Wall -Wextra -Wconversion -pedantic \
   $(R CMD config --ldflags) -o /tmp/persephone-linear-algebra
 /tmp/persephone-linear-algebra
 ```
+
+## Transforms and regressor domains (19c)
+
+The elementary `none`/`log` transformations preserve explicit missing masks.
+Log requires positive observed values and returns each observation's log
+Jacobian (`-log(y)`), so a future likelihood can select the correct estimation
+span before summation. Inverse log is pointwise exp; it does not apply a
+lognormal forecast-mean adjustment. Nonfinite input or exponential overflow/
+underflow is rejected. Internal Rcpp transformation defaults select `none`.
+
+`native_prepare_inputs()` validates a monthly/quarterly univariate `ts` and
+a uniquely named list of regressor series or an `mts`. It aligns by integer
+period, requires finite regressors throughout the entire requested observed,
+backcast and forecast domain, and crops only unused extra supplied periods.
+Missing responses are allowed; missing regressors, padding, recycling and
+implicit extrapolation are not. Output is a serializable plain-data contract.
+Estimation spans, context-object conversion, coefficient constraints and
+automatic transformation selection remain later pipeline work.
+
+The standalone transform harness uses no R headers or libraries:
+
+```sh
+c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
+  -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
+  src/numerics.cpp src/transforms.cpp tools/native-tests/test_transforms.cpp \
+  -o /tmp/persephone-transforms
+/tmp/persephone-transforms
+```

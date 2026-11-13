@@ -55,3 +55,8 @@ jobs:
             -Isrc src/numerics.cpp tools/native-tests/test_numerics.cpp \
             -o "$RUNNER_TEMP/persephone-numerics"
           "$RUNNER_TEMP/persephone-numerics"
+          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
+            -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_transforms.cpp \
+            -o "$RUNNER_TEMP/persephone-transforms"
+          "$RUNNER_TEMP/persephone-transforms"

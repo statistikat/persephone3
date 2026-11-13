@@ -45,7 +45,8 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
     return(list(backend = backend, schema_version = 1L,
                 status = "unimplemented", fit = FALSE,
                 primitives = c("time_domain", "difference_polynomial", "convolve", "finite_filter",
-                               "cholesky_solve", "qr_least_squares"),
+                               "cholesky_solve", "qr_least_squares",
+                               "transform", "inverse_transform", "prepare_inputs"),
                 methods = character(), specification_blocks = character(),
                 packages_available = NA, runtime_checked = FALSE,
                 reason = "Native seasonal-adjustment fitting is not implemented."))

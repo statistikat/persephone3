@@ -25,3 +25,11 @@
     .Call(`_persephone3_native_qr_solve`, matrix, rhs, rank_tolerance)
 }
 
+.native_transform <- function(values, transformation = NULL) {
+    .Call(`_persephone3_native_transform`, values, transformation)
+}
+
+.native_inverse_transform <- function(values, transformation = NULL) {
+    .Call(`_persephone3_native_inverse_transform`, values, transformation)
+}
+

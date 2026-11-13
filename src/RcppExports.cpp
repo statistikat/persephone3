@@ -87,6 +87,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_transform
+Rcpp::List native_transform(SEXP values, SEXP transformation);
+RcppExport SEXP _persephone3_native_transform(SEXP valuesSEXP, SEXP transformationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type transformation(transformationSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_transform(values, transformation));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_inverse_transform
+Rcpp::NumericVector native_inverse_transform(SEXP values, SEXP transformation);
+RcppExport SEXP _persephone3_native_inverse_transform(SEXP valuesSEXP, SEXP transformationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type transformation(transformationSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_inverse_transform(values, transformation));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_time_domain", (DL_FUNC) &_persephone3_native_time_domain, 4},
@@ -95,6 +119,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_filter", (DL_FUNC) &_persephone3_native_filter, 3},
     {"_persephone3_native_cholesky_solve", (DL_FUNC) &_persephone3_native_cholesky_solve, 2},
     {"_persephone3_native_qr_solve", (DL_FUNC) &_persephone3_native_qr_solve, 3},
+    {"_persephone3_native_transform", (DL_FUNC) &_persephone3_native_transform, 2},
+    {"_persephone3_native_inverse_transform", (DL_FUNC) &_persephone3_native_inverse_transform, 2},
     {NULL, NULL, 0}
 };
 

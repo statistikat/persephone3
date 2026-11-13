@@ -36,6 +36,10 @@ if ("--native" %in% args) {
   stopifnot(isTRUE(all.equal(solve_spd(diag(2), matrix(c(2, 3), 2))$solution,
                              matrix(c(2, 3), 2))))
   stopifnot(solve_qr(diag(2), matrix(c(2, 3), 2))$rank == 2L)
+  prepare <- getFromNamespace("native_prepare_inputs", "persephone3")
+  prepared <- prepare(ts(c(1, exp(1)), start = c(2000, 1), frequency = 12),
+                      transformation = "log")
+  stopifnot(isTRUE(all.equal(as.numeric(prepared$transformed), c(0, 1))))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",
