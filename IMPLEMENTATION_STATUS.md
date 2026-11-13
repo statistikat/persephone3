@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **`0e121ae`**, package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: **`f811e2f`**, package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -8,7 +8,7 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path, with **1,373 passing installed-package assertions**. These
+current rjd3 path, with **1,387 passing installed-package assertions**. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -49,6 +49,7 @@ the native-backend plan below.
 | 18b — inventory integrity follow-up | Prevent inventory-only writes from invalidating or mislabelling an existing reference corpus; require complete regeneration | Temporary-copy checks confirm rejected commands preserve file hashes/mtimes and full regeneration still passes all 12 corpus checks. The repository corpus was unchanged. |
 | 14a — validation workflow corrections | Full CI requires reference dependencies, prints/uploads tinytest logs, adds a Linux PDF-manual lane, aligns coverage/pkgdown to Java 21 and builds non-deploying pkgdown previews for pull requests | Workflow YAML parses locally. Remote runs, minimum-version qualification, pinned-versus-current dependency lanes and coverage thresholds remain open; the native-only lane stays separate. |
 | 17c — lazy backend reinitialization | Restore an existing protobuf descriptor database after R's example cleanup detaches its lookup pool; isolate and validate the optional compatibility bridge | 14 fresh-process assertions cover constructor/fit/setter recovery for both methods, namespace reloads, duplicate-pool prevention and incompatible-pool errors; package/native capability loading still initializes no Java. |
+| 14b — package check follow-up | Explicit namespace imports, source-package exclusions and corrected executable examples/manual wording | Full examples run successfully; implementation tests total 1,387 across 21 files. The remaining compiler warning comes from the installed R headers, not the independently compiled C++ core. |
 
 Each numbered slice is committed separately. A delivered foundation does not
 mean that native X-13/TRAMO-SEATS or the later release gates are complete.
@@ -85,12 +86,22 @@ establish those behaviors.
 
 ### Implementation validation
 
-- Installed the compiled package in a temporary library; **1,373 assertions**
-  pass across **20 test files**. No reference-backed test was skipped.
+- Installed the compiled package in a temporary library; **1,387 assertions**
+  pass across **21 test files**. No reference-backed test was skipped.
+- Full `R CMD check --as-cran` executed the examples and tests and rebuilt the
+  vignettes, PDF manual and HTML manual successfully. A generated `Rplots.pdf`
+  packaging note was corrected by excluding generated example plots. The final
+  packaging recheck reports **0 errors, 0 notes and 1 warning**; it omitted the
+  already-passing runtime/documentation checks after that exclusion-only change.
+  The warning is from the installed R 4.5.2 header `R_ext/Boolean.h`, which uses
+  an unknown Clang warning group, `-Wfixed-enum-extension`. No package-level
+  warning suppression was added. Final archive verification matched all **180**
+  current source/test/documentation files that also occur in the archive.
 - All **12 pinned direct-backend replays** and corpus integrity/corruption
   checks pass. The corpus is synthetic and does not copy Java implementation.
 - With Java-related R packages inaccessible in an isolated library, package
-  loading, capability errors and **58 compiled primitive assertions** pass.
+  loading, capability errors, **58 compiled primitive assertions** and **34
+  backend contract assertions** pass.
   This is not a claim that the system JVM was removed or native fitting works.
 - Independently compiled the C++ core with strict warnings and ASan/UBSan using
   the local Homebrew Clang toolchain; checks pass.
@@ -451,10 +462,11 @@ No performance measurements were taken in this review. Abstract base-class
 Inspected on **2026-11-13**: the requested [CLI directory][jd-cli] and relevant
 base modules at upstream commit
 [`15f1821fa71a949f842a5891e7cd68c83187f76d`][jd-snapshot]. Its root POM declares
-**3.9.1-SNAPSHOT**. This source snapshot is research evidence, **not yet the
-numerical reference version**: the installed R wrappers used in the earlier
-assessment are 3.9.0, and their exact bundled JAR versions/hashes still need to
-be recorded. Never compare against a moving `develop` branch as the oracle.
+**3.9.1-SNAPSHOT**. This source snapshot is research evidence, **not the
+numerical reference version**: item 16a pins the installed 3.9.0 wrappers,
+JD+ 3.9.0 artifacts and 20 JAR hashes. Mapping those exact artifacts to an
+audited Java source SHA remains open. Never compare against a moving `develop`
+branch as the oracle.
 
 The CLI is an application and workspace/batch layer. Its [X-13 plugin][jd-cli-x13]
 depends on base modules; the [R-facing X13 class][jd-r-x13] invokes `X13Kernel`
@@ -478,11 +490,12 @@ external executable would not by itself satisfy the C++/Rcpp replacement goal.
 
 ### Bounded feature inventory
 
-The following is the initial inventory from the current source. Item 16 must
-turn it into an option-by-option and output-by-output support matrix; the
-open-ended pass-through APIs mean this table alone is not a complete contract.
+The following inventory records the reassessment baseline. Item 16a expands it
+into versioned setter/output/template artifacts. The final native support
+decisions remain open; pass-through APIs mean this table alone is not a complete
+contract. Locations refer to the baseline and may have moved.
 
-| Current surface | Location | Required treatment |
+| Baseline surface | Location | Treatment / remaining native scope |
 | --- | --- | --- |
 | X-13 templates `rsa0`, `rsa1`, `rsa2c`, `rsa3`, `rsa4`, `rsa5c`; TRAMO/SEATS `rsafull`, `rsa0`–`rsa5` | `R/helpers.R`, `R/perX13.R`, `R/perTramo.R` | Freeze method-specific defaults and expansions; both constructors currently default to `rsa3` |
 | 15 spec blocks: `arima`, `automdl`, `basic`, `easter`, `estimate`, `setout`, `td`, `transform`, `addout`, `remout`, `addramp`, `remramp`, `usrdefvar`, `x11`, `benchmarking` | `R/helpers.R:122`, `R/update_spec.R` | Implement supported parameters, validation and update semantics; retain the local `outliers` shortcut |
@@ -490,12 +503,12 @@ open-ended pass-through APIs mean this table alone is not a complete contract.
 | 57 default requested keys, including wildcard families | `R/persephone.R:291` | Components `y/t/sa/s/i/cal`, forecasts and `y_ef`, ARIMA orders, regression/outlier information, residual/seasonality/spectral tests, Q/Q2 and quality |
 | Additional directly consumed fields | `R/get_functions.R`, SI plots, `R/generate_Qr_List.R` | X-11 d6/d7/d8/d9/d10/d13 and filter choices; SEATS components; regression coefficient metadata/covariance; likelihood degrees of freedom; diagnostic p-values |
 | Single and direct-hierarchy model execution | `R/perSingle.R`, `R/perX13.R`, `R/perTramo.R`, `R/perHts.R:672` | Route all paths through the same engine interface |
-| Eager dependency loading and dispatch | `R/helpers.R:.onLoad`, top-level `specfun_list`, `NAMESPACE`, `R/imports.R` | Remove eager rjd3 function capture/imports; Java initialization belongs only in the optional legacy adapter |
+| Eager dependency loading and dispatch | Former `R/helpers.R:.onLoad`, top-level `specfun_list`, `NAMESPACE`, `R/imports.R` | Resolved in 17a: Java initialization occurs only in the optional legacy adapter; 17c also restores detached descriptor lookups lazily |
 | Public `$params`, `$output`, JD3 class checks and serialized R6 objects | `R/persephone.R`, extraction/plot code, `inst/tinytest/test-single.R`, `R/createDashboard.R:97` | Versioned native contracts, deliberate compatibility policy, serializable state across R sessions and `callr` |
 
 **Keep in R:** R6 orchestration, batches, hierarchy/weight arithmetic, UI,
-plotting, and presentation rules. `genTd()` is already R code; item 11 should
-fix it and create independent calendar fixtures. Only move its computation to
+plotting, and presentation rules. `genTd()` remains R code; item 11 corrected it
+and added independent calendar fixtures. Only move its computation to
 C++ if required for the engine or justified by measurement. Eliminating Java
 does not require porting every R helper.
 
@@ -518,20 +531,20 @@ flowchart TD
     F --> G
 ```
 
-The proposed internal interface is `default_spec()`, `validate_spec()`,
-`update_spec()`, `fit()`, `normalize_result()`, and `capabilities()`. These are
-design names, not functions already implemented. Use `backend = "rjd3"` or
-`backend = "native"` during transition. Persist the effective backend in each
-object/result; define inheritance for new hierarchy children and preserve
-existing children's choices. Do not choose an engine merely because a package
-happens to be installed. Switch the default only at item 27.
+The implemented reference interface uses `backend_default_spec()`,
+`backend_update_spec()`, `backend_fit()`, `normalize_backend_result()` and
+`backend_capabilities()`, with specification validation helpers. It supports
+explicit `backend = "rjd3"` or `backend = "native"`, records that choice in
+each object/result and preserves existing children's choices. Native fitting
+still reports unsupported capability. Complete per-option native validation
+and execution will be added with each numerical slice. Switch the default only
+at item 27.
 
-For qualification, support a deliberate session setting such as
-`options(persephone.backend = "native")`, with an explicit constructor argument
-taking precedence. Resolve and record it at object construction; changing the
-option must not change existing objects. An unset option retains the transitional
-rjd3 default. This enables native-only example/test runs before the default
-switch without depending on installed-package detection.
+The session setting `options(persephone.backend = "native")` is implemented;
+an explicit constructor argument takes precedence. Resolution happens at object
+construction, and changing the option does not change existing objects. An unset
+option retains the transitional rjd3 default. This will support native-only
+example/test qualification once the required native fits exist.
 
 Use versioned, owned plain-R data for the interface:
 
