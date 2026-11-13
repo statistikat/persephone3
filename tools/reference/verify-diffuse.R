@@ -102,9 +102,11 @@ fixed_spec <- function(method, data) {
   spec <- if (method == "x13") rjd3x13::regarima_spec("rg0") else rjd3tramoseats::tramo_spec("tr0")
   # mean=NULL removes drift. In the pinned wrappers mean=FALSE instead creates
   # an undefined parameter. Orders and coefficient values must be set together.
-  spec <- rjd3toolkit::set_arima(spec, mean = NULL, p = 0L, d = data$d,
-    q = length(data$theta), bp = 0L, bd = data$bd, bq = 0L,
-    coef = data$theta, coef.type = if (length(data$theta)) "Fixed" else NULL)
+  coefficients <- c(-as.numeric(data$phi), data$theta, -as.numeric(data$bphi), data$btheta)
+  spec <- rjd3toolkit::set_arima(spec, mean = NULL, p = length(data$phi), d = data$d,
+    q = length(data$theta), bp = length(data$bphi), bd = data$bd, bq = length(data$btheta),
+    coef = if (length(coefficients)) coefficients else NULL,
+    coef.type = if (length(coefficients)) rep("Fixed", length(coefficients)) else NULL)
   spec <- rjd3toolkit::set_transform(spec, fun = if (data$log) "Log" else "None")
   spec <- rjd3toolkit::set_automodel(spec, enabled = FALSE)
   if (method == "tramoseats") spec <- rjd3toolkit::set_estimate(spec, exact.ml = TRUE)
@@ -114,8 +116,11 @@ fixed_spec <- function(method, data) {
 # Only public Java entry points are invoked. javap -public was used to inspect
 # signatures; no Java numerical method bodies were copied or translated.
 dk_likelihood <- function(data, profile) {
-  model <- rjd3toolkit::sarima_model(period = frequency(data$y), d = data$d,
-    bd = data$bd, theta = data$theta)
+  # Native/R AR coefficients enter 1-phi(B); JD+ phi/bphi are the polynomial
+  # coefficients themselves. MA coefficients use the same positive sign.
+  model <- rjd3toolkit::sarima_model(period = frequency(data$y),
+    phi = if (length(data$phi)) -data$phi else NULL, d = data$d, bd = data$bd, theta = data$theta,
+    bphi = if (length(data$bphi)) -data$bphi else NULL, btheta = data$btheta)
   java_model <- rjd3toolkit::.r2jd_sarima(model)
   ssf <- rJava::.jcall("jdplus/toolkit/base/core/ssf/arima/SsfArima",
     "Ljdplus/toolkit/base/core/ssf/univariate/Ssf;", "ssf",
@@ -222,24 +227,50 @@ if ("--second-order" %in% options) {
   # form identities above. They exercise nonzero diffuse corrections and the
   # structural zero certificates. No new numerical tolerance is introduced.
   before_checks <- checks
-  accepted <- rejected <- nonzero_corrections <- 0L
+  ar_acf <- rjd3toolkit::sarima_properties(rjd3toolkit::sarima_model(period = 4L, phi = -0.3), nacf = 4L)$acf
+  seasonal_acf <- rjd3toolkit::sarima_properties(rjd3toolkit::sarima_model(period = 4L, bphi = -0.25), nacf = 4L)$acf
+  ma_acf <- rjd3toolkit::sarima_properties(rjd3toolkit::sarima_model(period = 4L, theta = 0.2), nacf = 4L)$acf
+  close(ar_acf[2L] / ar_acf[1L], 0.3, "public JD+ regular AR sign convention")
+  close(seasonal_acf[5L] / seasonal_acf[1L], 0.25, "public JD+ seasonal AR sign convention")
+  close(ma_acf[2L] / ma_acf[1L], 0.2 / 1.04, "public JD+ MA sign convention")
+  accepted <- excluded_by_state_bound <- nonzero_corrections <- determinant_limits <- 0L
+  # Pinned public-DK intermediate accuracy limits, established against
+  # independent complete-data densities and direct preprocessing likelihoods.
+  # This list is explicit: no newly failing comparison is automatically exempted.
+  dk_determinant_limits <- paste0("12-d2-D2-", c("white-complete", "white-edges",
+    "ma-complete", "ma-internal", "ma-edges", "arma-complete", "arma-internal",
+    "arma-edges", "arma-early"))
   second_errors <- c(profile = 0, fixed = 0, finite_logdet = 0, diffuse_logdet = 0)
-  orders <- list(c(d = 0L, D = 2L), c(d = 2L, D = 0L), c(d = 2L, D = 1L))
+  orders <- expand.grid(d = 0:2, D = 0:2)
+  coefficients <- list(white = list(), ma = list(theta = 0.4),
+    arma = list(phi = 0.3, theta = 0.2), airline = list(theta = 0.2, btheta = -0.4))
   masks <- list(complete = integer(), internal = c(20L, 21L, 44L),
-    edges = c(1L, 2L, 119L, 120L), early = c(1L, 3L, 5L, 6L, 16L, 21L, 23L, 86L))
-  for (period in c(4L, 12L)) for (order in orders) for (mask in names(masks)) {
-    t <- seq_len(120L)
-    y <- sin(t * sqrt(2)) + 0.5 * cos(t * sqrt(3))
-    # Generate inputs by repeated seasonal accumulation and ordinary cumulative
-    # sums, with zero prehistory. No fitted output determines the input values.
-    for (j in seq_len(order[["D"]])) {
-      for (i in seq.int(period + 1L, length(y))) y[i] <- y[i] + y[i - period]
+    edges = c(1L, 2L, 119L, 120L), early = c(1L, 3L, 5L, 6L, 16L, 21L, 23L, 86L),
+    seasonal_phase = integer(), block = integer())
+  for (period in c(4L, 12L)) for (row in seq_len(nrow(orders))) for (model in names(coefficients)) {
+    order <- orders[row, ]
+    coef <- coefficients[[model]]
+    diffuse <- order$d + period * order$D
+    states <- max(1L, length(coef$phi) + period * length(coef$bphi),
+                  1L + length(coef$theta) + period * length(coef$btheta)) + diffuse
+    # Exclude by an independent declared dimension calculation, never by
+    # catching a failed numerical evaluation and treating it as a pass.
+    if (states > 32L) {
+      excluded_by_state_bound <- excluded_by_state_bound + length(masks)
+      next
     }
-    for (j in seq_len(order[["d"]])) y <- cumsum(y)
+    masks$seasonal_phase <- c(1L, 1L + period, 1L + 2L * period, 2L + period, 2L + 2L * period)
+    masks$block <- seq.int(2L * period + 1L, 3L * period + 3L)
+    for (mask in names(masks)) {
+    t <- seq_len(120L)
+    # Bounded values avoid conflating structural observability with overflowing
+    # high-order accumulated levels. A fixed model can evaluate any input.
+    y <- sin(t * sqrt(2)) + 0.5 * cos(t * sqrt(3)) + t / 40
     y[masks[[mask]]] <- NA_real_
     data <- list(y = ts(y, start = c(2000L, 1L), frequency = period),
-      d = order[["d"]], bd = order[["D"]], theta = NULL, log = FALSE)
-    id <- paste(period, paste0("d", data$d), paste0("D", data$bd), mask, sep = "-")
+      d = order$d, bd = order$D, phi = coef$phi, theta = coef$theta,
+      bphi = coef$bphi, btheta = coef$btheta, log = FALSE)
+    id <- paste(period, paste0("d", data$d), paste0("D", data$bd), model, mask, sep = "-")
     observed <- sum(!is.na(y))
     diffuse <- data$d + period * data$bd
     jd_profile <- dk_likelihood(data, TRUE)
@@ -248,28 +279,63 @@ if ("--second-order" %in% options) {
       jd_profile[["legacy"]] == 0, paste(id, "second-order DK counts and convention"))
     close(jd_fixed[names(jd_profile) != "ll"], jd_profile[names(jd_profile) != "ll"],
           paste(id, "DK fixed/profile intermediates"))
-    value <- tryCatch(native(as.numeric(data$y), numeric(), numeric(), numeric(), numeric(),
-      period, data$d, data$bd, mean = 0, variance = 1), error = identity)
-    if (inherits(value, "error")) {
-      # One observed qualification limit. Accept only this case and this explicit
-      # rejection, not arbitrary failures or a silently truncated likelihood.
-      assert(period == 4L && data$d == 2L && data$bd == 1L && mask == "early" &&
-        grepl("^numerically ambiguous diffuse innovation;", conditionMessage(value)),
-        paste(id, "unexpected second-order native rejection:", conditionMessage(value)))
-      rejected <- rejected + 1L
-      cat("QUALIFICATION LIMIT", id, ": explicit numerically ambiguous diffuse innovation rejection\n")
-      next
-    }
+    value <- tryCatch(native(as.numeric(data$y), as.numeric(data$phi), as.numeric(data$theta),
+      as.numeric(data$bphi), as.numeric(data$btheta), period, data$d, data$bd, mean = 0, variance = 1),
+      error = function(e) stop(id, ": ", conditionMessage(e), call. = FALSE))
     assert(identical(value$likelihood_status, "available") && identical(value$profile_status, "available"),
            paste(id, "second-order native likelihood status"))
     assert(value$observed_count == observed && value$diffuse_count == diffuse &&
       value$finite_count == observed - diffuse && value$initial_diffuse_rank == diffuse &&
       value$remaining_diffuse_rank == 0, paste(id, "second-order native counts and ranks"))
     close(value$sum_squared_standardized, jd_profile[["q"]], paste(id, "second-order sum of squares"), TRUE)
-    close(value$sum_log_finite_variances, jd_profile[["finite_logdet"]], paste(id, "second-order finite determinant"), TRUE)
+    if (id %in% dk_determinant_limits) {
+      determinant_limits <- determinant_limits + 1L
+      cat("ORACLE LIMIT", id, "public DK finite-logdet difference =",
+          format(value$sum_log_finite_variances - jd_profile[["finite_logdet"]], digits = 8),
+          "; alternative checks below are mandatory\n")
+    } else close(value$sum_log_finite_variances, jd_profile[["finite_logdet"]], paste(id, "second-order finite determinant"), TRUE)
     close(value$sum_log_diffuse_variances, jd_profile[["diffuse_logdet"]], paste(id, "second-order diffuse determinant"), TRUE)
     close(value$profiled_log_likelihood, jd_profile[["ll"]], paste(id, "second-order profiled likelihood"), TRUE)
     close(value$fixed_log_likelihood, jd_fixed[["ll"]], paste(id, "second-order fixed likelihood"), TRUE)
+    if (period == 12L && data$d == 2L && data$bd == 2L) {
+      # Apply this alternate validation uniformly to all 18 models/masks in the
+      # affected high-order class, not only when a DK comparison happens to fail.
+      for (method in c("x13", "tramoseats")) {
+        spec <- fixed_spec(method, data)
+        result <- if (method == "x13") rjd3x13::regarima_fast(data$y, spec) else rjd3tramoseats::tramo_fast(data$y, spec)
+        assert(length(result$description$variables) == 0L && length(result$estimation$b) == 0L &&
+          length(result$estimation$parameters$val) == 0L, paste(id, method, "alternate oracle remains fully fixed"))
+        for (name in c("phi", "theta", "bphi", "btheta")) {
+          expected_coef <- if (name %in% c("phi", "bphi")) -as.numeric(data[[name]]) else as.numeric(data[[name]])
+          actual_coef <- result$description$arima[[name]]
+          assert(if (length(expected_coef)) identical(as.numeric(actual_coef["value", ]), expected_coef) &&
+            all(as.character(actual_coef["type", ]) == "FIXED") else is.null(actual_coef),
+            paste(id, method, name, "alternate oracle coefficient state"))
+        }
+        raw <- result$estimation$likelihood
+        assert(raw$nobs == observed && raw$neffectiveobs == observed - diffuse && raw$nparams == 1L,
+               paste(id, method, "alternate oracle counts"))
+        total_logdet <- -2 * raw$ll - raw$neffectiveobs * (log(2 * pi) + 1 + log(raw$ssq / raw$neffectiveobs))
+        close(value$sum_log_finite_variances + value$sum_log_diffuse_variances, total_logdet,
+              paste(id, method, "alternate total determinant"), TRUE)
+        close(value$sum_squared_standardized, raw$ssq, paste(id, method, "alternate sum of squares"), TRUE)
+        close(value$profiled_log_likelihood, raw$ll, paste(id, method, "alternate profiled likelihood"), TRUE)
+      }
+      if (mask %in% c("complete", "edges")) {
+        trimmed <- data$y[seq.int(min(which(!is.na(data$y))), max(which(!is.na(data$y))))]
+        w <- diff(diff(trimmed, differences = 2L), lag = 12L, differences = 2L)
+        phi <- if (length(data$phi)) data$phi else 0
+        theta <- if (length(data$theta)) data$theta else 0
+        gamma0 <- (1 + theta^2 + 2 * phi * theta) / (1 - phi^2)
+        gamma1 <- phi * gamma0 + theta
+        covariance <- toeplitz(c(gamma0, phi^(seq_len(length(w) - 1L) - 1L) * gamma1))
+        expected_q <- drop(crossprod(w, solve(covariance, w)))
+        expected_logdet <- 2 * sum(log(diag(chol(covariance))))
+        close(value$sum_squared_standardized, expected_q, paste(id, "independent differenced covariance sum of squares"), TRUE)
+        close(value$sum_log_finite_variances, expected_logdet, paste(id, "independent differenced covariance determinant"), TRUE)
+        close(value$sum_log_diffuse_variances, 0, paste(id, "canonical complete/edge diffuse determinant"), TRUE)
+      }
+    }
     second_errors <- pmax(second_errors, abs(c(
       profile = value$profiled_log_likelihood - jd_profile[["ll"]],
       fixed = value$fixed_log_likelihood - jd_fixed[["ll"]],
@@ -277,12 +343,15 @@ if ("--second-order" %in% options) {
       diffuse_logdet = value$sum_log_diffuse_variances - jd_profile[["diffuse_logdet"]])))
     accepted <- accepted + 1L
     if (abs(jd_profile[["diffuse_logdet"]]) > 1e-10) nonzero_corrections <- nonzero_corrections + 1L
-    cat("PASS second-order differential", id, "\n")
+    }
+    cat("PASS second-order differential", period, paste0("d", data$d), paste0("D", data$bd),
+        model, "all six missingness masks\n")
   }
-  assert(accepted + rejected == 24L && accepted >= 23L, "second-order probe accounting")
+  assert(accepted == 414L && excluded_by_state_bound == 18L && determinant_limits == 9L, "second-order probe accounting")
   assert(identical(parent_before, extended_parent_hashes(base_dir)), "original corpus unchanged after second-order probes")
-  cat("PASS: second-order public-DK differential checks;", accepted, "accepted;", rejected,
-      "explicit qualification limits;", nonzero_corrections, "nonzero diffuse corrections;",
+  cat("PASS: second-order public-DK differential checks;", accepted, "accepted;", excluded_by_state_bound,
+      "excluded by the declared 32-state bound;", determinant_limits, "explicit DK determinant oracle limits;",
+      nonzero_corrections, "nonzero diffuse corrections;",
       checks - before_checks, "checks\n")
   print(second_errors, digits = 8)
 }

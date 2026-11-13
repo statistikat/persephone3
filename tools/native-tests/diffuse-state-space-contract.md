@@ -1,4 +1,4 @@
-# Exact diffuse likelihood pilot (20a.2)
+# Exact diffuse likelihood pilot (20a.2 and 20a.2b)
 
 This independently authored implementation evaluates fixed Gaussian state-space
 parameters. It adds a bounded exact diffuse initialization and an explicit
@@ -140,19 +140,86 @@ certificates support the tested second-order seasonal gap patterns and mixed
 unobservable directions with scalar-identity transitions, including intervening
 gaps. Approximate row matches are not certificates; residual checks still apply.
 
-An exactly zero or structurally certified observation projection gives a finite update. A nonzero
-projection below the roundoff threshold produces an explicit
-`numerically ambiguous diffuse innovation` error. The pilot does not silently
-identify an extra coordinate or round a doubtful projection to zero.
-Consequently, it does **not** support every otherwise valid state-space or
-missing-data pattern. Some combined higher-order integration with gaps still
-triggers conservative rejection, including tested quarterly `d=2,D=1` and
-monthly `d=1,D=2` or `d=2,D=2` patterns. The supported structural cases have
-strict success assertions. For remaining combined-order limitations, tests allow
-either the documented numerical rejection or a successful result verified
-against an independent oracle on platforms where cancellation is exact.
-Unidentified directions produce `unresolved_diffuse`, rather than a finite
-objective. Broader robust rank handling remains work for a later numerical slice.
+The canonical SARIMA construction additionally certifies observation dependence
+using the exact rank of its homogeneous history design. This covers the formerly
+rejected quarterly `d=2,D=1` and monthly `d=1,D=2` or `d=2,D=2` gap fixtures.
+The certificate establishes only whether a projection is zero. It does not
+replace, normalize, or transform the numerical diffuse loading or its
+determinant contribution. A certified zero must still pass the scaled residual
+check. A certified nonzero pivot which is numerically zero or too small remains
+an explicit error. The generic state-space boundary has no SARIMA certificate.
+
+An exactly zero or structurally certified observation projection gives a finite
+update. An uncertified nonzero projection below the roundoff threshold produces
+an explicit `numerically ambiguous diffuse innovation` error. Arbitrary generic
+models, poorly conditioned diffuse coordinates, and extreme time spans can
+therefore still be rejected. The pilot does not silently identify an extra
+coordinate or relax numerical thresholds. Unidentified directions produce
+`unresolved_diffuse`, rather than a finite objective.
+
+A remaining propagation limit is explicitly qualified. For a quarterly
+`d=2,D=1` series of length 90 observed only at positions `1,21,41,61,81`,
+the propagated numerical basis fails its certified-null residual check, even
+though exact rank correctly leaves three initial coordinates unidentified.
+Adding observations at `87:90` would identify all six coordinates, but the
+same earlier residual failure still prevents an objective. Both fixtures must
+raise `certified diffuse observation-null identity failed its residual check`.
+Thus a full-rank final design does not ensure numerical support through a long
+sparse prefix. A more stable propagated basis is deferred to item 20a.2c;
+20a.2b does not change the existing residual tolerance.
+
+### Exact SARIMA history rank
+
+For the supported `d,D` in `0..2`, a basis of the homogeneous solutions of
+\(\Delta(B)y_t=0\) consists of
+
+\[
+\{\mathbf{1}_{t\bmod s=j}t^q: j=0,\ldots,s-1,\ q=0,\ldots,D-1\}
+\quad\text{and}\quad
+\{t^D,\ldots,t^{D+d-1}\}.
+\]
+
+Empty groups are omitted when `D=0` or `d=0`. Each sequence is a homogeneous
+solution. The groups are independent: a nonzero polynomial of degree at least
+\(D\) cannot agree on an entire seasonal arithmetic progression with one of
+degree below \(D\), and the remaining seasonal groups have disjoint support.
+There are \(k=sD+d\) columns. Since the recurrence has nonzero leading and
+trailing coefficients, these coordinates are invertibly related to the
+\(k\) initial history values. Consequently their observed row rank is exactly
+the number of initial history directions identified by those observations.
+
+Let \(c_j\) be the number of observed positions in seasonal phase \(j\).
+The seasonal columns contribute \(\sum_j\min(c_j,D)\) pivots. After eliminating
+those columns, the \(D\)-th divided difference sends \(t^D\) to 1 and
+\(t^{D+1}\) to the sum of its \(D+1\) time knots. These identities follow
+from [the divided-difference formula](https://dlmf.nist.gov/3.3.E35) and
+[Newton interpolation](https://dlmf.nist.gov/3.3.E38); this bounded-order rank
+rule was independently derived from them.
+
+For `d=1`, one extra pivot exists iff a phase has at least \(D+1\)
+observations. For `d=2`, that same condition supplies one extra pivot, and a
+second exists iff a phase has at least \(D+2\) observations or the first
+\(D+1\) observed time sums differ between two qualifying phases. Distinct
+ordered knots ensure that a phase's next divided difference has a different
+sum. This includes `D=0`: its divided difference is direct evaluation of
+\([1,t]\).
+
+The implementation stores at most 12 phase counts, capped at \(D+2\), and
+the checked unsigned 64-bit sums of each phase's first \(D+1\) observed
+indices. No polynomial powers, growing elimination matrix, or floating rank
+threshold enter this certificate. A prospective observation is diffuse exactly
+when adding its row raises the certified rank. A missing position is classified
+for its returned variance but is never added to the observed rank. Accumulation
+stops once all \(k\) coordinates are identified. Length and time-index checks
+reject potential unsigned overflow; each stored sum contains at most three
+indices. The standalone tests exercise these range failures directly without
+allocating an extreme-length series.
+
+Numerical and certified remaining ranks must agree throughout filtering.
+The `numerics` metadata identifies use of the exact history certificate and
+counts its observed pivots and observed dependent rows during the diffuse
+phase. Neither the finite-update count after that phase nor missing rows inflate
+the dependent-row count.
 
 Inputs must be real or integer arrays of the documented shapes. Complex,
 logical, factor and character data are rejected before conversion. Model inputs
@@ -186,6 +253,24 @@ finite variances. Analytic random-walk gap densities, seasonal walks, I(2)
 determinants, coordinate changes, bounded random systems, overlapping finite and
 diffuse loadings, and R stationary ARMA likelihoods provide further checks.
 Large-variance asymptotics are not the primary oracle.
+
+The exact history certificate is independently tested by constructing the
+homogeneous basis above and computing observed-prefix ranks using base R's SVD,
+with a required clear singular-value gap. Quarterly and monthly models cover
+all nine `d,D` combinations under complete, registered, internal, edge, periodic,
+block, sparse, all-missing, and seeded random masks. Of these 162 cases, 161
+must succeed; the sparse quarterly propagation limit above must raise its
+specific residual error. A separate late-identification fixture qualifies the
+same limit when the final design has full rank. Special equal-knot-sum cases
+require a finite observation while one diffuse coordinate remains, followed by
+its later identification. Direct Gaussian integration checks the resulting
+likelihood constants; the test oracle does not reuse the production count/sum
+formula. A second Gaussian oracle forms the differencing operator with base R,
+then integrates missing observations using a QR factorization of its missing
+columns. This checks all identified stress-case likelihoods without state
+propagation, a large covariance matrix, or the production rank formula.
+Pinned direct JD+ comparisons are recorded separately in
+[the reference notes](../reference/diffuse-notes.md).
 
 The optional script `tools/native-tests/verify-diffuse-kfas.R` uses only public
 KFAS model/filter/likelihood APIs. It checks fixed and profiled likelihoods,

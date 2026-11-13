@@ -154,30 +154,55 @@ there is no fitted offset or correction to force agreement.
 
 ## Additional second-order differential coverage
 
-`--native --source --second-order` adds 24 direct public-DK comparisons without
-changing the original 32 preprocessing fits or their independent identities.
-This additional block is differential evidence, not a separate closed-form
-likelihood oracle. It checks `(d,D)=(0,2),(2,0),(2,1)` at periods 4 and 12 with
-four masks: complete, internal gaps at 20/21/44, edge gaps at 1/2/119/120, and
-early gaps at 1/3/5/6/16/21/23/86. Inputs use the same `z[t]` formula, accumulated
-seasonally `D` times and ordinarily `d` times, starting from zero prehistory.
-Each model remains within the 32-state bound and has no estimated coefficients.
+`--native --source --second-order` evaluates 414 cases without changing the
+original 32 preprocessing fits or their independent identities. All `d,D` in
+`0:2` are included at periods 4/12, with white innovations, MA `+0.4`, ARMA
+`(+0.3,+0.2)`, and airline MA `+0.2`/seasonal MA `-0.4`. Coefficients use the
+native/R convention: the public JD+ bridge negates regular/seasonal AR
+coefficients and preserves MA signs. Public autocovariance identities guard that
+conversion.
 
-The current build accepts 23 cases, with maximum absolute profile/fixed
-likelihood discrepancies of `1.16e-10`/`1.05e-10`. Separate determinant terms,
-sums of squares and counts also agree. Six accepted cases have nonzero diffuse
-determinants, including monthly `D=2` with internal gaps (`log(16)`) and early
-gaps (`log(64)`), ordinary `d=2` with early gaps (`log(4)`, both frequencies),
-and monthly `d=2,D=1` with early gaps (`log(25)`). Thus this block adds direct
-evidence for the diffuse correction that is zero in the original probe suite.
+Inputs are the bounded deterministic formula
+`sin(t*sqrt(2)) + 0.5*cos(t*sqrt(3)) + t/40`, `t=1:120`. Six missingness masks
+are used: complete; internal 20/21/44; edges 1/2/119/120; early
+1/3/5/6/16/21/23/86; seasonal-phase gaps
+`1,1+s,1+2*s,2+s,2+2*s`; and a consecutive block `(2*s+1):(3*s+3)`.
+Eighteen model/mask configurations are excluded prospectively by the declared
+32-state dimension bound. No failed native evaluation is converted to a pass.
 
-The quarterly `d=2,D=1` early-gap case still reports a numerically ambiguous
-diffuse innovation explicitly. The script counts that rejection separately
-from successful parity comparisons. It accepts no other unexpected rejection;
-if that specific case becomes supported, its returned result must pass the
-same predeclared numerical bounds. More general combined high-order gap patterns
-remain a qualification limit before a broadly supported optimizer can be built
-on this kernel.
+All 414 native evaluations now succeed, including the formerly rejected
+quarterly `d=2,D=1` early-gap case. This expanded block passes 4,064 checks and
+includes 81 nonzero diffuse corrections. Counts, sum of squares, profiled/fixed
+likelihoods and diffuse determinants pass the unchanged numerical bounds.
+Nine public-DK **finite determinant intermediates** have a separate identified
+oracle-precision limit; those cases require the alternative checks below.
+
+| Monthly `d=2,D=2` model | DK finite-determinant limits |
+| --- | --- |
+| White | Complete, edges |
+| MA `+0.4` | Complete, internal, edges |
+| ARMA `(+0.3,+0.2)` | Complete, internal, edges, early |
+
+For example, white complete data have exact finite log determinant zero; native
+returns `4.41e-13`, whereas public DK returns `-5.46e-8`. The native profiled
+likelihood agrees with the exact twice-ordinary/twice-seasonal differenced
+Gaussian density to `2e-13`; DK differs by `1.39e-7`. Across the expanded block,
+the largest native/DK profile, fixed and finite-determinant discrepancies are
+`1.01e-6`, `1.05e-5` and `1.21e-6`. The likelihood comparisons pass their
+predeclared scaled bounds, while the nine near-zero/small determinant
+comparisons do not. No tolerance was widened and no fixture was regenerated.
+
+The script explicitly reports those nine oracle limits. Uniformly across all
+18 monthly `d=2,D=2` cases, it additionally checks native likelihood, sum of
+squares and total determinant against direct fixed X-13 **and** TRAMO results.
+The total determinant is recovered from their exposed raw likelihood, finite
+count and sum of squares using the stated likelihood equation. Complete and
+edge-only cases also require an independent dense Gaussian covariance check
+after exact differencing: for ARMA(1,1),
+`gamma0=(1+theta^2+2*phi*theta)/(1-phi^2)`,
+`gamma1=phi*gamma0+theta`, and `gamma[h]=phi^(h-1)*gamma1`.
+R's public dense linear algebra evaluates that Toeplitz covariance. This
+validates the native result without approving the inaccurate DK intermediate.
 
 The structural zero certificates were reviewed independently: an observed update
 annihilates `Z B_post`, so a transition row exactly equal to `Z` must propagate
@@ -185,6 +210,15 @@ a zero loading row; an exact scalar-identity transition preserves that nullspace
 through missing observations. The core uses exact structural matches, with a
 residual check for the scalar-identity certificate. It does not treat approximate
 row equality or merely small observability as proof of a mathematical zero.
+The canonical SARIMA path additionally uses an exact integer homogeneous-history
+rank certificate, independent of the stationary ARMA coefficients, to classify
+dependent observations while retaining the original floating diffuse coordinates.
+
+This finite matrix is not a general sparse-history qualification. A separate
+known long sparse propagation limit remains: quarterly `d=2,D=1`, length 90,
+observed positions 1/21/41/61/81 (also with the tail 87:90 observed), can trigger
+the explicit projection-residual guard. That is a native numerical limit for
+item 20a.2c, distinct from the nine JD+ intermediate-precision limits above.
 
 ## Log adjustments and remaining work
 
@@ -196,10 +230,10 @@ native transform primitive's per-observation Jacobians must be retained, with
 their likelihood selection determined by the estimator pipeline; summing every
 observed term at the primitive boundary would miss this pinned convention.
 
-This is evidence for complete, no-regression `d=1` data only. Item 20a.3 must
-establish selection with general differencing, missing data, estimation spans,
-regressors and preadjustments before exposing an adjusted production likelihood.
-No production correction is introduced here.
+This original example alone covers complete, no-regression `d=1` data. The
+fixed-likelihood window contract and broader Jacobian selections are the next
+20a.3 integration slice. Regression effects, estimated models and preadjustments
+remain separate integration gates.
 
 Fixed model agreement also does not establish the correct objective for every
 future optimizer. Profile, diffuse and marginal likelihoods can differ when the

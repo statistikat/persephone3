@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **`56bddd9`**, package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: **20a.2b delivery following `6bb86c6`**, package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -8,7 +8,7 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full suite now has **2,382 passing installed-package
+current rjd3 path. The last full check, before 20a.2b, has **2,382 passing installed-package
 assertions** across **25 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
@@ -43,12 +43,13 @@ the native-backend plan below.
 | 17a — shared adapter and additive contracts | Explicit persistent backend selection for singles/batches/hierarchies, lazy rjd3 loading, optional dependencies, serializable spec/result envelopes and stale-fit detection | 260 installed-package R assertions pass, including 43 dashboard checks and direct backend parity. Installed-package loading and capability errors pass with Java-related R packages absent. Native fits remain unimplemented; richer normalized regressors/diagnostics continue in 6/10/12. |
 | 18a — direct-backend reference corpus | 12 synthetic fixed/manual AO/automatic fits across X-13/TRAMO-SEATS and monthly/quarterly data; raw outputs, exact field schemas, checksums and per-field comparator | Integrity/corruption tests and all 12 pinned live replays pass. Tolerances are provisional; external-context, missingness, LS/TC, benchmarking, difficult-model and multi-platform cases remain open. |
 | 18c — additive reference coverage | Eight separate `extended-v1` direct-backend fixtures for fixed LS/free TC, quarterly internal gaps, fixed/free external regressors and paired future-context shifts; parent corpus preserved | All eight exact pinned replays, 90 independent formula/domain/coefficient/forecast invariants, checksum and corruption checks pass. No tolerance was widened: 229 paths retain provisional rules and one coefficient path remains unreviewed/fail-closed. Full item 18 qualification remains open. |
-| 18d.1 — diffuse likelihood qualification | Read-only pinned JD+ probes via both preprocessing engines and public diffuse likelihood APIs; independent probability identities and separate second-order comparisons | 675 base/native checks and 212 second-order checks pass: 32 fixed direct fits, 14 base native cases, 23 accepted second-order cases and one explicit qualification limit. Six nonzero diffuse determinants agree; complete log-walk Jacobian selection is documented for 20a.3. No corpus or tolerance baseline was changed. |
+| 18d.1 — diffuse likelihood qualification | Read-only pinned JD+ probes via both preprocessing engines and public diffuse likelihood APIs; independent probability identities and expanded second-order comparisons | 675 base/native checks and 4,064 expanded checks pass across 414 native evaluations. Nine public-DK finite determinants have documented precision limits with mandatory alternative checks against both fixed preprocessors and independent Gaussian identities. No corpus or tolerance baseline was changed. |
 | 19a — C++17/Rcpp numerical foundations | Registered compiled routines for monthly/quarterly domains, differencing polynomials, convolution and finite filters with explicit missing masks; native-only CI workflow | 58 installed-package Rcpp assertions and standalone strict-warning/ASan/UBSan checks pass locally. Compiled primitives run with Java-related R packages inaccessible. Linux/Windows CI is configured, not remotely verified; no SARIMA estimation or seasonal-adjustment fit is implemented. |
 | 19b — numerical linear algebra | Owned column-major matrices; R-supported LAPACK Cholesky solves, log determinants and condition estimates; pivoted QR minimum-norm least squares with rank and original-domain residuals | 114 Rcpp assertions and strict-warning/ASan/UBSan core checks pass. Rank-deficient, underdetermined, zero-rank, ill-conditioned and malformed inputs are covered. OS builds and statistical model qualification remain open. |
 | 19c — transformations and model inputs | Mask-preserving identity/log transforms, per-observation log Jacobians and point inverse transforms; serializable monthly/quarterly input contract with full regressor-domain validation | 150 Rcpp/input assertions and standalone transform sanitizers pass. Future/backcast contexts must cover every requested period. No automatic transform selection, estimation-span policy or lognormal mean adjustment is implied. |
 | 20a.1 — stationary likelihood pilot | Fixed-parameter scalar-observation state-space and seasonal ARMA likelihood; stationary Lyapunov initialization/stability certificate, Joseph covariance update, explicit missingness, fixed/profile likelihoods and intermediate innovations | 247 R assertions against closed forms, an independent joint Gaussian density and public R Kalman/ARIMA routines; strict C++/sanitizer and cancellation/reuse checks pass. At most 16 states/loading columns; no diffuse states, integrated SARIMA, optimization or native seasonal-adjustment fit. JD+ likelihood conventions remain to be qualified. |
-| 20a.2 — exact diffuse likelihood pilot | Separate finite/diffuse uncertainty, identified-rank traces, exact-coordinate likelihood normalization, missing-observation propagation, explicit unresolved-state status and integrated SARIMA assembly | 484 mandatory assertions, standalone strict-warning/ASan/UBSan checks and 110 KFAS comparisons pass. Up to 32 total/16 stationary states; no large-variance approximation. Some combined second-order gap patterns still reject numerically; see the contract and 20a.2b follow-up. No drift, optimization, or native SA fit. |
+| 20a.2 — exact diffuse likelihood pilot | Separate finite/diffuse uncertainty, identified-rank traces, exact-coordinate likelihood normalization, missing-observation propagation, explicit unresolved-state status and integrated SARIMA assembly | Initial pilot: 484 mandatory assertions, standalone strict-warning/ASan/UBSan checks and 110 KFAS comparisons passed. Up to 32 total/16 stationary states; no large-variance approximation. Rank certification is extended by 20a.2b below. No drift, optimization, or native SA fit. |
+| 20a.2b — exact history-rank certification | Checked integer counts/time sums certify canonical SARIMA rank for `d,D <= 2`, period 4/12, while preserving the initial-coordinate measure and numerical guards | 2,532 diffuse assertions, independent SVD/Gaussian checks and standalone ASan/UBSan pass; all three registered gap failures now succeed. A long sparse prefix can still fail the loading-residual guard, even with later identification; tracked as 20a.2c. |
 | 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
@@ -91,13 +92,20 @@ establish those behaviors.
 | Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
 | Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
 | Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
-| Native numerical code | C++17/Rcpp domains, filters, transforms, validated inputs, LAPACK algebra, stationary and exact diffuse fixed-parameter likelihoods | 1,053 native assertions and standalone sanitizers pass; some higher-order gaps reject explicitly. Parameter estimation/native SA fits and cross-platform qualification remain open |
+| Native numerical code | C++17/Rcpp domains, filters, transforms, validated inputs, LAPACK algebra, stationary and exact diffuse fixed-parameter likelihoods | 3,101 native assertions across the focused suites and standalone sanitizers pass; long sparse loading propagation can still reject explicitly. Parameter estimation/native SA fits and cross-platform qualification remain open |
 | Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
 
 ### Implementation validation
 
+- The 20a.2b focused suite passes **2,532 diffuse assertions**, including 161
+  accepted rank/missingness scenarios, independent Gaussian integration and two
+  precise expected residual failures. Strict C++17 and ASan/UBSan pass. Expanded
+  pinned qualification evaluates **414 cases / 4,064 checks**, with 18 prospective
+  state-bound exclusions and nine explicitly reported DK intermediate limits.
+  The full-package and no-Java results below are the prior checked baseline;
+  they are not presented as a fresh check of this slice.
 - Full `R CMD build` and `R CMD check --as-cran` execute **2,382 assertions
   across 25 files**, examples, vignette builds/rebuilds and PDF/HTML manuals.
   No reference-backed package test is skipped. Result: **0 errors, 1 warning
@@ -467,7 +475,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20a.2b | Extend exact nullspace certification for remaining combined higher-order gap patterns; qualify additional difficult models before optimizer use | Convert registered rejection cases to verified results without relaxing weak-direction guards or changing the likelihood measure; require independent Gaussian and pinned-DK agreement |
+| 20a.2c | Stabilize diffuse-loading propagation for very long sparse initial histories, including later-identified designs | Resolve the two registered residual failures without threshold relaxation or a changed diffuse measure; retain independent rank/Gaussian and pinned-oracle checks |
 | 20a.3 | Connect validated inputs, estimation spans, differencing and transform Jacobians to a fixed-model likelihood contract | Original-domain likelihood identities; complete domain/missing-mask preservation; documented JD+ versus native normalization differences |
 | 20b.1 / 20b.2 | Add concentrated regression likelihood with fixed/free coefficients, then optimize ARMA parameters under explicit root constraints | Collinear/zero/fixed coefficient fixtures, parameter identifiability, convergence failure semantics and independent likelihood optima |
 | 20c / 20d | Compute coefficient covariance, standardized/interpolated residuals and forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
@@ -476,7 +484,8 @@ The next commits should be:
 | 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
 
 The native fixed-parameter likelihood now covers stationary and a bounded
-integrated/diffuse subset. Next, resolve the registered higher-order gap limits,
+integrated/diffuse subset. Registered rank-classification gaps are resolved;
+long sparse loading propagation remains an explicit numerical limit. Next,
 connect spans/transforms with their correct likelihood normalization, and add
 regression/parameter estimation before an end-to-end fixed-model X-13 slice.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
@@ -766,17 +775,16 @@ kernel; this still does not supply a complete preprocessing pipeline.
 
 **Next implementation sequence:**
 
-1. **20a.2b — broader diffuse qualification.** The exact kernel, finite/diffuse
-   covariance propagation, rank trace and fixed-coordinate normalization are
-   delivered. Structural identities support second-order seasonal gaps and
-   unobservable mixed-coordinate states under scalar-identity transitions.
-   A registered quarterly `d=2,D=1` early-gap case still rejects safely; other
-   compound second-order patterns have the same numerical ambiguity. Derive
-   additional exact nullspace certificates or a qualified stable representation;
-   do not turn small positive projections into zero by loosening a threshold.
-   Keep weak observability, transition rank loss and truly unresolved directions
-   distinct. Require independent Gaussian and pinned-DK comparisons for each
-   newly accepted case before general optimization uses it.
+1. **20a.2b delivered; 20a.2c — stable sparse propagation next.** Exact
+   homogeneous-history ranks now resolve the registered combined-order gaps.
+   The certificate changes no diffuse coordinates, determinant or threshold.
+   A quarterly `d=2,D=1`, length-90 history observed only at 1/21/41/61/81
+   still exceeds the floating loading-residual bound; adding observations
+   87:90 identifies the final design but does not avoid the earlier error.
+   Derive a stable loading representation with explicit coordinate/determinant
+   accounting. Retain the current residual and weak-direction checks until
+   independently validated. Add long/sparse histories, conditioning diagnostics,
+   and independent Gaussian/pinned-oracle evidence before general optimization.
 2. **20a.3 — preprocessing likelihood contract.** Add explicit estimation spans
    and mean/drift semantics to item 19c's input object. Select log-Jacobian terms
    according to the actual likelihood observations; preserve original dates and

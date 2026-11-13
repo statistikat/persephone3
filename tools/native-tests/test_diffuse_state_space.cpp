@@ -1,4 +1,5 @@
 #include "core/diffuse_state_space.hpp"
+#include "core/exact_history.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -14,6 +15,45 @@ bool rejects(Function function) {
 
 int main() {
     using namespace persephone;
+    // Equal phase sums can leave a global direction unidentified even when
+    // each of two seasons has two observations: {1,9}, {3,7} both sum to 10.
+    // A subsequent observation at 11 supplies a new independent direction.
+    detail::CountsHistoryCertificate equal_sums(2, 1, 4);
+    for (std::uint64_t t = 1; t <= 11; ++t) {
+        const bool observed = t == 1 || t == 3 || t == 7 || t == 9 || t == 11;
+        const bool independent = equal_sums.classify_current(observed);
+        if (t == 9) {
+            assert(!independent);
+            assert(equal_sums.rank() == 3);
+        }
+        if (t == 11) {
+            assert(independent);
+            assert(equal_sums.rank() == 4);
+        }
+        equal_sums.advance();
+    }
+    // A hypothetical gap row contributes no observed rank.
+    detail::CountsHistoryCertificate missing_history(1, 0, 4);
+    assert(missing_history.classify_current(false));
+    assert(missing_history.rank() == 0);
+    missing_history.advance(50);
+    assert(missing_history.classify_current(true));
+    assert(missing_history.rank() == 1);
+    missing_history.advance(std::numeric_limits<std::uint64_t>::max()); // Full rank stops growth.
+    assert(!missing_history.classify_current(true));
+    // Checked integer failures are exercised without allocating enormous data.
+    detail::CountsHistoryCertificate large_history(2, 2, 12);
+    const auto uint_max = std::numeric_limits<std::uint64_t>::max();
+    assert(rejects([&] { large_history.validate_length(uint_max / 3 + 1); }));
+    assert(rejects([&] { large_history.advance(uint_max); }));
+    large_history.advance(uint_max / 3 + 10);
+    assert(large_history.classify_current(true));
+    large_history.advance(12);
+    assert(large_history.classify_current(true));
+    large_history.advance(12);
+    assert(rejects([&] { large_history.classify_current(true); }));
+    assert(large_history.rank() == 2); // Rejected addition leaves rank intact.
+
     const MaskedSeries values{{1, 3, 0, 2, 6}, {0, 0, 1, 0, 0}};
     const auto rw = sarima_innovations(values, {}, {}, {}, {}, 4, 1, 0);
     const auto& result = rw.likelihood;
@@ -25,6 +65,9 @@ int main() {
     assert(std::abs(result.sum_squared_standardized - 20.5) < 1e-12);
     assert(std::abs(result.sum_log_finite_variances - std::log(2.0)) < 1e-12);
     assert(result.sum_log_diffuse_variances == 0);
+    assert(result.numerics.exact_history_certification);
+    assert(result.numerics.exact_history_pivot_count == 1);
+    assert(result.numerics.exact_history_zero_count == 0);
     assert(std::abs(result.fixed_log_likelihood + .5 * (3 * std::log(2 * std::acos(-1.0)) + std::log(2.0) + 20.5)) < 1e-12);
 
     // A finite observation can be informative while a different initial
@@ -37,6 +80,9 @@ int main() {
     assert(unresolved.finite_count == 4 && std::isnan(unresolved.fixed_log_likelihood));
     assert(unresolved.likelihood_status == "unresolved_diffuse");
     assert(unresolved.profile_status == "unresolved_diffuse");
+    assert(!unresolved.numerics.exact_history_certification);
+    assert(unresolved.numerics.exact_history_zero_count == 0);
+    assert(unresolved.numerics.exact_history_pivot_count == 0);
 
     // Exact T=cI preserves observation-null subspaces even when Householder
     // arithmetic leaves roundoff in a mixed-coordinate basis.
@@ -101,6 +147,20 @@ int main() {
         assert(second.likelihood.diffuse_count == static_cast<std::size_t>(2 * period));
         assert(second.likelihood.finite_count + second.likelihood.diffuse_count == 82);
         assert(second.likelihood.profile_status == "available");
+    }
+    // Registered combined-order gap cases previously encountered cancellation
+    // in a truly dependent diffuse observation. Every case must now succeed.
+    for (const auto orders : {std::array<int, 3>{4, 2, 1}, {12, 1, 2}, {12, 2, 2}}) {
+        const auto gap = sarima_innovations(second_order, {}, {}, {}, {}, orders[0], orders[1], orders[2]);
+        const auto& fit = gap.likelihood;
+        const auto dimension = static_cast<std::size_t>(orders[1] + orders[0] * orders[2]);
+        assert(fit.remaining_diffuse_rank == 0);
+        assert(fit.diffuse_count == dimension);
+        assert(fit.finite_count + fit.diffuse_count == 82);
+        assert(fit.profile_status == "available");
+        assert(fit.numerics.exact_history_certification);
+        assert(fit.numerics.exact_history_pivot_count == dimension);
+        assert(fit.numerics.exact_history_zero_count > 0);
     }
 
     int polls = 0;

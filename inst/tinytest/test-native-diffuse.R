@@ -371,20 +371,15 @@ expect_equal(second_order_gap$fixed_log_likelihood, expected$fixed, tolerance = 
 expect_equal(second_order_gap$profiled_log_likelihood, expected$profile, tolerance = 1e-7)
 expect_equal(second_order_gap$remaining_diffuse_rank, 0)
 
-# More complex combined integration can still leave an uncertified roundoff
-# projection. A platform may either reject it explicitly or return an answer
-# which passes the independent oracle, but never silently consume a direction.
-limited <- tryCatch(sarima(limited_values, period = 4, d = 2, seasonal_d = 1), error = identity)
-if (inherits(limited, "error")) {
-  expect_true(grepl("numerically ambiguous diffuse innovation", conditionMessage(limited)))
-} else {
-  joint <- integrated_joint(length(limited_values), numeric(), numeric(),
-                            c(1, -2, 1, 0, -1, 2, -1))
-  expected <- flat_prior_oracle(limited_values, joint)
-  expect_equal(limited$fixed_log_likelihood, expected$fixed, tolerance = 1e-7)
-  expect_equal(limited$profiled_log_likelihood, expected$profile, tolerance = 1e-7)
-  expect_equal(limited$remaining_diffuse_rank, 0)
-}
+# Exact homogeneous-history rank now certifies the combined-order zero pivots
+# in this former conservative-rejection case. Success is mandatory.
+limited <- sarima(limited_values, period = 4, d = 2, seasonal_d = 1)
+joint <- integrated_joint(length(limited_values), numeric(), numeric(),
+                          c(1, -2, 1, 0, -1, 2, -1))
+expected <- flat_prior_oracle(limited_values, joint)
+expect_equal(limited$fixed_log_likelihood, expected$fixed, tolerance = 1e-7)
+expect_equal(limited$profiled_log_likelihood, expected$profile, tolerance = 1e-7)
+expect_equal(limited$remaining_diffuse_rank, 0)
 
 # No diffuse coordinates reduces exactly to the existing proper stationary
 # Gaussian contract, while an unobserved coordinate must not produce an objective.
@@ -452,6 +447,11 @@ expect_error(diffuse(1:5, transition = matrix(1, 2, 3)), "dimension")
 expect_error(diffuse(1:5, observation_variance = -1), "nonnegative")
 expect_error(diffuse(c(1, Inf)), "finite|infinity")
 expect_error(diffuse(c(0, 1e-200)), "underflow")
+expect_error(diffuse(1:5, transition = diag(2), observation = c(1, 0),
+                     noise_loading = diag(2), initial_state = c(0, 0),
+                     finite_loading = diag(2),
+                     diffuse_loading = matrix(c(1e-14, 1), 2)),
+             "numerically ambiguous diffuse innovation")
 expect_error(diffuse(c(1, 1), noise_loading = matrix(0)), "deterministic|positive innovation variance")
 expect_error(sarima(1:20, d = 1, mean = 1), "mean|drift")
 expect_error(sarima(1:20, d = 3), "0|two|2")
@@ -473,3 +473,171 @@ for (invalid in list(1 + 1i, "1", TRUE, c(1, 2), matrix(1))) {
 for (invalid in c(0, -1, NA_real_, Inf)) expect_error(diffuse(1:5, variance = invalid), "variance")
 expect_equal(unserialize(serialize(walk, NULL)), walk)
 expect_equal(diffuse(y, variance = 1.7), walk)
+
+# Independent rank oracle for the canonical SARIMA history design. Its columns
+# are the explicit homogeneous solutions, and rank is computed using base R's
+# SVD, not the production per-phase counting/divided-difference certificate.
+homogeneous_design <- function(n, period, d, seasonal_d) {
+  time <- seq_len(n) / n
+  phase <- (seq_len(n) - 1L) %% period
+  columns <- list()
+  if (seasonal_d) for (season in 0:(period - 1L)) {
+    for (power in 0:(seasonal_d - 1L)) {
+      columns[[length(columns) + 1L]] <- as.numeric(phase == season) * time^power
+    }
+  }
+  if (d) for (power in seasonal_d + 0:(d - 1L)) {
+    columns[[length(columns) + 1L]] <- time^power
+  }
+  if (!length(columns)) matrix(numeric(), n, 0) else do.call(cbind, columns)
+}
+homogeneous_rank <- function(x) {
+  if (!nrow(x) || !ncol(x)) return(0L)
+  singular <- svd(x, nu = 0, nv = 0)$d
+  relative <- singular / max(singular)
+  # Require a clear numerical rank gap in the independent oracle itself.
+  if (any(relative > 1e-12 & relative < 1e-10)) {
+    stop("Independent homogeneous-design rank has no clear singular-value gap.")
+  }
+  sum(relative >= 1e-10)
+}
+rank_oracle <- function(values, period, d, seasonal_d) {
+  design <- homogeneous_design(length(values), period, d, seasonal_d)
+  initial <- ncol(design)
+  before <- after <- integer(length(values))
+  kind <- integer(length(values))
+  used <- integer()
+  rank <- 0L
+  for (i in seq_along(values)) {
+    before[i] <- initial - rank
+    if (!is.na(values[i])) {
+      used <- c(used, i)
+      next_rank <- homogeneous_rank(design[used, , drop = FALSE])
+      stopifnot((next_rank - rank) %in% 0:1)
+      kind[i] <- if (next_rank > rank) 1L else 2L
+      rank <- next_rank
+    }
+    after[i] <- initial - rank
+  }
+  list(kind = kind, before = before, after = after, remaining = initial - rank)
+}
+
+# An independent likelihood oracle for white-noise integrated models. Applying
+# base R's differences to I forms the innovation operator A. The full-data
+# flat-history density is proportional to exp(-||A y||^2 / (2 variance)); its
+# initial-coordinate Jacobian is one. Integrating missing y coordinates by QR
+# yields a determinant of A_missing, without a state recursion or large prior.
+missing_difference_oracle <- function(values, period, d, seasonal_d, variance = 1) {
+  operator <- diag(length(values))
+  if (d) operator <- diff(operator, differences = d)
+  if (seasonal_d) operator <- diff(operator, lag = period, differences = seasonal_d)
+  missing <- which(is.na(values))
+  observed <- which(!is.na(values))
+  signal <- drop(operator[, observed, drop = FALSE] %*% values[observed])
+  degrees <- nrow(operator) - length(missing)
+  logdet <- 0
+  if (length(missing)) {
+    design <- operator[, missing, drop = FALSE]
+    singular <- svd(design, nu = 0, nv = 0)$d
+    stopifnot(length(singular) == length(missing), min(singular) > max(singular) * 1e-10)
+    decomposition <- qr(design, LAPACK = TRUE)
+    logdet <- 2 * sum(log(abs(diag(qr.R(decomposition)))))
+    complement <- qr.Q(decomposition, complete = TRUE)[,
+      length(missing) + seq_len(degrees), drop = FALSE]
+    errors <- drop(crossprod(complement, signal))
+  } else errors <- signal
+  sse <- sum(errors^2)
+  scale <- if (degrees > 0) sse / degrees else NA_real_
+  list(fixed = -.5 * (degrees * log(2 * pi * variance) + logdet + sse / variance),
+       profile = if (degrees > 0) -.5 * (degrees * (log(2 * pi * scale) + 1) + logdet) else NA_real_,
+       scale = scale, sse = sse, degrees = degrees)
+}
+local({
+  had_seed <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  if (had_seed) old_seed <- get(".Random.seed", envir = .GlobalEnv)
+  on.exit(if (had_seed) assign(".Random.seed", old_seed, envir = .GlobalEnv) else
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) rm(".Random.seed", envir = .GlobalEnv))
+  set.seed(73261)
+  n <- 90L
+  masks <- list(complete = integer(), registered = c(1, 3, 5, 6, 16, 21, 23, 86),
+    internal = c(20, 21, 44), edges = c(1:6, 86:90),
+    periodic = seq(3, n, by = 3), blocks = c(1:20, 44:65),
+    sparse = setdiff(seq_len(n), c(1, 21, 41, 61, 81)),
+    all_missing = seq_len(n), random = sample(seq_len(n), 36L))
+  for (period in c(4, 12)) for (d in 0:2) for (seasonal_d in 0:2) {
+    for (mask_name in names(masks)) {
+      mask <- masks[[mask_name]]
+      values <- sin(seq_len(n) * sqrt(2)) + cos(seq_len(n) * sqrt(3)) / 2
+      values[mask] <- NA_real_
+      expected <- rank_oracle(values, period, d, seasonal_d)
+      if (period == 4 && d == 2 && seasonal_d == 1 && mask_name == "sparse") {
+        # This valid but intentionally unidentifiable design still exceeds the
+        # floating propagated-basis residual bound. Preserve its precise limit;
+        # the exact certificate must not weaken the numerical safeguard.
+        expect_equal(expected$remaining, 3L)
+        expect_error(sarima(values, period = period, d = d, seasonal_d = seasonal_d),
+                     "certified diffuse observation-null identity failed its residual check")
+        next
+      }
+      actual <- tryCatch(sarima(values, period = period, d = d, seasonal_d = seasonal_d),
+        error = function(error) stop("Rank stress s=", period, ", d=", d,
+          ", D=", seasonal_d, ", mask=", mask_name, ": ", conditionMessage(error)))
+      expect_equal(actual$update_kind, expected$kind)
+      expect_equal(actual$rank_before, expected$before)
+      expect_equal(actual$rank_after, expected$after)
+      expect_equal(actual$remaining_diffuse_rank, expected$remaining)
+      expect_equal(actual$diffuse_count, sum(expected$kind == 1L))
+      expect_equal(actual$finite_count, sum(expected$kind == 2L))
+      expect_equal(actual$numerics$exact_history_certification, d + period * seasonal_d > 0)
+      expect_equal(actual$numerics$exact_history_pivot_count, sum(expected$kind == 1L))
+      expect_equal(actual$numerics$exact_history_zero_count,
+                   sum(expected$kind == 2L & expected$before > 0L))
+      if (expected$remaining) {
+        expect_equal(actual$likelihood_status, "unresolved_diffuse")
+        expect_true(is.na(actual$fixed_log_likelihood))
+      } else {
+        expect_true(is.finite(actual$fixed_log_likelihood))
+        integrated <- missing_difference_oracle(values, period, d, seasonal_d)
+        expect_equal(actual$fixed_log_likelihood, integrated$fixed, tolerance = 1e-7)
+        expect_equal(actual$profiled_log_likelihood, integrated$profile, tolerance = 1e-7)
+        expect_equal(actual$profiled_variance, integrated$scale, tolerance = 1e-7)
+      }
+    }
+  }
+})
+
+# The same long sparse prefix can fail its numerical residual check before
+# later observations would identify all coordinates. Final design rank alone
+# does not guarantee that floating propagation stays within supported bounds.
+late_identified <- rep(NA_real_, 90)
+late_rows <- c(1, 21, 41, 61, 81, 87:90)
+late_identified[late_rows] <- sin(late_rows * sqrt(2)) + cos(late_rows * sqrt(3)) / 2
+expect_equal(rank_oracle(late_identified, 4, 2, 1)$remaining, 0L)
+expect_error(sarima(late_identified, period = 4, d = 2, seasonal_d = 1),
+             "certified diffuse observation-null identity failed its residual check")
+
+# Equal divided-difference knot sums across distinct seasonal phases must not
+# identify the second global polynomial coefficient prematurely. The resulting
+# dependent observation is a finite update while one diffuse direction remains.
+special_patterns <- list(
+  list(period = 4, seasonal_d = 1, n = 20L, observed = c(1:4, 7, 9, 13),
+       finite_at = 9L, final_pivot = 13L, difference = c(1, -2, 1, 0, -1, 2, -1)),
+  list(period = 12, seasonal_d = 2, n = 60L, observed = c(1:24, 29, 37, 49),
+       finite_at = 37L, final_pivot = 49L,
+       difference = c(1, -2, 1, rep(0, 9), -2, 4, -2, rep(0, 9), 1, -2, 1))
+)
+for (settings in special_patterns) {
+  values <- rep(NA_real_, settings$n)
+  values[settings$observed] <- sin(settings$observed / 3) + settings$observed / 20
+  actual <- sarima(values, period = settings$period, d = 2, seasonal_d = settings$seasonal_d)
+  expected_rank <- rank_oracle(values, settings$period, 2, settings$seasonal_d)
+  expect_equal(actual$update_kind, expected_rank$kind)
+  expect_equal(actual$update_kind[settings$finite_at], 2L)
+  expect_equal(actual$rank_after[settings$finite_at], 1L)
+  expect_equal(actual$update_kind[settings$final_pivot], 1L)
+  expect_equal(actual$rank_after[settings$final_pivot], 0L)
+  joint <- integrated_joint(settings$n, numeric(), numeric(), settings$difference)
+  expected <- flat_prior_oracle(values, joint)
+  expect_equal(actual$fixed_log_likelihood, expected$fixed, tolerance = 1e-7)
+  expect_equal(actual$profiled_log_likelihood, expected$profile, tolerance = 1e-7)
+}

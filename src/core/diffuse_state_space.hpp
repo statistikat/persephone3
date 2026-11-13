@@ -32,6 +32,9 @@ struct DiffuseNumerics {
     double projection_tolerance;
     std::size_t propagation_rank_checks;
     double maximum_projection_residual;
+    bool exact_history_certification;
+    std::size_t exact_history_zero_count;
+    std::size_t exact_history_pivot_count;
 };
 
 struct DiffuseLikelihood {

@@ -1,4 +1,5 @@
 #include "core/diffuse_state_space.hpp"
+#include "core/exact_history.hpp"
 
 // DLARFG is called through R's declared LAPACK ABI. Only its orthogonal
 // reflector is used; no third-party filtering implementation is incorporated.
@@ -212,11 +213,21 @@ void validate_model(const DiffuseStateSpace& model, const std::vector<double>& s
 
 DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& model,
                           std::vector<double> state, DenseMatrix p, Basis basis,
-                          double mean, double variance, const Interrupt& interrupt) {
+                          double mean, double variance, const Interrupt& interrupt,
+                          detail::CountsHistoryCertificate* history = nullptr) {
     series.validate();
     validate_model(model, state, mean, variance, interrupt);
     validate_basis(basis, interrupt, "initial diffuse loading is numerically rank deficient");
     const auto m = model.transition.rows(), n = series.values.size(), initial_rank = basis.columns;
+    if (history) {
+        if (history->dimension() != initial_rank || history->rank() != 0) {
+            throw std::logic_error("exact history certificate disagrees with initial diffuse rank");
+        }
+        static_assert(std::numeric_limits<std::size_t>::digits <=
+                      std::numeric_limits<std::uint64_t>::digits,
+                      "exact history certificate requires size_t to fit uint64");
+        history->validate_length(static_cast<std::uint64_t>(n));
+    }
     const auto process = gram(model.noise_loading);
     const auto initial_finite = p;
     const auto initial_diffuse = gram(basis);
@@ -226,6 +237,7 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
     MaskedSeries innovations{std::vector<double>(n, 0), series.missing};
     MaskedSeries standardized{std::vector<double>(n, 0), std::vector<std::uint8_t>(n, 1)};
     std::size_t observed = 0, diffuse_count = 0, finite_count = 0, last_diffuse = 0, rank_checks = 0;
+    std::size_t exact_zero_count = 0, exact_pivot_count = 0;
     long double squares = 0, finite_logs = 0, diffuse_logs = 0;
     double maximum_projection_residual = 0;
     const double z_norm = norm(model.observation);
@@ -240,6 +252,15 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
     for (std::size_t t = 0; t < n; ++t) {
         if ((t & 31U) == 0) checkpoint(interrupt);
         rank_before[t] = basis.columns;
+        bool exact_independent = false;
+        bool exact_zero = false;
+        if (history && basis.columns > 0) {
+            if (basis.columns != initial_rank - history->rank()) {
+                throw std::runtime_error("floating diffuse rank disagrees with exact history certificate");
+            }
+            exact_independent = history->classify_current(!series.missing[t]);
+            exact_zero = !exact_independent;
+        }
         long double predicted = mean;
         for (std::size_t i = 0; i < m; ++i) predicted += static_cast<long double>(model.observation[i]) * state[i];
         predictions[t] = checked(predicted);
@@ -254,7 +275,10 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
         // identity through any number of missing periods. Only the exact
         // scalar-identity pattern enables the certificate; approximate
         // proportionality is never used to discard weak observability.
-        if (observation_null_certified && basis.columns > 0) {
+        // Canonical SARIMA has an additional exact certificate from the
+        // observed homogeneous-history design. It establishes dependence
+        // without numerical rank thresholds or changing B's coordinates.
+        if ((observation_null_certified || exact_zero) && basis.columns > 0) {
             const long double scale = static_cast<long double>(z_norm) * norm(basis.values);
             const double relative = scale == 0 ? 0 : checked(w_norm / scale);
             maximum_projection_residual = std::max(maximum_projection_residual, relative);
@@ -263,6 +287,9 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
             }
             std::fill(w.begin(), w.end(), 0);
             w_norm = 0;
+        }
+        if (exact_independent && w_norm == 0) {
+            throw std::runtime_error("exact history pivot is numerically unresolved in the diffuse loading");
         }
         diffuse_variances[t] = square(w_norm);
         if (!series.missing[t]) {
@@ -285,6 +312,7 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                                                     maximum_projection_residual, interrupt);
                 diffuse_logs += 2 * std::log(static_cast<long double>(w_norm));
                 ++diffuse_count;
+                if (history) ++exact_pivot_count;
                 last_diffuse = t + 1;
                 update_kind[t] = 1;
             } else {
@@ -299,13 +327,18 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                 for (std::size_t i = 0; i < m; ++i) gain[i] = checked(pz[i] / finite_variances[t]);
                 p = joseph(p, gain, model.observation, model.observation_variance);
                 ++finite_count;
+                if (exact_zero) ++exact_zero_count;
                 update_kind[t] = 2;
             }
             for (std::size_t i = 0; i < m; ++i) state[i] = checked(static_cast<long double>(state[i]) + static_cast<long double>(gain[i]) * innovation);
             observation_null_certified = true;
         }
         rank_after[t] = basis.columns;
+        if (history && basis.columns != initial_rank - history->rank()) {
+            throw std::runtime_error("diffuse update disagrees with exact history rank");
+        }
         if (t + 1 < n) {
+            if (history) history->advance();
             observation_null_certified = observation_null_certified && scalar_transition;
             state = product(model.transition, state);
             p = sandwich(model.transition, p);
@@ -349,7 +382,8 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
             fixed_loglik, profiled_variance, profiled_loglik, std::move(likelihood_status),
             std::move(profile_status), std::move(state), initial_finite, initial_diffuse,
             std::move(p), gram(basis),
-            {rank_tolerance, projection_tolerance, rank_checks, maximum_projection_residual}};
+            {rank_tolerance, projection_tolerance, rank_checks, maximum_projection_residual,
+             history != nullptr, exact_zero_count, exact_pivot_count}};
 }
 
 } // namespace
@@ -400,8 +434,9 @@ SarimaLikelihood sarima_innovations(const MaskedSeries& series, const std::vecto
         for (std::size_t i = 1; i < k; ++i) transition(r + i, r + i - 1) = 1;
     }
     DiffuseStateSpace model{std::move(transition), std::move(z), std::move(loading), 0};
+    detail::CountsHistoryCertificate history(d, seasonal_d, period);
     auto likelihood = filter(series, model, std::vector<double>(m, 0), std::move(initial_finite),
-                              std::move(basis), mean, variance, interrupt);
+                              std::move(basis), mean, variance, interrupt, k > 0 ? &history : nullptr);
     return {std::move(model), std::move(arma.ar), std::move(arma.ma),
             std::move(difference), std::move(likelihood)};
 }
