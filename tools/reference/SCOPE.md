@@ -6,6 +6,10 @@ interface and the artifacts actually used for reference calculations.
 ## Reproduce the inventory
 
 ```sh
+# Reproduce the committed inventory together with its reference fixtures.
+Rscript tools/reference/generate.R
+
+# Only for an initial inventory before a fixture corpus exists.
 Rscript tools/reference/inventory.R
 ```
 
@@ -13,6 +17,10 @@ The script requires the installed rjd3 packages, rJava, RProtoBuf and `digest`.
 It loads the reference backend but never calls Persephone or changes libraries.
 An existing inventory rejects changes to package versions, JAR hashes, R or
 JVM unless explicitly invoked with `--refresh-reference` for a reviewed update.
+Once a corpus exists, direct `inventory.R` invocation stops before loading the
+oracle or changing any artifacts, including with `--refresh-reference`. Use
+`generate.R` (or `generate.R --refresh-reference` for a reviewed oracle change)
+so inventory, fresh calculations and checksums are regenerated together.
 
 The outputs in `inst/tinytest/fixtures/backend/` are:
 

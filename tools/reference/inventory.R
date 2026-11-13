@@ -1,4 +1,6 @@
-# Run: Rscript tools/reference/inventory.R
+# Initial inventory only: Rscript tools/reference/inventory.R
+# Once fixtures exist, regenerate their inventory together with the corpus via
+# Rscript tools/reference/generate.R [--refresh-reference].
 # An existing oracle cannot be replaced with different JARs unless explicitly
 # requested with --refresh-reference. Review all changed artifacts before commit.
 args <- commandArgs(trailingOnly = FALSE)
@@ -6,6 +8,18 @@ script <- sub("^--file=", "", args[startsWith(args, "--file=")][[1]])
 source(file.path(dirname(normalizePath(script)), "common.R"))
 root <- reference_root()
 outdir <- reference_fixture_dir(root)
+# commandArgs retains the outer generate.R invocation when it sources this file.
+# Check before creating directories, loading the oracle or writing any artifact:
+# updating only inventory hashes would wrongly pair new metadata with old fits.
+from_generator <- identical(normalizePath(script),
+                            normalizePath(file.path(root, "tools/reference/generate.R")))
+has_corpus <- any(file.exists(file.path(outdir, c("fixtures.csv", "SHA256SUMS.csv"))))
+if (has_corpus && !from_generator) {
+  stop(paste0("A reference corpus already exists. Inventory-only updates would invalidate its provenance/checksums. ",
+              "Run Rscript tools/reference/generate.R to regenerate the inventory and all fixtures together. ",
+              "For an intentional reviewed oracle change, use Rscript tools/reference/generate.R --refresh-reference. ",
+              "No artifacts were changed."), call. = FALSE)
+}
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 required <- c("rjd3toolkit", "rjd3x13", "rjd3tramoseats", "rjd3jars", "rJava", "RProtoBuf", "digest")
 for (pkg in required) if (!requireNamespace(pkg, quietly = TRUE)) stop("Missing reference-generation dependency: ", pkg)

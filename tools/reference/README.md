@@ -61,6 +61,12 @@ Rscript tools/reference/generate.R
 Rscript tools/reference/generate.R --refresh-reference
 ```
 
+`inventory.R` is an initial-inventory command only. When a corpus already exists,
+it stops before changing artifacts and directs you to `generate.R`; even
+`inventory.R --refresh-reference` cannot replace the oracle metadata while
+retaining old fixture results. Regeneration recomputes all 12 fits before
+writing the final corpus checksums.
+
 Generation needs the rjd3 packages, rJava, RProtoBuf and `digest` installed in
 the R library selected for the command. Fast verification only needs base R
 and the developer dependency `digest`; it verifies that Java/rjd3 namespaces
