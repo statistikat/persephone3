@@ -1,0 +1,113 @@
+# Numerical implementation provenance
+
+Evidence checked on 2026-11-13. This extends the original oracle inventory;
+it does not rewrite that historical manifest or assert legal clearance.
+
+## Identified published release
+
+The installed reference contains 16 JD+ JARs with Maven coordinates
+`eu.europa.ec.joinup.sat:jdplus-*:3.9.0`. Every one of their recorded SHA256
+digests matches the corresponding checksum published by Maven Central. Exact
+artifact names, hashes and primary-source URLs are recorded in
+[provenance-jdplus-3.9.0.csv](provenance-jdplus-3.9.0.csv); they can be compared
+offline with `inst/tinytest/fixtures/backend/oracle-manifest.R`.
+
+The official [3.9.0 release](https://github.com/jdemetra/jdplus-main/releases/tag/v3.9.0)
+was published on 2026-09-14. Its
+[tag ref](https://api.github.com/repos/jdemetra/jdplus-main/git/ref/tags/v3.9.0)
+points to annotated tag object `81c2358345aa0ff7d793a817f5b7cc9a3b6056b7`.
+That [tag object](https://api.github.com/repos/jdemetra/jdplus-main/git/tags/81c2358345aa0ff7d793a817f5b7cc9a3b6056b7)
+resolves to release commit **`cd50b84773c2bdbf7a067a497954bb6d46cdb81b`**.
+GitHub reports the tag as unsigned. The previously inspected
+`15f1821fa71a949f842a5891e7cd68c83187f76d` is a later development snapshot and
+must not be used as the 3.9.0 reference revision.
+
+The [Maven Central parent POM](https://repo.maven.apache.org/maven2/eu/europa/ec/joinup/sat/jdplus-main/3.9.0/jdplus-main-3.9.0.pom)
+is byte-identical to [`pom.xml` at the release commit](https://github.com/jdemetra/jdplus-main/blob/cd50b84773c2bdbf7a067a497954bb6d46cdb81b/pom.xml):
+
+| Evidence | Digest |
+| --- | --- |
+| Parent POM SHA256 | `6b8db0d16b9adb61a5d3409f97ac6d7602e45660754476e2874977ad1b5f8d88` |
+| Parent POM Git blob SHA1, computed over `blob <byte-length>\0<contents>` | `ca8b5cc47430a2701fd229b15c3ea68fbee631c3` |
+
+The POM declares version 3.9.0, Java 21 and build output timestamp
+`2026-09-14T10:43:30Z`. This establishes the published Maven artifacts and
+the associated upstream release source revision using checksums and release
+metadata, beyond matching version strings alone.
+
+It does **not** prove that rebuilding that source produces those exact JAR
+bytes. No reproducible Java build, signed provenance attestation or signature
+verification was performed. The original manifest remains the runtime artifact
+pin. The four non-JD+ JARs in its 20-JAR inventory are outside this 16-artifact
+mapping. Installed rjd3 wrappers have no `RemoteSha`/`RemoteRef` metadata, so
+their exact source-build revisions remain unresolved; current upstream
+development branches are not substituted for their installed versions.
+
+## Licensing evidence and implementation policy
+
+The release [LICENSE](https://github.com/jdemetra/jdplus-main/blob/cd50b84773c2bdbf7a067a497954bb6d46cdb81b/LICENSE)
+identifies EUPL 1.2, and the release POM declares EUPL. Installed
+`rjd3toolkit`, `rjd3x13`, `rjd3tramoseats` and `rjd3jars` likewise declare
+`License: EUPL` in the captured package metadata. Their current official
+[toolkit](https://github.com/rjdverse/rjd3toolkit/blob/develop/DESCRIPTION),
+[X-13](https://github.com/rjdverse/rjd3x13/blob/develop/DESCRIPTION),
+[TRAMO/SEATS](https://github.com/rjdverse/rjd3tramoseats/blob/develop/DESCRIPTION)
+and [JAR package](https://github.com/rjdverse/rjd3jars/blob/develop/DESCRIPTION)
+metadata also declare EUPL; these moving pages corroborate the declaration,
+not the installed wrappers' exact source revisions.
+
+Persephone currently declares MIT. The preferred approach is independently
+authored numerical code based on identified mathematical references and
+independent identities, with pinned JD+ outputs used for differential tests.
+No Java implementation or JAR is copied into this repository by this work.
+Inspecting upstream public API/metadata does not authorize translating its
+implementation and assigning the translation a new license.
+
+The installed Rcpp 1.1.2 metadata declares `GPL (>= 2)`, also stated by
+[Rcpp's official DESCRIPTION](https://github.com/RcppCore/Rcpp/blob/master/DESCRIPTION).
+Independent numerical authorship does not remove the need to review
+Rcpp integration, any future numerical-library dependency, bundled headers,
+notices, and the resulting distribution terms. This document records evidence
+and the implementation approach; it does not decide legal compatibility or
+replace maintainer/legal review.
+
+For each new numerical component, record the mathematical source, conventions,
+author and independent tests beside the implementation. If upstream source is
+copied or translated later, separately record the exact files/revision,
+copyright notices, applicable license and approved distribution approach.
+Before release, resolve that distribution review and any remaining source-build
+mapping needed for the implementation actually shipped. Release identification
+and the present artifact checksums do not complete those gates.
+
+## Authorship record by numerical module
+
+These modules were authored for Persephone in the current implementation series;
+the corresponding repository commits identify the changes and reviewers.
+
+| Module | Authored approach and references | Validation boundary |
+| --- | --- | --- |
+| `src/linear_algebra.cpp`, `src/core/linear_algebra.hpp` and the Rcpp boundary | Thin checked calls to R-distributed LAPACK/BLAS through R's declared interfaces, including `DPOTRF`, `DPOTRS`, `DPOCON`, `DGELSY` and `DGEMM`. Factorizations were not translated or reimplemented. Interface guidance comes from [Writing R Extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.html) and the official [Netlib DGELSY documentation](https://netlib.org/lapack/lapack-3.1.1/html/dgelsy.f.html). | Independent solve/residual/rank checks and R numerical comparisons exercise the adapter and error handling; they do not establish a new factorization implementation or a seasonal-adjustment engine. |
+| `src/transforms.cpp`, `src/core/transforms.hpp` and the Rcpp boundary | Independently authored elementary `log`/`exp` transformations. The per-observation log-Jacobian is derived directly from `d log(y)/dy = 1/y`, giving `-log(y)` for a positive observed value. Missing observations have a separate mask. | Algebraic inverse/Jacobian checks, observed-positive-domain validation and overflow/underflow tests. Transformation selection and final estimator likelihood conventions remain separate work. |
+| `src/state_space.cpp`, `src/core/state_space.hpp` and the Rcpp boundary | Independently authored stationary Kalman innovations and discrete Lyapunov equations. Initial covariance follows the stationary unconditional-covariance equations, with [Casals and Sotoca's primary paper](https://www.ucm.es/data/cont/docs/562-2013-11-11-fvinitEcoLet.pdf) as initialization context. State timing and AR/MA conventions are compared with the public [R Kalman interface](https://www.stat.ethz.ch/R-manual/R-devel/library/stats/help/KalmanForecast.html) and [R ARIMA documentation](https://www.stat.ethz.ch/R-manual/R-devel/library/stats/html/arima.html). | Tests call public R `makeARIMA`/`KalmanLike`/`arima` and independently assembled Gaussian covariance densities. Public R function bodies were also inspected to confirm conventions; no R or Java implementation was copied or translated into this kernel. The current pilot evaluates fixed stationary parameters, not diffuse initialization, parameter estimation, automatic selection or seasonal adjustment. |
+
+The detailed state-space equations, sign conventions, initialization, numerical
+limits and oracle interpretation are recorded in
+[state-space-contract.md](../native-tests/state-space-contract.md). This is an
+authorship and reference record, not a claim of a formally isolated clean-room
+process. The dependency/distribution review above still applies.
+
+## Rechecking the evidence
+
+1. Compare CSV `installed_sha256` values with the original manifest's matching
+   package-relative paths; no original artifact should change.
+2. Read each CSV `checksum_url` and compare the complete SHA256 string.
+3. Resolve the GitHub tag ref and annotated tag object above; compare the full
+   commit SHA, not a branch head.
+4. Hash the published parent POM and compare its Git blob ID with the pinned
+   source-file metadata. Keep byte identity separate from a reproducible-build
+   claim.
+
+The new `extended-v1` fixtures use the existing runtime oracle and synthetic
+formulas. Their own manifest records the parent artifact hashes and generation
+scripts. They neither update the original 12-case corpus nor qualify a native
+algorithm merely by adding reference examples.
