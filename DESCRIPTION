@@ -18,6 +18,7 @@ LazyData: true
 Depends: R (>= 4.1.0)
 Imports:
     R6,
+    Rcpp,
     highcharter,
     dygraphs,
     plotly,
@@ -38,6 +39,8 @@ Imports:
     base64enc,
     htmltools,
     htmlwidgets
+LinkingTo: Rcpp
+SystemRequirements: C++17
 Suggests:
     rjd3toolkit (>= 3.5.0),
     rjd3x13 (>= 3.5.0),

@@ -46,6 +46,7 @@ import(ggplot2)
 import(htmlwidgets)
 importFrom(DT,DTOutput)
 importFrom(R6,R6Class)
+importFrom(Rcpp,evalCpp)
 importFrom(dygraphs,
   dyAnnotation,
   dyCSS,
@@ -105,3 +106,4 @@ importFrom(zoo,
   as.Date,
   as.yearmon
 )
+useDynLib(persephone3, .registration = TRUE)

@@ -48,6 +48,8 @@ Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
 its optional packages and Java runtime. The package itself can now load without
 them. `backend_capabilities("native")` reports the native implementation status;
 native model fitting is not implemented yet and never falls back silently.
+The C++17/Rcpp foundations currently provide internal time-domain, differencing,
+convolution and finite-filter kernels; source installation requires a C++17 compiler.
 
 Each object records its backend at construction. An explicit `backend` argument
 overrides `options(persephone.backend = "rjd3")`; changing the option does not

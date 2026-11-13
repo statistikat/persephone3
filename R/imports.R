@@ -1,5 +1,7 @@
 #' Package imports
 #'
+#' @useDynLib persephone3, .registration = TRUE
+#' @importFrom Rcpp evalCpp
 #' @import htmlwidgets
 #'
 #' @importFrom stats aggregate.ts density printCoefmat pt qqnorm tsp

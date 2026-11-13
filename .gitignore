@@ -19,3 +19,9 @@ Meta
 *.tar.gz.asc
 *.Rout
 AGENTS.md
+
+# Native compilation artifacts
+/src/*.o
+/src/*.so
+/src/*.dll
+/src/*.dylib

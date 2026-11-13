@@ -1,0 +1,53 @@
+name: Native foundations
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      JAVA_HOME: __PERSEPHONE_NO_JAVA__
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache: false
+          packages: |
+            local::.
+            any::tinytest
+            any::digest
+          dependencies: '"hard"'
+      - name: Verify package loading without Java R dependencies
+        run: Rscript tools/verify-nojava.R --native
+      - name: Test installed native routines
+        shell: Rscript {0}
+        run: |
+          library(persephone3)
+          results <- tinytest::run_test_file("inst/tinytest/test-native-primitives.R")
+          stopifnot(length(results) > 0L, all(as.logical(results)))
+      - name: Verify frozen reference artifacts without Java
+        run: Rscript tools/reference/verify.R
+      - name: Sanitize independent C++ core
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
+            -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -Isrc src/numerics.cpp tools/native-tests/test_numerics.cpp \
+            -o "$RUNNER_TEMP/persephone-numerics"
+          "$RUNNER_TEMP/persephone-numerics"
