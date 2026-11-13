@@ -31,6 +31,11 @@ if ("--native" %in% args) {
   difference <- getFromNamespace(".native_difference_polynomial", "persephone3")
   stopifnot(identical(convolve(c(1, -1), c(1, 1)), c(1, 0, -1)))
   stopifnot(identical(difference(1, 0, 12), c(1, -1)))
+  solve_spd <- getFromNamespace(".native_cholesky_solve", "persephone3")
+  solve_qr <- getFromNamespace(".native_qr_solve", "persephone3")
+  stopifnot(isTRUE(all.equal(solve_spd(diag(2), matrix(c(2, 3), 2))$solution,
+                             matrix(c(2, 3), 2))))
+  stopifnot(solve_qr(diag(2), matrix(c(2, 3), 2))$rank == 2L)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

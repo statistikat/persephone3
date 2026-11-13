@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **`f811e2f`**, package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: current branch (prior checkpoint **`c12299a`**), package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -13,7 +13,8 @@ cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
 **The Java replacement is not complete.** Native code currently provides time
-domains, differencing polynomials, convolution and finite filters. It does not
+domains, differencing polynomials, convolution, finite filters, and LAPACK-backed
+Cholesky/QR linear algebra. It does not
 estimate SARIMA models or perform X-11/TRAMO/SEATS adjustment. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
@@ -37,6 +38,7 @@ the native-backend plan below.
 | 17a — shared adapter and additive contracts | Explicit persistent backend selection for singles/batches/hierarchies, lazy rjd3 loading, optional dependencies, serializable spec/result envelopes and stale-fit detection | 260 installed-package R assertions pass, including 43 dashboard checks and direct backend parity. Installed-package loading and capability errors pass with Java-related R packages absent. Native fits remain unimplemented; richer normalized regressors/diagnostics continue in 6/10/12. |
 | 18a — direct-backend reference corpus | 12 synthetic fixed/manual AO/automatic fits across X-13/TRAMO-SEATS and monthly/quarterly data; raw outputs, exact field schemas, checksums and per-field comparator | Integrity/corruption tests and all 12 pinned live replays pass. Tolerances are provisional; external-context, missingness, LS/TC, benchmarking, difficult-model and multi-platform cases remain open. |
 | 19a — C++17/Rcpp numerical foundations | Registered compiled routines for monthly/quarterly domains, differencing polynomials, convolution and finite filters with explicit missing masks; native-only CI workflow | 58 installed-package Rcpp assertions and standalone strict-warning/ASan/UBSan checks pass locally. Compiled primitives run with Java-related R packages inaccessible. Linux/Windows CI is configured, not remotely verified; no SARIMA estimation or seasonal-adjustment fit is implemented. |
+| 19b — numerical linear algebra | Owned column-major matrices; R-supported LAPACK Cholesky solves, log determinants and condition estimates; pivoted QR minimum-norm least squares with rank and original-domain residuals | 102 Rcpp assertions and strict-warning/ASan/UBSan core checks pass. Rank-deficient, underdetermined, zero-rank, ill-conditioned and malformed inputs are covered. OS builds and statistical model qualification remain open. |
 | 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
@@ -437,7 +439,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16b / 18c | Resolve oracle source/provenance and numerical-code licensing choices; qualify tolerances and add fixed/free regressors, missingness, LS/TC and future-context fixtures | Audited references/support decisions and independent invariants, without rebasing discrepancies away |
-| 19b | Select and integrate portable QR/Cholesky/linear-system support; add transforms and regressor-domain validation | Rank-deficient/ill-conditioned fixtures, compiler/sanitizer checks and platform builds |
+| 19c | Add transforms and regressor-domain validation on the delivered LAPACK foundation | Log-Jacobian identities, exact monthly/quarterly alignment and complete future-context checks |
 | 20a | Implement fixed-parameter SARIMA state-space initialization, exact/diffuse likelihood and missing-observation handling | Intermediate innovations, variances, effective sample and likelihood normalization match qualified references |
 | 20b–d | Estimate regression/ARMA coefficients, enforce root constraints, compute covariance/residuals, forecast/backcast with future regressors | Fixed/free parameter and uncertainty parity, explicit convergence failures, serialized plain-data results |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
@@ -596,7 +598,8 @@ Start with a pure C++17 core inside this package and a thin Rcpp adapter;
 avoid recreating the Java class hierarchy. Use a maintained linear algebra
 library or R-supported BLAS/LAPACK rather than writing QR/Cholesky routines
 from scratch; select one approach after numerical, portability and licence
-review. Keep C++ types independent of Rcpp so numerical kernels can be tested
+review. Slice 19b selects R-supported BLAS/LAPACK; no factorization source is
+vendored or translated. Keep C++ types independent of Rcpp so numerical kernels can be tested
 separately. No long-lived external pointers initially: ordinary R objects must
 survive cloning, `saveRDS`/`readRDS`, and dashboard child-process transport.
 

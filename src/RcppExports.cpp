@@ -62,12 +62,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_cholesky_solve
+Rcpp::List native_cholesky_solve(SEXP matrix, SEXP rhs);
+RcppExport SEXP _persephone3_native_cholesky_solve(SEXP matrixSEXP, SEXP rhsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type matrix(matrixSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rhs(rhsSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_cholesky_solve(matrix, rhs));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_qr_solve
+Rcpp::List native_qr_solve(SEXP matrix, SEXP rhs, double rank_tolerance);
+RcppExport SEXP _persephone3_native_qr_solve(SEXP matrixSEXP, SEXP rhsSEXP, SEXP rank_toleranceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type matrix(matrixSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rhs(rhsSEXP);
+    Rcpp::traits::input_parameter< double >::type rank_tolerance(rank_toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_qr_solve(matrix, rhs, rank_tolerance));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_time_domain", (DL_FUNC) &_persephone3_native_time_domain, 4},
     {"_persephone3_native_difference_polynomial", (DL_FUNC) &_persephone3_native_difference_polynomial, 3},
     {"_persephone3_native_convolve", (DL_FUNC) &_persephone3_native_convolve, 2},
     {"_persephone3_native_filter", (DL_FUNC) &_persephone3_native_filter, 3},
+    {"_persephone3_native_cholesky_solve", (DL_FUNC) &_persephone3_native_cholesky_solve, 2},
+    {"_persephone3_native_qr_solve", (DL_FUNC) &_persephone3_native_qr_solve, 3},
     {NULL, NULL, 0}
 };
 

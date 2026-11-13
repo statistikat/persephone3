@@ -38,8 +38,12 @@ jobs:
         shell: Rscript {0}
         run: |
           library(persephone3)
-          results <- tinytest::run_test_file("inst/tinytest/test-native-primitives.R")
-          stopifnot(length(results) > 0L, all(as.logical(results)))
+          files <- list.files("inst/tinytest", "^test-native-.*[.]R$", full.names = TRUE)
+          stopifnot(length(files) > 0L)
+          for (file in files) {
+            results <- tinytest::run_test_file(file)
+            stopifnot(length(results) > 0L, all(as.logical(results)))
+          }
       - name: Verify frozen reference artifacts without Java
         run: Rscript tools/reference/verify.R
       - name: Sanitize independent C++ core

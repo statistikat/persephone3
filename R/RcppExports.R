@@ -17,3 +17,11 @@
     .Call(`_persephone3_native_filter`, values, weights, offsets)
 }
 
+.native_cholesky_solve <- function(matrix, rhs) {
+    .Call(`_persephone3_native_cholesky_solve`, matrix, rhs)
+}
+
+.native_qr_solve <- function(matrix, rhs, rank_tolerance = 1e-10) {
+    .Call(`_persephone3_native_qr_solve`, matrix, rhs, rank_tolerance)
+}
+
