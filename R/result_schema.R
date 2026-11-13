@@ -36,6 +36,9 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
   }
   if (inherits(spec, "persephone_spec")) {
     backend_spec_parameters(spec, method, backend)
+    if (!identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts)))) {
+      stop("Specification frequency does not match the result's observed series.", call. = FALSE)
+    }
     specification <- spec
   } else {
     specification <- new_backend_spec(method, frequency = stats::frequency(ts),

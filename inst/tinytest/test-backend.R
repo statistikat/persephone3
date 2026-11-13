@@ -135,3 +135,12 @@ if (all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
 } else {
   message("Skipping only optional rjd3 reference-adapter tests: dependencies unavailable")
 }
+
+# Normalization must not label monthly data with a quarterly specification.
+local({
+  spec <- persephone3:::new_backend_spec("x13", frequency = 4,
+                                        parameters = list(), backend = "native")
+  expect_error(persephone3:::normalize_backend_result(
+    list(user_defined = list(sa = AirPassengers)), "x13", "native", spec, AirPassengers),
+    "Specification frequency")
+})
