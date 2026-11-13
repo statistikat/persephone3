@@ -72,7 +72,7 @@ ui <- fluidPage(
   # -------------------------------------------------------------------------
   # Title bar
   # -------------------------------------------------------------------------
-  titlePanel("Persephone3 Dashboard"),
+  titlePanel(getOption("persephone.dashboard.title", "Persephone3 Dashboard")),
 
   # -------------------------------------------------------------------------
   # Main layout: Two-column layout

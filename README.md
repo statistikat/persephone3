@@ -134,9 +134,10 @@ app$kill()
 Run each model before opening its dashboard. Single-series dashboards
 can also be saved with `createDashboard(obj, file = "dashboard.html")`.
 
-For now, launch the batch/hierarchy Shiny app from the package source
-checkout: its launcher loads the package from the current working
-directory.
+The batch/hierarchy app can be launched from any working directory,
+using an installed package or a source checkout loaded with
+`devtools::load_all()`. Use `launch.browser = FALSE` to start it without
+opening a browser; the local address is available as `attr(app, "url")`.
 
 ## Further reading
 

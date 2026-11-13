@@ -39,7 +39,8 @@ Imports:
     shinycssloaders,
     stringr,
     base64enc,
-    htmltools
+    htmltools,
+    htmlwidgets
 Suggests:
     knitr,
     rmarkdown,

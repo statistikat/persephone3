@@ -7,16 +7,18 @@
 \alias{createDashboard_compare}
 \title{Create diagnostic dashboard for time series objects}
 \usage{
-createDashboard(x, y = NULL, title = NULL, file = NULL, ...)
+createDashboard(x, y = NULL, title = NULL, file = NULL,
+  launch.browser = TRUE, startup.timeout = 30, ...)
 
 createDashboard_single(x, title = "Series Diagnostics", file = NULL, ...)
 
-createDashboard_hts(x, title = NULL, file = NULL, ...)
+createDashboard_hts(x, title = NULL, file = NULL,
+  launch.browser = TRUE, startup.timeout = 30, ...)
 
 createDashboard_compare(x, y, title = "Series Comparison", file = NULL, ...)
 }
 \arguments{
-\item{x}{A time series object (single series or hierarchical), or a list of two single series objects for comparison}
+\item{x}{A time series object (single series or hierarchical), for display}
 
 \item{y}{Second time series object (optional, for comparison of two single series)}
 
@@ -24,10 +26,16 @@ createDashboard_compare(x, y, title = "Series Comparison", file = NULL, ...)
 
 \item{file}{Optional file path to save HTML output (single series only)}
 
+\item{launch.browser}{Open the batch/hierarchy dashboard in a browser.}
+
+\item{startup.timeout}{Maximum seconds to wait for the Shiny server to start.}
+
 \item{...}{Additional arguments passed to specific methods}
 }
 \value{
-For single series: browsable HTML UI. For hierarchical: invisible \code{callr} process.
+For single series: browsable HTML UI. For batch/hierarchical objects:
+an invisible \code{callr} process, with its local URL in \code{attr(process, "url")}.
+Call \code{process$kill()} to stop the app.
 }
 \description{
 Creates a diagnostic dashboard for time series objects. For single series

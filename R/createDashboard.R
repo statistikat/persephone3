@@ -4,12 +4,16 @@
 #' objects, returns an HTML dashboard. For hierarchical time series, launches
 #' an interactive Shiny application. Can also compare two single series objects.
 #'
-#' @param x A time series object (single series or hierarchical), or a list of two single series objects for comparison
+#' @param x A time series object (single series or hierarchical), for display
 #' @param y Second time series object (optional, for comparison of two single series)
 #' @param title Main title for the dashboard (default depends on object type)
 #' @param file Optional file path to save HTML output (single series only)
+#' @param launch.browser Open the batch/hierarchy dashboard in a browser.
+#' @param startup.timeout Maximum seconds to wait for the Shiny server to start.
 #' @param ... Additional arguments passed to specific methods
-#' @return For single series: browsable HTML UI. For hierarchical: invisible `callr` process.
+#' @return For single series: browsable HTML UI. For batch/hierarchical objects:
+#'   an invisible `callr` process, with its local URL in `attr(process, "url")`.
+#'   Call `process$kill()` to stop the app.
 #' @export
 #' @examples
 #' # For single series - returns HTML dashboard
@@ -26,7 +30,8 @@
 #'
 #' # For hierarchical series - launches Shiny app
 #' # createDashboard(hts_object)
-createDashboard <- function(x, y = NULL, title = NULL, file = NULL, ...) {
+createDashboard <- function(x, y = NULL, title = NULL, file = NULL,
+                            launch.browser = TRUE, startup.timeout = 30, ...) {
   # Check if comparing two series
   if (!is.null(y)) {
     # Comparison mode: two single series objects
@@ -47,7 +52,8 @@ createDashboard <- function(x, y = NULL, title = NULL, file = NULL, ...) {
   ) {
     # Both hts and multipleTimeSeries use the same Shiny app
     # For multipleTimeSeries, the app will show components without aggregates
-    createDashboard_hts(x, title = title, ...)
+    createDashboard_hts(x, title = title, launch.browser = launch.browser,
+                        startup.timeout = startup.timeout, ...)
   } else {
     stop(
       "Unsupported object class: ",
@@ -64,51 +70,56 @@ createDashboard_single <- function(
   file = NULL,
   ...
 ) {
+  if (is.null(title)) title <- "Series Diagnostics"
   dashboard_single(x, file = file, title = title)
 }
 
 #' @describeIn createDashboard Internal helper for hierarchical time series dashboards
-createDashboard_hts <- function(x, title = NULL, file = NULL, ...) {
-  # Find app directory from installed package
-  app_dir <- system.file("app", package = "persephone3")
-  if (app_dir == "") {
-    stop("Could not find the app directory.")
+createDashboard_hts <- function(x, title = NULL, file = NULL,
+                                launch.browser = TRUE, startup.timeout = 30, ...) {
+  if (!is.logical(launch.browser) || length(launch.browser) != 1L ||
+      is.na(launch.browser)) {
+    stop("launch.browser must be TRUE or FALSE", call. = FALSE)
+  }
+  if (!is.numeric(startup.timeout) || length(startup.timeout) != 1L ||
+      !is.finite(startup.timeout) || startup.timeout <= 0) {
+    stop("startup.timeout must be a positive number", call. = FALSE)
   }
 
-  # Get package directory for devtools::load_all()
-  pkg_dir <- normalizePath(".")
+  # Resolve from the loaded namespace, never the caller's working directory.
+  pkg_dir <- getNamespaceInfo(asNamespace("persephone3"), "path")
+  source_package <- dir.exists(file.path(pkg_dir, "inst", "app"))
+  app_dir <- file.path(pkg_dir, if (source_package) "inst/app" else "app")
+  if (!dir.exists(app_dir)) stop("Could not find the app directory.")
 
-  # Select random port for Shiny server
   port <- httpuv::randomPort()
   shiny_url <- paste0("http://127.0.0.1:", port)
-
-  # Start Shiny app in background process
   p <- callr::r_bg(
-    function(app_dir, obj, pkg_dir, port) {
-      suppressPackageStartupMessages({
-        devtools::load_all(pkg_dir)
-      })
-      options(persephone.dashboard.object = obj)
-      shiny::runApp(
-        app_dir,
-        host = "127.0.0.1",
-        port = port,
-        launch.browser = FALSE
-      )
+    function(app_dir, obj, pkg_dir, source_package, port, title) {
+      if (source_package) {
+        suppressPackageStartupMessages(devtools::load_all(pkg_dir))
+      } else {
+        loadNamespace("persephone3", lib.loc = dirname(pkg_dir))
+      }
+      options(persephone.dashboard.object = obj,
+              persephone.dashboard.title = title)
+      shiny::runApp(app_dir, host = "127.0.0.1", port = port,
+                    launch.browser = FALSE)
     },
-    args = list(app_dir = app_dir, obj = x, pkg_dir = pkg_dir, port = port),
+    args = list(app_dir = app_dir, obj = x, pkg_dir = pkg_dir,
+                source_package = source_package, port = port, title = title),
+    libpath = .libPaths(),
     supervise = TRUE
   )
 
-  # Wait for server to start
-  start_time <- Sys.time()
   ready <- FALSE
-  max_startup_time <- 10
-  while (difftime(Sys.time(), start_time, units = "secs") < max_startup_time) {
-    con <- try(
-      suppressWarnings(base::url(shiny_url, open = "rb")),
-      silent = TRUE
-    )
+  on.exit(if (!ready && p$is_alive()) p$kill(), add = TRUE)
+  start_time <- Sys.time()
+  while (as.numeric(difftime(Sys.time(), start_time, units = "secs")) < startup.timeout) {
+    if (!p$is_alive()) {
+      stop("Dashboard process exited before startup: ", p$read_error(), call. = FALSE)
+    }
+    con <- try(suppressWarnings(base::url(shiny_url, open = "rb")), silent = TRUE)
     if (!inherits(con, "try-error")) {
       close(con)
       ready <- TRUE
@@ -116,18 +127,13 @@ createDashboard_hts <- function(x, title = NULL, file = NULL, ...) {
     }
     Sys.sleep(0.2)
   }
-
-  if (ready) {
-    utils::browseURL(shiny_url)
-    message("Dashboard running at ", shiny_url)
-  } else {
-    p$kill()
-    stop(
-      paste("Dashboard failed to start within", max_startup_time, "seconds."),
-      call. = FALSE
-    )
+  if (!ready) {
+    stop("Dashboard failed to start within ", startup.timeout, " seconds.",
+         call. = FALSE)
   }
-
+  attr(p, "url") <- shiny_url
+  if (launch.browser) utils::browseURL(shiny_url)
+  message("Dashboard running at ", shiny_url)
   invisible(p)
 }
 
@@ -139,5 +145,6 @@ createDashboard_compare <- function(
   file = NULL,
   ...
 ) {
+  if (is.null(title)) title <- "Series Comparison"
   dashboard_compare(x, y, file = file, title = title)
 }

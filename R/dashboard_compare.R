@@ -25,6 +25,8 @@
 #' createDashboard(obj1, obj2)  # preferred
 #'
 dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
+  validate_dashboard_series(x)
+  validate_dashboard_series(y)
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")
   miss <- pkgs[

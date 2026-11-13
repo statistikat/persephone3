@@ -14,6 +14,7 @@
 #' obj$run()
 #' createDashboard(obj)  # preferred
 dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
+  validate_dashboard_series(x)
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")
   miss <- pkgs[
@@ -798,4 +799,14 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   }
 
   out
+}
+
+# Shared validation for the exported HTML dashboard functions.
+validate_dashboard_series <- function(x) {
+  if (!inherits(x, c("x13Single", "tramoseatsSingle"))) {
+    stop("Expected an x13Single or tramoseatsSingle object", call. = FALSE)
+  }
+  if (is.null(x$output)) {
+    stop("Run the model with $run() before creating a dashboard", call. = FALSE)
+  }
 }

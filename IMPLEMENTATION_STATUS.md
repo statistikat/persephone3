@@ -6,8 +6,18 @@ Reviewed: 2026-11-13
 
 Package version: **0.1.0**. The working tree is based on `master` commit
 `463aca8`, pulled from `origin/master`. Items 1–3 are organized as separate
-commits on `codex/implementation-items-1-3`. The package remains experimental; implemented features do not
-by themselves establish release readiness.
+commits on `codex/implementation-items-1-3`. The implementation HEAD is
+`9ba14a3`. The package remains experimental; implemented features do not by
+themselves establish release readiness.
+
+| Item | Commit | Change |
+| --- | --- | --- |
+| 1 | `d8a742c` | Add forecasts and outlier markers to hierarchical plots |
+| 2 | `f9cb071` | Correct package dependency declarations and namespace imports |
+| 3 | `9ba14a3` | Refresh persephone3 guides and document implementation status |
+
+The branch remains local and has not been pushed. Items 4 and 5 continue on
+this branch as separate commits. Validation results are recorded per item.
 
 ## Progress against the numbered implementation items
 
@@ -39,8 +49,15 @@ by themselves establish release readiness.
    simplified-outlier examples, clarified that the regional dataset example
    covers 26 countries rather than a complete EU aggregate, and made its random
    weights reproducible. Added diagnostics to the pkgdown navigation.
-4. **Dashboard regression coverage — open.** Add dedicated HTML-generation,
-   comparison-input, and Shiny startup/lifecycle tests.
+4. **Dashboard regression coverage — implemented.** Added 36 assertions for
+   single/comparison HTML output, escaped and default titles, exported files,
+   invalid/unfitted inputs, batch/hierarchy startup from a different working
+   directory, timeout handling, and shutdown. The launcher resolves the loaded
+   package location and supports both installed and development packages.
+   `launch.browser = FALSE` permits headless use; `startup.timeout` bounds startup,
+   and `attr(process, "url")` exposes the local address. Failed startup cleans
+   up the child process. The app now honors custom titles. Added the directly
+   required `htmlwidgets` dependency and documented the launcher controls.
 5. **Release validation — in progress.** Current-source tests pass; package
    checks, browser validation, and release cleanup are tracked below.
 
@@ -64,7 +81,7 @@ single-series objects to HTML output and batch/hierarchical objects to Shiny.
 
 ## Tests and delivery infrastructure
 
-- Eight active test files live in `inst/tinytest/`, covering single series,
+- Nine active test files live in `inst/tinytest/`, covering single series,
   batches, hierarchies, plotting, model/outlier fixes, calendar regressors, and
   miscellaneous helpers. `tests/tinytest.R` runs them during package checks
   when `tinytest` is available.
@@ -81,6 +98,12 @@ These are repository configurations, not evidence that the latest CI runs pass.
 Remote CI results and coverage percentages were not checked.
 
 ## Validation
+
+- Item 4: all **133 assertions** in nine test files passed against a fresh
+  installation, including 36 dashboard assertions. The new dashboard tests
+  also passed with the development package loaded. Local-server tests required
+  localhost access outside the execution sandbox. Log:
+  `/tmp/persephone-item4-tests.log`.
 
 - All **97 assertions** in the eight active tinytest files passed against the
   current source loaded with `pkgload::load_all()`, including the 32 new
@@ -111,8 +134,8 @@ Remote CI results and coverage percentages were not checked.
   MathJax option; the initial README HTML preview could not fetch remote badge
   images. Final Markdown generation used `html_preview = FALSE`.
 - Dashboard-launch examples remain `eval = FALSE` to avoid starting services
-  during documentation builds. The current batch/hierarchy launcher requires
-  the package source checkout as working directory; README now documents this.
+  during documentation builds. Item 4 removes the source-checkout working-directory
+  requirement and updates README accordingly.
 - The earlier package check excluded PDF manual generation and vignette builds.
   Vignettes have since rendered individually, but a new package check with
   built vignettes and PDF manual validation has not been run. Browser/dashboard
@@ -120,12 +143,13 @@ Remote CI results and coverage percentages were not checked.
 
 ## Remaining work
 
+- **Next implementation item: 5 — release validation.** Run checks with built
+  vignettes and the PDF manual, resolve remaining warnings, and inspect the
+  dashboards and hierarchical plots in a browser.
 - Resolve remaining package-check findings before release, including non-ASCII
   strings in `R/dashboard_single.R`.
 - Run a package check with the now-renderable vignettes included, and validate
   the PDF manual in a complete documentation toolchain.
-- Continue with item 4 (dashboard tests), including the launcher working-directory
-  requirement documented during item 3.
 - Visually inspect the new hierarchical forecast intervals and outlier markers
   in a browser, and smoke-test all dashboard modes.
 
