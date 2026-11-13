@@ -2,7 +2,7 @@
 % Please edit documentation in R/generate_Qr_List.R
 \name{generate_Qr_List}
 \alias{generate_Qr_List}
-\title{Generates a list containing the figures for a EUROSTAT quality report}
+\title{Generates figures for a EUROSTAT quality report}
 \usage{
 generate_Qr_List(x)
 }
@@ -10,6 +10,10 @@ generate_Qr_List(x)
 \item{x}{an object of class \link{persephone}.}
 }
 \description{
-Generates a list containing the figures for a EUROSTAT quality report
+Outliers are ranked by absolute estimated t-statistic. Fixed coefficients
+without an estimated standard error follow ranked entries in stable input
+order. At most three labels are returned. Overall quality is the backend's
+own result. The stage-2 Henderson filter is unavailable in the current output
+contract and is not reconstructed from an unverified rule.
 }
 \keyword{internal}

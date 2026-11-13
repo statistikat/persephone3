@@ -14,7 +14,9 @@
 #'         significant trading day effect and thus justified trading-day
 #'         regressors, i.e. the reverse direction of the residual tests:
 #'         "Good" (p < 0.05), "Uncertain" (0.05 <= p < 0.1), "Bad" (p >= 0.1)
-#'   \item \strong{Outliers:} "Good" (< 3\%), "Uncertain" (3-5\%), "Severe" (> 5\%)
+#'   \item \strong{Combined seasonality:} categorical backend outcome,
+#'         preserved as text rather than interpreted as a p-value.
+#'   \item \strong{Outliers:} "Good" (< 3\%), "Uncertain" (3\% to below 5\%), "Severe" (>= 5\%)
 #' }
 #'
 #' @section Returned Columns:
@@ -64,7 +66,6 @@
 #'
 #' @keywords internal
 generate_diagnostics_table <- function(x) {
-  #browser()
   type <- ifelse(grepl("Single", class(x)[1]), "single", "aggregate")
 
   if (is.null(x$output) | length(x$output) == 0) {
@@ -96,136 +97,36 @@ generate_diagnostics_table <- function(x) {
     ))
   }
 
-  userdef <- x$output$user_defined
-  preproc <- x$output$preprocessing
-
-  bpbdbq <- paste0(
-    "(",
-    userdef$arima.p,
-    " ",
-    userdef$arima.d,
-    " ",
-    userdef$arima.q,
-    ")",
-    "(",
-    userdef$arima.bp,
-    " ",
-    userdef$arima.bd,
-    " ",
-    userdef$arima.bq,
-    ")"
-  )
-
-  classify_norm_indep <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.001) {
-      "Severe"
-    } else if (p < 0.01) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_seas_td <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.01) {
-      "Severe"
-    } else if (p < 0.05) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_outl <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.03) {
-      "Good"
-    } else if (p < 0.05) {
-      "Uncertain"
-    } else {
-      "Severe"
-    }
-  }
-
-  classify_p <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.05) {
-      "Good"
-    } else {
-      "Bad"
-    }
-  }
-
-  # Significance test of the trading-day regressors in the pre-adjustment
-  # regression: small p means the trading day effect is present and the
-  # regressors are justified — the reverse direction of residual diagnostics
-  classify_td_reg <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.05) {
-      "Good"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Bad"
-    }
-  }
-
-  qStat <- x$output$mstats$q
-  qStat2 <- x$output$mstats$qm2
-  fTest <- userdef$`regression.td-ftest`$pvalue[1]
-  out <- getOutliers(x)
-  out_p <- nrow(out) / length(x$ts)
-
+  metrics <- diagnostic_metrics(x)
+  out <- diagnostic_outliers(x)
+  n_out <- if (is.null(out)) NA_integer_ else nrow(out)
+  out_p <- if (length(x$ts)) n_out / length(x$ts) else NA_real_
   data.frame(
-    run = !is.null(x$output),
+    run = TRUE,
     method = x$method,
     type = type,
-    seasonality = userdef$`diagnostics.seas-si-combined`,
-    normality = classify_norm_indep(userdef$residuals.doornikhansen$pvalue),
-    independence = classify_norm_indep(userdef$residuals.lb$pvalue),
-    QS_seas = classify_seas_td(userdef$`diagnostics.seas-sa-qs`$pvalue),
-    F_seas = classify_seas_td(userdef$`diagnostics.seas-sa-f`$pvalue),
-    combSA_all = classify_p(userdef$`diagnostics.td-sa-all`$pvalue),
-    combSA_last = classify_p(userdef$`diagnostics.td-sa-last`$pvalue),
-    combI_all = classify_p(userdef$`diagnostics.td-i-all`$pvalue),
-    combI_last = classify_p(userdef$`diagnostics.td-i-last`$pvalue),
-    fTestSA_td = classify_norm_indep(x$output$diagnostics$td.ftest.sa$pvalue),
-    TD_Ftest = if (is.null(fTest) || length(fTest) == 0 || is.na(fTest)) {
-      NA_real_
-    } else {
-      signif(fTest, 3)
-    },
-    TD_status = classify_td_reg(fTest),
-    logTransform = preproc$description$log,
-    arimaMdl = bpbdbq,
-    nOutliers_Q = classify_outl(out_p),
-    nOutliers = nrow(out),
-    nAutoout = sum(out$autoout),
-    nRecentout = sum(out$recentout),
-    Q = ifelse(is.null(qStat), NA, round(qStat, digits = 2)),
-    Q2 = ifelse(is.null(qStat2), NA, round(qStat2, digits = 2)),
-    TotalQ = userdef$quality.summary
+    seasonality = metrics$seasonality$value,
+    normality = metrics$normality$status,
+    independence = metrics$independence$status,
+    QS_seas = metrics$residual_qs$status,
+    F_seas = metrics$residual_f$status,
+    combSA_all = metrics$td_sa_all$status,
+    combSA_last = metrics$td_sa_last$status,
+    combI_all = metrics$td_i_all$status,
+    combI_last = metrics$td_i_last$status,
+    fTestSA_td = metrics$td_sa_f$status,
+    TD_Ftest = signif(metrics$td_regression$pvalue, 3),
+    TD_status = metrics$td_regression$status,
+    logTransform = metrics$log,
+    arimaMdl = metrics$arima,
+    nOutliers_Q = diagnostic_classify(out_p, "outliers"),
+    nOutliers = n_out,
+    nAutoout = if (is.null(out)) NA_integer_ else sum(out$autoout),
+    nRecentout = if (is.null(out)) NA_integer_ else sum(out$recentout),
+    Q = round(metrics$q$value, 2),
+    Q2 = round(metrics$q2$value, 2),
+    TotalQ = metrics$quality$value,
+    stringsAsFactors = FALSE
   )
 }
 

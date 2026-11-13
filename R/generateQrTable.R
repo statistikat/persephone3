@@ -9,7 +9,7 @@
 #' * __component__ is a column added by `iterate()` and informs where in the
 #'   hierarchy a certain component is.
 #' * __Method__ is `TS` for [rjd3tramoseats::tramoseats_fast()] and `x13` for [rjd3x13::x13_fast()]
-#' * __Period__ is `12` for yearly measurements and `4` for quarterly
+#' * __Period__ is `12` for monthly measurements and `4` for quarterly
 #'   measurements
 #' * __Start__ denotes the start of the time series
 #' * __End__ denotes the end of the time series
@@ -17,19 +17,22 @@
 #' * __ARIMA.Model__
 #' * __LeapYear__
 #' * __MovingHoliday__
-#' * __NbTF__
+#' * __NbTD__ Number of trading-day regressors
 #' * __Noutliers__ Number of outliers
-#' * __Outlier1__
-#' * __Outlier2__
-#' * __Outlier3__
+#' * __Outlier1__, __Outlier2__, __Outlier3__ are ranked by absolute t-statistic;
+#'   unavailable ranks are `NA`. Fixed effects without standard errors follow
+#'   estimated effects in their original order.
 #' * __CombinedTest_SI__
 #' * __Residual.Seasonality__
 #' * __Residual.TD.Effect__
 #' * __Q.Stat__
 #' * __Final.Henderson.Filter__
-#' * __Stage.2.Henderson.Filter__
+#' * __Stage.2.Henderson.Filter__ is `NA`: the current backend output contract
+#'   does not expose a verified stage-2 filter.
 #' * __Seasonal.Filter__
-#' * __Max.Adj__
+#' * __Quality__ preserves the backend's overall quality category.
+#' * __Max.Adj__ is unavailable when a relative adjustment is undefined,
+#'   including an original observation equal to zero.
 #'
 #' @examples
 #' obj_x13 <- perX13(AirPassengers, "rsa3")

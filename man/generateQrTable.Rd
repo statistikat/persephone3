@@ -19,7 +19,7 @@ report for each component of a hierarchical \code{persephone} object
 \item \strong{component} is a column added by \code{iterate()} and informs where in the
 hierarchy a certain component is.
 \item \strong{Method} is \code{TS} for \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}} and \code{x13} for \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}}
-\item \strong{Period} is \code{12} for yearly measurements and \code{4} for quarterly
+\item \strong{Period} is \code{12} for monthly measurements and \code{4} for quarterly
 measurements
 \item \strong{Start} denotes the start of the time series
 \item \strong{End} denotes the end of the time series
@@ -27,19 +27,22 @@ measurements
 \item \strong{ARIMA.Model}
 \item \strong{LeapYear}
 \item \strong{MovingHoliday}
-\item \strong{NbTF}
+\item \strong{NbTD} Number of trading-day regressors
 \item \strong{Noutliers} Number of outliers
-\item \strong{Outlier1}
-\item \strong{Outlier2}
-\item \strong{Outlier3}
+\item \strong{Outlier1}, \strong{Outlier2}, \strong{Outlier3} are ranked by absolute t-statistic;
+unavailable ranks are \code{NA}. Fixed effects without standard errors follow
+estimated effects in their original order.
 \item \strong{CombinedTest_SI}
 \item \strong{Residual.Seasonality}
 \item \strong{Residual.TD.Effect}
 \item \strong{Q.Stat}
 \item \strong{Final.Henderson.Filter}
-\item \strong{Stage.2.Henderson.Filter}
+\item \strong{Stage.2.Henderson.Filter} is \code{NA}: the current backend output contract
+does not expose a verified stage-2 filter.
 \item \strong{Seasonal.Filter}
-\item \strong{Max.Adj}
+\item \strong{Quality} preserves the backend's overall quality category.
+\item \strong{Max.Adj} is unavailable when a relative adjustment is undefined,
+including an original observation equal to zero.
 }
 }
 

@@ -39,132 +39,9 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
     )
   }
 
-  # ---- helpers (copied from dashboard_single) ----
-  safe_get <- function(obj, path, default = NULL) {
-    cur <- obj
-    for (nm in path) {
-      if (is.null(cur)) {
-        return(default)
-      }
-
-      nxt <- tryCatch(
-        {
-          if (is.list(cur) || is.data.frame(cur)) {
-            if (nm %in% names(cur)) cur[[nm]] else NULL
-          } else if (is.environment(cur)) {
-            if (exists(nm, envir = cur, inherits = FALSE)) {
-              get(nm, envir = cur, inherits = FALSE)
-            } else {
-              NULL
-            }
-          } else {
-            NULL
-          }
-        },
-        error = function(e) NULL
-      )
-
-      if (is.null(nxt)) {
-        return(default)
-      }
-      cur <- nxt
-    }
-    cur
-  }
-
-  extract_scalar <- function(z, default = NA) {
-    if (is.null(z) || length(z) == 0) {
-      return(default)
-    }
-    if (is.list(z) && !is.null(z$pvalue)) {
-      return(extract_scalar(z$pvalue, default))
-    }
-    z <- unname(z[1])
-    if (length(z) == 0 || is.na(z)) {
-      return(default)
-    }
-    z
-  }
-
-  fmt_num <- function(z, digits = 3) {
-    if (is.null(z) || length(z) == 0 || all(is.na(z))) {
-      return("NA")
-    }
-    if (is.logical(z)) {
-      return(ifelse(z, "Yes", "No"))
-    }
-    if (is.numeric(z)) {
-      return(formatC(z[1], digits = digits, format = "f"))
-    }
-    as.character(z[1])
-  }
-
-  fmt_p <- function(z, digits = 4) {
-    if (is.null(z) || length(z) == 0 || all(is.na(z))) {
-      return("NA")
-    }
-    if (!is.numeric(z)) {
-      z <- suppressWarnings(as.numeric(z[1]))
-    }
-    if (is.na(z)) {
-      return("NA")
-    }
-    formatC(z, digits = digits, format = "f")
-  }
-
-  classify_norm_indep <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.001) {
-      "Severe"
-    } else if (p < 0.01) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_seas_td <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.01) {
-      "Severe"
-    } else if (p < 0.05) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_td_ftest <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p >= 0.05) "Good" else "Bad"
-  }
-
-  classify_qstat <- function(q) {
-    if (is.null(q) || length(q) == 0 || is.na(q)) {
-      return("Undefined")
-    }
-    q <- as.numeric(q[1])
-    if (q < 1) {
-      "Good"
-    } else if (q < 2) {
-      "Bad"
-    } else {
-      "Severe"
-    }
-  }
+  # Shared typed metrics and formatting, including unavailable values.
+  fmt_num <- diagnostic_format
+  fmt_p <- diagnostic_format_p
 
   status_color <- function(status) {
     status <- tolower(as.character(status))
@@ -179,34 +56,14 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
     )
   }
 
-  metric_box_comp <- function(
-    label,
-    val_x,
-    val_y,
-    status_x = NULL,
-    status_y = NULL,
-    small = FALSE
-  ) {
-    color_x <- if (is.null(status_x)) "#4f46e5" else status_color(status_x)
-    color_y <- if (is.null(status_y)) "#4f46e5" else status_color(status_y)
-    cls <- if (small) "mini-box" else "value-box"
-
+  metric_box_comp <- function(label, value, status = NULL, small = FALSE) {
+    color <- if (is.null(status)) "#4f46e5" else status_color(status)
     htmltools::tags$div(
-      class = "compare-metric",
-      htmltools::tags$div(class = "metric-label", label),
-      htmltools::tags$div(
-        class = "metric-values",
-        htmltools::tags$div(
-          class = cls,
-          style = paste0("border-left: 4px solid ", color_x, ";"),
-          htmltools::tags$div(class = "box-value", val_x)
-        ),
-        htmltools::tags$div(
-          class = cls,
-          style = paste0("border-left: 4px solid ", color_y, ";"),
-          htmltools::tags$div(class = "box-value", val_y)
-        )
-      )
+      class = if (small) "mini-box" else "value-box",
+      style = paste0("border-left: 4px solid ", color, ";"),
+      htmltools::tags$div(class = "box-label metric-label", label),
+      htmltools::tags$div(class = "box-value", value),
+      if (!is.null(status) && nzchar(status)) htmltools::tags$div(class = "box-status", status)
     )
   }
 
@@ -218,117 +75,38 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
     )
   }
 
-  # ---- extract data for both series ----
-  extract_metrics <- function(series_obj) {
-    userdef <- safe_get(series_obj, c("output", "user_defined"), list())
-
-    q1 <- suppressWarnings(as.numeric(extract_scalar(safe_get(
-      series_obj,
-      c("output", "mstats", "q"),
-      NA
-    ))))
-    q2 <- suppressWarnings(as.numeric(extract_scalar(safe_get(
-      series_obj,
-      c("output", "mstats", "qm2"),
-      NA
-    ))))
-
-    log_flag <- safe_get(
-      series_obj,
-      c("output", "preprocessing", "description", "log"),
-      NA
-    )
-    log_txt <- if (isTRUE(log_flag)) {
-      "Yes"
-    } else if (identical(log_flag, FALSE)) {
-      "No"
-    } else {
-      fmt_num(log_flag)
-    }
-
-    arima_txt <- paste0(
-      "(",
-      fmt_num(safe_get(userdef, "arima.p", NA), 0),
-      " ",
-      fmt_num(safe_get(userdef, "arima.d", NA), 0),
-      " ",
-      fmt_num(safe_get(userdef, "arima.q", NA), 0),
-      ")",
-      "(",
-      fmt_num(safe_get(userdef, "arima.bp", NA), 0),
-      " ",
-      fmt_num(safe_get(userdef, "arima.bd", NA), 0),
-      " ",
-      fmt_num(safe_get(userdef, "arima.bq", NA), 0),
-      ")"
-    )
-
-    p_norm <- suppressWarnings(as.numeric(extract_scalar(
-      safe_get(
-        series_obj,
-        c("output", "preprocessing", "diagnostics", "doornikhansen", "pvalue"),
-        NA
-      )
-    )))
-
-    p_indep <- suppressWarnings(as.numeric(extract_scalar(
-      safe_get(
-        series_obj,
-        c("output", "preprocessing", "diagnostics", "lb", "pvalue"),
-        NA
-      )
-    )))
-
-    p_seas <- suppressWarnings(as.numeric(extract_scalar(
-      safe_get(userdef, "diagnostics.seas-si-combined", NULL)
-    )))
-
-    p_td <- suppressWarnings(as.numeric(extract_scalar(
-      safe_get(userdef, c("regression.td-ftest", "pvalue"), NULL)
-    )))
-
-    list(
-      q1 = q1,
-      q2 = q2,
-      log_txt = log_txt,
-      arima_txt = arima_txt,
-      p_norm = p_norm,
-      p_indep = p_indep,
-      p_seas = p_seas,
-      p_td = p_td,
-      st_norm = classify_norm_indep(p_norm),
-      st_indep = classify_norm_indep(p_indep),
-      st_seas = classify_seas_td(p_seas),
-      st_td = classify_td_ftest(p_td)
-    )
-  }
-
-  metrics_x <- extract_metrics(x)
-  metrics_y <- extract_metrics(y)
+  metrics_x <- diagnostic_dashboard_values(x)
+  metrics_y <- diagnostic_dashboard_values(y)
 
   # ---- comparison table ----
   comp_df <- data.frame(
     Metric = c(
       "Normality (p)",
       "Independence (p)",
-      "Seasonality (p)",
-      "TD F-test (p)",
+      "Combined seasonality",
+      "TD regression F-test (p)",
+      "Residual TD F-test (p)",
+      "Quality summary",
       "Q1",
       "Q2"
     ),
     Series_A = c(
       fmt_p(metrics_x$p_norm),
       fmt_p(metrics_x$p_indep),
-      fmt_p(metrics_x$p_seas),
+      fmt_num(metrics_x$seasonality),
       fmt_p(metrics_x$p_td),
+      fmt_p(metrics_x$p_residual_td),
+      fmt_num(metrics_x$quality),
       fmt_num(metrics_x$q1),
       fmt_num(metrics_x$q2)
     ),
     Series_B = c(
       fmt_p(metrics_y$p_norm),
       fmt_p(metrics_y$p_indep),
-      fmt_p(metrics_y$p_seas),
+      fmt_num(metrics_y$seasonality),
       fmt_p(metrics_y$p_td),
+      fmt_p(metrics_y$p_residual_td),
+      fmt_num(metrics_y$quality),
       fmt_num(metrics_y$q1),
       fmt_num(metrics_y$q2)
     ),
@@ -337,16 +115,20 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
       metrics_x$st_indep,
       metrics_x$st_seas,
       metrics_x$st_td,
-      classify_qstat(metrics_x$q1),
-      classify_qstat(metrics_x$q2)
+      metrics_x$st_residual_td,
+      "",
+      metrics_x$st_q1,
+      metrics_x$st_q2
     ),
     Status_B = c(
       metrics_y$st_norm,
       metrics_y$st_indep,
       metrics_y$st_seas,
       metrics_y$st_td,
-      classify_qstat(metrics_y$q1),
-      classify_qstat(metrics_y$q2)
+      metrics_y$st_residual_td,
+      "",
+      metrics_y$st_q1,
+      metrics_y$st_q2
     ),
     stringsAsFactors = FALSE
   )
@@ -509,15 +291,21 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
               small = TRUE
             ),
             metric_box_comp(
-              "Seasonality",
-              fmt_p(metrics_x$p_seas),
+              "Combined seasonality",
+              fmt_num(metrics_x$seasonality),
               metrics_x$st_seas,
               small = TRUE
             ),
             metric_box_comp(
-              "TD F-test",
+              "TD regression F-test",
               fmt_p(metrics_x$p_td),
               metrics_x$st_td,
+              small = TRUE
+            ),
+            metric_box_comp(
+              "Residual TD F-test",
+              fmt_p(metrics_x$p_residual_td),
+              metrics_x$st_residual_td,
               small = TRUE
             )
           )
@@ -553,15 +341,21 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
               small = TRUE
             ),
             metric_box_comp(
-              "Seasonality",
-              fmt_p(metrics_y$p_seas),
+              "Combined seasonality",
+              fmt_num(metrics_y$seasonality),
               metrics_y$st_seas,
               small = TRUE
             ),
             metric_box_comp(
-              "TD F-test",
+              "TD regression F-test",
               fmt_p(metrics_y$p_td),
               metrics_y$st_td,
+              small = TRUE
+            ),
+            metric_box_comp(
+              "Residual TD F-test",
+              fmt_p(metrics_y$p_residual_td),
+              metrics_y$st_residual_td,
               small = TRUE
             )
           )

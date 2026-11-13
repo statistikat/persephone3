@@ -29,41 +29,6 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   }
 
   # ---- helpers ----
-  safe_get <- function(obj, path, default = NULL) {
-    cur <- obj
-    for (nm in path) {
-      if (is.null(cur)) {
-        return(default)
-      }
-
-      nxt <- tryCatch(
-        {
-          # list/data.frame style
-          if (is.list(cur) || is.data.frame(cur)) {
-            if (nm %in% names(cur)) cur[[nm]] else NULL
-
-            # environment style
-          } else if (is.environment(cur)) {
-            if (exists(nm, envir = cur, inherits = FALSE)) {
-              get(nm, envir = cur, inherits = FALSE)
-            } else {
-              NULL
-            }
-          } else {
-            NULL
-          }
-        },
-        error = function(e) NULL
-      )
-
-      if (is.null(nxt)) {
-        return(default)
-      }
-      cur <- nxt
-    }
-    cur
-  }
-
   quad_plot_panel <- function(p11, p12, p21, p22) {
     htmltools::tags$div(
       class = "quad-grid",
@@ -74,107 +39,8 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
     )
   }
 
-  first_non_null <- function(...) {
-    vals <- list(...)
-    for (v in vals) {
-      if (!is.null(v) && length(v) > 0 && !all(is.na(v))) return(v)
-    }
-    NULL
-  }
-
-  extract_scalar <- function(z, default = NA) {
-    if (is.null(z) || length(z) == 0) {
-      return(default)
-    }
-    if (is.list(z) && !is.null(z$pvalue)) {
-      return(extract_scalar(z$pvalue, default))
-    }
-    z <- unname(z[1])
-    if (length(z) == 0 || is.na(z)) {
-      return(default)
-    }
-    z
-  }
-
-  fmt_num <- function(z, digits = 3) {
-    if (is.null(z) || length(z) == 0 || all(is.na(z))) {
-      return("Undefined")
-    }
-    if (is.logical(z)) {
-      return(ifelse(z, "Yes", "No"))
-    }
-    if (is.numeric(z)) {
-      return(formatC(z[1], digits = digits, format = "f"))
-    }
-    as.character(z[1])
-  }
-
-  fmt_p <- function(z, digits = 4) {
-    if (is.null(z) || length(z) == 0 || all(is.na(z))) {
-      return("Undefined")
-    }
-    if (!is.numeric(z)) {
-      z <- suppressWarnings(as.numeric(z[1]))
-    }
-    if (is.na(z)) {
-      return("Undefined")
-    }
-    formatC(z, digits = digits, format = "f")
-  }
-
-  classify_norm_indep <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.001) {
-      "Severe"
-    } else if (p < 0.01) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_seas_td <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p < 0.01) {
-      "Severe"
-    } else if (p < 0.05) {
-      "Bad"
-    } else if (p < 0.1) {
-      "Uncertain"
-    } else {
-      "Good"
-    }
-  }
-
-  classify_td_ftest <- function(p) {
-    if (is.null(p) || length(p) == 0 || is.na(p)) {
-      return("Undefined")
-    }
-    p <- as.numeric(p[1])
-    if (p >= 0.05) "Good" else "Bad"
-  }
-
-  classify_qstat <- function(q) {
-    if (is.null(q) || length(q) == 0 || is.na(q)) {
-      return("Undefined")
-    }
-    q <- as.numeric(q[1])
-    if (q < 1) {
-      "Good"
-    } else if (q < 2) {
-      "Bad"
-    } else {
-      "Severe"
-    }
-  }
+  fmt_num <- diagnostic_format
+  fmt_p <- diagnostic_format_p
 
   status_color <- function(status) {
     status <- tolower(as.character(status))
@@ -334,137 +200,32 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
     )
   }
 
-  # ---- extract data ----
-  userdef <- safe_get(x, c("output", "user_defined"), list())
-  resids <- safe_get(x, c("output", "preprocessing", "estimation", "res"), NULL)
-
-  out <- tryCatch(getOutliers(x), error = function(e) NULL)
-  n_out <- if (is.null(out)) {
-    NA
-  } else if (is.null(nrow(out))) {
-    NA
-  } else {
-    nrow(out)
-  }
-
-  q1 <- suppressWarnings(as.numeric(extract_scalar(safe_get(
-    x,
-    c("output", "mstats", "q"),
-    NA
-  ))))
-  q2 <- suppressWarnings(as.numeric(extract_scalar(safe_get(
-    x,
-    c("output", "mstats", "qm2"),
-    NA
-  ))))
-
-  log_flag <- safe_get(
-    x,
-    c("output", "preprocessing", "description", "log"),
-    NA
-  )
-  log_txt <- if (isTRUE(log_flag)) {
-    "Yes"
-  } else if (identical(log_flag, FALSE)) {
-    "No"
-  } else {
-    fmt_num(log_flag)
-  }
-
-  arima_txt <- paste0(
-    "(",
-    fmt_num(safe_get(userdef, "arima.p", NA), 0),
-    " ",
-    fmt_num(safe_get(userdef, "arima.d", NA), 0),
-    " ",
-    fmt_num(safe_get(userdef, "arima.q", NA), 0),
-    ")",
-    "(",
-    fmt_num(safe_get(userdef, "arima.bp", NA), 0),
-    " ",
-    fmt_num(safe_get(userdef, "arima.bd", NA), 0),
-    " ",
-    fmt_num(safe_get(userdef, "arima.bq", NA), 0),
-    ")"
-  )
-
-  p_norm <- suppressWarnings(as.numeric(extract_scalar(
-    safe_get(
-      x,
-      c("output", "preprocessing", "diagnostics", "doornikhansen", "pvalue"),
-      NA
-    )
-  )))
-
-  p_indep <- suppressWarnings(as.numeric(extract_scalar(
-    safe_get(x, c("output", "preprocessing", "diagnostics", "lb", "pvalue"), NA)
-  )))
-
-  p_seas <- suppressWarnings(as.numeric(extract_scalar(
-    first_non_null(
-      safe_get(
-        x,
-        c("output", "user_defined", "diagnostics.seas-si-combined"),
-        NULL
-      ),
-      safe_get(userdef, "diagnostics.seas-si-combined", NULL)
-    )
-  )))
-
-  p_td <- suppressWarnings(as.numeric(extract_scalar(
-    first_non_null(
-      safe_get(
-        x,
-        c("output", "user_defined", "regression.td-ftest", "pvalue"),
-        NULL
-      ),
-      safe_get(userdef, c("regression.td-ftest", "pvalue"), NULL)
-    )
-  )))
-
-  p_seas_qs <- suppressWarnings(as.numeric(extract_scalar(
-    first_non_null(
-      safe_get(
-        x,
-        c("output", "user_defined", "diagnostics.seas-sa-qs", "pvalue"),
-        NULL
-      ),
-      safe_get(userdef, c("diagnostics.seas-sa-qs", "pvalue"), NULL)
-    )
-  )))
-
-  p_seas_f <- suppressWarnings(as.numeric(extract_scalar(
-    first_non_null(
-      safe_get(
-        x,
-        c("output", "user_defined", "diagnostics.seas-sa-f", "pvalue"),
-        NULL
-      ),
-      safe_get(
-        x,
-        c("output", "user_defined", "diagnostics.seas-sa-f'", "pvalue"),
-        NULL
-      ),
-      safe_get(userdef, c("diagnostics.seas-sa-f", "pvalue"), NULL),
-      safe_get(userdef, c("diagnostics.seas-sa-f'", "pvalue"), NULL)
-    )
-  )))
-
-  q_summary <- first_non_null(
-    safe_get(userdef, "quality.summary", NULL),
-    safe_get(x, c("output", "user_defined", "quality.summary"), NULL),
-    NA
-  )
-
-  # ---- statuses ----
-  st_norm <- classify_norm_indep(p_norm)
-  st_indep <- classify_norm_indep(p_indep)
-  st_seas <- classify_seas_td(p_seas)
-  st_td <- classify_td_ftest(p_td)
-  st_qs <- classify_seas_td(p_seas_qs)
-  st_sf <- classify_seas_td(p_seas_f)
-  st_q1 <- classify_qstat(q1)
-  st_q2 <- classify_qstat(q2)
+  # All surfaces use the same typed values and classification rules.
+  metrics <- diagnostic_dashboard_values(x)
+  resids <- diagnostic_at(x$output, c("preprocessing", "estimation", "res"))
+  out <- tryCatch(diagnostic_outliers(x), error = function(e) NULL)
+  n_out <- if (is.null(out)) NA_integer_ else nrow(out)
+  q1 <- metrics$q1
+  q2 <- metrics$q2
+  log_txt <- metrics$log_txt
+  arima_txt <- metrics$arima_txt
+  seasonality <- metrics$seasonality
+  q_summary <- metrics$quality
+  p_norm <- metrics$p_norm
+  p_indep <- metrics$p_indep
+  p_td <- metrics$p_td
+  p_seas_qs <- metrics$p_seas_qs
+  p_seas_f <- metrics$p_seas_f
+  p_residual_td <- metrics$p_residual_td
+  st_norm <- metrics$st_norm
+  st_indep <- metrics$st_indep
+  st_seas <- metrics$st_seas
+  st_td <- metrics$st_td
+  st_qs <- metrics$st_qs
+  st_sf <- metrics$st_sf
+  st_residual_td <- metrics$st_residual_td
+  st_q1 <- metrics$st_q1
+  st_q2 <- metrics$st_q2
 
   # ---- Persephone native plots as widgets ----
   # original_plot  <- render_persephone_plot(plot(x), height = "320px")
@@ -501,8 +262,9 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
     Diagnostic = c(
       "Normality",
       "Independence",
-      "Seasonality",
-      "TD F-test",
+      "Combined seasonality",
+      "TD regression F-test",
+      "Residual TD F-test",
       "SeasQS",
       "SeasF",
       "Q1",
@@ -511,14 +273,15 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
     Value = c(
       fmt_p(p_norm),
       fmt_p(p_indep),
-      fmt_p(p_seas),
+      fmt_num(seasonality),
       fmt_p(p_td),
+      fmt_p(p_residual_td),
       fmt_p(p_seas_qs),
       fmt_p(p_seas_f),
       fmt_num(q1),
       fmt_num(q2)
     ),
-    Status = c(st_norm, st_indep, st_seas, st_td, st_qs, st_sf, st_q1, st_q2),
+    Status = c(st_norm, st_indep, st_seas, st_td, st_residual_td, st_qs, st_sf, st_q1, st_q2),
     stringsAsFactors = FALSE
   )
 
@@ -777,8 +540,9 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
             class = "status-box-grid",
             metric_box("Normality", fmt_p(p_norm), st_norm, small = TRUE),
             metric_box("Independence", fmt_p(p_indep), st_indep, small = TRUE),
-            metric_box("Seasonality", fmt_p(p_seas), st_seas, small = TRUE),
-            metric_box("TD F-test", fmt_p(p_td), st_td, small = TRUE),
+            metric_box("Combined seasonality", fmt_num(seasonality), st_seas, small = TRUE),
+            metric_box("TD regression F-test", fmt_p(p_td), st_td, small = TRUE),
+            metric_box("Residual TD F-test", fmt_p(p_residual_td), st_residual_td, small = TRUE),
             metric_box("SeasQS", fmt_p(p_seas_qs), st_qs, small = TRUE),
             metric_box("SeasF", fmt_p(p_seas_f), st_sf, small = TRUE)
           ),

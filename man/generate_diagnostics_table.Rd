@@ -26,7 +26,9 @@ The function classifies various diagnostic statistics into quality categories:
 significant trading day effect and thus justified trading-day
 regressors, i.e. the reverse direction of the residual tests:
 "Good" (p < 0.05), "Uncertain" (0.05 <= p < 0.1), "Bad" (p >= 0.1)
-\item \strong{Outliers:} "Good" (< 3\\%), "Uncertain" (3-5\\%), "Severe" (> 5\\%)
+\item \strong{Combined seasonality:} categorical backend outcome,
+preserved as text rather than interpreted as a p-value.
+\item \strong{Outliers:} "Good" (< 3\\%), "Uncertain" (3\\% to below 5\\%), "Severe" (>= 5\\%)
 }
 }
 \section{Returned Columns}{
