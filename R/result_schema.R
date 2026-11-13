@@ -70,8 +70,8 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
                  provenance = list(backend = backend, packages = backend_versions(backend, method)),
                  status = list(code = code, convergence = "not_reported"),
                  domain = backend_domain(ts), components = components,
-                 forecasts = list(points = points, standard_errors = errors,
-                                  domains = lapply(points, backend_domain)),
+                 forecasts = new_forecast_contract(points, errors, observed = ts,
+                                                   mode = forecast_mode(output)),
                  diagnostics = diagnostics, availability = availability,
                  raw = output), class = "persephone_result")
 }

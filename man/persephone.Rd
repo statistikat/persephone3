@@ -60,6 +60,25 @@ run? If \code{FALSE} (the default), the output will be returned invisibly.
 \code{\link[=perX13]{perX13()}}, \code{\link[=perTramo]{perTramo()}}, \code{\link[=perHts]{perHts()}}
 }
 
+\section{Forecasts}{
+
+After a successful fit, \verb{$forecasts$points$y} contains original-series
+forecasts; other named components are \code{t}, \code{sa}, \code{s}, \code{i} and \code{cal}.
+The direct model's same contract is available through \verb{$forecastsDirect}.
+Each field retains its own time domain: a backend may supply fewer calendar
+forecasts or standard errors than original-series forecasts. The contract's
+\code{availability} table records these partial horizons and unavailable fields;
+standard errors are never recycled to fill a longer horizon.
+
+Hierarchies aggregate level forecasts using their usual sum or weighted mean.
+Selected indirect forecasts honor nested children's direct/indirect choices,
+whereas \verb{$forecastsIndirect} uses fully indirect child results. Multiplicative
+seasonal, irregular and calendar factors cannot be summed; these aggregate
+fields remain unavailable unless all decompositions are additive. Uncertainty
+for multiple components requires cross-component covariance and is therefore
+unavailable. Before fitting or with no available horizon, the result is NULL.
+}
+
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
   \describe{
@@ -91,9 +110,14 @@ the first time.}
 
     \item{\code{adjustedDirect}}{see \link{perHts}}
 
-    \item{\code{forecasts}}{get forecasts from the model}
+    \item{\code{forecasts}}{A serializable forecast contract, or NULL before fitting
+or when no forecast horizon is available. \code{points} contains named ts
+series y, t, sa, s, i and cal. \code{domains} and \code{standard_error_domains}
+retain each field's own horizon; standard errors may cover only a
+prefix. \code{scales} and \code{availability} describe units and missing outputs.}
 
-    \item{\code{forecastsDirect}}{get direct forecasts from the model}
+    \item{\code{forecastsDirect}}{The direct model's forecast contract. Original-series
+standard errors are retained when supplied by the computation backend.}
   }
   \if{html}{\out{</div>}}
 }

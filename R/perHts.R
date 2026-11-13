@@ -398,8 +398,13 @@ hierarchicalTimeSeries <- R6::R6Class(
       return(self$adjustedDirect)
     },
 
-    #' @field forecasts get forecasts
+    #' @field forecasts Forecast contract for the chosen direct/indirect result.
+    #'   Indirect y/t/sa forecasts aggregate level series. s/i/cal are aggregated
+    #'   only for additive decompositions. Cross-component uncertainty remains
+    #'   unavailable without covariance; see the contract's availability table.
     forecasts = function() {
+      private$check_aggregation_inputs()
+      if (is.null(private$output_internal)) return(NULL)
       if (is.na(self$indirect)) {
         warning(
           "The decision between direct and indirect adjustment was not recorded yet. \nDirect forecasts are returned."
@@ -410,16 +415,14 @@ hierarchicalTimeSeries <- R6::R6Class(
       return(self$forecastsDirect)
     },
 
-    #' @field forecastsIndirect get forecasts according to indirect adjustments
+    #' @field forecastsIndirect Forecast contract from fully indirect leaf
+    #'   adjustment, preserving each hierarchy level's aggregation weights.
     forecastsIndirect = function() {
+      private$check_aggregation_inputs()
       if (is.null(private$output_internal)) {
         return(NULL)
       }
-      private$aggregate(
-        self$components,
-        self$weights,
-        which = "forecastsIndirect"
-      )
+      aggregate_component_forecasts(self$components, self$weights, fully_indirect = TRUE)
     }
   ),
 
@@ -449,10 +452,11 @@ hierarchicalTimeSeries <- R6::R6Class(
     params_internal = NULL, # spec for aggregate series
 
     forecasts_indirect_one_step = function() {
+      private$check_aggregation_inputs()
       if (is.null(private$output_internal)) {
         return(NULL)
       }
-      private$aggregate(self$components, self$weights, which = "forecasts")
+      aggregate_component_forecasts(self$components, self$weights)
     },
 
     adjusted_indirect_one_step = function() {
@@ -706,7 +710,7 @@ startEndAsDecimal <- function(x, freq = 12) {
 # engine lets calendar alignment and weighted values be checked without Java.
 hts_series_domain <- function(series) {
   if (!length(series) || any(vapply(series, function(x) {
-    !is.ts(x) || !is.numeric(x) || !NROW(x)
+    !stats::is.ts(x) || !is.numeric(x) || !NROW(x)
   }, logical(1)))) {
     stop("Every component must provide a nonempty numeric time series.", call. = FALSE)
   }
@@ -738,12 +742,12 @@ hts_order_named <- function(values, expected, supplied_names = names(values)) {
 }
 
 hts_weight_list <- function(weights) {
-  if (is.ts(weights) && is.matrix(weights)) {
+  if (stats::is.ts(weights) && is.matrix(weights)) {
     result <- lapply(seq_len(ncol(weights)), function(i) weights[, i])
     names(result) <- colnames(weights)
     return(result)
   }
-  if (is.ts(weights)) return(list(weights))
+  if (stats::is.ts(weights)) return(list(weights))
   if (is.list(weights)) return(weights)
   if (is.numeric(weights) && is.null(dim(weights))) return(as.list(weights))
   stop("Weights must be a numeric vector, a list of ts weights, or an mts object.",
@@ -755,7 +759,7 @@ hts_weight_values <- function(weight, target, component) {
     stop("Weights for '", component, "' must be nonempty, finite and nonmissing.",
          call. = FALSE)
   }
-  if (!is.ts(weight)) {
+  if (!stats::is.ts(weight)) {
     if (length(weight) != 1L || !is.null(dim(weight))) {
       stop("Varying weights for '", component, "' must be a univariate ts.", call. = FALSE)
     }
@@ -839,7 +843,7 @@ hts_prepare_weights <- function(components, weights) {
     hts_weight_values(supplied[[i]], reference, component_names[i])
   }
   last <- max(c(tsp(reference)[2], vapply(supplied, function(x) {
-    if (is.ts(x)) tsp(x)[2] else tsp(reference)[2]
+    if (stats::is.ts(x)) tsp(x)[2] else tsp(reference)[2]
   }, numeric(1))))
   count <- round((last - tsp(reference)[1]) * frequency(reference)) + 1
   target <- ts(rep(0, count), start = stats::start(reference), frequency = frequency(reference))

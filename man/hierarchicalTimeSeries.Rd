@@ -68,9 +68,13 @@ all components are adjusted and then aggregated}
 
     \item{\code{adjusted}}{results from the seasonal adjustment}
 
-    \item{\code{forecasts}}{get forecasts}
+    \item{\code{forecasts}}{Forecast contract for the chosen direct/indirect result.
+Indirect y/t/sa forecasts aggregate level series. s/i/cal are aggregated
+only for additive decompositions. Cross-component uncertainty remains
+unavailable without covariance; see the contract's availability table.}
 
-    \item{\code{forecastsIndirect}}{get forecasts according to indirect adjustments}
+    \item{\code{forecastsIndirect}}{Forecast contract from fully indirect leaf
+adjustment, preserving each hierarchy level's aggregation weights.}
   }
   \if{html}{\out{</div>}}
 }

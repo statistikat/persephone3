@@ -39,6 +39,23 @@
 #'   run? If `FALSE` (the default), the output will be returned invisibly.
 #' @section derived classes:
 #' [perX13()], [perTramo()], [perHts()]
+#'
+#' @section Forecasts:
+#' After a successful fit, `$forecasts$points$y` contains original-series
+#' forecasts; other named components are `t`, `sa`, `s`, `i` and `cal`.
+#' The direct model's same contract is available through `$forecastsDirect`.
+#' Each field retains its own time domain: a backend may supply fewer calendar
+#' forecasts or standard errors than original-series forecasts. The contract's
+#' `availability` table records these partial horizons and unavailable fields;
+#' standard errors are never recycled to fill a longer horizon.
+#'
+#' Hierarchies aggregate level forecasts using their usual sum or weighted mean.
+#' Selected indirect forecasts honor nested children's direct/indirect choices,
+#' whereas `$forecastsIndirect` uses fully indirect child results. Multiplicative
+#' seasonal, irregular and calendar factors cannot be summed; these aggregate
+#' fields remain unavailable unless all decompositions are additive. Uncertainty
+#' for multiple components requires cross-component covariance and is therefore
+#' unavailable. Before fitting or with no available horizon, the result is NULL.
 #' @export
 persephone <- R6::R6Class(
   "persephone",
@@ -240,13 +257,18 @@ persephone <- R6::R6Class(
     # spec = function() {
     #   private$params_internal
     # },
-    #' @field forecasts get forecasts from the model
+    #' @field forecasts A serializable forecast contract, or NULL before fitting
+    #'   or when no forecast horizon is available. `points` contains named ts
+    #'   series y, t, sa, s, i and cal. `domains` and `standard_error_domains`
+    #'   retain each field's own horizon; standard errors may cover only a
+    #'   prefix. `scales` and `availability` describe units and missing outputs.
     forecasts = function() {
-      self$output$final$forecasts
+      self$forecastsDirect
     },
-    #' @field forecastsDirect get direct forecasts from the model
+    #' @field forecastsDirect The direct model's forecast contract. Original-series
+    #'   standard errors are retained when supplied by the computation backend.
     forecastsDirect = function() {
-      self$output$final$forecasts
+      forecasts_from_result(self$result, self$output, self$ts)
     }
   ),
   # ---- Private Methods ----
