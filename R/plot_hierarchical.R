@@ -10,6 +10,10 @@
 #' For [perHts()] objects, the function plots the original
 #' aggregate series
 #' as well as the directly and indirectly seasonally adjusted aggregate series.
+#' Forecasts and 95% prediction intervals refer to the original aggregate's
+#' direct model. If forecast standard errors are unavailable, only the forecast
+#' line is shown. Outlier markers (AO, LS, TC) refer to that same aggregate
+#' model, not to outliers in individual components.
 #'
 #' If no run has been performed on the [persephone] object,
 #' only the original (aggregate) time series is plotted.
@@ -64,7 +68,8 @@
 #' @export
 plot.hierarchicalTimeSeries <- function(x, main=NULL,
                             rangeSelector=TRUE, drawPoints=FALSE,
-                            annualComparison=NULL, ...){
+                            annualComparison=NULL, forecasts=TRUE,
+                            showOutliers=TRUE, ...){
 
   # Helper function for annual comparison
   annComp <- function(ts, annualComparison){
@@ -129,37 +134,77 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     sa_dir <- x$adjustedDirect
     sa_indir <- x$adjustedIndirect
 
-    # Forecasts not implemented yet
+    series <- cbind(y, sa_dir, sa_indir)
+    forecast <- x$output$user_defined$y_f
+    forecast_se <- x$output$user_defined$y_ef
+    has_forecast <- isTRUE(forecasts) && !is.null(forecast) &&
+      length(forecast) > 0L && any(is.finite(forecast))
+    has_interval <- has_forecast && !is.null(forecast_se) &&
+      length(forecast_se) == length(forecast) &&
+      identical(tsp(forecast_se), tsp(forecast))
 
-    # ppm_y_f <- x$output$user_defined$preprocessing.model.y_f # nolint
-    # ppm_y_ef <- x$output$user_defined$preprocessing.model.y_ef # nolint
+    if (has_forecast) {
+      series_names <- colnames(series)
+      series <- cbind(series, forecast)
+      colnames(series) <- c(series_names, "forecast")
+      if (has_interval) {
+        lowerci <- forecast - 1.96 * forecast_se
+        upperci <- forecast + 1.96 * forecast_se
+        series_names <- colnames(series)
+        series <- cbind(series, lowerci, upperci)
+        colnames(series) <- c(series_names, "lowerci", "upperci")
+      }
+    }
 
-    # Initialize Graph Object
-    # # Back-/Forecasts
-    # if (forecasts & !is.null(ppm_y_f) & !is.null(ppm_y_ef)) {
-    #   lowerci <- ppm_y_f - 1.96 * ppm_y_ef
-    #   upperci <- ppm_y_f + 1.96 * ppm_y_ef
-    #   ts <- cbind(y, t, sa, ppm_y_f, lowerci, upperci)
-    #
-    #   graphObj <- dygraph(ts, main = main) %>%
-    #     dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-    #     dySeries("sa", label = "Seasonally Adjusted") %>%
-    #     dySeries("t", label = "Trend") %>%
-    #     dySeries(c("lowerci", "ppm_y_f", "upperci"), label = "Forecasts",
-    #              strokePattern = "dashed", drawPoints = drawPoints) %>%
-    #     dyLegend(width = 400)
-    #
-    # }else{
-      ts <- cbind(y, sa_dir, sa_indir)
+    outliers <- if (isTRUE(showOutliers)) getOutliers(x) else NULL
+    colors <- c(AO = "red", LS = "orange", TC = "dodgerblue")
+    marker_names <- character(0)
+    if (is.data.frame(outliers) && nrow(outliers) > 0L) {
+      # Match calendar dates to observation periods (including quarterly data).
+      period <- floor(as.numeric(zoo::as.yearmon(outliers$date)) *
+                        frequency(y) + 1e-7)
+      index <- match(period, round(as.numeric(time(y)) * frequency(y)))
+      keep <- !is.na(index) & outliers$type %in% names(colors)
+      outliers <- outliers[keep, , drop = FALSE]
+      index <- index[keep]
+      for (type in unique(outliers$type)) {
+        marker <- y
+        marker[] <- NA_real_
+        positions <- index[outliers$type == type]
+        marker[positions] <- y[positions]
+        series_names <- colnames(series)
+        series <- cbind(series, marker)
+        marker_name <- paste0("otl", type)
+        colnames(series) <- c(series_names, marker_name)
+        marker_names[type] <- marker_name
+      }
+    }
 
-      graphObj <- dygraph(ts, main = main) %>%
-        dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-        dySeries("sa_dir", label = "Direct SA") %>%
-        dySeries("sa_indir", label = "Indirect SA") %>%
-        dyLegend(width = 290)
-    # }
+    graphObj <- dygraph(series, main = main) %>%
+      dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+      dySeries("sa_dir", label = "Direct SA") %>%
+      dySeries("sa_indir", label = "Indirect SA") %>%
+      dyLegend(width = if (has_forecast) 400 else 290)
 
-    # Outliers not implemented
+    if (has_forecast) {
+      forecast_columns <- if (has_interval) {
+        c("lowerci", "forecast", "upperci")
+      } else {
+        "forecast"
+      }
+      graphObj <- dySeries(graphObj, forecast_columns, label = "Forecasts",
+                           strokePattern = "dashed", drawPoints = drawPoints)
+    }
+    for (type in names(marker_names)) {
+      graphObj <- dySeries(graphObj, marker_names[[type]], label = type,
+                           drawPoints = TRUE, strokeWidth = 0,
+                           color = colors[[type]], pointShape = "dot",
+                           pointSize = 2.5)
+      for (date in as.character(outliers$date[outliers$type == type])) {
+        graphObj <- dyEvent(graphObj, date, label = NULL, labelLoc = "bottom",
+                            strokePattern = "dashed", color = colors[[type]])
+      }
+    }
 
     if (rangeSelector) {
       graphObj <- graphObj %>%
@@ -167,7 +212,7 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     }
 
     if (!is.null(annualComparison)) {
-      annCompRes <- annComp(ts, annualComparison)
+      annCompRes <- annComp(series, annualComparison)
       for (i in 1:length(annCompRes[["annCompVec"]])) {
         graphObj <- graphObj %>%
           dyEvent(annCompRes[["annCompVec"]][i], annCompRes[["annCompLab"]],

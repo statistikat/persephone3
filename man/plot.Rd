@@ -12,6 +12,8 @@
   rangeSelector = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
+  forecasts = TRUE,
+  showOutliers = TRUE,
   ...
 )
 
@@ -62,6 +64,10 @@ well as one year forecasts with prediction intervals of the original series.
 For \code{\link[=perHts]{perHts()}} objects, the function plots the original
 aggregate series
 as well as the directly and indirectly seasonally adjusted aggregate series.
+Forecasts and 95% prediction intervals refer to the original aggregate's
+direct model. If forecast standard errors are unavailable, only the forecast
+line is shown. Outlier markers (AO, LS, TC) refer to that same aggregate
+model, not to outliers in individual components.
 }
 \details{
 If no run has been performed on the \link{persephone} object,
