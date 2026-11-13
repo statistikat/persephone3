@@ -17,14 +17,15 @@ Language: en-US
 LazyData: true
 Depends: R (>= 4.1.0)
 Imports:
+    R6,
     rjd3toolkit (>= 3.5.0),
     rjd3x13 (>= 3.5.0),
     rjd3tramoseats (>= 3.5.0),
-    cli,
     highcharter,
     dygraphs,
     plotly,
     ggplot2,
+    forecast,
     scales,
     timeDate,
     magrittr,
@@ -36,7 +37,6 @@ Imports:
     devtools,
     DT,
     shinycssloaders,
-    rlang (>= 1.2.0),
     stringr,
     base64enc,
     htmltools
@@ -45,7 +45,6 @@ Suggests:
     rmarkdown,
     prettydoc,
     tinytest,
-    forecast,
     bookdown
 Remotes:
      github::rjdverse/rjd3toolkit,

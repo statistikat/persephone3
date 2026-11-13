@@ -86,7 +86,6 @@ createDashboard_hts <- function(x, title = NULL, file = NULL, ...) {
   p <- callr::r_bg(
     function(app_dir, obj, pkg_dir, port) {
       suppressPackageStartupMessages({
-        library(shiny)
         devtools::load_all(pkg_dir)
       })
       options(persephone.dashboard.object = obj)
