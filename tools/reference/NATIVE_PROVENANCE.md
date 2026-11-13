@@ -113,6 +113,16 @@ implementation was inspected, copied or translated for this slice. See
 [the information contract](../native-tests/arma-information-contract.md) and
 [reference notes](arma-information-notes.md).
 
+Slice 20c.1b.1 adds a prospective dense Gaussian residual-information oracle in
+`arma-residual-oracle.R`. Cholesky whitening, GLS, missing-coordinate projection,
+determinant normalization and Gauss-Newton covariance are independently derived
+from the existing Gaussian model. Closed AR(1) whitening/GLS derivatives and
+unit-invariance identities provide independent analytic checks. Pinned public
+wrapper outputs and fixed-parameter residual calls supply differential evidence;
+no numerical implementation is copied. This is validation tooling, not native
+production code or an accepted TRAMO covariance parity contract. The explicit
+compatibility decision is recorded in `tramo-information-decision.md`.
+
 Slice 20b.2b.2 also uses the elementary linear identity
 `L(y-X*b0)=L(y)-L(X)*b0` to center the regression response before whitening,
 with an ordinary least-squares `b0` computed by the existing DGELSY adapter.

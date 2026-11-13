@@ -58,14 +58,15 @@ inference convention, not a failed covariance inverse.
 **48.88627332%**. TRAMO scores also differ (maximum absolute difference
 **8.93985505e-4**), so they are not accepted as the same score contract.
 
-Prospective public-API probes show that a determinant-normalized residual
-Jacobian reproduces several complete TRAMO cases, with discrepancies in other
-complete and missing-data cases. That convention and its initialization/missing
-normalization still require independent qualification. These exploratory results
-do not authorize widening the X-13 budgets, altering the frozen fixtures, or
-advertising TRAMO uncertainty parity.
+The subsequent [20c.1b.1 study](tramo-information-decision.md) derives the
+determinant-normalized complete residual Jacobian, including missing-coordinate
+projection. It matches 61/64 covariances; three numerical differences remain.
+Analytic and unit-invariance controls demonstrate a pinned AR(1) covariance's
+unit sensitivity. The study records a maintainer decision on accurate final-fit
+covariance versus reproduction of those legacy values. It does not widen the
+X-13 budgets, alter frozen fixtures or advertise TRAMO covariance parity.
 
-Next, resolve that method-specific contract, then extend regression uncertainty
+Next, obtain that compatibility decision and implement the chosen path, then extend regression uncertainty
 and residuals in 20c.2. Default backend and native seasonal-adjustment capability
 remain unchanged. The previously recorded matched fit timings still describe
 the optimizer API: information is an explicit additional call and is excluded

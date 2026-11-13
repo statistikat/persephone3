@@ -1,7 +1,8 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Numerical implementation: **20c.1a observed information**;
-matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
+Updated: **2026-11-13**. Numerical implementation: **`4f00d22` (20c.1a)**;
+20c.1b.1 now records a TRAMO uncertainty compatibility decision.
+Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -45,7 +46,9 @@ screen exact/near parameter redundancy separately from convergence and regressio
 rank. Physical-coefficient observed information now supplies separately labelled
 full-profile ML and conditional-regression/residual-df uncertainty, with numerical,
 stationarity, structural and curvature gates. The latter is qualified against
-pinned X-13; TRAMO uses a different covariance convention that remains open.
+pinned X-13. TRAMO's residual-Jacobian convention now has an independent dense
+oracle matching 61 of 64 pinned covariance outputs; three numerical differences
+require a maintainer compatibility decision before adoption.
 Joint regression uncertainty, residuals and wider platform qualification remain open;
 native X-11/TRAMO/SEATS adjustment is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
@@ -88,6 +91,7 @@ the native-backend plan below.
 | 20b.2b.1 — deterministic ARMA optimization | Sequential BFGS with feasible Armijo steps, accuracy-qualified central/one-sided differences, one supplied start, strict budgets and explicit convergence/failure diagnostics; owned cached likelihoods and serializable R results | 1,196 mandatory assertions include 58 successful fits against 22 independent density minima, fixed coefficients, windows/log inputs, gaps, seasonal integration and serial/threaded equality. Standalone strict C++17/ASan/UBSan covers analytic optima and interruption/reuse at 12 generic plus 967 ARMA callback boundaries. First-order convergence does not establish identification or a minimum; broader pinned fitted-model parity and uncertainty remain open. |
 | 20b.2b.2 — fitted-model qualification and transfer diagnostics | Prospective fixed-order reference matrix, independent minima/alternate starts, algebraic free-coefficient transfer Jacobian with normalized SVD, and affine regression centering before whitening | 1,807 mandatory fitted-model plus 196 diagnostic assertions pass; 64 matrix cases plus four persistent controls produce 144 pinned direct fits / 1,517 checks. Two drift-related optimizer precision failures are resolved without tolerance changes. Exact/near/cross-factor redundancy, fixed constraints and weak regressors remain distinct from convergence; 31 diagnostic cancellation/reuse boundaries pass sanitizers. Finite-sample identification, estimated-parameter uncertainty and remote platform evidence remain open. |
 | 20c.1a — observed information and X-13 uncertainty | Three-scale physical-coefficient derivatives, signed/normalized information spectrum, separate profile-ML and conditional-regression/residual-df covariance, explicit unavailable standard errors | 1,785 independent assertions and 136 pinned fits / 2,317 comparison checks pass. X-13 covariance maximum relative error is `7.45e-6`; TRAMO is measured separately and remains unqualified. Strict C++/ASan/UBSan covers 43 generic plus 647 ARMA cancellation boundaries. No optimizer covariance is reused; no native SA/default switch is enabled. |
+| 20c.1b.1 — TRAMO residual-information study | Independent dense complete-residual projection, missing-coordinate determinant, residual Jacobian and closed AR(1) derivative oracle; versioned unit-invariance evidence | 443 checks / 90 public calls pass; 61/64 covariance comparisons meet `2e-5`. Pinned AR(1) covariance changes 1.4457% when only response units change, while independent covariance is invariant to `2.71e-10`. See `tools/reference/tramo-information-decision.md`: accepting accurate final-fit covariance versus reproducing legacy numerical values is a maintainer decision. Production TRAMO covariance remains unavailable. |
 | 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
@@ -130,7 +134,7 @@ establish those behaviors.
 | Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
 | Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
 | Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
-| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, centered regression GLS, deterministic ARMA optimization, transfer-sensitivity diagnostics and optional OpenMP | Bounded fixed-order fitted parity, conditional regression covariance and explicit candidate/stopping/structural statuses are delivered. Finite-sample information, estimated-ARMA uncertainty, native SA fits and cross-platform evidence remain open |
+| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, centered regression GLS, deterministic ARMA optimization, transfer diagnostics, observed information and optional OpenMP | Bounded fitted parity and profile/X-13 ARMA covariance are delivered. TRAMO covariance needs the documented compatibility decision; joint regression uncertainty, native SA fits and cross-platform evidence remain open |
 | Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
@@ -674,7 +678,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20c.1b | Resolve TRAMO's residual-Jacobian covariance/score convention after the delivered observed-information/X-13 slice | Independent residual normalization and Jacobian identities, complete/gapped/persistent cases, stable final-point results and explicit method-specific compatibility decisions; never relabel X-13 covariance as TRAMO |
+| 20c.1b.2 — decision pending | Choose accurate final-fit TRAMO covariance with three documented reference exceptions, or require reproduction of the legacy numerical values; then implement the chosen C++ path | 20c.1b.1 supplies 443 independent checks, analytic/public residual derivatives and unit-invariance evidence. Keep the existing `2e-5` budget and make any exceptions explicit; see `tools/reference/tramo-information-decision.md` |
 | 20c.2 / 20d | Qualify joint regression uncertainty and standardized/interpolated residuals, then forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
@@ -689,7 +693,8 @@ regression likelihood, including estimated mean/drift. Fixed-order ARMA
 optimization is delivered with bounded controls and explicit first-order stopping.
 The prospective fitted-model matrix and structural redundancy screen are now
 qualified locally. Observed information and X-13 ARMA uncertainty are delivered.
-Next resolve TRAMO uncertainty, extend joint regression uncertainty/residuals,
+Next obtain the TRAMO covariance compatibility decision, implement that path,
+extend joint regression uncertainty/residuals,
 then forecasts before an end-to-end fixed-model X-13 slice.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
 and does not justify a default switch. The detailed acceptance criteria below
@@ -1071,16 +1076,27 @@ AR(2) coordinates. The 136-reference-fit comparison passes 2,317 checks without
 changing frozen fixtures. See `tools/native-tests/arma-information-contract.md`
 and `tools/reference/arma-information-notes.md`.
 
-1. **20c.1b — TRAMO covariance and score qualification.** Derive the
-   determinant-normalized residual-Jacobian candidate independently, including
-   parameter-dependent normalization and GLS profiling. Resolve complete-case,
-   missing-row and persistent-model discrepancies against public pinned outputs;
-   do not assume residual rotations preserve a Gauss-Newton covariance. Test
-   changes of starting values, scale and equivalent identity/log inputs to
-   distinguish formula differences from solver-history or numerical effects.
-   Keep observed curvature, expected information and residual-Jacobian
-   approximations separately labelled. Register any remaining compatibility
-   decision with quantitative evidence; never widen tolerances to hide it.
+**Delivered 20c.1b.1:** a separate dense residual-information oracle resolves
+the mathematical TRAMO convention, including missing-coordinate projection.
+It agrees with 61/64 pinned covariances, with two AR(1) exceptions at 1.4457%
+and one MA(1) exception at 0.1091%. Changing response units changes the pinned
+AR(1) covariance by 1.4457% while the independent analytic/dense result remains
+invariant. All 443 independent checks and 90 direct calls are recorded in
+`tools/reference/information/2026-11-13-tramo/`. No upstream numerical source
+was translated. Public reported residuals at missing positions have a separate
+contract and are not universally the covariance residual vector.
+
+1. **20c.1b.2 — maintainer decision, then native TRAMO information.** Choose
+   accurate final-fit covariance with the three registered differences
+   (**recommended**), or require reproduction of the legacy numerical values
+   before proceeding. This changes standard errors and therefore statistical
+   decisions; it is not an implementation-detail choice to make silently.
+   The concrete alternatives, raw evidence and follow-up design are in
+   `tools/reference/tramo-information-decision.md`. After the decision,
+   implement complete residual projection/Jacobian and the chosen normalization
+   in C++, with explicit estimator labels, rank/range/error/cancellation gates,
+   unchanged general tolerance and separate score acceptance. Extend to
+   persistent models before advertising wider TRAMO covariance parity.
 2. **20c.2 — regression uncertainty and residuals.** Extend conditional GLS
    covariance to the chosen joint/profile inference contract, explicitly
    distinguishing fixed-ARMA, estimated-ARMA and residual-df scales. Qualify
