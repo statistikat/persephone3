@@ -4,62 +4,46 @@ Reviewed: 2026-11-13
 
 ## Current snapshot
 
-Package version: **0.1.0**. The working tree is based on `master` commit
-`463aca8`, pulled from `origin/master`. Items 1–3 are organized as separate
-commits on `codex/implementation-items-1-3`. The implementation HEAD is
-`9ba14a3`. The package remains experimental; implemented features do not by
-themselves establish release readiness.
+Package version: **0.1.0**. Work is on `codex/implementation-items-1-3`, based on
+`master` commit `463aca8`. The branch is local and has not been pushed.
 
-| Item | Commit | Change |
+| Item | Commit | Result |
 | --- | --- | --- |
-| 1 | `d8a742c` | Add forecasts and outlier markers to hierarchical plots |
-| 2 | `f9cb071` | Correct package dependency declarations and namespace imports |
-| 3 | `9ba14a3` | Refresh persephone3 guides and document implementation status |
+| 1 | `d8a742c` | Hierarchical forecasts and outlier plotting |
+| 2 | `f9cb071` | Dependency declarations and namespace imports |
+| 3 | `9ba14a3` | README and vignette migration |
+| 4 | `2d10eb3` | Dashboard regression tests and portable launcher |
+| 5 | Release-validation commit accompanying this report | Full checks and browser-discovered fixes |
 
-The branch remains local and has not been pushed. Items 4 and 5 continue on
-this branch as separate commits. Validation results are recorded per item.
+## Progress against the implementation items
 
-## Progress against the numbered implementation items
-
-1. **Hierarchical plotting — implemented.** `forecasts` and `showOutliers`
-   default to `TRUE`, while existing positional arguments remain compatible.
-   Original-aggregate forecasts use the direct model and include 95% prediction
-   intervals when matching standard errors are available. Missing standard
-   errors fall back to a line; missing forecasts are omitted. AO, LS, and TC
-   markers refer to the aggregate model, with monthly/quarterly period matching
-   and out-of-range outliers omitted. The manual and 32 focused assertions cover
-   these semantics. Browser visual validation remains outstanding.
-2. **Dependency declarations — complete and checked.**
-   Added `R6` to Imports and moved `forecast` from Suggests to Imports because
-   `autoplot()` calls it unconditionally. Removed unused direct `cli` and
-   `rlang` declarations; transitive requirements remain managed by dependencies.
-   Added explicit namespace imports for R6 construction, the rjd3toolkit setter
-   table, dependencies used by the bundled Shiny app, and functions identified
-   by package checks. Removed the redundant `library(shiny)` in the dashboard
-   launcher; the app scripts load Shiny themselves and the launcher calls
-   `shiny::runApp()`. Installed `shinycssloaders` in a temporary validation
-   library, without changing the user's normal R library.
-3. **Documentation migration — complete for the current guides.** Updated
-   `README.Rmd` and regenerated `README.md` with current guide links, batch and
-   hierarchy examples, diagnostics, and dashboard usage. Corrected specification
-   access in the hierarchy guide (`$paramsDirect` for aggregate specifications,
-   `$params` for single components, and nested `$automodel$enabled` fields).
-   The explicit ARIMA example now disables automatic model selection. Added
-   hierarchical forecast/outlier documentation, enabled the diagnostics and
-   simplified-outlier examples, clarified that the regional dataset example
-   covers 26 countries rather than a complete EU aggregate, and made its random
-   weights reproducible. Added diagnostics to the pkgdown navigation.
-4. **Dashboard regression coverage — implemented.** Added 36 assertions for
-   single/comparison HTML output, escaped and default titles, exported files,
-   invalid/unfitted inputs, batch/hierarchy startup from a different working
-   directory, timeout handling, and shutdown. The launcher resolves the loaded
-   package location and supports both installed and development packages.
-   `launch.browser = FALSE` permits headless use; `startup.timeout` bounds startup,
-   and `attr(process, "url")` exposes the local address. Failed startup cleans
-   up the child process. The app now honors custom titles. Added the directly
-   required `htmlwidgets` dependency and documented the launcher controls.
-5. **Release validation — in progress.** Current-source tests pass; package
-   checks, browser validation, and release cleanup are tracked below.
+1. **Hierarchical plotting — complete.** Forecasts and 95% prediction intervals
+   use the original aggregate's direct model; missing standard errors fall back
+   to a line. AO, LS, and TC markers use monthly/quarterly period matching and
+   omit out-of-range events. `forecasts` and `showOutliers` are independently
+   configurable. Release validation corrected marker/legend colors when forecast
+   intervals collapse multiple data columns. There are 36 focused assertions.
+2. **Dependency declarations — complete.** Added direct R6/forecast dependencies,
+   removed unused declarations, and made namespace requirements explicit.
+   Dashboard validation additionally identified the direct `htmlwidgets`
+   dependency and namespace registration requirement.
+3. **Documentation migration — complete.** Updated README and all five guides,
+   corrected specification access and explicit ARIMA settings, documented
+   hierarchical plotting, clarified the regional dataset coverage, and added
+   diagnostics navigation. README is regenerated from `README.Rmd`.
+4. **Dashboard regression coverage — complete.** Tests cover HTML generation and
+   export, default/custom/escaped titles, invalid and unfitted inputs,
+   batch/hierarchy startup outside the checkout, timeout handling, shutdown,
+   aggregate panels, and reactive selection changes. The launcher resolves the
+   loaded package location, supports installed/development packages, honors
+   custom titles, and exposes `launch.browser`, `startup.timeout`, and
+   `attr(process, "url")`. Failed startups clean up the child process. There are
+   43 dashboard assertions after release-validation regressions were added.
+5. **Local release validation — complete.**
+   Removed non-ASCII CSS comments and made manual inequality notation portable
+   to LaTeX. Browser checks found and resolved inconsistent outlier colors,
+   blocked aggregate panels, self-invalidating panel caching, and narrow plot
+   cards. Added responsive card sizing and regression checks. Updated NEWS.
 
 ## Implemented capabilities
 
@@ -79,79 +63,40 @@ The public namespace exports the main constructors, plotting functions,
 diagnostic helpers, and dashboard entry points. `createDashboard()` dispatches
 single-series objects to HTML output and batch/hierarchical objects to Shiny.
 
-## Tests and delivery infrastructure
+## Validation evidence
 
-- Nine active test files live in `inst/tinytest/`, covering single series,
-  batches, hierarchies, plotting, model/outlier fixes, calendar regressors, and
-  miscellaneous helpers. `tests/tinytest.R` runs them during package checks
-  when `tinytest` is available.
-- Development scripts and older test copies also exist under `inst/devel/`;
-  that directory is excluded from package builds by `.Rbuildignore`.
-- The R-CMD-check workflow configures macOS and Windows with release R, plus
-  Ubuntu with release and development R. It sets up Java 21 and treats check
-  warnings as failures.
-- A separate coverage workflow configures `covr::codecov()` and Java 17.
-- A pkgdown workflow, `_pkgdown.yml`, generated manuals, and five vignettes are
-  present.
+- Final full `R CMD check` passed with **0 errors, 0 warnings, 0 notes**.
+  All 56 R source, test, and app files match the checked source archive.
+- The suite contains **144 assertions in nine files**, including 36 hierarchical
+  plotting and 43 dashboard assertions. The full installed-package suite passed
+  during release checks; source-level dashboard tests also passed.
+- `R CMD build` includes all five vignettes. Full `R CMD check` runs examples,
+  tests, vignette rebuilding, and PDF manual generation without exclusion flags.
+- Browser checks with Playwright cover single-series and comparison dashboards,
+  batch series selection, hierarchy aggregate/component selection, monthly and
+  quarterly forecast/outlier plots, and the narrower embedded dashboard layout.
+  Corrected aggregate/component rendering has no application console errors;
+  the local test servers report only missing optional `favicon.ico` requests.
+- Validation environment: macOS, R 4.5.2, rjd3 packages 3.9.0. The temporary R
+  library is `/tmp/persephone3-status-lib`; the user's normal library was not
+  modified. Local-server tests require permission to bind localhost ports.
+- Build/check logs, the built package and PDF manual, browser snapshots, and
+  screenshots are under `/tmp/persephone-release-validation`. These are local
+  temporary evidence, not files shipped in the repository. All validation
+  browser sessions and fixture servers were stopped after inspection.
 
-These are repository configurations, not evidence that the latest CI runs pass.
-Remote CI results and coverage percentages were not checked.
+## Delivery and remaining release steps
 
-## Validation
+All five implementation items have been addressed locally. The package remains
+experimental; these checks do not establish support for every environment.
 
-- Item 4: all **133 assertions** in nine test files passed against a fresh
-  installation, including 36 dashboard assertions. The new dashboard tests
-  also passed with the development package loaded. Local-server tests required
-  localhost access outside the execution sandbox. Log:
-  `/tmp/persephone-item4-tests.log`.
+- Push the branch and run the configured macOS, Windows, and Linux CI matrix
+  before merging or publishing. Remote CI and coverage results are unverified.
+- Broader browser/device testing and domain review of numerical results remain
+  appropriate before a production release.
+- No package publication, remote push, or merge has been performed.
 
-- All **97 assertions** in the eight active tinytest files passed against the
-  current source loaded with `pkgload::load_all()`, including the 32 new
-  hierarchical plotting assertions. Existing model-configuration warnings were
-  emitted; no assertions failed.
-- Earlier smoke tests rendered X-13 and TRAMO/SEATS aggregate forecasts using
-  the updated plotting/extraction code and installed model classes.
-- The package source archive builds successfully. `IMPLEMENTATION_STATUS.md`
-  is excluded from the R package build via `.Rbuildignore`.
-- `shinycssloaders` 1.1.0 is installed in `/tmp/persephone3-status-lib` for these
-  checks. Installed rjd3 packages 3.9.0 and Shiny 1.14.0 satisfy the declared
-  version minimums; R is 4.5.2.
-- Final `R CMD check --no-manual --no-build-vignettes --no-vignettes` completed
-  with **0 errors, 3 warnings, and 0 notes**. Dependency checks, loading with
-  stated dependencies, code analysis, examples, and installed-package tests
-  passed. The three remaining warnings concern existing non-ASCII strings in
-  `R/dashboard_single.R` and two reports of missing built vignette outputs
-  (vignettes were deliberately not built). Repository index access was blocked
-  during the check, so package availability was checked using local libraries.
-- A parsed-source audit of `R/` and `inst/app/` found no undeclared namespace
-  dependencies. All declared packages are available in the validation libraries.
-- Final check log: `/tmp/persephone3-final-check/persephone3.Rcheck/00check.log`.
-- Documentation validation after item 3: `README.Rmd` regenerated successfully,
-  and all five vignettes rendered to HTML against the current source. Reviewed
-  the hierarchy output to confirm three `FALSE` settings and the subsequent
-  component-specific `TRUE`, rather than silently displaying `NULL`. Rendered
-  HTML is under `/tmp/persephone3-doc-review`. Pandoc reported a deprecated
-  MathJax option; the initial README HTML preview could not fetch remote badge
-  images. Final Markdown generation used `html_preview = FALSE`.
-- Dashboard-launch examples remain `eval = FALSE` to avoid starting services
-  during documentation builds. Item 4 removes the source-checkout working-directory
-  requirement and updates README accordingly.
-- The earlier package check excluded PDF manual generation and vignette builds.
-  Vignettes have since rendered individually, but a new package check with
-  built vignettes and PDF manual validation has not been run. Browser/dashboard
-  visual checks and remote CI status remain unverified.
-
-## Remaining work
-
-- **Next implementation item: 5 — release validation.** Run checks with built
-  vignettes and the PDF manual, resolve remaining warnings, and inspect the
-  dashboards and hierarchical plots in a browser.
-- Resolve remaining package-check findings before release, including non-ASCII
-  strings in `R/dashboard_single.R`.
-- Run a package check with the now-renderable vignettes included, and validate
-  the PDF manual in a complete documentation toolchain.
-- Visually inspect the new hierarchical forecast intervals and outlier markers
-  in a browser, and smoke-test all dashboard modes.
-
-The abstract `stop("implement ...")` hooks in `R/persephone.R` are intentional
-base-class interfaces, not evidence of missing concrete model implementations.
+The repository's workflows cover multi-platform R CMD check, coverage, and
+pkgdown. Development/archived scripts under `inst/devel/` and this status report
+are excluded from the package build. Abstract `stop("implement ...")` hooks in
+`R/persephone.R` are intentional base-class interfaces.

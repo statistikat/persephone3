@@ -36,6 +36,9 @@ for (freq in c(12, 4)) {
   expect_equal(which(!is.na(values$otlLS)), as.integer(freq + freq / 4 + 1))
   expect_equal(which(!is.na(values$otlTC)), as.integer(2 * freq + freq / 2 + 1))
   expect_equal(length(graph$x$events), 3L)
+  expect_equal(length(graph$x$attrs$colors), length(graph$x$attrs$labels) - 1L)
+  palette <- setNames(graph$x$attrs$colors, graph$x$attrs$labels[-1])
+  expect_equal(unname(palette[c("AO", "LS", "TC")]), c("red", "orange", "dodgerblue"))
 
   plain <- plot(fixture, forecasts = FALSE, showOutliers = FALSE)
   expect_equal(plain$x$attrs$labels[-1], c("Original", "Direct SA", "Indirect SA"))

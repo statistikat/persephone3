@@ -1,5 +1,7 @@
 #' Package imports
 #'
+#' @import htmlwidgets
+#'
 #' @importFrom stats aggregate.ts density printCoefmat pt qqnorm tsp
 #' @importFrom utils capture.output tail
 #' @importFrom graphics plot.new

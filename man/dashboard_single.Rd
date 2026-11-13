@@ -7,7 +7,8 @@
 dashboard_single(x, file = NULL, title = "Diagnostics")
 }
 \arguments{
-\item{x}{A single time series object (class \code{x13Single} or \code{tramoseatsSingle})}
+\item{x}{A fitted single series (\code{x13Single} or \code{tramoseatsSingle}), or a
+\code{hierarchicalTimeSeries} aggregate selected in the Shiny app.}
 
 \item{file}{Optional file path to save HTML output}
 

@@ -3,7 +3,8 @@
 #' Creates an interactive HTML diagnostic dashboard for a single hierarchical
 #' time series object, showing model diagnostics, plots, and quality metrics.
 #'
-#' @param x A single time series object (class `x13Single` or `tramoseatsSingle`)
+#' @param x A fitted single series (`x13Single` or `tramoseatsSingle`), or a
+#'   `hierarchicalTimeSeries` aggregate selected in the Shiny app.
 #' @param title Main title for the dashboard (default: "Diagnostics")
 #' @param file Optional file path to save HTML output
 #' @return Browsable HTML UI containing the diagnostic dashboard
@@ -14,7 +15,7 @@
 #' obj$run()
 #' createDashboard(obj)  # preferred
 dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
-  validate_dashboard_series(x)
+  validate_dashboard_series(x, allow_aggregate = TRUE)
   # ---- required packages ----
   pkgs <- c("htmltools", "htmlwidgets", "base64enc")
   miss <- pkgs[
@@ -576,7 +577,7 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
         }
         .dash-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
           grid-template-rows: repeat(3, minmax(260px, auto));
           gap: 14px;
         }
@@ -698,16 +699,15 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
           font-size: 12px;
         }
 
-        /* --- NEU: Schriftgrößen für Grafiken verkleinern --- */
-        /*.widget-wrap svg text, .quad-cell svg text {
-        /*  font-size: 10px !important;
-        /*}
-        /*.widget-wrap .plotly text, .quad-cell .plotly text {
-        /*  font-size: 10px !important;
-        /*}
-        /*.widget-wrap .g-gtitle, .quad-cell .g-gtitle {
-        /*  font-size: 12px !important; /* Titel leicht größer als Achsen */
-        /*}
+        /* Keep plot titles and legends readable in narrower viewports. */
+        @media (max-width: 800px) {
+          .dash-grid { grid-template-columns: minmax(0, 1fr); }
+          .quad-grid { grid-template-columns: minmax(0, 1fr); height: auto; }
+          .quad-cell { min-height: 280px; }
+        }
+        .card:has(.quad-grid) { grid-column: 1 / -1; }
+        .quad-grid { min-height: 560px; }
+        .dygraph-legend { max-width: 100%; font-size: 11px; white-space: normal; }
       "
       ))
     ),
@@ -802,8 +802,10 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
 }
 
 # Shared validation for the exported HTML dashboard functions.
-validate_dashboard_series <- function(x) {
-  if (!inherits(x, c("x13Single", "tramoseatsSingle"))) {
+validate_dashboard_series <- function(x, allow_aggregate = FALSE) {
+  classes <- c("x13Single", "tramoseatsSingle")
+  if (allow_aggregate) classes <- c(classes, "hierarchicalTimeSeries")
+  if (!inherits(x, classes)) {
     stop("Expected an x13Single or tramoseatsSingle object", call. = FALSE)
   }
   if (is.null(x$output)) {

@@ -36,6 +36,14 @@ local({
   expect_true(grepl("Series B", html, fixed = TRUE))
 })
 
+# The Shiny aggregate panel uses dashboard_single directly.
+hierarchy <- perHts(a = AirPassengers, b = AirPassengers, method = "x13")
+hierarchy$run()
+aggregate_html <- as.character(dashboard_single(hierarchy))
+expect_true(grepl("Directly and Indirectly", aggregate_html, fixed = TRUE))
+expect_false(grepl("Plot error:", aggregate_html, fixed = TRUE))
+expect_error(dashboard_compare(hierarchy, x), "Expected an x13Single")
+
 # Run real servers from a directory that is not a package checkout.
 local({
   previous_dir <- getwd()
@@ -60,4 +68,27 @@ local({
     process$wait(timeout = 5000)
     expect_false(process$is_alive())
   }
+})
+
+# Changing the selected series must replace the panel instead of reusing stale UI.
+local({
+  module_env <- new.env(parent = asNamespace("shiny"))
+  source(system.file("app", "modules", "mod_series.R", package = "persephone3"),
+         local = module_env)
+  calls <- 0L
+  module_env$dashboard_single <- function(obj) {
+    calls <<- calls + 1L
+    htmltools::div(class(obj)[1])
+  }
+  selected <- shiny::reactiveVal(x)
+  shiny::testServer(module_env$mod_series_server,
+                    args = list(series_reactive = selected), {
+    expect_true(grepl("x13Single", output$content$html, fixed = TRUE))
+    session$flushReact()
+    expect_equal(calls, 1L)
+    selected(y)
+    session$flushReact()
+    expect_true(grepl("tramoseatsSingle", output$content$html, fixed = TRUE))
+    expect_equal(calls, 2L)
+  })
 })

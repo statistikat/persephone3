@@ -18,14 +18,14 @@ Generate diagnostics table for persephone objects (internal)
 \details{
 The function classifies various diagnostic statistics into quality categories:
 \itemize{
-\item \strong{Normality/Independence tests:} "Good" (p ≥ 0.1), "Uncertain" (0.01 ≤ p < 0.1),
-"Bad" (0.001 ≤ p < 0.01), "Severe" (p < 0.001)
-\item \strong{Seasonality/TD tests:} "Good" (p ≥ 0.1), "Uncertain" (0.05 ≤ p < 0.1),
-"Bad" (0.01 ≤ p < 0.05), "Severe" (p < 0.01)
+\item \strong{Normality/Independence tests:} "Good" (p >= 0.1), "Uncertain" (0.01 <= p < 0.1),
+"Bad" (0.001 <= p < 0.01), "Severe" (p < 0.001)
+\item \strong{Seasonality/TD tests:} "Good" (p >= 0.1), "Uncertain" (0.05 <= p < 0.1),
+"Bad" (0.01 <= p < 0.05), "Severe" (p < 0.01)
 \item \strong{TD regression F-test (\code{TD_status}):} small p indicates a
 significant trading day effect and thus justified trading-day
 regressors, i.e. the reverse direction of the residual tests:
-"Good" (p < 0.05), "Uncertain" (0.05 ≤ p < 0.1), "Bad" (p ≥ 0.1)
+"Good" (p < 0.05), "Uncertain" (0.05 <= p < 0.1), "Bad" (p >= 0.1)
 \item \strong{Outliers:} "Good" (< 3\\%), "Uncertain" (3-5\\%), "Severe" (> 5\\%)
 }
 }

@@ -186,15 +186,6 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       dySeries("sa_indir", label = "Indirect SA") %>%
       dyLegend(width = if (has_forecast) 400 else 290)
 
-    if (has_forecast) {
-      forecast_columns <- if (has_interval) {
-        c("lowerci", "forecast", "upperci")
-      } else {
-        "forecast"
-      }
-      graphObj <- dySeries(graphObj, forecast_columns, label = "Forecasts",
-                           strokePattern = "dashed", drawPoints = drawPoints)
-    }
     for (type in names(marker_names)) {
       graphObj <- dySeries(graphObj, marker_names[[type]], label = type,
                            drawPoints = TRUE, strokeWidth = 0,
@@ -206,6 +197,17 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       }
     }
 
+    # Configure colors before collapsing the three forecast columns into
+    # custom bars: dySeries otherwise initializes colors from the raw columns.
+    if (has_forecast) {
+      forecast_columns <- if (has_interval) {
+        c("lowerci", "forecast", "upperci")
+      } else {
+        "forecast"
+      }
+      graphObj <- dySeries(graphObj, forecast_columns, label = "Forecasts",
+                           strokePattern = "dashed", drawPoints = drawPoints)
+    }
     if (rangeSelector) {
       graphObj <- graphObj %>%
         dyRangeSelector(height = 20)
