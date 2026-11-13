@@ -65,6 +65,7 @@ importFrom(highcharter,
   hc_title,
   hchart
 )
+importFrom(jsonlite,toJSON)
 importFrom(lubridate,
   month,
   quarter,
@@ -79,6 +80,7 @@ importFrom(stats,
   cycle,
   density,
   dnorm,
+  end,
   frequency,
   lag,
   pacf,
@@ -86,8 +88,10 @@ importFrom(stats,
   pt,
   qnorm,
   qqnorm,
+  setNames,
   spec.ar,
   spec.pgram,
+  start,
   time,
   ts,
   tsp,
@@ -96,6 +100,7 @@ importFrom(stats,
 importFrom(stringr,str_count)
 importFrom(utils,
   capture.output,
+  head,
   tail
 )
 useDynLib(persephone3, .registration = TRUE)

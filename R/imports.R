@@ -2,10 +2,11 @@
 #'
 #' @useDynLib persephone3, .registration = TRUE
 #' @importFrom Rcpp evalCpp
+#' @importFrom jsonlite toJSON
 #' @import htmlwidgets
 #'
-#' @importFrom stats aggregate.ts density printCoefmat pt qqnorm tsp
-#' @importFrom utils capture.output tail
+#' @importFrom stats aggregate.ts density end printCoefmat pt qqnorm setNames start tsp
+#' @importFrom utils capture.output head tail
 #' @importFrom graphics plot.new
 #' @importFrom R6 R6Class
 #' @importFrom DT DTOutput
