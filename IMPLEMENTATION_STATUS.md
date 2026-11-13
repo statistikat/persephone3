@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: current branch (prior checkpoint **`c12299a`**), package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: **`f2d2be8`**, package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -8,7 +8,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path, with **1,387 passing installed-package assertions**. These
+current rjd3 path. The full suite now has **1,898 passing installed-package
+assertions** across **24 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -94,31 +95,43 @@ establish those behaviors.
 
 ### Implementation validation
 
-- Installed the compiled package in a temporary library; **1,387 assertions**
-  pass across **21 test files**. No reference-backed test was skipped.
-- Full `R CMD check --as-cran` executed the examples and tests and rebuilt the
-  vignettes, PDF manual and HTML manual successfully. A generated `Rplots.pdf`
-  packaging note was corrected by excluding generated example plots. The final
-  packaging recheck reports **0 errors, 0 notes and 1 warning**; it omitted the
-  already-passing runtime/documentation checks after that exclusion-only change.
-  The warning is from the installed R 4.5.2 header `R_ext/Boolean.h`, which uses
-  an unknown Clang warning group, `-Wfixed-enum-extension`. No package-level
-  warning suppression was added. Final archive verification matched all **180**
-  current source/test/documentation files that also occur in the archive.
-- All **12 pinned direct-backend replays** and corpus integrity/corruption
-  checks pass. The corpus is synthetic and does not copy Java implementation.
-- With Java-related R packages inaccessible in an isolated library, package
-  loading, capability errors, **58 compiled primitive assertions** and **34
-  backend contract assertions** pass.
-  This is not a claim that the system JVM was removed or native fitting works.
-- Independently compiled the C++ core with strict warnings and ASan/UBSan using
-  the local Homebrew Clang toolchain; checks pass.
-- Browser checks confirm literal markup labels, separate duplicate-name nodes,
-  selection across sorting/paging, off-page close and refreshed reopen, with no
-  injected label elements or duplicate output IDs. Local test servers were stopped.
-- Artifacts are under `/tmp/persephone-implementation-validation`; browser
-  snapshots are under `/tmp/persephone-release-validation/.playwright-cli`.
-  Temporary artifacts are evidence, not required repository inputs.
+- Full `R CMD build` and `R CMD check --as-cran` pass all **1,898 assertions
+  across 24 files**, examples, vignette builds/rebuilds, and PDF/HTML manuals.
+  No reference-backed test was skipped. The final result is **0 errors,
+  1 warning and 1 note**. The warning remains the installed R 4.5.2 header's
+  unknown Clang warning group `-Wfixed-enum-extension`; no package warning
+  suppression was added. Local CRAN incoming checks report existing DESCRIPTION
+  metadata: the GitHub `Remotes` field, title casing and "This package" wording.
+  Remote incoming checks were disabled; no CRAN submission or remote CI was run.
+- The checked archive matches **227 tracked files byte-for-byte**, excluding
+  R's normal DESCRIPTION reformatting/generated packaging fields. This includes
+  final R/C++ sources, tests, numerical contracts and reference artifacts.
+- **20 direct-backend cases** replay successfully: the original 12 retain their
+  existing comparator, and all eight additive cases reproduce complete raw
+  results exactly. The extended suite also passes **90 independent invariants**
+  plus checksum/corruption and existing-suite write-guard checks. Original
+  fixtures and hashes remain unchanged; statistical tolerances remain provisional.
+- With Java-related R packages inaccessible in an isolated library, installed
+  package loading/capability errors, **569 native assertions** (58 original
+  primitives, 114 algebra, 150 transforms/inputs, 247 likelihood) and **34 backend
+  contract assertions** pass. No Java namespace is loaded or fallback attempted.
+  This is not a claim that the system JVM was removed or native SA fitting works.
+- Strict-warning C++ builds and ASan/UBSan pass the algebra, transform and
+  state-space standalone harnesses, including cancellation and subsequent reuse.
+  Linked system R BLAS/LAPACK libraries are not themselves sanitizer-instrumented.
+  Native CI now runs all `test-native-*.R` files, both frozen reference verifiers,
+  and the core sanitizer harnesses. YAML parses locally; Linux/Windows and remote
+  workflow execution remain unverified.
+- Local builds used R 4.5.2, Rcpp 1.1.2 and Homebrew Clang. The user's Makevars
+  contained a stale GCC 9 library path; validation used a temporary copy pointing
+  to the installed GCC 16 runtime. The user's configuration was unchanged, and
+  package Makevars use R's portable LAPACK/BLAS/Fortran variables.
+- Current logs/archive are under `/tmp/persephone-native-next-validation`;
+  numerical test logs are `/tmp/persephone-all-native.log`, and reference replay
+  logs are `/tmp/persephone-original-replay.log` and
+  `/tmp/persephone-extended-final.log`. These are temporary evidence, not required
+  repository inputs. The earlier dashboard browser validation is preserved below;
+  no browser behavior changed in these numerical slices.
 
 ### Previously completed validation, rechecked as evidence
 
@@ -129,6 +142,8 @@ establish those behaviors.
 - At reassessment, all **56 R source, test, and app files** matched the previously checked
   source archive. The full suite/build was not rerun during this documentation
   reassessment; source had not changed.
+- The previous correctness pass also verified literal markup labels, duplicate
+  names, off-page closing and refreshed reopen with no duplicate output bindings.
 - Earlier Playwright checks covered single/comparison dashboards, batch and
   hierarchy selections, monthly/quarterly plots, and a narrower embedded layout.
   Those were rendering and interaction checks, not numerical validation.
