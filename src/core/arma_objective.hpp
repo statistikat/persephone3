@@ -31,5 +31,14 @@ ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
     double mean = 0, double rank_tolerance = 1e-10, double log_jacobian = 0,
     const Interrupt& interrupt = {});
 
+// Same objective in physical polynomial coefficients. Fixed entries must be
+// preserved exactly. Intended for derivative/uncertainty calculations, which
+// must not differentiate a saturated optimizer transform.
+ArmaObjective evaluate_arma_physical_objective(const MaskedSeries& series,
+    const RegressionDesign& design, const ArmaParameterMap& map,
+    const std::array<std::vector<double>,4>& coefficients, int period, int d, int seasonal_d,
+    double mean = 0, double rank_tolerance = 1e-10, double log_jacobian = 0,
+    const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

@@ -99,7 +99,7 @@ arma_fit_covariance <- function(blocks, period, n) {
   toeplitz(gamma[seq_len(n)])
 }
 
-arma_fit_density <- function(case, blocks) {
+arma_fit_density <- function(case, blocks, regression_coefficients = NULL) {
   args <- case$arguments; rows <- case$rows
   y <- as.numeric(args$series)[rows]
   if (args$transformation == "log") y <- log(y)
@@ -123,7 +123,8 @@ arma_fit_density <- function(case, blocks) {
       length(missing) + seq_len(nrow(white) - length(missing)), drop = FALSE]
     response <- drop(crossprod(complement, response)); design <- crossprod(complement, design)
   }
-  beta <- unname(qr.coef(qr(design), response))
+  beta <- if (is.null(regression_coefficients)) unname(qr.coef(qr(design), response)) else regression_coefficients
+  stopifnot(length(beta) == ncol(design), all(is.finite(beta)))
   squares <- sum((response - drop(design %*% beta))^2); count <- length(response)
   profile <- -.5 * (count * (log(2 * pi) + 1 + log(squares / count)) + determinant)
   jacobian <- if (args$transformation == "log") -sum(log(as.numeric(args$series)[rows[

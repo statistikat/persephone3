@@ -2,6 +2,7 @@
 #include "core/arma_objective.hpp"
 #include "core/arma_optimizer.hpp"
 #include "core/arma_identification.hpp"
+#include "core/arma_information.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -275,7 +276,100 @@ Rcpp::List control_output(const persephone::OptimizerControl& c) {
         Rcpp::_["function_tolerance"]=c.function_tolerance,Rcpp::_["difference_step"]=c.difference_step,
         Rcpp::_["armijo"]=c.armijo,Rcpp::_["max_step"]=c.max_step);
 }
+persephone::InformationControl information_control(SEXP values) {
+    persephone::InformationControl c;
+    if(Rf_isNull(values)) return c;
+    if(TYPEOF(values)!=VECSXP || !Rf_isNull(Rf_getAttrib(values,R_DimSymbol))) throw std::invalid_argument("information control must be a named list");
+    const Rcpp::List list(values);
+    if(list.size()==0) return c;
+    const auto names=Rf_getAttrib(values,R_NamesSymbol);
+    if(TYPEOF(names)!=STRSXP || Rf_xlength(names)!=list.size()) throw std::invalid_argument("information controls need unique names");
+    std::vector<std::string> seen;
+    for(R_xlen_t i=0;i<list.size();++i) {
+        if(STRING_ELT(names,i)==NA_STRING) throw std::invalid_argument("information control names cannot be missing");
+        const auto name=Rcpp::as<std::string>(STRING_ELT(names,i));
+        if(std::find(seen.begin(),seen.end(),name)!=seen.end() || Rf_isNull(list[i])) throw std::invalid_argument("information controls need distinct names and non-NULL values");
+        seen.push_back(name);
+        if(name=="difference_step") c.difference_step=scalar(list[i],name.c_str(),1e-3);
+        else if(name=="difference_refinements") c.difference_refinements=integer(list[i],name.c_str(),8,16);
+        else if(name=="max_evaluations") c.max_evaluations=integer(list[i],name.c_str(),20000,1000000);
+        else if(name=="relative_tolerance") c.relative_tolerance=scalar(list[i],name.c_str(),1e-4);
+        else if(name=="absolute_tolerance") c.absolute_tolerance=scalar(list[i],name.c_str(),1e-6);
+        else if(name=="gradient_tolerance") c.gradient_tolerance=scalar(list[i],name.c_str(),1e-4);
+        else if(name=="rank_tolerance") c.rank_tolerance=scalar(list[i],name.c_str(),1e-10);
+        else if(name=="weak_tolerance") c.weak_tolerance=scalar(list[i],name.c_str(),1e-6);
+        else throw std::invalid_argument("unknown information control: "+name);
+    }
+    c.validate(); return c;
+}
+Rcpp::RObject matrix_or_null(const std::optional<persephone::DenseMatrix>& a) {
+    if(!a) return R_NilValue;
+    return Rcpp::NumericMatrix(static_cast<int>(a->rows()),static_cast<int>(a->columns()),a->values().begin());
+}
 } // namespace
+
+// [[Rcpp::export(name = ".native_arma_information")]]
+Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
+    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
+    SEXP control=R_NilValue, SEXP method=R_NilValue) {
+    const auto c=information_control(control);
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    std::string selected="profile_ml";
+    if(!Rf_isNull(method)) {
+        if(TYPEOF(method)!=STRSXP || Rf_xlength(method)!=1 || STRING_ELT(method,0)==NA_STRING ||
+            !Rf_isNull(Rf_getAttrib(method,R_DimSymbol))) throw std::invalid_argument("information method must be one nonmissing string");
+        selected=Rcpp::as<std::string>(method);
+    }
+    if(selected!="profile_ml" && selected!="conditional_residual_df") throw std::invalid_argument("unknown information method");
+    const bool conditional=selected=="conditional_residual_df";
+    const auto result=persephone::arma_information(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        c,[] { Rcpp::checkUserInterrupt(); }, conditional ? persephone::ArmaInformationMode::ConditionalResidualDF :
+            persephone::ArmaInformationMode::ProfileML);
+    const auto& info=result.information;
+    Rcpp::List out;
+    out["schema_version"]=1; out["status"]=info.status;
+    out["available"]=info.status=="available" || info.status=="no_free_parameters";
+    out["method"]=selected;
+    out["information_type"]="observed";
+    out["coordinates"]="free_polynomial_coefficients";
+    out["scale_convention"]=conditional ? "residual_df_n_minus_free_regression_minus_free_ARMA" : "profiled_ML_Q_over_n_finite";
+    out["regression_convention"]=conditional ? "held_at_fitted_GLS_coefficients" : "profiled_at_each_candidate";
+    out["inference"]="local_asymptotic_normal_approximation";
+    out["reference_parity"]="not_qualified";
+    out["free_regression"]=static_cast<int>(result.free_regression);
+    out["residual_df"]=result.estimation_center && result.estimation_center->status=="available" ? static_cast<double>(result.residual_df) : NA_REAL;
+    out["covariance_multiplier"]=optional(result.covariance_multiplier);
+    out["coefficients"]=numeric(result.coefficients);
+    out["gradient"]=numeric(info.gradient); out["gradient_error"]=numeric(info.gradient_error);
+    out["hessian"]=matrix_or_null(info.hessian); out["hessian_error"]=matrix_or_null(info.hessian_error);
+    out["covariance"]=matrix_or_null(info.covariance);
+    if(info.status=="no_free_parameters") out["covariance"]=Rcpp::NumericMatrix(0,0);
+    out["derivative_status"]=info.derivative_status; out["curvature_status"]=info.curvature_status;
+    out["stationary"]=info.stationary; out["difference_steps"]=numeric(info.steps);
+    out["evaluations"]=info.evaluations; out["refinements"]=info.refinements;
+    out["rank"]=info.normalized_eigenvalues.empty() ? NA_INTEGER : info.rank;
+    out["normalized_eigenvalues"]=numeric(info.normalized_eigenvalues);
+    out["normalized_error_estimate"]=info.normalized_eigenvalues.empty() ? NA_REAL : info.normalized_error;
+    out["eigenvalue_ratio"]=info.normalized_eigenvalues.empty() ? NA_REAL : info.eigenvalue_ratio;
+    Rcpp::IntegerVector rejected; Rcpp::CharacterVector reasons;
+    for(const auto& entry:info.rejected) { reasons.push_back(entry.first); rejected.push_back(entry.second); }
+    rejected.attr("names")=reasons; out["rejected"]=rejected;
+    out["parameter_diagnostics"]=identification_output(result.structural);
+    const auto center=result.estimation_center;
+    out["center"]=center ? static_cast<SEXP>(objective_output(*center,result.coefficients.size())) : R_NilValue;
+    out["control"]=Rcpp::List::create(Rcpp::_["difference_step"]=c.difference_step,
+        Rcpp::_["difference_refinements"]=c.difference_refinements,Rcpp::_["max_evaluations"]=c.max_evaluations,
+        Rcpp::_["relative_tolerance"]=c.relative_tolerance,Rcpp::_["absolute_tolerance"]=c.absolute_tolerance,
+        Rcpp::_["gradient_tolerance"]=c.gradient_tolerance,Rcpp::_["rank_tolerance"]=c.rank_tolerance,
+        Rcpp::_["weak_tolerance"]=c.weak_tolerance);
+    return out;
+}
 
 // [[Rcpp::export(name = ".native_arma_optimize")]]
 Rcpp::List native_arma_optimize(SEXP values, SEXP design, SEXP coefficients,

@@ -213,3 +213,15 @@ distinguishes this structural screen from finite-sample identification and
 uncertainty. Compile `test_arma_identification.cpp` with `numerics.cpp`,
 `linear_algebra.cpp`, `arma_parameters.cpp`, `arma_identification.cpp` and the
 R LAPACK/BLAS flags above; strict warnings and ASan/UBSan cover all callbacks.
+
+## Observed information and uncertainty
+
+`native_arma_information()` computes physical-coefficient observed curvature
+separately from optimization, with labelled full-profile ML and fixed-regression
+residual-df covariance. The [information contract](arma-information-contract.md)
+defines accuracy, structural, stationarity and curvature gates. Independent
+Gaussian tests exercise all 64 fitted cases and nuisance Schur complements.
+Standalone `test_information.cpp` and `test_arma_information.cpp` cover analytic
+identities, signed/weak/rank-deficient information and exhaustive cancellation.
+The [pinned comparison](../reference/arma-information-notes.md) qualifies the
+X-13 convention; TRAMO is a separate, still-open covariance contract.

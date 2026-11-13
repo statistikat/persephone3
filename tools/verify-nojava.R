@@ -78,6 +78,10 @@ if ("--native" %in% args) {
   stopifnot("arma_identification" %in% cap$primitives,
             fitted$parameter_diagnostics$status == "full_rank_transfer",
             fitted$parameter_diagnostics$statistical_identification == "not_assessed")
+  information <- getFromNamespace("native_arma_information", "persephone3")
+  uncertainty <- information(objective_setup(sin(x), ar = NA_real_), fitted$coordinates)
+  stopifnot("arma_information" %in% cap$primitives, uncertainty$available,
+            is.matrix(uncertainty$covariance), all(is.finite(uncertainty$standard_errors)))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

@@ -100,6 +100,19 @@ the corresponding repository commits identify the changes and reviewers.
 | `src/optimizer.cpp`, `src/arma_optimizer.cpp`, their core headers and R/Rcpp boundary | Independently authored inverse-BFGS algebra, feasible Armijo halving and two-scale central/one-sided differences. [Xie, Byrd and Nocedal, sections 2–3](https://arxiv.org/pdf/1901.09063) supplies mathematical context for the standard update, descent conditions and error sensitivity; this implementation uses guarded Armijo updates and does not claim that paper's convergence theorem. No optimizer source is copied or translated. | Analytic quadratic/Rosenbrock minima, independent dense Gaussian scalar/joint/mixed/seasonal minima, estimated derivative errors, budgets, failure semantics, exact fixed coefficients and exhaustive callback/reuse tests. The bounded pinned-fit matrix is recorded in `arma-fit-notes.md`; finite-sample identification and parameter uncertainty remain separate gates. |
 | `src/arma_identification.cpp`, its core header and R/Rcpp boundary; `singular_values()` in `src/linear_algebra.cpp` | Independently derived derivative numerators for `H=M/A`, with exact polynomial products and free-coefficient columns. Checked calls to LAPACK DGESVD compute a column-normalized singular spectrum; no SVD implementation is reproduced. [McLeod (1999)](https://arxiv.org/abs/1611.01387) supplies context for common factors and singular ARMA information, not an implementation or a theorem about arbitrary sampled regression models. | Closed ARMA(1,1) identities, independent polynomial perturbations and R SVD, seasonal/cross-factor/fixed-free screens, near-unit/weak-regression examples and exhaustive cancellation/reuse. See `tools/native-tests/arma-identification-contract.md`. Full transfer rank does not certify finite-sample identification or uncertainty. |
 
+Slice 20c.1a adds independently authored three-scale central differences and
+Richardson/error checks in `information.cpp`, observed-information eigenanalysis
+through LAPACK `DSYEV`, and physical-coefficient conditional/profile covariance
+in `arma_information.cpp`. [Baker (2021)](https://arxiv.org/abs/2105.04829)
+provides context for analytic validation of numerical-Hessian covariance; its
+algorithm was not copied. Gaussian Taylor/Schur-complement identities and dense
+likelihoods independently test the implementation. Public pinned X-13 outputs
+identify the conditional-regression residual-df convention. TRAMO outputs are
+explicitly recorded as a separate unresolved convention. No upstream numerical
+implementation was inspected, copied or translated for this slice. See
+[the information contract](../native-tests/arma-information-contract.md) and
+[reference notes](arma-information-notes.md).
+
 Slice 20b.2b.2 also uses the elementary linear identity
 `L(y-X*b0)=L(y)-L(X)*b0` to center the regression response before whitening,
 with an ordinary least-squares `b0` computed by the existing DGELSY adapter.

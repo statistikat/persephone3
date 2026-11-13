@@ -50,7 +50,8 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
                                "stationary_likelihood", "arma_likelihood",
                                "diffuse_likelihood", "sarima_likelihood",
                                "fixed_likelihood", "regression_likelihood",
-                               "arma_parameter_map", "arma_objective", "arma_optimization", "arma_identification"),
+                               "arma_parameter_map", "arma_objective", "arma_optimization", "arma_identification",
+                               "arma_information"),
                 methods = character(), specification_blocks = character(),
                 packages_available = NA, runtime_checked = FALSE,
                 reason = "Native seasonal-adjustment fitting is not implemented."))

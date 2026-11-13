@@ -31,15 +31,13 @@ void validate_arma_objective_inputs(const MaskedSeries& series,
     (void)parallel_info(); // Malformed thread configuration is not a bad candidate.
 }
 
-ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
-    const RegressionDesign& design, const ArmaParameterMap& map,
-    const std::vector<double>& coordinates, int period, int d, int seasonal_d,
+namespace {
+ArmaObjective evaluate_decoded(const MaskedSeries& series,
+    const RegressionDesign& design, ArmaDecoded parameters, int period, int d, int seasonal_d,
     double mean, double rank_tolerance, double log_jacobian,
     const Interrupt& interrupt) {
-    validate_arma_objective_inputs(series, design, map, period, d, seasonal_d,
-                                   mean, rank_tolerance, log_jacobian, interrupt);
     const double unavailable = std::numeric_limits<double>::quiet_NaN();
-    ArmaObjective result{"unavailable", "", map.decode(coordinates), unavailable, unavailable, std::nullopt};
+    ArmaObjective result{"unavailable", "", std::move(parameters), unavailable, unavailable, std::nullopt};
     if (result.parameters.status != "admissible") {
         result.status = result.parameters.status;
         result.message = "ARMA proposal failed the declared factor admissibility check";
@@ -75,6 +73,40 @@ ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
     result.adjusted_log_likelihood = adjusted;
     result.value = -adjusted;
     return result;
+}
+} // namespace
+
+ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
+    const RegressionDesign& design, const ArmaParameterMap& map,
+    const std::vector<double>& coordinates, int period, int d, int seasonal_d,
+    double mean, double rank_tolerance, double log_jacobian,
+    const Interrupt& interrupt) {
+    validate_arma_objective_inputs(series,design,map,period,d,seasonal_d,mean,rank_tolerance,log_jacobian,interrupt);
+    return evaluate_decoded(series,design,map.decode(coordinates),period,d,seasonal_d,mean,rank_tolerance,log_jacobian,interrupt);
+}
+
+ArmaObjective evaluate_arma_physical_objective(const MaskedSeries& series,
+    const RegressionDesign& design, const ArmaParameterMap& map,
+    const std::array<std::vector<double>,4>& coefficients, int period, int d, int seasonal_d,
+    double mean, double rank_tolerance, double log_jacobian, const Interrupt& interrupt) {
+    validate_arma_objective_inputs(series,design,map,period,d,seasonal_d,mean,rank_tolerance,log_jacobian,interrupt);
+    ArmaDecoded decoded{"admissible",-1,0,coefficients,{}};
+    for(std::size_t b=0;b<4;++b) {
+        const auto& block=map.blocks()[b];
+        if(coefficients[b].size()!=block.initial.size()) throw std::invalid_argument("physical ARMA factor lengths must match the parameter map");
+        for(std::size_t j=0;j<block.fixed.size();++j) if(block.fixed[j] && coefficients[b][j]!=block.initial[j]) {
+            throw std::invalid_argument("physical ARMA proposal must preserve fixed coefficients");
+        }
+    }
+    for(std::size_t b=0;b<4;++b) {
+        const auto admissible=arma_admissibility(coefficients[b], b==1 || b==3, map.margin());
+        decoded.reflections[b]=admissible.reflections;
+        if(admissible.status!="admissible") {
+            decoded.status=admissible.status; decoded.failed_block=static_cast<int>(b);
+            decoded.failed_order=admissible.failed_order; break;
+        }
+    }
+    return evaluate_decoded(series,design,std::move(decoded),period,d,seasonal_d,mean,rank_tolerance,log_jacobian,interrupt);
 }
 
 } // namespace persephone

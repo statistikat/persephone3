@@ -73,5 +73,11 @@ LeastSquaresResult qr_least_squares(const DenseMatrix& matrix,
 std::vector<double> singular_values(const DenseMatrix& matrix,
                                     const Interrupt& interrupt = {});
 
+// DSYEV eigenvalues of a symmetric matrix in ascending order; no eigenvectors.
+// Uses the same symmetry/finite input contract as Cholesky, but permits
+// indefinite and singular matrices. No statistical rank is inferred here.
+std::vector<double> symmetric_eigenvalues(const DenseMatrix& matrix,
+                                         const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

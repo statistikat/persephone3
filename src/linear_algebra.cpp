@@ -145,6 +145,39 @@ std::vector<double> singular_values(const DenseMatrix& matrix, const Interrupt& 
     return values;
 }
 
+std::vector<double> symmetric_eigenvalues(const DenseMatrix& matrix, const Interrupt& interrupt) {
+    matrix.validate(interrupt);
+    if (matrix.rows() != matrix.columns()) throw std::invalid_argument("eigenvalue matrix must be square");
+    auto a = matrix;
+    double scale = 0;
+    for (const auto x : a.values()) scale = std::max(scale, std::abs(x));
+    for (std::size_t j = 0; j < a.columns(); ++j) for (std::size_t i = 0; i < j; ++i) {
+        if (scale > 0 && std::abs(a(i,j)/scale-a(j,i)/scale) > 64*std::numeric_limits<double>::epsilon()) {
+            throw std::invalid_argument("eigenvalue matrix must be symmetric within roundoff tolerance");
+        }
+        a(i,j) = a(j,i) = a(i,j) + .5*(a(j,i)-a(i,j));
+    }
+    const int n = static_cast<int>(a.rows());
+    std::vector<double> values(a.rows());
+    double query = 0;
+    int info = 0, lwork = -1;
+    checkpoint(interrupt);
+    F77_CALL(dsyev)("N", "U", &n, a.values().data(), &n, values.data(), &query, &lwork, &info FCONE FCONE);
+    check_info(info, "DSYEV workspace query");
+    lwork = workspace_size(query, 3*a.rows());
+    std::vector<double> work(static_cast<std::size_t>(lwork));
+    checkpoint(interrupt);
+    F77_CALL(dsyev)("N", "U", &n, a.values().data(), &n, values.data(), work.data(), &lwork, &info FCONE FCONE);
+    check_info(info, "DSYEV");
+    checkpoint(interrupt);
+    double previous = -std::numeric_limits<double>::infinity();
+    for (const auto x : values) {
+        if (!std::isfinite(x) || x < previous) throw std::runtime_error("DSYEV returned invalid eigenvalues");
+        previous = x;
+    }
+    return values;
+}
+
 CholeskyFactor cholesky_factor(const DenseMatrix& matrix, const Interrupt& interrupt) {
     matrix.validate(interrupt);
     if (matrix.rows() != matrix.columns()) {
