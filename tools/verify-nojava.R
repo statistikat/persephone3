@@ -71,6 +71,10 @@ if ("--native" %in% args) {
   objective <- objective_value(objective_setup(sin(x), ar = NA_real_))
   stopifnot("arma_objective" %in% cap$primitives, objective$available,
             is.finite(objective$value), objective$likelihood$nparams_profiled == 2)
+  optimize_arma <- getFromNamespace("native_arma_optimize", "persephone3")
+  fitted <- optimize_arma(objective_setup(sin(x), ar = NA_real_))
+  stopifnot("arma_optimization" %in% cap$primitives, fitted$converged,
+            fitted$final$available, is.finite(fitted$final$value))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

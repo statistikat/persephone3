@@ -5,8 +5,8 @@ source. It currently supplies time indexing, differencing polynomials,
 convolution, finite filters, transformations, LAPACK adapters and a stationary
 fixed-parameter innovations likelihood, with a separate exact diffuse kernel
 for integrated SARIMA models, plus concentrated regression likelihood with
-fixed ARMA parameters. It does **not** fit seasonal-adjustment
-models.
+fixed ARMA parameters. A bounded fixed-order ARMA optimizer builds on these
+kernels. It does **not** fit seasonal-adjustment models.
 
 Run from the repository root with any supported C++17 compiler:
 
@@ -182,3 +182,18 @@ R headers/libraries. `test_arma_objective.cpp` adds `src/arma_parameters.cpp` an
 `src/arma_objective.cpp` to the regression harness's source/link list above.
 Use the same strict-warning and ASan/UBSan options. Mandatory R tests compare
 independent polynomial roots and dense Gaussian AR/MA objective profiles.
+
+## Deterministic ARMA optimization (20b.2b.1)
+
+`native_arma_optimize()` accepts a prepared objective and runs bounded C++ BFGS
+with feasible backtracking and checked numerical derivatives. It retains fixed
+parameters, explicit failure/convergence statuses and the final likelihood
+without uncounted reevaluation. The contract, working-coordinate convention,
+controls and remaining identification/reference gates are in
+[arma-optimizer-contract.md](arma-optimizer-contract.md).
+
+Compile `test_optimizer.cpp` with `src/optimizer.cpp` alone; neither needs R.
+For `test_arma_optimizer.cpp`, add `src/optimizer.cpp` and
+`src/arma_optimizer.cpp` to the objective harness source/link list above.
+Both support the same strict-warning/ASan/UBSan workflow. The R suite uses
+independent dense Gaussian minima for scalar, joint, mixed and seasonal models.

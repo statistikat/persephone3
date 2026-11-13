@@ -17,6 +17,11 @@ struct ArmaObjective {
     std::optional<RegressionLikelihood> likelihood;
 };
 
+void validate_arma_objective_inputs(const MaskedSeries& series,
+    const RegressionDesign& design, const ArmaParameterMap& map,
+    int period, int d, int seasonal_d, double mean, double rank_tolerance,
+    double log_jacobian, const Interrupt& interrupt = {});
+
 // A single candidate, not an optimizer. Invalid static inputs throw; rejected
 // candidates and numerical failures return explicit unavailable objectives.
 // Interrupts, allocation failures and internal logic errors still propagate.

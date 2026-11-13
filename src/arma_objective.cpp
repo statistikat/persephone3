@@ -10,9 +10,9 @@
 
 namespace persephone {
 
-ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
+void validate_arma_objective_inputs(const MaskedSeries& series,
     const RegressionDesign& design, const ArmaParameterMap& map,
-    const std::vector<double>& coordinates, int period, int d, int seasonal_d,
+    int period, int d, int seasonal_d,
     double mean, double rank_tolerance, double log_jacobian,
     const Interrupt& interrupt) {
     validate_regression_inputs(series, design, mean, 1, rank_tolerance, interrupt);
@@ -29,6 +29,15 @@ ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
         throw std::invalid_argument("ARMA objective exceeds the 16 stationary / 32 total state bounds");
     }
     (void)parallel_info(); // Malformed thread configuration is not a bad candidate.
+}
+
+ArmaObjective evaluate_arma_objective(const MaskedSeries& series,
+    const RegressionDesign& design, const ArmaParameterMap& map,
+    const std::vector<double>& coordinates, int period, int d, int seasonal_d,
+    double mean, double rank_tolerance, double log_jacobian,
+    const Interrupt& interrupt) {
+    validate_arma_objective_inputs(series, design, map, period, d, seasonal_d,
+                                   mean, rank_tolerance, log_jacobian, interrupt);
     const double unavailable = std::numeric_limits<double>::quiet_NaN();
     ArmaObjective result{"unavailable", "", map.decode(coordinates), unavailable, unavailable, std::nullopt};
     if (result.parameters.status != "admissible") {

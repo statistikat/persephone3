@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **20b.2a ARMA parameter/objective contract following `b03fdd5`**, package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: **20b.2b.1 deterministic ARMA optimization following `f363d2f`**, package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -8,8 +8,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **9,123 passing installed-package
-assertions** across **29 files**, including the native numerical additions. These
+current rjd3 path. The full check has **10,319 passing installed-package
+assertions** across **30 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -24,15 +24,17 @@ estimates fixed/free regression effects, stationary mean and integrated drift
 with fixed ARMA parameters, with optional OpenMP for independent numerical
 outputs and whitening channels. Stable/invertible ARMA parameter maps and a
 serializable concentrated-objective contract are now implemented, including
-mixed fixed/free constraints and explicit rejection/failure statuses. It does
-not yet run ARMA optimization or perform
-X-11/TRAMO/SEATS adjustment. rjd3 remains the
+mixed fixed/free constraints and explicit rejection/failure statuses. A bounded
+fixed-order ARMA optimizer now supplies deterministic feasible BFGS steps,
+qualified numerical gradients, explicit stopping reasons and cached initial/final
+likelihoods. Broader fitted-model and identification qualification remains open;
+native X-11/TRAMO/SEATS adjustment is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
 dependencies and are no longer loaded when the package itself loads.
 
 Items **16–19** have delivered foundations, **14** has workflow improvements,
-**20a.1–3/20b.1–2a** deliver restricted likelihood, regression and ARMA objective
+**20a.1–3/20b.1–2b.1** deliver restricted likelihood, regression and ARMA optimization
 foundations, and the rest of
 **20–27** remains numerical implementation and qualification work. Passing
 package checks or primitive tests does not establish native statistical parity.
@@ -62,8 +64,9 @@ the native-backend plan below.
 | 20a.2b — exact history-rank certification | Checked integer counts/time sums certify canonical SARIMA rank for `d,D <= 2`, period 4/12, while preserving the initial-coordinate measure and numerical guards | Initial delivery passed 2,532 diffuse assertions and resolved three registered gap failures. Its remaining long sparse-prefix failures are resolved by 20a.2c below. |
 | 20a.2c — stable sparse histories | Direct factored homogeneous functions with QR normalization at the original history coordinates; square-root Joseph/prediction propagation for the finite covariance; explicit numerical diagnostics | 3,059 diffuse assertions, standalone strict C++/ASan/UBSan, exact-integer determinant checks and 36 sparse reference models pass without tolerance changes. Both registered failures are resolved. Conditioning/range guards remain; arbitrary-length histories and native model fitting are not universally qualified. |
 | 20a.3 — fixed-model windows and transformations | Inclusive period windows, fresh prior at span start, preserved dates/masks/source indices, identity/log inputs, separate raw/adjusted likelihoods and named pinned-JD+ calendar Jacobian policy | 1,050 mandatory assertions and 426 native/direct-window comparisons pass. The reference probes include 852 fixed preprocessing fits and selector/perturbation checks. Drift/regression enter through 20b.1; direct-window semantics deliberately do not promise equivalence to JD+ estimation selectors. |
-| 20b.1 — fixed-SARIMA regression likelihood | Named fixed/free coefficients, generated mean/drift, common-gain whitening, rank-aware GLS, ML scale and separate fixed/ML/residual-df covariance, transformed/windowed objectives and conditional traces | 1,170 mandatory assertions, 432 native/direct matrix cases plus mean/drift, alias and context probes pass. Standalone serial/four-worker ASan/UBSan covers identity, cancellation/reuse and extreme covariance range. Nonidentifiable coefficients/objectives stay unavailable; ARMA optimization, coefficient-aware forecasts and native SA remain open. |
-| 20b.2a — ARMA parameter and objective contract | Independent Schur/Levinson factor checks, bounded reflection transforms for fully free blocks, exact fixed coefficients with checked mixed blocks, serializable setup/evaluation and unavailable candidate statuses | 1,911 mandatory assertions against independent polynomial roots and dense Gaussian profiles pass. Strict C++17/ASan/UBSan checks include the AR(2) stability triangle and 36 cancellation/reuse boundaries. ARMA optimization, convergence/identifiability and fitted-reference qualification remain 20b.2b. |
+| 20b.1 — fixed-SARIMA regression likelihood | Named fixed/free coefficients, generated mean/drift, common-gain whitening, rank-aware GLS, ML scale and separate fixed/ML/residual-df covariance, transformed/windowed objectives and conditional traces | 1,170 mandatory assertions, 432 native/direct matrix cases plus mean/drift, alias and context probes pass. Standalone serial/four-worker ASan/UBSan covers identity, cancellation/reuse and extreme covariance range. Nonidentifiable coefficients/objectives stay unavailable; coefficient-aware forecasts and native SA remain open. ARMA optimization is added in 20b.2b.1 below. |
+| 20b.2a — ARMA parameter and objective contract | Independent Schur/Levinson factor checks, bounded reflection transforms for fully free blocks, exact fixed coefficients with checked mixed blocks, serializable setup/evaluation and unavailable candidate statuses | 1,911 mandatory assertions against independent polynomial roots and dense Gaussian profiles pass. Strict C++17/ASan/UBSan checks include the AR(2) stability triangle and 36 cancellation/reuse boundaries. The optimizer is delivered below; broader fitted-reference and identification qualification remains 20b.2b.2. |
+| 20b.2b.1 — deterministic ARMA optimization | Sequential BFGS with feasible Armijo steps, accuracy-qualified central/one-sided differences, one supplied start, strict budgets and explicit convergence/failure diagnostics; owned cached likelihoods and serializable R results | 1,196 mandatory assertions include 58 successful fits against 22 independent density minima, fixed coefficients, windows/log inputs, gaps, seasonal integration and serial/threaded equality. Standalone strict C++17/ASan/UBSan covers analytic optima and interruption/reuse at 12 generic plus 967 ARMA callback boundaries. First-order convergence does not establish identification or a minimum; broader pinned fitted-model parity and uncertainty remain open. |
 | 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
@@ -106,7 +109,7 @@ establish those behaviors.
 | Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
 | Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
 | Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
-| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, windowed regression GLS, ARMA parameter/objective contracts and optional OpenMP | Fixed-ARMA regression, conditional covariance and checked objective candidates are delivered. Registered sparse limits are resolved; conditioning/range failures remain explicit. ARMA optimization, native SA fits and cross-platform qualification remain open |
+| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, windowed regression GLS, deterministic ARMA optimization and optional OpenMP | Fixed-order optimization, conditional regression covariance and explicit candidate/stopping statuses are delivered. Broader fitted-model/identification qualification, estimated-ARMA uncertainty, native SA fits and cross-platform evidence remain open |
 | Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
@@ -115,23 +118,34 @@ establish those behaviors.
 
 - Optional OpenMP is verified in an installed package with actual workers,
   identical serial/threaded results and standalone ASan/UBSan. A separately
-  installed fallback has **7,796 native assertions across nine files**, with
+  installed fallback has **8,992 native assertions across ten files**, with
   `compiled=FALSE`, one actual thread and no linked `libomp`. Its extra two
   assertions check the fallback explicitly. The regression sanitizer harness
   also requires a real four-worker team. Configure/cleanup scripts pass the
   real Debian `checkbashisms` tool with R's strict `-p -n` flags. See
   `tools/native-tests/openmp-contract.md` for build/runtime controls, exception
   and interruption rules, and explicit unsupported parallel work.
-- The new ARMA parameter/objective suite passes **1,911 assertions**: real and
+- The ARMA optimizer passes **1,196 assertions**, including 58 successful fits
+  against 22 independently constructed dense-Gaussian minima: 48 AR(1)/MA(1)
+  fits from three starts across frequency, missingness and log cases; three
+  mixed fixed/free AR(2) starts; three joint ARMA(1,1) starts; and four seasonal
+  AR/MA fits with seasonal integration and estimated drift. Independent
+  derivative checks, monotone accepted objectives, exact evaluation budgets,
+  failed starts, transform saturation, serialization and serial/four-worker
+  identity pass. Strict C++17/ASan/UBSan also verifies analytic quadratic and
+  Rosenbrock optima and interruption/reuse at all 12 generic and 967 ARMA
+  callback boundaries. This adds no new pinned fitted-JD+ parity claim; the
+  next slice qualifies fitted models and identification. Numerical derivative
+  errors are estimates, and first-order convergence is not a minimum certificate.
+- The ARMA parameter/objective suite passes **1,911 assertions**: real and
   complex polynomial roots, all four factor types, fixed/free maps, exact fixed
   values, transform saturation, malformed controls and explicit failure statuses.
   Independent dense Gaussian GLS verifies 42 AR(1)/MA(1) profiles, their scalar
   minima and local central differences; eight seasonal/integrated/log/window
   cases retain the prior regression contract. Standalone strict C++17 and
   ASan/UBSan pass the independent AR(2) stability region and all 36 objective
-  cancellation/reuse boundaries. No native optimizer or new fitted-JD+ parity
-  claim is included in this slice; the regression kernel/reference rules remain
-  unchanged apart from shared static preflight.
+  cancellation/reuse boundaries. These parameter/objective checks remain
+  unchanged; shared static input preflight now also serves the optimizer.
 - Fixed-SARIMA regression passes **1,170 mandatory assertions**: independent
   OLS/dense Gaussian integration, seasonal-MA/differencing identities,
   fixed/free/zero/aliased columns, generated mean/drift, window/log/context
@@ -149,8 +163,8 @@ establish those behaviors.
   small positive directions, interruption/reuse and malformed inputs. An
   independent exact-integer check of 48 diffuse determinants has maximum
   discrepancy `5.15e-14`.
-- Full `R CMD build` and `R CMD check --as-cran` execute **9,123 assertions
-  across 29 files**, examples, vignette builds/rebuilds and PDF/HTML manuals.
+- Full `R CMD build` and `R CMD check --as-cran` execute **10,319 assertions
+  across 30 files**, examples, vignette builds/rebuilds and PDF/HTML manuals.
   No reference-backed package test is skipped. Result: **0 errors, 1 warning
   and 1 note**. The reported check issues remain
   the installed R 4.5.2 header's unknown Clang warning group
@@ -158,10 +172,10 @@ establish those behaviors.
   checks (`Remotes`, title casing and "This package" wording). Remote incoming
   checks are disabled; no CRAN submission or remote CI is claimed.
 - With Java-related R packages inaccessible in the isolated library, the
-  installed package passes capability/loading checks, **7,794 native assertions**
+  installed package passes capability/loading checks, **8,990 native assertions**
   (3,059 diffuse, 1,050 window/transform likelihood, 247 stationary, 150 inputs,
   114 algebra, 58 primitives, 35 parallel, 1,170 regression, 1,911 ARMA
-  parameter/objective) and
+  parameter/objective, 1,196 optimizer) and
   **34 backend contract assertions**. No Java namespace is loaded or fallback
   attempted. The host JVM remains installed; native seasonal adjustment is absent.
 - The exact diffuse kernel passes **110 KFAS 1.6.0 comparisons**, including fixed
@@ -212,16 +226,18 @@ establish those behaviors.
 - Strict-warning C++ compilation and ASan/UBSan pass the new standalone harness,
   including interruption at every callback and successful subsequent reuse.
   R's prebuilt BLAS/LAPACK libraries are not themselves sanitizer-instrumented.
-  Native CI discovers all nine native test files, tests Ubuntu/macOS/Windows
+  Native CI discovers all ten native test files, tests Ubuntu/macOS/Windows
   plus a separate Ubuntu serial lane, and includes serial/OpenMP sanitizer
   harnesses. Workflow YAML parses locally; remote execution remains unverified.
 - Local builds use R 4.5.2, Rcpp 1.1.2 and Homebrew Clang, with the existing
   temporary Makevars copy selecting the installed GCC 16 runtime. The user's
   stale GCC 9 configuration is unchanged; repository linkage remains portable.
 - Current logs and checked archive are under
-  `/tmp/persephone-arma-objective-validation`: `build.log`, `check-console.log`,
+  `/tmp/persephone-optimizer-validation`: `build.log`, `check-console.log`,
   `nojava.log`, `serial-install.log`, `serial-tests.log`, `native.log` and the
-  standalone `parameters-{build,run}.log` and `objective-{build,run}.log` files. Earlier direct
+  standalone `optimizer-{build,run}.log` and `arma-{build,run}.log` files.
+  Parameter/objective sanitizer evidence remains in
+  `/tmp/persephone-arma-objective-validation`. Earlier direct
   regression qualification remains in `/tmp/persephone-regression-validation`,
   and diffuse/window evidence in `/tmp/persephone-sparse-validation`. These are
   temporary evidence, not repository inputs. No dashboard behavior changed.
@@ -553,7 +569,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20b.2b | Implement deterministic optimization around the delivered parameter map/objective, including feasible steps for mixed blocks and explicit stopping/failure results | Independent optima, derivative accuracy, near-boundary/common-root/collinear cases, pinned fixed-order fits and cancellation/reuse; never treat unavailable candidates as finite successful values |
+| 20b.2b.2 | Qualify the delivered fixed-order optimizer against pinned direct fits; add difficult starts, near-unit/common-root models and weak-identification diagnostics | Independent minima, unchanged reference rules, frequency/seasonal/fixed-free/window/log/gap matrices and cross-platform evidence; distinguish feasibility, convergence and identification |
 | 20c / 20d | Extend conditional regression covariance to estimated-ARMA inference; standardized/interpolated residuals and forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
@@ -563,8 +579,10 @@ The native fixed-parameter likelihood now covers stationary and a bounded
 integrated/diffuse subset. Registered rank-classification and sparse-propagation
 failures are resolved, with conditioning/range guards still enforced. Inclusive
 windows and a named, qualified log-Jacobian policy are connected to fixed/free
-regression likelihood, including estimated mean/drift. Next, optimize ARMA
-parameters before an end-to-end fixed-model X-13 slice.
+regression likelihood, including estimated mean/drift. Fixed-order ARMA
+optimization is delivered with bounded controls and explicit first-order stopping.
+Next, qualify fitted-model parity and identification, then estimated-parameter
+uncertainty and forecasts before an end-to-end fixed-model X-13 slice.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
 and does not justify a default switch. The detailed acceptance criteria below
 remain in force.
@@ -886,8 +904,27 @@ named reflection margin, independently verified against polynomial roots.
 `native_arma_objective()` evaluates the existing concentrated ML objective and
 reports explicit boundary, rank, diffuse and numerical failure statuses without
 finite penalty substitution. Static input errors and cancellation still throw.
-The contract is serializable, has no parameter-transform Jacobian, and does not
-run an optimizer. See `tools/native-tests/arma-objective-contract.md`.
+The contract is serializable and has no parameter-transform Jacobian. The
+optimizer below consumes it. See `tools/native-tests/arma-objective-contract.md`.
+
+**Delivered 20b.2b.1:** `native_arma_optimize()` minimizes that concentrated
+objective from one supplied start using a generic C++17 BFGS solver, independent
+of R/Rcpp. The ARMA adapter and likelihood kernels remain Rcpp-free, with R's
+BLAS/LAPACK ABI used by numerical kernels. Feasible Armijo halving rejects
+unavailable candidates without penalties. Fully free factors use unit-reflection
+working coordinates to avoid false convergence from saturated transforms; the
+parameter-map coordinates remain available in results. Mixed blocks retain exact
+fixed coefficients. Central or second-order one-sided differences must meet a
+documented accuracy check before gradient stopping can succeed. Small steps alone
+report stagnation, and iteration/evaluation budgets include rejected candidates
+and derivative probes. Initial/final likelihoods are cached owned values, with
+no uncounted final evaluation. All evaluation and R/LAPACK callbacks remain
+sequential; existing independent whitening channels may use OpenMP. Results
+include counts, trace, derivative estimates and explicit stopping status, with
+`identification = "not_assessed"` and `optimality = "first_order_only"`. There is
+no Hessian covariance or global/local minimum guarantee. See
+`tools/native-tests/arma-optimizer-contract.md` for controls, bounds, failure
+states, independent evidence and cancellation rules.
 
 **Next implementation sequence:**
 
@@ -897,36 +934,33 @@ newly exposed cancellation after long gaps. Numerical guards and unavailable
 statuses remain explicit; this qualifies the stated fixtures, not every
 possible extreme history. The next implementation commits are:
 
-1. **20b.2b — optimization and convergence.** Implement deterministic starts,
-   bounded iteration/evaluation limits and a documented descent/line-search
-   method using the delivered per-factor coordinate modes. Mixed fixed/free
-   blocks require feasible steps; do not alter fixed values, reflect roots or
-   silently substitute finite penalties for rejected candidates. Define gradient
-   accuracy and feasible central/one-sided difference rules before accepting
-   derivative-based stopping. Return the initial/final objective, evaluation
-   count, parameter/gradient/step diagnostics and an explicit stopping reason.
-   Require successful reuse after cancellation or numerical failure. Qualified
-   scalar AR/MA objective minima now provide the first independent targets.
-2. **20b.2b qualification — fitted models and identification.** Extend those
-   scalar checks to fixed-order seasonal models with missing observations,
-   windows/log inputs and mixed fixed/free regressors against pinned direct fits.
-   Exercise near-unit roots, common AR/MA factors, flat/aliased designs and poor
-   starts. Distinguish feasible parameters, a finite objective, convergence and
-   parameter identification; none implies the others. Keep provisional
-   tolerances until independent minima and cross-platform evidence support them.
+1. **20b.2b.2 — fitted models and identification.** Build a read-only differential
+   harness around pinned JD+ direct fixed-order fits and the delivered optimizer.
+   Predeclare monthly/quarterly ordinary and seasonal ARMA cases, mixed fixed/free
+   ARMA and regression coefficients, estimated mean/drift, internal and endpoint
+   gaps, windows and log inputs. Match objective normalization and Jacobians
+   before comparing coefficients; verify that future-only context perturbations
+   do not change an in-sample estimate. Preserve existing fixtures and tolerances.
+   Add independent dense-Gaussian minima and deterministic alternate supplied
+   starts to expose local solutions or failed starts. Exercise near-unit roots,
+   common AR/MA factors, weak/aliased designs and flat likelihoods. Define and test
+   explicit identification diagnostics separately from feasibility, finite
+   objectives and first-order convergence; retain unavailable uncertainty until
+   qualified. Investigate every discrepancy without rebaselining it away, and
+   run the matrix on supported platforms before asserting wider fitted parity.
    Candidate evaluations stay on the main thread while using R's LAPACK ABI;
    parallel objective batches require a separately qualified implementation.
    No automatic order, transformation or outlier selection is implied.
-3. **20c/20d — uncertainty and forecasts.** Extend the delivered conditional
+2. **20c/20d — uncertainty and forecasts.** Extend the delivered conditional
    regression covariance for estimated ARMA parameters and derive original-domain
    forecast/backcast errors, including regression uncertainty and documented
    log back-transformation. Keep fixed horizons/context coverage and item 10's
    separate point/error domains. Only then connect the restricted X-11 slice.
 
 Each substep remains a separate implementation/test/documentation commit.
-ARMA optimization and a complete native constructor remain unavailable until
-their advertised contract is actually supported; regression estimation with
-fixed ARMA parameters is now delivered.
+The internal fixed-order optimizer and fixed-ARMA regression estimation are now
+delivered. A complete native seasonal-adjustment constructor remains unavailable
+until its advertised numerical and result contract is actually supported.
 
 **Acceptance:** fixed-spec coefficients, likelihood, covariance, residuals and
 forecast means/errors meet predeclared tolerances, including near-unit roots,

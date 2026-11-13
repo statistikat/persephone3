@@ -1,5 +1,6 @@
 #include <Rcpp.h>
 #include "core/arma_objective.hpp"
+#include "core/arma_optimizer.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -96,6 +97,54 @@ Rcpp::List decoded(const persephone::ArmaDecoded& result) {
         Rcpp::_["coefficients"] = named_blocks(result.coefficients),
         Rcpp::_["reflections"] = named_blocks(result.reflections));
 }
+struct ObjectiveData {
+    persephone::MaskedSeries input;
+    persephone::RegressionDesign regression;
+};
+ObjectiveData objective_data(SEXP values, SEXP design, SEXP coefficients) {
+    const auto response = vector(values, "values", std::numeric_limits<int>::max());
+    persephone::MaskedSeries input{std::vector<double>(response.size(), 0), std::vector<std::uint8_t>(response.size(), 0)};
+    for (R_xlen_t i = 0; i < response.size(); ++i) {
+        if ((i & 4095) == 0) Rcpp::checkUserInterrupt();
+        if (std::isnan(response[i])) input.missing[static_cast<std::size_t>(i)] = 1;
+        else input.values[static_cast<std::size_t>(i)] = response[i];
+    }
+    const auto dims = Rf_getAttrib(design, R_DimSymbol);
+    if ((TYPEOF(design) != REALSXP && TYPEOF(design) != INTSXP) || Rf_isFactor(design) ||
+        TYPEOF(dims) != INTSXP || Rf_xlength(dims) != 2) throw std::invalid_argument("design must be a real numeric matrix");
+    const Rcpp::IntegerVector shape(dims);
+    if (shape[0] != response.size() || shape[1] < 0 || shape[1] > 32 ||
+        Rf_xlength(design) != static_cast<R_xlen_t>(shape[0]) * shape[1]) throw std::invalid_argument("design dimensions must match response rows and at most 32 columns");
+    const auto coeff = vector(coefficients, "regression coefficients", 32);
+    if (coeff.size() != shape[1]) throw std::invalid_argument("regression coefficients must match design columns");
+    const auto x = Rcpp::as<Rcpp::NumericVector>(design);
+    persephone::RegressionDesign regression{static_cast<std::size_t>(shape[1]),
+        std::vector<double>(x.begin(), x.end()), std::vector<double>(coeff.size(), 0), std::vector<std::uint8_t>(coeff.size(), 0)};
+    for (R_xlen_t i = 0; i < coeff.size(); ++i) {
+        if (R_IsNA(coeff[i])) continue;
+        if (!std::isfinite(coeff[i])) throw std::invalid_argument("regression coefficients must be finite or NA");
+        regression.coefficients[static_cast<std::size_t>(i)] = coeff[i]; regression.fixed[static_cast<std::size_t>(i)] = 1;
+    }
+    return {std::move(input),std::move(regression)};
+}
+Rcpp::List objective_output(const persephone::ArmaObjective& result, std::size_t free_parameters) {
+    Rcpp::List output = Rcpp::List::create(Rcpp::_["schema_version"] = 1,
+        Rcpp::_["status"] = result.status, Rcpp::_["message"] = result.message,
+        Rcpp::_["available"] = result.status == "available", Rcpp::_["value"] = optional(result.value),
+        Rcpp::_["adjusted_log_likelihood"] = optional(result.adjusted_log_likelihood),
+        Rcpp::_["parameters"] = decoded(result.parameters));
+    if (result.likelihood) {
+        const auto& fit = *result.likelihood;
+        output["likelihood"] = Rcpp::List::create(
+            Rcpp::_["profiled_log_likelihood"] = optional(fit.profiled_log_likelihood),
+            Rcpp::_["profiled_variance"] = optional(fit.profiled_variance),
+            Rcpp::_["profile_status"] = fit.profile_status, Rcpp::_["finite_count"] = static_cast<double>(fit.finite_count),
+            Rcpp::_["regression_rank"] = static_cast<int>(fit.rank), Rcpp::_["regression_coefficients"] = numeric(fit.coefficients),
+            Rcpp::_["nparams_profiled"] = result.status == "available" ?
+                static_cast<double>(fit.free_columns.size() + free_parameters + 1) : NA_REAL);
+    } else output["likelihood"] = R_NilValue;
+    return output;
+}
 } // namespace
 
 // [[Rcpp::export(name = ".native_arma_parameter_map")]]
@@ -149,48 +198,99 @@ Rcpp::List native_arma_objective(SEXP values, SEXP design, SEXP coefficients,
     SEXP d = R_NilValue, SEXP seasonal_d = R_NilValue, SEXP mean = R_NilValue,
     SEXP rank_tolerance = R_NilValue, SEXP margin = R_NilValue, SEXP log_jacobian = R_NilValue) {
     const auto map = parameter_map(specification, initial, margin);
-    const auto response = vector(values, "values", std::numeric_limits<int>::max());
-    persephone::MaskedSeries input{std::vector<double>(response.size(), 0), std::vector<std::uint8_t>(response.size(), 0)};
-    for (R_xlen_t i = 0; i < response.size(); ++i) {
-        if ((i & 4095) == 0) Rcpp::checkUserInterrupt();
-        if (std::isnan(response[i])) input.missing[static_cast<std::size_t>(i)] = 1;
-        else input.values[static_cast<std::size_t>(i)] = response[i];
-    }
-    const auto dims = Rf_getAttrib(design, R_DimSymbol);
-    if ((TYPEOF(design) != REALSXP && TYPEOF(design) != INTSXP) || Rf_isFactor(design) ||
-        TYPEOF(dims) != INTSXP || Rf_xlength(dims) != 2) throw std::invalid_argument("design must be a real numeric matrix");
-    const Rcpp::IntegerVector shape(dims);
-    if (shape[0] != response.size() || shape[1] < 0 || shape[1] > 32 ||
-        Rf_xlength(design) != static_cast<R_xlen_t>(shape[0]) * shape[1]) throw std::invalid_argument("design dimensions must match response rows and at most 32 columns");
-    const auto coeff = vector(coefficients, "regression coefficients", 32);
-    if (coeff.size() != shape[1]) throw std::invalid_argument("regression coefficients must match design columns");
-    const auto x = Rcpp::as<Rcpp::NumericVector>(design);
-    persephone::RegressionDesign regression{static_cast<std::size_t>(shape[1]),
-        std::vector<double>(x.begin(), x.end()), std::vector<double>(coeff.size(), 0), std::vector<std::uint8_t>(coeff.size(), 0)};
-    for (R_xlen_t i = 0; i < coeff.size(); ++i) {
-        if (R_IsNA(coeff[i])) continue;
-        if (!std::isfinite(coeff[i])) throw std::invalid_argument("regression coefficients must be finite or NA");
-        regression.coefficients[static_cast<std::size_t>(i)] = coeff[i]; regression.fixed[static_cast<std::size_t>(i)] = 1;
-    }
+    auto data = objective_data(values, design, coefficients);
+    const auto& input = data.input;
+    const auto& regression = data.regression;
     const auto result = persephone::evaluate_arma_objective(input, regression, map,
         Rcpp::as<std::vector<double>>(vector(coordinates, "ARMA coordinates", 64)),
         integer(period, "period", 0, 12), integer(d, "d", 0, 2), integer(seasonal_d, "seasonal_d", 0, 2),
         scalar(mean, "mean", 0), scalar(rank_tolerance, "rank tolerance", 1e-10), scalar(log_jacobian, "log Jacobian", 0),
         [] { Rcpp::checkUserInterrupt(); });
-    Rcpp::List output = Rcpp::List::create(Rcpp::_["schema_version"] = 1,
-        Rcpp::_["status"] = result.status, Rcpp::_["message"] = result.message,
-        Rcpp::_["available"] = result.status == "available", Rcpp::_["value"] = optional(result.value),
-        Rcpp::_["adjusted_log_likelihood"] = optional(result.adjusted_log_likelihood),
-        Rcpp::_["parameters"] = decoded(result.parameters));
-    if (result.likelihood) {
-        const auto& fit = *result.likelihood;
-        output["likelihood"] = Rcpp::List::create(
-            Rcpp::_["profiled_log_likelihood"] = optional(fit.profiled_log_likelihood),
-            Rcpp::_["profiled_variance"] = optional(fit.profiled_variance),
-            Rcpp::_["profile_status"] = fit.profile_status, Rcpp::_["finite_count"] = static_cast<double>(fit.finite_count),
-            Rcpp::_["regression_rank"] = static_cast<int>(fit.rank), Rcpp::_["regression_coefficients"] = numeric(fit.coefficients),
-            Rcpp::_["nparams_profiled"] = result.status == "available" ?
-                static_cast<double>(fit.free_columns.size() + map.initial_coordinates().size() + 1) : NA_REAL);
-    } else output["likelihood"] = R_NilValue;
-    return output;
+    return objective_output(result, map.initial_coordinates().size());
+}
+
+namespace {
+persephone::OptimizerControl optimizer_control(SEXP values) {
+    persephone::OptimizerControl c;
+    if(Rf_isNull(values)) return c;
+    if(TYPEOF(values)!=VECSXP || !Rf_isNull(Rf_getAttrib(values,R_DimSymbol))) throw std::invalid_argument("optimizer control must be a named list");
+    const Rcpp::List list(values);
+    if(list.size()==0) return c;
+    const auto names=Rf_getAttrib(values,R_NamesSymbol);
+    if(TYPEOF(names)!=STRSXP || Rf_xlength(names)!=list.size()) throw std::invalid_argument("optimizer controls need unique names");
+    std::vector<std::string> seen;
+    for(R_xlen_t i=0;i<list.size();++i) {
+        if(STRING_ELT(names,i)==NA_STRING) throw std::invalid_argument("optimizer control names cannot be missing");
+        const auto name=Rcpp::as<std::string>(STRING_ELT(names,i));
+        if(std::find(seen.begin(),seen.end(),name)!=seen.end() || Rf_isNull(list[i])) throw std::invalid_argument("optimizer controls need distinct names and non-NULL values");
+        seen.push_back(name);
+        if(name=="max_iterations") c.max_iterations=integer(list[i],name.c_str(),100,10000);
+        else if(name=="max_evaluations") c.max_evaluations=integer(list[i],name.c_str(),2000,1000000);
+        else if(name=="max_line_search") c.max_line_search=integer(list[i],name.c_str(),30,100);
+        else if(name=="difference_refinements") c.difference_refinements=integer(list[i],name.c_str(),10,20);
+        else if(name=="gradient_tolerance") c.gradient_tolerance=scalar(list[i],name.c_str(),1e-5);
+        else if(name=="step_tolerance") c.step_tolerance=scalar(list[i],name.c_str(),1e-10);
+        else if(name=="function_tolerance") c.function_tolerance=scalar(list[i],name.c_str(),1e-10);
+        else if(name=="difference_step") c.difference_step=scalar(list[i],name.c_str(),1e-4);
+        else if(name=="armijo") c.armijo=scalar(list[i],name.c_str(),1e-4);
+        else if(name=="max_step") c.max_step=scalar(list[i],name.c_str(),1);
+        else throw std::invalid_argument("unknown optimizer control: "+name);
+    }
+    c.validate(); return c;
+}
+Rcpp::List control_output(const persephone::OptimizerControl& c) {
+    return Rcpp::List::create(Rcpp::_["max_iterations"]=c.max_iterations,Rcpp::_["max_evaluations"]=c.max_evaluations,
+        Rcpp::_["max_line_search"]=c.max_line_search,Rcpp::_["difference_refinements"]=c.difference_refinements,
+        Rcpp::_["gradient_tolerance"]=c.gradient_tolerance,Rcpp::_["step_tolerance"]=c.step_tolerance,
+        Rcpp::_["function_tolerance"]=c.function_tolerance,Rcpp::_["difference_step"]=c.difference_step,
+        Rcpp::_["armijo"]=c.armijo,Rcpp::_["max_step"]=c.max_step);
+}
+} // namespace
+
+// [[Rcpp::export(name = ".native_arma_optimize")]]
+Rcpp::List native_arma_optimize(SEXP values, SEXP design, SEXP coefficients,
+    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
+    SEXP control=R_NilValue) {
+    const auto c=optimizer_control(control);
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    const auto result=persephone::optimize_arma_objective(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        c,[] { Rcpp::checkUserInterrupt(); });
+    const auto first=std::static_pointer_cast<const persephone::ArmaOptimizationPoint>(result.initial.detail);
+    const auto last=std::static_pointer_cast<const persephone::ArmaOptimizationPoint>(result.final.detail);
+    if(!first || !last) throw std::logic_error("optimizer lost its accepted ARMA point");
+    Rcpp::List out;
+    out["schema_version"]=1; out["status"]=result.status; out["converged"]=result.converged;
+    out["success"]=result.converged || result.status=="no_free_parameters";
+    out["identification"]="not_assessed"; out["optimality"]="first_order_only";
+    out["initial"]=objective_output(first->objective,map.initial_coordinates().size());
+    out["final"]=objective_output(last->objective,map.initial_coordinates().size());
+    out["initial_coordinates"]=numeric(first->coordinates); out["coordinates"]=numeric(last->coordinates);
+    out["working_coordinates"]=numeric(result.coordinates);
+    out["gradient"]=numeric(result.gradient); out["gradient_error"]=numeric(result.gradient_error);
+    out["difference_steps"]=numeric(result.difference_steps); out["difference_schemes"]=result.difference_schemes;
+    out["iterations"]=result.iterations; out["evaluations"]=result.evaluations;
+    out["gradient_evaluations"]=result.gradient_evaluations; out["bfgs_resets"]=result.bfgs_resets;
+    Rcpp::IntegerVector rejected; Rcpp::CharacterVector reasons;
+    for(const auto& entry:result.rejected) { reasons.push_back(entry.first); rejected.push_back(entry.second); }
+    rejected.attr("names")=reasons; out["rejected"]=rejected;
+    Rcpp::NumericMatrix history(static_cast<int>(result.trace.size()),9);
+    for(std::size_t i=0;i<result.trace.size();++i) {
+        const auto& t=result.trace[i]; const int row=static_cast<int>(i);
+        history(row,0)=t.iteration; history(row,1)=t.evaluations; history(row,2)=t.value;
+        history(row,3)=optional(t.gradient_norm); history(row,4)=optional(t.gradient_error);
+        history(row,5)=t.step_norm; history(row,6)=t.function_change; history(row,7)=t.step_length;
+        history(row,8)=optional(t.gradient_bound);
+    }
+    Rcpp::colnames(history)=Rcpp::CharacterVector::create("iteration","evaluations","value","gradient_norm",
+        "gradient_error","step_norm","function_change","step_length","gradient_bound");
+    out["trace"]=history; out["control"]=control_output(c);
+    out["method"]="bfgs_feasible_armijo";
+    out["gradient_coordinates"]="unit_reflection_or_free_coefficient";
+    return out;
 }

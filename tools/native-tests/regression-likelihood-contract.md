@@ -127,6 +127,7 @@ and extreme numeric range checks. Prebuilt BLAS/LAPACK is not instrumented.
 The read-only [reference probes](../reference/regression-notes.md) qualify the
 bounded pinned-JD+ conventions without changing stored fixtures or tolerances.
 
-ARMA optimization is the next slice (20b.2). Estimated-ARMA uncertainty,
+Bounded ARMA optimization is now delivered in 20b.2b.1; wider fitted-reference
+qualification remains 20b.2b.2. Estimated-ARMA uncertainty,
 coefficient-aware forecasts, automatic transformation/model selection,
 outlier search and native X-13/TRAMO-SEATS remain separate work.

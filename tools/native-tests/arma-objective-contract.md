@@ -151,7 +151,8 @@ the independent AR(2) stability triangle. `test_arma_objective.cpp` checks the
 white-noise density, statuses and all 36 callback cancellation/reuse boundaries.
 Both pass strict-warning C++17 and ASan/UBSan; prebuilt BLAS/LAPACK is not instrumented.
 
-Next is 20b.2b: deterministic starts, optimization steps, derivative checks,
-stopping/failure results, then pinned fitted-model comparisons. Factor
+The bounded optimizer is now delivered in
+[20b.2b.1](arma-optimizer-contract.md), with derivative and stopping diagnostics.
+Next is 20b.2b.2: pinned fitted-model and identification qualification. Factor
 admissibility does not establish joint ARMA identifiability (for example,
 common AR/MA roots), convergence, parameter uncertainty, or full JD+ parity.
