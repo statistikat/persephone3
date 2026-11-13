@@ -1,4 +1,5 @@
 #include "core/transforms.hpp"
+#include "core/parallel.hpp"
 
 #include <cmath>
 #include <stdexcept>
@@ -18,9 +19,8 @@ TransformedSeries transform_series(const MaskedSeries& series, Transform transfo
     validate_transform(transform);
     TransformedSeries result{series, {std::vector<double>(series.values.size(), 0.0),
                                       series.missing}};
-    for (std::size_t i = 0; i < series.values.size(); ++i) {
-        if ((i & 4095U) == 0 && interrupt) interrupt();
-        if (series.missing[i]) continue;
+    parallel_for(series.values.size(), 1, interrupt, [&](std::size_t i) {
+        if (series.missing[i]) return;
         if (transform == Transform::logarithm) {
             if (series.values[i] <= 0.0) {
                 throw std::invalid_argument("log transformation requires positive observed values");
@@ -32,7 +32,7 @@ TransformedSeries transform_series(const MaskedSeries& series, Transform transfo
             result.series.values[i] = value;
             result.log_jacobian.values[i] = -value;
         }
-    }
+    });
     return result;
 }
 
@@ -41,15 +41,14 @@ MaskedSeries inverse_transform(const MaskedSeries& series, Transform transform,
     series.validate();
     validate_transform(transform);
     MaskedSeries result = series;
-    for (std::size_t i = 0; i < series.values.size(); ++i) {
-        if ((i & 4095U) == 0 && interrupt) interrupt();
-        if (series.missing[i] || transform == Transform::none) continue;
+    parallel_for(series.values.size(), 1, interrupt, [&](std::size_t i) {
+        if (series.missing[i] || transform == Transform::none) return;
         const double value = std::exp(series.values[i]);
         if (!std::isfinite(value) || value <= 0.0) {
             throw std::overflow_error("inverse log transformation overflowed or underflowed");
         }
         result.values[i] = value;
-    }
+    });
     return result;
 }
 } // namespace persephone

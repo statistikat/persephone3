@@ -25,3 +25,7 @@ AGENTS.md
 /src/*.so
 /src/*.dll
 /src/*.dylib
+/src/Makevars
+/src/Makevars.win
+/config.log
+/.persephone-openmp-*

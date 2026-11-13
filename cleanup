@@ -1,0 +1,3 @@
+#!/bin/sh
+# These files are generated only from the tracked templates by configure.
+rm -f src/Makevars src/Makevars.win config.log

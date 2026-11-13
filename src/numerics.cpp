@@ -1,4 +1,5 @@
 #include "core/numerics.hpp"
+#include "core/parallel.hpp"
 
 #include <cmath>
 #include <limits>
@@ -104,12 +105,27 @@ std::vector<double> convolve(const std::vector<double>& left,
         throw std::length_error("convolution result is too large");
     }
     std::vector<double> result(left.size() + right.size() - 1, 0.0);
-    std::size_t operations = 0;
-    for (std::size_t i = 0; i < left.size(); ++i) {
-        for (std::size_t j = 0; j < right.size(); ++j) {
-            poll(interrupt, operations++);
-            result[i + j] = checked_sum_product(result[i + j], left[i], right[j]);
+    const auto work = std::min(left.size(), right.size());
+    if (work > parallel_work_threshold) {
+        // Very long single reductions retain fine-grained serial polling.
+        // They cannot be split/reassociated without changing summation order.
+        const auto serial_interrupt = in_parallel_region() ? Interrupt{} : interrupt;
+        std::size_t operations = 0;
+        for (std::size_t i = 0; i < left.size(); ++i) {
+            for (std::size_t j = 0; j < right.size(); ++j) {
+                poll(serial_interrupt, operations++);
+                result[i + j] = checked_sum_product(result[i + j], left[i], right[j]);
+            }
         }
+    } else {
+        parallel_for(result.size(), work, interrupt, [&](std::size_t output) {
+            const auto first = output >= right.size() ? output - (right.size() - 1) : 0;
+            const auto last = std::min(output, left.size() - 1);
+            double value = 0;
+            // Same ascending left-index addition order as the original loop.
+            for (auto i = first; i <= last; ++i) value = checked_sum_product(value, left[i], right[output - i]);
+            result[output] = value;
+        });
     }
     return result;
 }
@@ -148,15 +164,18 @@ MaskedSeries finite_filter(const MaskedSeries& series,
     MaskedSeries result{std::vector<double>(series.values.size(), 0.0),
                         std::vector<std::uint8_t>(series.values.size(), 0)};
     const auto length = static_cast<std::int64_t>(series.values.size());
+    const bool long_window = weights.size() > parallel_work_threshold / 2;
+    const auto serial_interrupt = in_parallel_region() ? Interrupt{} : interrupt;
     std::size_t operations = 0;
-    for (std::int64_t i = 0; i < length; ++i) {
+    const auto calculate = [&](std::size_t output) {
+        const auto i = static_cast<std::int64_t>(output);
         double value = 0.0;
         bool missing = false;
         // Resolve the entire missingness window before doing arithmetic. This
         // makes the mask independent of tap ordering and avoids overflow in a
         // result that must be missing because another active tap is absent.
         for (std::size_t j = 0; j < weights.size(); ++j) {
-            poll(interrupt, operations++);
+            if (long_window) poll(serial_interrupt, operations++);
             if (weights[j] == 0.0) continue;
             // Compare before adding so even INT64_MIN/MAX offsets are safe.
             if (offsets[j] < -i || offsets[j] >= length - i) {
@@ -172,14 +191,17 @@ MaskedSeries finite_filter(const MaskedSeries& series,
         result.missing[static_cast<std::size_t>(i)] = missing;
         if (!missing) {
             for (std::size_t j = 0; j < weights.size(); ++j) {
-                poll(interrupt, operations++);
+                if (long_window) poll(serial_interrupt, operations++);
                 if (weights[j] == 0.0) continue;
                 const auto index = static_cast<std::size_t>(i + offsets[j]);
                 value = checked_sum_product(value, weights[j], series.values[index]);
             }
             result.values[static_cast<std::size_t>(i)] = value;
         }
-    }
+    };
+    if (long_window) {
+        for (std::size_t i = 0; i < series.values.size(); ++i) calculate(i);
+    } else parallel_for(series.values.size(), 2 * weights.size(), interrupt, calculate);
     return result;
 }
 

@@ -41,7 +41,7 @@ Imports:
     jsonlite,
     htmlwidgets
 LinkingTo: Rcpp
-SystemRequirements: C++17
+SystemRequirements: C++17, OpenMP (optional)
 Suggests:
     RProtoBuf,
     rjd3toolkit (>= 3.5.0),

@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **20a.2c delivery following `676ca8b`**, package **0.1.0**,
+Updated: **2026-11-13**. Implementation source: **19d OpenMP delivery following `671f1ba`**, package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -8,7 +8,7 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full suite now has **6,007 passing installed-package
+current rjd3 path. The last full check, before 19d, has **6,007 passing installed-package
 assertions** across **26 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
@@ -49,6 +49,7 @@ the native-backend plan below.
 | 19a — C++17/Rcpp numerical foundations | Registered compiled routines for monthly/quarterly domains, differencing polynomials, convolution and finite filters with explicit missing masks; native-only CI workflow | 58 installed-package Rcpp assertions and standalone strict-warning/ASan/UBSan checks pass locally. Compiled primitives run with Java-related R packages inaccessible. Linux/Windows CI is configured, not remotely verified; no SARIMA estimation or seasonal-adjustment fit is implemented. |
 | 19b — numerical linear algebra | Owned column-major matrices; R-supported LAPACK Cholesky solves, log determinants and condition estimates; pivoted QR minimum-norm least squares with rank and original-domain residuals | 114 Rcpp assertions and strict-warning/ASan/UBSan core checks pass. Rank-deficient, underdetermined, zero-rank, ill-conditioned and malformed inputs are covered. OS builds and statistical model qualification remain open. |
 | 19c — transformations and model inputs | Mask-preserving identity/log transforms, per-observation log Jacobians and point inverse transforms; serializable monthly/quarterly input contract with full regressor-domain validation | 150 Rcpp/input assertions and standalone transform sanitizers pass. Future/backcast contexts must cover every requested period. No automatic transform selection, estimation-span policy or lognormal mean adjustment is implied. |
+| 19d — optional OpenMP execution | Independent convolution/filter/transform outputs use bounded worker regions with deterministic per-output arithmetic; C++17 compile/link/runtime detection and serial fallback | 35 parallel assertions plus 208 primitive/input assertions pass in the development DLL with two actual workers. Standalone serial/four-worker equality, exceptions, main-thread cancellation, nested suppression and ASan/UBSan pass. Default thread request is two; `PERSEPHONE_NUM_THREADS=1` selects serial execution. Remote CI remains unverified. |
 | 20a.1 — stationary likelihood pilot | Fixed-parameter scalar-observation state-space and seasonal ARMA likelihood; stationary Lyapunov initialization/stability certificate, Joseph covariance update, explicit missingness, fixed/profile likelihoods and intermediate innovations | 247 R assertions against closed forms, an independent joint Gaussian density and public R Kalman/ARIMA routines; strict C++/sanitizer and cancellation/reuse checks pass. At most 16 states/loading columns; no diffuse states, integrated SARIMA, optimization or native seasonal-adjustment fit. JD+ likelihood conventions remain to be qualified. |
 | 20a.2 — exact diffuse likelihood pilot | Separate finite/diffuse uncertainty, identified-rank traces, exact-coordinate likelihood normalization, missing-observation propagation, explicit unresolved-state status and integrated SARIMA assembly | Initial pilot: 484 mandatory assertions, standalone strict-warning/ASan/UBSan checks and 110 KFAS comparisons passed. Up to 32 total/16 stationary states; no large-variance approximation. Rank certification is extended by 20a.2b below. No drift, optimization, or native SA fit. |
 | 20a.2b — exact history-rank certification | Checked integer counts/time sums certify canonical SARIMA rank for `d,D <= 2`, period 4/12, while preserving the initial-coordinate measure and numerical guards | Initial delivery passed 2,532 diffuse assertions and resolved three registered gap failures. Its remaining long sparse-prefix failures are resolved by 20a.2c below. |
@@ -103,6 +104,11 @@ establish those behaviors.
 
 ### Implementation validation
 
+- The new 19d OpenMP slice passes **243 focused development assertions** and
+  standalone serial/OpenMP sanitizer checks. The full-package and no-Java
+  results below describe the preceding checked baseline until the next full
+  build. See `tools/native-tests/openmp-contract.md` for build/runtime controls,
+  exception and interruption rules, and explicit unsupported parallel work.
 - The 20a.2c focused suite passes **3,059 diffuse assertions**. All 162 original
   rank/missingness cases now return correct results, including unavailable
   objectives for unidentified designs; the late-identification failure now has

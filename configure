@@ -1,0 +1,41 @@
+#!/bin/sh
+# Test the actual R C++17 compiler, including user Makevars overrides. R's
+# OpenMP macro can describe its default compiler rather than C++17, so merely
+# finding -fopenmp is not enough. Failure selects a working serial build.
+set -eu
+if test -z "${R_HOME:-}"; then R_HOME=$(R RHOME); fi
+r_command="${R_HOME}/bin/R"
+if test -x "${r_command}.exe"; then r_command="${r_command}.exe"; fi
+probe_dir=".persephone-openmp-$$"
+mkdir "$probe_dir"
+trap 'rm -rf "$probe_dir"' EXIT HUP INT QUIT TERM
+cat > "$probe_dir/Makevars" <<'EOF'
+CXX_STD = CXX17
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+EOF
+cat > "$probe_dir/probe.cpp" <<'EOF'
+#ifndef _OPENMP
+#error OpenMP is not enabled for the selected C++17 compiler
+#endif
+#include <omp.h>
+static_assert(__cplusplus >= 201703L, "C++17 is required");
+extern "C" void persephone_openmp_probe(int* output) {
+    int result = 0;
+    const int count = omp_get_max_threads() > 1 ? 2 : 1;
+#pragma omp parallel num_threads(count) reduction(+:result)
+    result += omp_get_num_threads();
+    *output = result;
+}
+EOF
+extension=$("$r_command" --vanilla --slave -e 'cat(.Platform$dynlib.ext)')
+openmp_flags=''
+if (cd "$probe_dir" && "$r_command" CMD SHLIB --preclean -o "probe$extension" probe.cpp &&
+    "$r_command" --vanilla --slave -e 'dyn.load(paste0("probe", .Platform$dynlib.ext)); stopifnot(.C("persephone_openmp_probe", integer(1))[[1]] >= 1L)') > config.log 2>&1; then
+    openmp_flags='$(SHLIB_OPENMP_CXXFLAGS)'
+    echo 'Persephone: C++17 OpenMP compile/link/runtime check passed.'
+else
+    echo 'Persephone: OpenMP unavailable for this C++17 toolchain; using serial execution (see config.log).'
+fi
+sed "s|@OPENMP_FLAGS@|$openmp_flags|g" src/Makevars.in > src/Makevars
+sed "s|@OPENMP_FLAGS@|$openmp_flags|g" src/Makevars.win.in > src/Makevars.win

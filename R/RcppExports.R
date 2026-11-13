@@ -33,6 +33,10 @@
     .Call(`_persephone3_native_qr_solve`, matrix, rhs, rank_tolerance)
 }
 
+.native_parallel_info <- function() {
+    .Call(`_persephone3_native_parallel_info`)
+}
+
 .native_stationary_likelihood <- function(values, transition, observation, noise_loading, observation_variance = NULL, mean = NULL, variance = NULL) {
     .Call(`_persephone3_native_stationary_likelihood`, values, transition, observation, noise_loading, observation_variance, mean, variance)
 }

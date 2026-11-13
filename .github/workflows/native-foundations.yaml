@@ -13,17 +13,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            openmp: default
+          - os: macos-latest
+            openmp: default
+          - os: windows-latest
+            openmp: default
+          - os: ubuntu-latest
+            openmp: disabled
     runs-on: ${{ matrix.os }}
     env:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       JAVA_HOME: __PERSEPHONE_NO_JAVA__
+      R_MAKEVARS_USER: ${{ runner.temp }}/persephone-Makevars
+      PERSEPHONE_DISABLE_OPENMP: ${{ matrix.openmp == 'disabled' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: release
           use-public-rspm: true
+      - name: Configure the serial fallback lane
+        shell: Rscript {0}
+        run: |
+          flags <- if (Sys.getenv("PERSEPHONE_DISABLE_OPENMP") == "1") "SHLIB_OPENMP_CXXFLAGS =" else character()
+          writeLines(flags, Sys.getenv("R_MAKEVARS_USER"))
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           cache: false
@@ -44,12 +59,28 @@ jobs:
             results <- tinytest::run_test_file(file)
             stopifnot(length(results) > 0L, all(as.logical(results)))
           }
+      - name: Require actual OpenMP workers on Linux
+        if: runner.os == 'Linux' && matrix.openmp == 'default'
+        env:
+          PERSEPHONE_REQUIRE_OPENMP: '1'
+          OMP_NUM_THREADS: '4'
+          OMP_DYNAMIC: 'FALSE'
+        shell: Rscript {0}
+        run: |
+          results <- tinytest::run_test_file("inst/tinytest/test-native-parallel.R")
+          stopifnot(all(as.logical(results)))
+      - name: Require a genuine serial package build
+        if: matrix.openmp == 'disabled'
+        shell: Rscript {0}
+        run: |
+          info <- persephone3:::.native_parallel_info()
+          stopifnot(!info$compiled, info$probe_threads == 1L)
       - name: Verify frozen reference artifacts without Java
         run: |
           Rscript tools/reference/verify.R
           Rscript tools/reference/verify-extended.R
       - name: Sanitize independent C++ core
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.openmp == 'default'
         shell: bash
         run: |
           c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
@@ -62,6 +93,18 @@ jobs:
             -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_transforms.cpp \
             -o "$RUNNER_TEMP/persephone-transforms"
           "$RUNNER_TEMP/persephone-transforms"
+          for mode in serial openmp; do
+            flags=""
+            if [ "$mode" = openmp ]; then flags="-fopenmp"; fi
+            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_parallel.cpp \
+              -o "$RUNNER_TEMP/persephone-parallel-$mode"
+            if [ "$mode" = openmp ]; then
+              PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE \
+                "$RUNNER_TEMP/persephone-parallel-$mode"
+            else "$RUNNER_TEMP/persephone-parallel-$mode"; fi
+          done
           for harness in linear_algebra state_space diffuse_state_space; do
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \

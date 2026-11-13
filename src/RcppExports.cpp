@@ -127,6 +127,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_parallel_info
+Rcpp::List native_parallel_info();
+RcppExport SEXP _persephone3_native_parallel_info() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(native_parallel_info());
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_stationary_likelihood
 Rcpp::List native_stationary_likelihood(SEXP values, SEXP transition, SEXP observation, SEXP noise_loading, SEXP observation_variance, SEXP mean, SEXP variance);
 RcppExport SEXP _persephone3_native_stationary_likelihood(SEXP valuesSEXP, SEXP transitionSEXP, SEXP observationSEXP, SEXP noise_loadingSEXP, SEXP observation_varianceSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
@@ -196,6 +206,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_filter", (DL_FUNC) &_persephone3_native_filter, 3},
     {"_persephone3_native_cholesky_solve", (DL_FUNC) &_persephone3_native_cholesky_solve, 2},
     {"_persephone3_native_qr_solve", (DL_FUNC) &_persephone3_native_qr_solve, 3},
+    {"_persephone3_native_parallel_info", (DL_FUNC) &_persephone3_native_parallel_info, 0},
     {"_persephone3_native_stationary_likelihood", (DL_FUNC) &_persephone3_native_stationary_likelihood, 7},
     {"_persephone3_native_arma_likelihood", (DL_FUNC) &_persephone3_native_arma_likelihood, 8},
     {"_persephone3_native_transform", (DL_FUNC) &_persephone3_native_transform, 2},
