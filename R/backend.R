@@ -47,7 +47,8 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
                 primitives = c("time_domain", "difference_polynomial", "convolve", "finite_filter",
                                "cholesky_solve", "qr_least_squares",
                                "transform", "inverse_transform", "prepare_inputs",
-                               "stationary_likelihood", "arma_likelihood"),
+                               "stationary_likelihood", "arma_likelihood",
+                               "diffuse_likelihood", "sarima_likelihood"),
                 methods = character(), specification_blocks = character(),
                 packages_available = NA, runtime_checked = FALSE,
                 reason = "Native seasonal-adjustment fitting is not implemented."))

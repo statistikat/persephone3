@@ -62,11 +62,11 @@ jobs:
             -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_transforms.cpp \
             -o "$RUNNER_TEMP/persephone-transforms"
           "$RUNNER_TEMP/persephone-transforms"
-          for harness in linear_algebra state_space; do
+          for harness in linear_algebra state_space diffuse_state_space; do
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
               $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
-              src/state_space.cpp "tools/native-tests/test_${harness}.cpp" \
+              src/state_space.cpp src/diffuse_state_space.cpp "tools/native-tests/test_${harness}.cpp" \
               $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
               $(R CMD config FLIBS) $(R CMD config --ldflags) \
               -o "$RUNNER_TEMP/persephone-${harness}"

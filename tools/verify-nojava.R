@@ -44,6 +44,12 @@ if ("--native" %in% args) {
   white <- likelihood(c(1, NA_real_, 2), numeric(), numeric(), numeric(), numeric(), 12)
   stopifnot(white$observed_count == 2,
             isTRUE(all.equal(white$fixed_log_likelihood, sum(dnorm(c(1, 2), log = TRUE)))))
+  sarima <- getFromNamespace(".native_sarima_likelihood", "persephone3")
+  walk <- sarima(c(2, 3, NA_real_, 5), numeric(), numeric(), numeric(), numeric(), 12, d = 1)
+  stopifnot(walk$diffuse_count == 1, walk$finite_count == 2,
+            walk$remaining_diffuse_rank == 0,
+            isTRUE(all.equal(walk$fixed_log_likelihood,
+              dnorm(1, log = TRUE) + dnorm(2, sd = sqrt(2), log = TRUE))))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

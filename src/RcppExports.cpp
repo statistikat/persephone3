@@ -10,6 +10,46 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// native_diffuse_likelihood
+Rcpp::List native_diffuse_likelihood(SEXP values, SEXP transition, SEXP observation, SEXP noise_loading, SEXP initial_state, SEXP finite_loading, SEXP diffuse_loading, SEXP observation_variance, SEXP mean, SEXP variance);
+RcppExport SEXP _persephone3_native_diffuse_likelihood(SEXP valuesSEXP, SEXP transitionSEXP, SEXP observationSEXP, SEXP noise_loadingSEXP, SEXP initial_stateSEXP, SEXP finite_loadingSEXP, SEXP diffuse_loadingSEXP, SEXP observation_varianceSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type transition(transitionSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type observation(observationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type noise_loading(noise_loadingSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial_state(initial_stateSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type finite_loading(finite_loadingSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type diffuse_loading(diffuse_loadingSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type observation_variance(observation_varianceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type variance(varianceSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_diffuse_likelihood(values, transition, observation, noise_loading, initial_state, finite_loading, diffuse_loading, observation_variance, mean, variance));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_sarima_likelihood
+Rcpp::List native_sarima_likelihood(SEXP values, SEXP ar, SEXP ma, SEXP seasonal_ar, SEXP seasonal_ma, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP variance);
+RcppExport SEXP _persephone3_native_sarima_likelihood(SEXP valuesSEXP, SEXP arSEXP, SEXP maSEXP, SEXP seasonal_arSEXP, SEXP seasonal_maSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ar(arSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ma(maSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_ar(seasonal_arSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_ma(seasonal_maSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type d(dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_d(seasonal_dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type variance(varianceSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_sarima_likelihood(values, ar, ma, seasonal_ar, seasonal_ma, period, d, seasonal_d, mean, variance));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_time_domain
 Rcpp::List native_time_domain(double year, double start_period, double frequency, double length);
 RcppExport SEXP _persephone3_native_time_domain(SEXP yearSEXP, SEXP start_periodSEXP, SEXP frequencySEXP, SEXP lengthSEXP) {
@@ -148,6 +188,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_persephone3_native_diffuse_likelihood", (DL_FUNC) &_persephone3_native_diffuse_likelihood, 10},
+    {"_persephone3_native_sarima_likelihood", (DL_FUNC) &_persephone3_native_sarima_likelihood, 10},
     {"_persephone3_native_time_domain", (DL_FUNC) &_persephone3_native_time_domain, 4},
     {"_persephone3_native_difference_polynomial", (DL_FUNC) &_persephone3_native_difference_polynomial, 3},
     {"_persephone3_native_convolve", (DL_FUNC) &_persephone3_native_convolve, 2},

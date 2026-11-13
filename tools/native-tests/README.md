@@ -3,7 +3,8 @@
 The C++ core is independently authored and contains no translated JDemetra+
 source. It currently supplies time indexing, differencing polynomials,
 convolution, finite filters, transformations, LAPACK adapters and a stationary
-fixed-parameter innovations likelihood. It does **not** fit seasonal-adjustment
+fixed-parameter innovations likelihood, with a separate exact diffuse kernel
+for integrated SARIMA models. It does **not** fit seasonal-adjustment
 models.
 
 Run from the repository root with any supported C++17 compiler:
@@ -101,3 +102,28 @@ subsequent successful reuse. Installed R tests compare closed forms, an
 independent multivariate Gaussian density, and R's public Kalman/ARIMA APIs.
 These establish the stated kernel contract, not JD+ likelihood conventions or
 full SARIMA/seasonal-adjustment parity.
+
+## Exact diffuse likelihood (20a.2)
+
+The internal `.native_diffuse_likelihood()` accepts finite and diffuse initial
+loadings explicitly. `.native_sarima_likelihood()` constructs a monthly/quarterly
+fixed-parameter SARIMA model with initial observation history treated diffusely.
+The core keeps finite and diffuse uncertainty separate throughout filtering; no
+arbitrary large initial variance is used. Its initial-state coordinate measure,
+effective sample count and numerical rejection rules are documented in
+[diffuse-state-space-contract.md](diffuse-state-space-contract.md).
+
+At most 32 total states are supported, including at most 16 stationary ARMA
+states. Ordinary and seasonal differencing orders range from zero to two,
+subject to that total bound. The common monthly airline model uses 27 states.
+Nonzero mean/drift for integrated models is intentionally rejected until the
+preprocessing/regression contract defines it. Unresolved diffuse states produce
+an explicit unavailable likelihood, not a successful objective for optimization.
+
+`test-native-diffuse.R` uses closed forms, differencing and an independent joint
+Gaussian calculation integrated over the initial-state coordinates. Optional
+external oracle scripts exercise public KFAS and pinned JD+ APIs; neither
+package is required by the native kernel or its regular test suite. The
+standalone sanitizer harness is `test_diffuse_state_space.cpp`; compile it with
+`numerics.cpp`, `linear_algebra.cpp`, `state_space.cpp`,
+`diffuse_state_space.cpp` and the R LAPACK/BLAS flags above.
