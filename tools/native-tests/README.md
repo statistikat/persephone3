@@ -167,3 +167,18 @@ and the R LAPACK/BLAS flags above. Run both serial and `-fopenmp` builds where
 supported; `PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE`
 requires actual workers in the latter. The harness checks identical coefficients,
 whitening, covariance and likelihood, plus main-thread cancellation/reuse.
+
+## ARMA parameter/objective contract (20b.2a)
+
+The internal parameter map uses bounded reflections for fully free factors and
+checked coefficient coordinates for mixed fixed/free factors. A reusable plain
+R objective contract evaluates the existing concentrated regression likelihood
+at one admissible proposal, with explicit unavailable/failure statuses.
+See [arma-objective-contract.md](arma-objective-contract.md) for signs,
+constraints, numerical margins and the optimizer boundary.
+
+`test_arma_parameters.cpp` compiles with `src/arma_parameters.cpp` alone, without
+R headers/libraries. `test_arma_objective.cpp` adds `src/arma_parameters.cpp` and
+`src/arma_objective.cpp` to the regression harness's source/link list above.
+Use the same strict-warning and ASan/UBSan options. Mandatory R tests compare
+independent polynomial roots and dense Gaussian AR/MA objective profiles.

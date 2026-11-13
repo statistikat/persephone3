@@ -32,12 +32,10 @@ native_regression_coefficients <- function(coefficients, labels) {
   result
 }
 
-native_regression_likelihood <- function(series, regressors = NULL, coefficients = NULL,
-    ar = numeric(), ma = numeric(), seasonal_ar = numeric(), seasonal_ma = numeric(),
-    d = 0L, seasonal_d = 0L, mean = 0, variance = 1, transformation = "none",
+native_regression_inputs <- function(series, regressors = NULL, coefficients = NULL,
+    d = 0L, seasonal_d = 0L, mean = 0, transformation = "none",
     estimation_start = NULL, estimation_end = NULL, include_mean = FALSE,
-    include_drift = FALSE, forecast_horizon = 0L, backcast_horizon = 0L,
-    rank_tolerance = 1e-10) {
+    include_drift = FALSE, forecast_horizon = 0L, backcast_horizon = 0L) {
   include_mean <- native_regression_flag(include_mean, "include_mean")
   include_drift <- native_regression_flag(include_drift, "include_drift")
   d <- native_regression_order(d, "d")
@@ -76,6 +74,27 @@ native_regression_likelihood <- function(series, regressors = NULL, coefficients
   if (is.null(labels)) labels <- character()
   fixed <- native_regression_coefficients(coefficients, labels)
   design <- inputs$regressors[inputs$observed_rows, , drop = FALSE]
+  list(window = window, inputs = inputs, labels = labels, fixed = fixed,
+       design = design, generated = generated, d = d, seasonal_d = seasonal_d)
+}
+
+native_regression_likelihood <- function(series, regressors = NULL, coefficients = NULL,
+    ar = numeric(), ma = numeric(), seasonal_ar = numeric(), seasonal_ma = numeric(),
+    d = 0L, seasonal_d = 0L, mean = 0, variance = 1, transformation = "none",
+    estimation_start = NULL, estimation_end = NULL, include_mean = FALSE,
+    include_drift = FALSE, forecast_horizon = 0L, backcast_horizon = 0L,
+    rank_tolerance = 1e-10) {
+  prepared <- native_regression_inputs(series, regressors, coefficients, d,
+    seasonal_d, mean, transformation, estimation_start, estimation_end,
+    include_mean, include_drift, forecast_horizon, backcast_horizon)
+  window <- prepared$window
+  inputs <- prepared$inputs
+  labels <- prepared$labels
+  fixed <- prepared$fixed
+  design <- prepared$design
+  generated <- prepared$generated
+  d <- prepared$d
+  seasonal_d <- prepared$seasonal_d
   result <- .native_regression_likelihood(as.numeric(inputs$transformed), design,
     unname(fixed), ar, ma, seasonal_ar, seasonal_ma, inputs$observed_domain$frequency,
     d, seasonal_d, mean, variance, rank_tolerance)

@@ -105,12 +105,18 @@ jobs:
                 "$RUNNER_TEMP/persephone-parallel-$mode"
             else "$RUNNER_TEMP/persephone-parallel-$mode"; fi
           done
-          for harness in linear_algebra state_space diffuse_state_space regression_likelihood; do
+          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
+            -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
+            src/arma_parameters.cpp tools/native-tests/test_arma_parameters.cpp \
+            -o "$RUNNER_TEMP/persephone-arma-parameters"
+          "$RUNNER_TEMP/persephone-arma-parameters"
+          for harness in linear_algebra state_space diffuse_state_space regression_likelihood arma_objective; do
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
               $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
               src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
-              src/diffuse_state_space.cpp src/regression_likelihood.cpp "tools/native-tests/test_${harness}.cpp" \
+              src/diffuse_state_space.cpp src/regression_likelihood.cpp \
+              src/arma_parameters.cpp src/arma_objective.cpp "tools/native-tests/test_${harness}.cpp" \
               $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
               $(R CMD config FLIBS) $(R CMD config --ldflags) \
               -o "$RUNNER_TEMP/persephone-${harness}"

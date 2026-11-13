@@ -66,6 +66,11 @@ if ("--native" %in% args) {
             regression$regression$rank == 2L,
             isTRUE(all.equal(unname(regression$regression$coefficients), c(3, 2))),
             regression$likelihood$finite_count == 20L)
+  objective_setup <- getFromNamespace("native_arma_objective_setup", "persephone3")
+  objective_value <- getFromNamespace("native_arma_objective", "persephone3")
+  objective <- objective_value(objective_setup(sin(x), ar = NA_real_))
+  stopifnot("arma_objective" %in% cap$primitives, objective$available,
+            is.finite(objective$value), objective$likelihood$nparams_profiled == 2)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

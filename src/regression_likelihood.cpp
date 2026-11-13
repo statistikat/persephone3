@@ -166,12 +166,8 @@ void whiten_columns(RegressionLikelihood& result, const RegressionDesign& design
 
 } // namespace
 
-RegressionLikelihood sarima_regression_likelihood(
-    const MaskedSeries& series, const RegressionDesign& design,
-    const std::vector<double>& ar, const std::vector<double>& ma,
-    const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
-    int period, int d, int seasonal_d, double mean, double variance,
-    double rank_tolerance, const Interrupt& interrupt) {
+void validate_regression_inputs(const MaskedSeries& series, const RegressionDesign& design,
+    double mean, double variance, double rank_tolerance, const Interrupt& interrupt) {
     series.validate();
     const auto rows = series.values.size();
     validate_design(design, rows, interrupt);
@@ -179,6 +175,17 @@ RegressionLikelihood sarima_regression_likelihood(
         throw std::invalid_argument("regression rank tolerance must be strictly between zero and one");
     }
     if (!std::isfinite(mean)) throw std::invalid_argument("mean must be finite");
+    if (!std::isfinite(variance) || variance <= 0) throw std::invalid_argument("innovation scale variance must be finite and positive");
+}
+
+RegressionLikelihood sarima_regression_likelihood(
+    const MaskedSeries& series, const RegressionDesign& design,
+    const std::vector<double>& ar, const std::vector<double>& ma,
+    const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
+    int period, int d, int seasonal_d, double mean, double variance,
+    double rank_tolerance, const Interrupt& interrupt) {
+    validate_regression_inputs(series, design, mean, variance, rank_tolerance, interrupt);
+    const auto rows = series.values.size();
     if ((d > 0 || seasonal_d > 0) && mean != 0) throw std::invalid_argument("integrated SARIMA requires mean zero; use an explicit drift regressor");
     const double unavailable = std::numeric_limits<double>::quiet_NaN();
     RegressionLikelihood result{};

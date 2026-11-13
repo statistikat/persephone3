@@ -10,6 +10,69 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// native_arma_parameter_map
+Rcpp::List native_arma_parameter_map(SEXP specification, SEXP initial, SEXP margin);
+RcppExport SEXP _persephone3_native_arma_parameter_map(SEXP specificationSEXP, SEXP initialSEXP, SEXP marginSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type specification(specificationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial(initialSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_parameter_map(specification, initial, margin));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_arma_decode
+Rcpp::List native_arma_decode(SEXP specification, SEXP initial, SEXP coordinates, SEXP margin);
+RcppExport SEXP _persephone3_native_arma_decode(SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP marginSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type specification(specificationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial(initialSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coordinates(coordinatesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_decode(specification, initial, coordinates, margin));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_arma_admissibility
+Rcpp::List native_arma_admissibility(SEXP coefficients, SEXP moving_average, SEXP margin);
+RcppExport SEXP _persephone3_native_arma_admissibility(SEXP coefficientsSEXP, SEXP moving_averageSEXP, SEXP marginSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type coefficients(coefficientsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type moving_average(moving_averageSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_admissibility(coefficients, moving_average, margin));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_arma_objective
+Rcpp::List native_arma_objective(SEXP values, SEXP design, SEXP coefficients, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian);
+RcppExport SEXP _persephone3_native_arma_objective(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type design(designSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coefficients(coefficientsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type specification(specificationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial(initialSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coordinates(coordinatesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type d(dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_d(seasonal_dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rank_tolerance(rank_toleranceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type log_jacobian(log_jacobianSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_objective(values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_diffuse_likelihood
 Rcpp::List native_diffuse_likelihood(SEXP values, SEXP transition, SEXP observation, SEXP noise_loading, SEXP initial_state, SEXP finite_loading, SEXP diffuse_loading, SEXP observation_variance, SEXP mean, SEXP variance);
 RcppExport SEXP _persephone3_native_diffuse_likelihood(SEXP valuesSEXP, SEXP transitionSEXP, SEXP observationSEXP, SEXP noise_loadingSEXP, SEXP initial_stateSEXP, SEXP finite_loadingSEXP, SEXP diffuse_loadingSEXP, SEXP observation_varianceSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
@@ -221,6 +284,10 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
+    {"_persephone3_native_arma_decode", (DL_FUNC) &_persephone3_native_arma_decode, 4},
+    {"_persephone3_native_arma_admissibility", (DL_FUNC) &_persephone3_native_arma_admissibility, 3},
+    {"_persephone3_native_arma_objective", (DL_FUNC) &_persephone3_native_arma_objective, 13},
     {"_persephone3_native_diffuse_likelihood", (DL_FUNC) &_persephone3_native_diffuse_likelihood, 10},
     {"_persephone3_native_sarima_likelihood", (DL_FUNC) &_persephone3_native_sarima_likelihood, 10},
     {"_persephone3_native_time_domain", (DL_FUNC) &_persephone3_native_time_domain, 4},

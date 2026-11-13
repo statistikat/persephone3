@@ -20,6 +20,11 @@ struct RegressionDesign {
     std::vector<std::uint8_t> fixed;
 };
 
+// Shared preflight for fitting and optimization candidates. Invalid data and
+// controls remain errors even when a candidate's ARMA parameters are rejected.
+void validate_regression_inputs(const MaskedSeries& series, const RegressionDesign& design,
+    double mean, double variance, double rank_tolerance, const Interrupt& interrupt = {});
+
 struct RegressionLikelihood {
     std::vector<double> coefficients;
     std::vector<std::uint8_t> fixed;
