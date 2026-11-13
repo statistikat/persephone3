@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include "core/arma_objective.hpp"
 #include "core/arma_optimizer.hpp"
+#include "core/arma_identification.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -145,6 +146,25 @@ Rcpp::List objective_output(const persephone::ArmaObjective& result, std::size_t
     } else output["likelihood"] = R_NilValue;
     return output;
 }
+Rcpp::List identification_output(const persephone::ArmaIdentification& result) {
+    Rcpp::List out = Rcpp::List::create(Rcpp::_["schema_version"] = 1,
+        Rcpp::_["status"] = result.status, Rcpp::_["parameter_status"] = result.parameter_status,
+        Rcpp::_["scope"] = "local_transfer_sensitivity", Rcpp::_["statistical_identification"] = "not_assessed",
+        Rcpp::_["coordinates"] = "free_polynomial_coefficients",
+        Rcpp::_["free_parameters"] = static_cast<int>(result.free_parameters),
+        Rcpp::_["rank"] = result.parameter_status == "admissible" ? result.rank : NA_INTEGER,
+        Rcpp::_["singular_ratio"] = optional(result.singular_ratio),
+        Rcpp::_["minimum_reflection_slack"] = optional(result.minimum_reflection_slack),
+        Rcpp::_["singular_values"] = numeric(result.singular_values),
+        Rcpp::_["column_norms"] = numeric(result.column_norms),
+        Rcpp::_["rank_tolerance"] = result.rank_tolerance, Rcpp::_["near_tolerance"] = result.near_tolerance);
+    if (result.numerator_jacobian) {
+        const auto& a = *result.numerator_jacobian;
+        out["numerator_jacobian"] = Rcpp::NumericMatrix(static_cast<int>(a.rows()),
+            static_cast<int>(a.columns()), a.values().begin());
+    } else out["numerator_jacobian"] = R_NilValue;
+    return out;
+}
 } // namespace
 
 // [[Rcpp::export(name = ".native_arma_parameter_map")]]
@@ -178,6 +198,16 @@ Rcpp::List native_arma_parameter_map(SEXP specification, SEXP initial = R_NilVal
 Rcpp::List native_arma_decode(SEXP specification, SEXP initial, SEXP coordinates, SEXP margin = R_NilValue) {
     const auto map = parameter_map(specification, initial, margin);
     return decoded(map.decode(Rcpp::as<std::vector<double>>(vector(coordinates, "ARMA coordinates", 64))));
+}
+
+// [[Rcpp::export(name = ".native_arma_identification")]]
+Rcpp::List native_arma_identification(SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP margin = R_NilValue, SEXP rank_tolerance = R_NilValue, SEXP near_tolerance = R_NilValue) {
+    const auto map = parameter_map(specification, initial, margin);
+    return identification_output(persephone::arma_identification(map,
+        Rcpp::as<std::vector<double>>(vector(coordinates, "ARMA coordinates", 64)),
+        integer(period, "period", 0, 12), scalar(rank_tolerance, "identification rank tolerance", 1e-10),
+        scalar(near_tolerance, "identification near tolerance", 1e-4), [] { Rcpp::checkUserInterrupt(); }));
 }
 
 // [[Rcpp::export(name = ".native_arma_admissibility")]]
@@ -292,5 +322,8 @@ Rcpp::List native_arma_optimize(SEXP values, SEXP design, SEXP coefficients,
     out["trace"]=history; out["control"]=control_output(c);
     out["method"]="bfgs_feasible_armijo";
     out["gradient_coordinates"]="unit_reflection_or_free_coefficient";
+    out["parameter_diagnostics"]=identification_output(persephone::arma_identification(map,
+        last->coordinates, integer(period,"period",0,12), 1e-10, 1e-4,
+        [] { Rcpp::checkUserInterrupt(); }));
     return out;
 }

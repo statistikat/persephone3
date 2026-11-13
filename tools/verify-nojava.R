@@ -75,6 +75,9 @@ if ("--native" %in% args) {
   fitted <- optimize_arma(objective_setup(sin(x), ar = NA_real_))
   stopifnot("arma_optimization" %in% cap$primitives, fitted$converged,
             fitted$final$available, is.finite(fitted$final$value))
+  stopifnot("arma_identification" %in% cap$primitives,
+            fitted$parameter_diagnostics$status == "full_rank_transfer",
+            fitted$parameter_diagnostics$statistical_identification == "not_assessed")
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

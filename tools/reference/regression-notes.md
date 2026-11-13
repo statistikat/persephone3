@@ -48,10 +48,11 @@ for the log-Jacobian. These are bounded roundoff checks using the existing
 tolerance is inferred from this synthetic matrix.
 
 The compiled native implementation passes the same **432 cases / 8,640 native
-checks** against the independent construction. Maximum absolute discrepancies
-are `2.10e-14` for coefficients, `2.34e-12` for profile likelihood, `1.14e-13`
+checks** against the independent construction. Rechecking after 20b.2b.2's
+affine regression centering gives maximum absolute discrepancies
+of `8.91e-14` for coefficients, `2.34e-12` for profile likelihood, `1.14e-13`
 for the likelihood at supplied variance 1.7, `2.28e-13` for the sum of squares,
-`3.56e-13` for unit-scale coefficient covariance and `1.98e-14` for residual-df
+`3.56e-13` for unit-scale coefficient covariance and `1.75e-13` for residual-df
 covariance; the Jacobian agrees exactly. The native probe additionally passes
 **72 generated mean/drift cases / 288 checks**, **3 explicit alias cases /
 9 checks**, and **4 future-context cases / 8 checks**. It checks original

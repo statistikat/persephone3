@@ -68,5 +68,10 @@ LeastSquaresResult qr_least_squares(const DenseMatrix& matrix,
                                     double rank_tolerance = 1e-10,
                                     const Interrupt& interrupt = {});
 
+// DGESVD singular values in descending order. No vectors or covariance are
+// computed. The input is copied; all LAPACK work stays on the calling thread.
+std::vector<double> singular_values(const DenseMatrix& matrix,
+                                    const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

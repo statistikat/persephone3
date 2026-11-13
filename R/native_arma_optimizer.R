@@ -19,6 +19,7 @@ native_arma_optimize <- function(objective,
   for (field in c("initial", "final")) {
     if (!is.null(result[[field]]$likelihood)) names(result[[field]]$likelihood$regression_coefficients) <- data$labels
   }
+  result$parameter_diagnostics <- native_arma_identification_labels(result$parameter_diagnostics, p)
   structure(c(result, list(objective = objective$objective,
     normalization = objective$normalization, adjustment = objective$adjustment)),
     class = "persephone_native_arma_optimization")

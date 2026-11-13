@@ -197,3 +197,19 @@ For `test_arma_optimizer.cpp`, add `src/optimizer.cpp` and
 `src/arma_optimizer.cpp` to the objective harness source/link list above.
 Both support the same strict-warning/ASan/UBSan workflow. The R suite uses
 independent dense Gaussian minima for scalar, joint, mixed and seasonal models.
+
+## Fitted-model qualification and transfer sensitivity (20b.2b.2)
+
+The [fit qualification notes](../reference/arma-fit-notes.md) describe 64
+monthly/quarterly cases, persistent-AR controls, independent density minima,
+alternate starts and pinned direct comparisons. These exposed a precision loss
+with large drift terms; affine regression centering before whitening resolves
+it without changing the model or optimizer tolerances.
+
+`native_arma_identification()` and the optimizer's `parameter_diagnostics`
+screen exact/near parameter redundancy using an algebraic transfer Jacobian and
+column-normalized SVD. The [diagnostic contract](arma-identification-contract.md)
+distinguishes this structural screen from finite-sample identification and
+uncertainty. Compile `test_arma_identification.cpp` with `numerics.cpp`,
+`linear_algebra.cpp`, `arma_parameters.cpp`, `arma_identification.cpp` and the
+R LAPACK/BLAS flags above; strict warnings and ASan/UBSan cover all callbacks.

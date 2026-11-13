@@ -44,6 +44,14 @@ columns. Their coefficients may also be fixed. An integrated model's scalar
 
 ## Shared whitening and concentrated ML
 
+Since 20b.2b.2, an ordinary least-squares centering vector `b0` is obtained from
+observed response/design rows before whitening. The response channel filters
+`y-X*b0`, and GLS returns `b0` plus the fitted correction. This affine change
+reduces cancellation for large drift levels; it changes neither the statistical
+model nor the actual whitened-design rank test. Original-response whitening
+outputs are reconstructed using `L(y)=L(y-X*b0)+L(X)*b0`. The centering estimate
+is not a fitted coefficient, covariance estimate or permission to drop columns.
+
 The covariance filter runs once on a zero response with the actual observation
 mask and records its gains. The adjusted response and every free design column
 are propagated through the same gains, state transition and mask. Only finite
@@ -127,7 +135,7 @@ and extreme numeric range checks. Prebuilt BLAS/LAPACK is not instrumented.
 The read-only [reference probes](../reference/regression-notes.md) qualify the
 bounded pinned-JD+ conventions without changing stored fixtures or tolerances.
 
-Bounded ARMA optimization is now delivered in 20b.2b.1; wider fitted-reference
-qualification remains 20b.2b.2. Estimated-ARMA uncertainty,
+Bounded ARMA optimization and the prospective fitted-reference matrix are
+delivered in 20b.2b.1–2. Estimated-ARMA uncertainty,
 coefficient-aware forecasts, automatic transformation/model selection,
 outlier search and native X-13/TRAMO-SEATS remain separate work.

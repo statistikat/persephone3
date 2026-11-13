@@ -107,8 +107,32 @@ std::vector<double> regression_covariance(const DenseMatrix& design,
     return covariance;
 }
 
+std::vector<double> regression_center(const RegressionLikelihood& result,
+    const RegressionDesign& design, double mean, double rank_tolerance,
+    const Interrupt& interrupt) {
+    const auto free = result.free_columns.size();
+    std::vector<double> center(free, 0);
+    if (free == 0 || result.observed_count == 0) return center;
+    DenseMatrix x(result.observed_count, free), y(result.observed_count, 1);
+    const auto rows = result.adjusted_response.values.size();
+    std::size_t row = 0;
+    for (std::size_t i = 0; i < rows; ++i) {
+        if ((i & 255U) == 0) checkpoint(interrupt);
+        if (result.adjusted_response.missing[i]) continue;
+        y(row, 0) = checked(static_cast<long double>(result.adjusted_response.values[i]) - mean);
+        for (std::size_t j = 0; j < free; ++j) x(row, j) = design.values[i + rows * result.free_columns[j]];
+        ++row;
+    }
+    // This is only an affine change of regression coordinates. The whitened
+    // design still determines the actual GLS rank, estimate and covariance.
+    // Centering before time propagation avoids differencing a large fitted
+    // drift in finite precision at every likelihood evaluation.
+    const auto fit = qr_least_squares(x, y, rank_tolerance, interrupt);
+    return fit.coefficients.values();
+}
+
 void whiten_columns(RegressionLikelihood& result, const RegressionDesign& design,
-                    const SarimaLikelihood& baseline, double mean,
+                    const SarimaLikelihood& baseline, double mean, const std::vector<double>& center,
                     const Interrupt& interrupt) {
     const auto rows = result.adjusted_response.values.size();
     const auto states = baseline.model.transition.rows();
@@ -136,9 +160,11 @@ void whiten_columns(RegressionLikelihood& result, const RegressionDesign& design
                 if (!result.adjusted_response.missing[t]) {
                     long double prediction = 0;
                     for (std::size_t i = 0; i < states; ++i) prediction += static_cast<long double>(observation[i]) * state[offset + i];
-                    const auto value = channel == 0 ?
-                        checked(static_cast<long double>(result.adjusted_response.values[t]) - mean) :
-                        design.values[t + rows * result.free_columns[channel - 1]];
+                    long double centered = static_cast<long double>(result.adjusted_response.values[t]) - mean;
+                    if (channel == 0) for (std::size_t j = 0; j < center.size(); ++j) {
+                        centered -= static_cast<long double>(design.values[t + rows * result.free_columns[j]]) * center[j];
+                    }
+                    const auto value = channel == 0 ? checked(centered) : design.values[t + rows * result.free_columns[channel - 1]];
                     const auto innovation = checked(static_cast<long double>(value) - prediction);
                     if (finite_index[t] < count) {
                         const auto standardized = checked(innovation / std::sqrt(variances[t]));
@@ -248,7 +274,16 @@ RegressionLikelihood sarima_regression_likelihood(
         }
     }
     if (result.finite_rows.size() != count) throw std::logic_error("regression finite-row accounting disagrees with the state model");
-    whiten_columns(result, design, baseline, mean, interrupt);
+    const auto center = regression_center(result, design, mean, rank_tolerance, interrupt);
+    whiten_columns(result, design, baseline, mean, center, interrupt);
+    const auto centered_response = result.whitened_response;
+    // Public whitening quantities retain their original-response convention.
+    for (std::size_t i = 0; free > 0 && i < count; ++i) {
+        if ((i & 255U) == 0) checkpoint(interrupt);
+        long double value = centered_response[i];
+        for (std::size_t j = 0; j < free; ++j) value += static_cast<long double>(result.whitened_design[i + count * j]) * center[j];
+        result.whitened_response[i] = checked(value);
+    }
     for (std::size_t j = 0; j < free; ++j) {
         checkpoint(interrupt);
         const auto column = result.free_columns[j];
@@ -283,13 +318,13 @@ RegressionLikelihood sarima_regression_likelihood(
         result.status = result.likelihood_status = result.profile_status = "no_finite_innovations";
         return result;
     }
-    result.whitened_residuals = result.whitened_response;
+    result.whitened_residuals = centered_response;
     if (free > 0) {
         DenseMatrix whitened(count, free, result.whitened_design);
         for (std::size_t j = 0; j < free; ++j) {
             if (result.numerically_zero_columns[j]) std::fill_n(whitened.values().data() + count * j, count, 0);
         }
-        const auto solved = qr_least_squares(whitened, DenseMatrix(count, 1, result.whitened_response), rank_tolerance, interrupt);
+        const auto solved = qr_least_squares(whitened, DenseMatrix(count, 1, centered_response), rank_tolerance, interrupt);
         result.rank = static_cast<std::size_t>(solved.rank);
         result.residual_df = count - result.rank;
         if (result.rank < free) {
@@ -298,7 +333,8 @@ RegressionLikelihood sarima_regression_likelihood(
             result.whitened_residuals.assign(count, unavailable);
             return result;
         }
-        for (std::size_t j = 0; j < free; ++j) result.coefficients[result.free_columns[j]] = solved.coefficients(j, 0);
+        for (std::size_t j = 0; j < free; ++j) result.coefficients[result.free_columns[j]] = checked(
+            static_cast<long double>(center[j]) + solved.coefficients(j, 0));
         result.whitened_residuals = solved.residuals.values();
         // Full row/column rank spans every finite response. Its concentrated
         // residual is mathematically zero, regardless of solution roundoff.

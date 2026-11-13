@@ -37,6 +37,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_arma_identification
+Rcpp::List native_arma_identification(SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP margin, SEXP rank_tolerance, SEXP near_tolerance);
+RcppExport SEXP _persephone3_native_arma_identification(SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP marginSEXP, SEXP rank_toleranceSEXP, SEXP near_toleranceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type specification(specificationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial(initialSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coordinates(coordinatesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rank_tolerance(rank_toleranceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type near_tolerance(near_toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_identification(specification, initial, coordinates, period, margin, rank_tolerance, near_tolerance));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_arma_admissibility
 Rcpp::List native_arma_admissibility(SEXP coefficients, SEXP moving_average, SEXP margin);
 RcppExport SEXP _persephone3_native_arma_admissibility(SEXP coefficientsSEXP, SEXP moving_averageSEXP, SEXP marginSEXP) {
@@ -310,6 +327,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
     {"_persephone3_native_arma_decode", (DL_FUNC) &_persephone3_native_arma_decode, 4},
+    {"_persephone3_native_arma_identification", (DL_FUNC) &_persephone3_native_arma_identification, 7},
     {"_persephone3_native_arma_admissibility", (DL_FUNC) &_persephone3_native_arma_admissibility, 3},
     {"_persephone3_native_arma_objective", (DL_FUNC) &_persephone3_native_arma_objective, 13},
     {"_persephone3_native_arma_optimize", (DL_FUNC) &_persephone3_native_arma_optimize, 14},

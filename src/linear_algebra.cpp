@@ -113,6 +113,38 @@ void DenseMatrix::validate(const Interrupt& interrupt) const {
     }
 }
 
+std::vector<double> singular_values(const DenseMatrix& matrix, const Interrupt& interrupt) {
+    matrix.validate(interrupt);
+    const int m = static_cast<int>(matrix.rows()), n = static_cast<int>(matrix.columns());
+    const auto small = static_cast<std::size_t>(std::min(m, n));
+    const auto minimum = std::max(3 * small + static_cast<std::size_t>(std::max(m, n)), 5 * small);
+    workspace_size(1, minimum);
+    auto a = matrix;
+    std::vector<double> values(small);
+    double unused_u = 0, unused_v = 0, query = 0;
+    const int one = 1;
+    int info = 0, lwork = -1;
+    checkpoint(interrupt);
+    F77_CALL(dgesvd)("N", "N", &m, &n, a.values().data(), &m, values.data(),
+        &unused_u, &one, &unused_v, &one, &query, &lwork, &info FCONE FCONE);
+    check_info(info, "DGESVD workspace query");
+    lwork = workspace_size(query, minimum);
+    std::vector<double> work(static_cast<std::size_t>(lwork));
+    checkpoint(interrupt);
+    F77_CALL(dgesvd)("N", "N", &m, &n, a.values().data(), &m, values.data(),
+        &unused_u, &one, &unused_v, &one, work.data(), &lwork, &info FCONE FCONE);
+    check_info(info, "DGESVD");
+    checkpoint(interrupt);
+    double previous = std::numeric_limits<double>::infinity();
+    for (const auto value : values) {
+        if (!std::isfinite(value) || value < 0 || value > previous) {
+            throw std::runtime_error("DGESVD returned invalid singular values");
+        }
+        previous = value;
+    }
+    return values;
+}
+
 CholeskyFactor cholesky_factor(const DenseMatrix& matrix, const Interrupt& interrupt) {
     matrix.validate(interrupt);
     if (matrix.rows() != matrix.columns()) {

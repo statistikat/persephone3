@@ -177,3 +177,19 @@ Rscript tools/reference/verify-diffuse.R --native --source --second-order
 The additional second-order lane reports accepted cases separately from a
 registered numerical rejection. Neither a bounded likelihood comparison nor
 a documented rejection establishes full seasonal-adjustment support.
+
+## Estimated fixed-order models
+
+[ARMA fit qualification](arma-fit-notes.md) compares 64 prospective model cases
+and four persistent-AR controls against both pinned preprocessing engines,
+with independent Gaussian minima and future-context invariants. It preserves
+the existing corpus and tolerance manifest:
+
+```sh
+Rscript tools/reference/verify-arma-fits.R
+Rscript tools/reference/verify-arma-fits.R --source
+```
+
+The mandatory native suite runs the independent cases without Java. Structural
+parameter redundancy is assessed separately from convergence; finite-sample
+information and estimated-parameter uncertainty remain open.

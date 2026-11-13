@@ -137,6 +137,12 @@ A small gradient can occur on a ridge, saddle or nonidentified model. It does
 not certify a local/global minimum, common-root exclusion, information-matrix
 rank, inferential precision or equivalence to a JD+ fitting procedure.
 
+Slice 20b.2b.2 adds `parameter_diagnostics`: an algebraic, constraint-aware
+[transfer-sensitivity screen](arma-identification-contract.md) at the retained
+point. It adds no likelihood evaluations, changes no stopping status and does
+not replace finite-sample identification. Its SVD work and interrupt callbacks
+run on the main thread after the optimizer returns.
+
 ## Validation and next work
 
 The mandatory R suite has **1,196 assertions**, including 58 fits against
@@ -155,8 +161,9 @@ precision failure and all 12 callbacks of its cancellation case.
 density and checks 967 actual main-thread callback boundaries plus reuse. Both
 pass strict C++17 and ASan/UBSan; prebuilt numerical libraries are not instrumented.
 
-Next, **20b.2b.2** qualifies fitted models against pinned JD+ APIs and addresses
-near-unit/common-root/weak-identification cases and multi-platform agreement.
-Broader fit acceptance, ARMA/regression uncertainty, forecasts and the native
-seasonal-adjustment pipeline remain separate work. This slice changes no
-reference fixtures, statistical tolerances, model-selection policy or defaults.
+**20b.2b.2** now adds [bounded fitted-model qualification](../reference/arma-fit-notes.md)
+against pinned JD+ APIs, independent minima and difficult starts, plus the
+structural redundancy screen. Broader fit acceptance, finite-sample information,
+ARMA/regression uncertainty, platform evidence, forecasts and the native
+seasonal-adjustment pipeline remain separate work. Reference fixtures,
+statistical tolerances, model-selection policy and defaults are unchanged.

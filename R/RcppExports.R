@@ -9,6 +9,10 @@
     .Call(`_persephone3_native_arma_decode`, specification, initial, coordinates, margin)
 }
 
+.native_arma_identification <- function(specification, initial, coordinates, period, margin = NULL, rank_tolerance = NULL, near_tolerance = NULL) {
+    .Call(`_persephone3_native_arma_identification`, specification, initial, coordinates, period, margin, rank_tolerance, near_tolerance)
+}
+
 .native_arma_admissibility <- function(coefficients, moving_average, margin = NULL) {
     .Call(`_persephone3_native_arma_admissibility`, coefficients, moving_average, margin)
 }
