@@ -188,8 +188,16 @@ the existing corpus and tolerance manifest:
 ```sh
 Rscript tools/reference/verify-arma-fits.R
 Rscript tools/reference/verify-arma-fits.R --source
+Rscript tools/reference/verify-arma-fits.R --no-timing
 ```
 
 The mandatory native suite runs the independent cases without Java. Structural
 parameter redundancy is assessed separately from convergence; finite-sample
 information and estimated-parameter uncertainty remain open.
+
+The comparison now reports repeated elapsed times for the same 64 cases through
+all three APIs, both prepared fit calls and setup plus fitting. Startup and warm-up
+are separate. Use `--timing-output=<existing-empty-directory>` to save raw rounds,
+per-model comparisons and runtime/thread metadata outside the frozen corpus;
+`--no-timing` runs only numerical qualification. See the
+[timing protocol](arma-fit-notes.md#runtime-comparison) for aggregation and scope.

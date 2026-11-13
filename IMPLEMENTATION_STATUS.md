@@ -1,6 +1,7 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-13**. Implementation source: **20b.2b.2 fitted-model qualification and transfer diagnostics following `eec1254`**, package **0.1.0**,
+Updated: **2026-11-13**. Numerical implementation: **`9cd42b3` (20b.2b.2)**;
+this follow-up adds matched API timing to its comparison tooling. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
 
@@ -272,6 +273,42 @@ establish those behaviors.
   regression qualification remains in `/tmp/persephone-regression-validation`,
   and diffuse/window evidence in `/tmp/persephone-sparse-validation`. These are
   temporary evidence, not repository inputs. No dashboard behavior changed.
+
+### Native versus JDemetra+ runtime
+
+The comparison now includes repeated wall-clock measurements on the **same 64
+fixed-order cases per engine**, separately timing prepared fit calls and setup
+plus fitting. Three warmed rounds use calibrated batches of at least 50 ms and
+rotate engine order. The installed native build is `9cd42b3`, on local macOS
+arm64 with R 4.5.2, JD+ 3.9.0, two requested/probed native OpenMP workers and
+BLAS thread limits of one.
+
+| Backend | Prepared fits: median total / 64 cases | Setup + fits: median total / 64 cases | Setup + fit: mean per case |
+| --- | ---: | ---: | ---: |
+| Native C++/Rcpp | 9.006 s | 9.051 s | 141.43 ms |
+| JDemetra+ X-13 preprocessing | 0.195 s | 0.284 s | 4.43 ms |
+| JDemetra+ TRAMO preprocessing | 0.181 s | 0.258 s | 4.03 ms |
+
+The current native path is **31.9× slower than X-13 and 35.1× slower than TRAMO
+including setup** on this workload. Native setup-plus-fit round totals range
+from 9.050 to 9.067 s; X-13 from 0.282 to 0.290 s; TRAMO from 0.255 to 0.262 s.
+Monthly cases account for 7.920 s of the native total, with airline and mixed
+factor models the largest workloads. Profiling must determine the cause before
+selecting an optimization.
+
+Startup is separate: native package loading took 0.495 s; reference-wrapper/JVM
+loading 0.334 s; pin verification 0.048 s. These sequential phases share R
+dependencies. The fit table excludes startup, warm-up, independent-oracle
+calculations and validation; it compares the existing APIs, whose returned
+outputs differ. It is not a complete seasonal-adjustment runtime comparison.
+
+The run retains **1,152 batches / 14,092 measured fit calls** and passes the
+unchanged **144 direct fits / 1,517 numerical checks**. See the protocol, per-model
+results and raw metadata in `tools/reference/arma-fit-notes.md` and
+`tools/reference/timings/2026-11-13-arma-fit/`. The timing extension changes only
+tooling/documentation; the 12,322-assertion full package check above remains the
+validation of the unchanged compiled implementation. Timing aggregation, ratio
+direction, argument checks and report reconstruction were checked separately.
 
 ### Previously completed validation, rechecked as evidence
 
@@ -602,6 +639,7 @@ The next commits should be:
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
 | 20c.1 | Define and implement finite-sample information diagnostics and estimated-ARMA coefficient uncertainty, using the delivered transfer screen as a separate structural guard | Independent curvature/information identities, fixed/free projections, scale and degrees-of-freedom conventions, weak/rank-deficient cases and pinned fitted covariance comparisons; optimizer convergence alone never enables inference |
 | 20c.2 / 20d | Qualify joint regression uncertainty and standardized/interpolated residuals, then forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
+| 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
 | 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
@@ -624,7 +662,8 @@ broader performance tuning, broad plot-style unification, unrelated dependency
 slimming, and removal of archival code until correctness and compatibility are
 covered. Removing Java/rjd3 is now an explicit project objective, gated by
 native feature parity rather than treated as routine dependency cleanup.
-No performance measurements were taken in this review. Abstract base-class
+Matched API timings are now recorded with the fitted-model comparison; wider
+scalability and performance tuning remain open. Abstract base-class
 `stop("implement ...")` hooks remain intentional and are not counted as defects.
 
 ## C++/Rcpp backend migration
@@ -1288,8 +1327,8 @@ Suggested responsibilities, not assignments to specific people:
 One person can cover several implementation roles, but statistical equivalence
 should receive independent review. Treat the work as a substantial numerical
 software project; a reliable schedule requires the scope inventory and first
-native pilot. Neither a runtime speedup nor a complete-port delivery date has
-been established by this source review.
+native pilot. The measured API timings cover the stated fixed-order matrix;
+they do not establish a general runtime speedup or a complete-port delivery date.
 
 ### Sources for the migration plan
 

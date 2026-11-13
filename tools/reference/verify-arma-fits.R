@@ -1,19 +1,75 @@
-# Read-only pinned fixed-order fit qualification; never writes reference data.
+# Pinned fixed-order qualification and matched timings; frozen references stay read-only.
 args <- commandArgs(trailingOnly = FALSE)
 script <- sub("^--file=", "", args[startsWith(args, "--file=")][[1L]])
 tooling <- dirname(normalizePath(script))
-options <- commandArgs(trailingOnly = TRUE)
-if (any(!options %in% "--source")) stop("Usage: verify-arma-fits.R [--source]")
+source(file.path(tooling, "fit-timing.R"))
+config <- fit_timing_options(commandArgs(trailingOnly = TRUE))
 source(file.path(tooling, "common.R"))
 source(file.path(tooling, "extended-fixtures.R"))
 root <- reference_root(); base_dir <- reference_fixture_dir(root)
+if (!is.null(config$output)) {
+  config$output <- normalizePath(config$output, mustWork = TRUE)
+  frozen <- normalizePath(base_dir, mustWork = TRUE)
+  if (!dir.exists(config$output) || config$output == frozen || startsWith(config$output, paste0(frozen, "/"))) {
+    stop("Timing output must be an existing directory outside the frozen reference corpus")
+  }
+  if (any(file.exists(file.path(config$output, c("raw.csv", "summary.csv", "by-model.csv", "metadata.R"))))) {
+    stop("Timing output already exists; choose an empty directory")
+  }
+}
 before <- extended_parent_hashes(base_dir)
-extended_assert_oracle(base_dir)
-if ("--source" %in% options) pkgload::load_all(root, quiet = TRUE, compile = FALSE)
+native_preloaded <- "persephone3" %in% loadedNamespaces()
+native_load <- fit_timing_once(function() {
+  if (config$source) pkgload::load_all(root, quiet = TRUE, compile = FALSE)
+  else if (!requireNamespace("persephone3", quietly = TRUE)) stop("Install persephone3 before comparing fits")
+})
+reference_preloaded <- any(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats", "rJava") %in% loadedNamespaces())
+reference_load <- fit_timing_once(function() {
+  for (package in c("rjd3toolkit", "rjd3x13", "rjd3tramoseats")) {
+    if (!requireNamespace(package, quietly = TRUE)) stop("Missing reference package: ", package)
+  }
+  # Public runtime query ensures JVM initialization has occurred inside this interval.
+  rJava::.jcall("java/lang/System", "S", "getProperty", "java.version")
+})
+pin <- fit_timing_once(function() extended_assert_oracle(base_dir))
 source(file.path(root, "inst/tinytest/fixtures/native/arma-fit-cases.R"))
 setup <- getFromNamespace("native_arma_objective_setup", "persephone3")
 optimize_native <- getFromNamespace("native_arma_optimize", "persephone3")
-evaluate <- getFromNamespace("native_arma_objective", "persephone3")
+control <- list(max_iterations = 200L, max_evaluations = 4000L)
+execute_native <- function(context) optimize_native(context, control = control)
+native_value <- function(result) {
+  if (!isTRUE(result$converged)) stop("Timed native fit did not converge")
+  result$final$value
+}
+reference_value <- function(result) -result$estimation$likelihood$adjustedll
+prepare_reference <- function(case, method) {
+  spec <- if (method == "x13") rjd3x13::regarima_spec("rg0") else rjd3tramoseats::tramo_spec("tr0")
+  # JD+ orders factors AR, seasonal AR, MA, seasonal MA; AR signs are negated.
+  order <- c("ar", "seasonal_ar", "ma", "seasonal_ma")
+  coefficient <- unlist(case$specification[order], use.names = FALSE)
+  sign <- rep(c(-1, -1, 1, 1), lengths(case$specification[order]))
+  free <- is.na(coefficient); coefficient[free] <- 0
+  spec <- rjd3toolkit::set_arima(spec, mean = 0, mean.type = "Undefined",
+    p = length(case$specification$ar), d = case$d, q = length(case$specification$ma),
+    bp = length(case$specification$seasonal_ar), bd = case$D, bq = length(case$specification$seasonal_ma),
+    coef = coefficient * sign, coef.type = ifelse(free, "Initial", "Fixed"))
+  spec <- rjd3toolkit::set_automodel(spec, enabled = FALSE)
+  spec <- rjd3toolkit::set_transform(spec, fun = if (case$arguments$transformation == "log") "Log" else "None")
+  spec <- rjd3toolkit::set_estimate(spec, tol = 1e-12, exact.ml = TRUE)
+  spec <- rjd3toolkit::add_usrdefvar(spec, name = "x", regeffect = "Trend")
+  spec <- rjd3toolkit::add_usrdefvar(spec, name = "fixed", coef = .2, regeffect = "Trend")
+  list(spec = spec, context = rjd3toolkit::modelling_context(variables = list(r = case$arguments$regressors)),
+    series = window(case$arguments$series, start = case$arguments$estimation_start,
+      end = case$arguments$estimation_end), free_parameters = sum(free))
+}
+reference_executor <- function(method) {
+  force(method)
+  function(input) if (method == "x13") rjd3x13::regarima_fast(input$series, input$spec, context = input$context) else
+    rjd3tramoseats::tramo_fast(input$series, input$spec, context = input$context)
+}
+native_preparer <- function(case) { force(case); function() do.call(setup, case$arguments) }
+reference_preparer <- function(case, method) { force(case); force(method); function() prepare_reference(case, method) }
+jobs <- list()
 checks <- 0L; failures <- character(); direct_fits <- 0L
 assert <- function(value, label) {
   checks <<- checks + 1L
@@ -26,39 +82,28 @@ maximum <- c(coefficient = 0, regression = 0, objective = 0, density = 0)
 cases <- arma_fit_cases()
 for (case in cases) {
   context <- do.call(setup, case$arguments)
-  native <- optimize_native(context, control = list(max_iterations = 200L, max_evaluations = 4000L))
+  native <- execute_native(context)
   assert(native$converged, paste(case$id, "native", native$status))
   if (!native$final$available) next
+  if (config$enabled) jobs[[length(jobs) + 1L]] <- fit_timing_job(case, "native", context,
+    native_preparer(case), execute_native, native_value, native$final$value)
   expected <- arma_fit_density(case, native$final$parameters$coefficients)
   close(native$final$value, expected$value, 2e-8, paste(case$id, "independent density"))
   close(native$final$likelihood$regression_coefficients, expected$beta, 2e-8, paste(case$id, "independent GLS"))
   maximum["density"] <- max(maximum["density"], abs(native$final$value - expected$value))
   for (method in c("x13", "tramoseats")) {
-    spec <- if (method == "x13") rjd3x13::regarima_spec("rg0") else rjd3tramoseats::tramo_spec("tr0")
-    # JD+ orders the factors AR, seasonal AR, MA, seasonal MA, with AR signs negated.
-    order <- c("ar", "seasonal_ar", "ma", "seasonal_ma")
-    coefficient <- unlist(case$specification[order], use.names = FALSE)
-    sign <- rep(c(-1, -1, 1, 1), lengths(case$specification[order]))
-    free <- is.na(coefficient); coefficient[free] <- 0
-    spec <- rjd3toolkit::set_arima(spec, mean = 0, mean.type = "Undefined",
-      p = length(case$specification$ar), d = case$d, q = length(case$specification$ma),
-      bp = length(case$specification$seasonal_ar), bd = case$D, bq = length(case$specification$seasonal_ma),
-      coef = coefficient * sign, coef.type = ifelse(free, "Initial", "Fixed"))
-    spec <- rjd3toolkit::set_automodel(spec, enabled = FALSE)
-    spec <- rjd3toolkit::set_transform(spec, fun = if (case$arguments$transformation == "log") "Log" else "None")
-    spec <- rjd3toolkit::set_estimate(spec, tol = 1e-12, exact.ml = TRUE)
-    spec <- rjd3toolkit::add_usrdefvar(spec, name = "x", regeffect = "Trend")
-    spec <- rjd3toolkit::add_usrdefvar(spec, name = "fixed", coef = .2, regeffect = "Trend")
+    prepared <- prepare_reference(case, method)
+    spec <- prepared$spec; model_context <- prepared$context; y <- prepared$series
     columns <- case$arguments$regressors
-    model_context <- rjd3toolkit::modelling_context(variables = list(r = columns))
-    y <- window(case$arguments$series, start = case$arguments$estimation_start,
-                end = case$arguments$estimation_end)
     direct_fits <- direct_fits + 1L
-    fit <- if (method == "x13") rjd3x13::regarima_fast(y, spec, context = model_context) else
-      rjd3tramoseats::tramo_fast(y, spec, context = model_context)
+    execute <- reference_executor(method)
+    fit <- execute(prepared)
     label <- paste(method, case$id)
     assert(is.list(fit) && !is.null(fit$estimation), paste(label, "reference fit"))
     if (!is.list(fit) || is.null(fit$estimation)) next
+    if (config$enabled) jobs[[length(jobs) + 1L]] <- fit_timing_job(case,
+      if (method == "x13") "jd_x13" else "jd_tramo", prepared,
+      reference_preparer(case, method), execute, reference_value, reference_value(fit))
     blocks <- lapply(c("phi", "theta", "bphi", "btheta"), function(key) {
       x <- fit$description$arima[[key]]
       if (is.null(x)) numeric() else as.numeric(x["value", ])
@@ -79,7 +124,7 @@ for (case in cases) {
     assert(identical(tail(names_beta, 2L), c("r.x", "r.fixed")), paste(label, "regressor order"))
     close(native$final$likelihood$regression_coefficients, beta[c(2, 3, 1)], 1e-5, paste(label, "regression coefficients"))
     close(likelihood$neffectiveobs, expected$finite, 0, paste(label, "effective observations"))
-    close(likelihood$nparams, sum(free) + 3L, 0, paste(label, "parameter count"))
+    close(likelihood$nparams, prepared$free_parameters + 3L, 0, paste(label, "parameter count"))
     # Evaluate the reference coefficients through an independent density too.
     direct_density <- arma_fit_density(case, blocks)
     close(-likelihood$ll, -direct_density$profile, 2e-8, paste(label, "reference density convention"))
@@ -132,3 +177,23 @@ cat("Cases", length(cases), "plus 4 persistent controls; direct fits", direct_fi
 print(maximum, digits = 9)
 if (length(failures)) { print(failures); stop("Fixed-order fit qualification failed", call. = FALSE) }
 cat("PASS: pinned fitted-model comparisons and independent densities\n")
+if (config$enabled) {
+  metadata <- list(schema_version = 1L, captured_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    source_commit = system2("git", c("-C", shQuote(root), "rev-parse", "HEAD"), stdout = TRUE),
+    native_version = as.character(utils::packageVersion("persephone3")),
+    native_library_sha256 = reference_sha256(getLoadedDLLs()[["persephone3"]][["path"]]),
+    timing_script_sha256 = reference_sha256(file.path(tooling, c("verify-arma-fits.R", "fit-timing.R"))),
+    native_load_mode = if (config$source) "development source" else "installed package",
+    native_preloaded = native_preloaded, reference_preloaded = reference_preloaded,
+    native_load_seconds = native_load$seconds, reference_load_seconds = reference_load$seconds,
+    reference_pin_seconds = pin$seconds, R = R.version.string, platform = R.version$platform,
+    OS = Sys.info()[c("sysname", "release", "machine")], logical_cores = parallel::detectCores(),
+    numerical_libraries = extSoftVersion(), java = pin$value$java,
+    reference_packages = lapply(pin$value$packages, function(package) package$Version),
+    native_parallel = getFromNamespace(".native_parallel_info", "persephone3")(),
+    thread_environment = Sys.getenv(c("PERSEPHONE_NUM_THREADS", "OMP_NUM_THREADS", "OMP_DYNAMIC",
+      "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "MKL_NUM_THREADS"), unset = NA_character_),
+    control = control, input_scope = "64 main-matrix cases; persistent and future-context controls excluded")
+  fit_timing_run(jobs, config, metadata)
+  stopifnot(identical(before, extended_parent_hashes(base_dir)))
+}
