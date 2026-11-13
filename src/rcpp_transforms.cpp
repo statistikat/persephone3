@@ -17,7 +17,7 @@ persephone::Transform transform_kind(SEXP input) {
 }
 
 persephone::MaskedSeries transform_input(SEXP input) {
-    if ((TYPEOF(input) != REALSXP && TYPEOF(input) != INTSXP) ||
+    if ((TYPEOF(input) != REALSXP && TYPEOF(input) != INTSXP) || Rf_isFactor(input) ||
         !Rf_isNull(Rf_getAttrib(input, R_DimSymbol))) {
         throw std::invalid_argument("series must be a real numeric vector without dimensions");
     }

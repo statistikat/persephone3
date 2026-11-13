@@ -26,7 +26,7 @@ expect_error(inverse(1, "auto"), "'none' or 'log'")
 expect_error(inverse(Inf, "log"), "finite")
 expect_error(inverse(1000, "log"), "overflowed or underflowed")
 expect_error(inverse(-1000, "log"), "overflowed or underflowed")
-for (bad in list(1+2i, "1", TRUE, list(1), matrix(1:4, 2), array(1:8, c(2, 2, 2)))) {
+for (bad in list(1+2i, "1", TRUE, factor("a"), list(1), matrix(1:4, 2), array(1:8, c(2, 2, 2)))) {
   expect_error(transform(bad), "real numeric vector")
   expect_error(inverse(bad), "real numeric vector")
 }
