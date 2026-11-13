@@ -2,17 +2,44 @@
 % Please edit documentation in R/fixOutlier.R
 \name{fixOutlier}
 \alias{fixOutlier}
-\title{Fix outliers in the model}
+\title{Fix detected outlier locations in the model}
 \usage{
-fixOutlier(x, timespan = 12, verbose = FALSE)
+fixOutlier(x, timespan = 12, verbose = FALSE, iterate = FALSE)
 }
 \arguments{
-\item{x}{a persephone object}
+\item{x}{A fitted Persephone single series, hierarchy or batch.}
 
-\item{timespan}{number of months from the end of the time series where outliers are not fixed}
+\item{timespan}{Number of months at the end of the observed series in which
+automatic detection remains allowed. Converted to observations with
+\code{ceiling(timespan * frequency / 12)}; a positive fraction of a quarterly
+observation protects the whole quarter. Zero fixes all detected locations
+and disables automatic detection. A window covering the complete series
+leaves the specification unchanged.}
 
-\item{verbose}{if TRUE the changed parameters will be reported}
+\item{verbose}{If TRUE, report newly specified outliers and the detection span.}
+
+\item{iterate}{If TRUE, also process hierarchy components recursively. The
+default changes only the direct aggregate. A batch has no aggregate, so
+its immediate members are always processed; this flag controls recursion
+within hierarchical members.}
+}
+\value{
+\code{x}, invisibly, after updating specifications in place. If any selected
+model has not been run, warns and returns \code{NULL} without changing models.
 }
 \description{
-Fixes detected outliers to prevent re-detection
+Adds eligible detected AO, LS and TC effects to the regression specification,
+preserving existing manual outliers. Their locations and types become
+explicit; their coefficients are still estimated when the model is rerun.
+}
+\details{
+The protected tail is intersected with the current estimation and detection
+spans. The function never enables disabled detection or broadens those spans.
+If that intersection is empty, automatic detection is disabled. Existing
+manually specified outliers, names and fixed coefficients are preserved.
+
+Results remain the results of the previous fit and become stale after a
+specification changes. Call \verb{$run()} again to estimate the new specification.
+Repeating the operation does not add duplicate type/date pairs. All selected
+updates are prepared before any object is changed.
 }
