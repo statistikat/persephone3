@@ -38,9 +38,11 @@ ht2
 \section{Public fields}{
   \if{html}{\out{<div class="r6-fields">}}
   \describe{
-    \item{\code{components}}{the sub series of the hierarchical time series}
+    \item{\code{components}}{The subseries. Reconstruct the hierarchy to replace
+components; changing model settings or direct/indirect choices is allowed.}
 
-    \item{\code{weights}}{the weights used for aggregating components}
+    \item{\code{weights}}{Aligned weights for weighted means (NULL for sums).
+Reconstruct the hierarchy to change weights after construction.}
 
     \item{\code{indirect}}{whether to use direct or indirect adjustment}
   }
@@ -152,7 +154,11 @@ returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[r
       \item{\code{weights}}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies
 for different time points. They must have the same length as the
-number of components.}
+number of components. Without weights, components are summed. With
+weights, aggregation is a weighted mean. Named inputs are aligned by
+component name. A short weight series must cover the first observation;
+its final value is carried forward only after its last supplied period.
+Parent weights can be inherited as sums of weighted child groups.}
       \item{\code{iterate}}{logical, if TRUE apply the given ... spec/params also to all components.
 For plain ts/mts components, method and template are inherited only if iterate is TRUE.}
       \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,

@@ -63,7 +63,11 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @param weights either a vector if the same weight is used for all time
     #'   points or a list of ts objects or a mts object if the weight varies
     #'   for different time points. They must have the same length as the
-    #'   number of components.
+    #'   number of components. Without weights, components are summed. With
+    #'   weights, aggregation is a weighted mean. Named inputs are aligned by
+    #'   component name. A short weight series must cover the first observation;
+    #'   its final value is carried forward only after its last supplied period.
+    #'   Parent weights can be inherited as sums of weighted child groups.
     #' @param iterate logical, if TRUE apply the given ... spec/params also to all components.
     #'   For plain ts/mts components, method and template are inherited only if iterate is TRUE.
     initialize = function(
@@ -154,103 +158,18 @@ hierarchicalTimeSeries <- R6::R6Class(
       } else {
         components <- lapply(components, as.persephone, backend = self$backend)
       }
-      componentsHts <- sapply(
-        components,
-        function(x) "hierarchicalTimeSeries" %in% class(x)
-      )
-
-      if (!is.null(weights)) {
-        if (
-          ifelse(
-            is.list(weights) || is.vector(weights),
-            length(weights),
-            ncol(weights)
-          ) !=
-            sum(!componentsHts)
-        ) {
-          stop(
-            "If the weights argument is provided, its length must be equal to the number of components."
-          )
-        }
-      }
-      weights_ts <- list()
-      if (any(componentsHts)) {
-        weightsNull <- sapply(components[componentsHts], function(x) {
-          is.null(x$weights)
-        })
-        if (any(!weightsNull)) {
-          if (any(weightsNull)) {
-            stop(
-              "At the moment it is only supported to use either weights for all components or none."
-            )
-          }
-          for (i in which(componentsHts)) {
-            weights_ts[[i]] <- ts(
-              rowSums(components[[i]]$weights),
-              start = start(components[[i]]$weights[, 1]),
-              end = end(components[[i]]$weights[, 1]),
-              frequency = frequency(components[[i]]$weights[, 1])
-            )
-          }
-        }
-      }
-
-      if (!is.list(weights) & !is.null(weights)) {
-        which_components_not_Hts <- which(!componentsHts)
-        for (i in seq_along(which_components_not_Hts)) {
-          j <- which_components_not_Hts[i]
-          weights_ts[[j]] <- ts(
-            weights[i],
-            start = start(components[[j]]$ts),
-            end = end(components[[j]]$ts),
-            frequency = frequency(components[[j]]$ts)
-          )
-        }
-      }
-
       private$check_classes(components)
       names(components) <- private$coerce_component_names(components)
       private$tsp_internal <- private$check_time_instances(components)
       self$components <- components
-      # # Ensure each component has an initial spec (so paramsDirect is present).
-      # # Only initialize if missing to avoid overwriting user-provided specs.
-      # lapply(self$components, function(node) {
-      #   ok <- FALSE
-      #   # if public paramsDirect exists and is non-null, skip
-      #   try({
-      #     if (!is.null(node$paramsDirect)) ok <- TRUE
-      #   }, silent = TRUE)
-      #   if (!ok) {
-      #     tryCatch({
-      #       node$updateParams()
-      #     }, error = function(e) {
-      #       # fallback: try updateParamsDirect if available
-      #       if (!is.null(node$updateParamsDirect) && is.function(node$updateParamsDirect)) {
-      #         tryCatch(node$updateParamsDirect(), error = function(e2) NULL)
-      #       }
-      #     })
-      #   }
-      #   invisible(NULL)
-      # })
-      if ("mts" %in% class(weights)) {
-        weights_ts[!componentsHts] <- as.list(weights)
-      }
-      if (length(weights_ts) == 0 && !is.list(weights)) {
-        weights_ts <- NULL
-      } else if (length(weights_ts) == 0 && is.list(weights)) {
-        weights_ts <- do.call("cbind", weights)
-        colnames(weights_ts) <- names(components)
-      } else if (length(weights_ts) > 0 && is.list(weights)) {
-        weights_ts[!componentsHts] <- weights
-        weights_ts <- do.call("cbind", weights_ts)
-        colnames(weights_ts) <- names(components)
-      } else {
-        weights_ts <- do.call("cbind", weights_ts)
-        colnames(weights_ts) <- names(components)
-      }
-
-      self$weights <- weights_ts
+      self$weights <- hts_prepare_weights(components, weights)
       private$ts_internal <- private$aggregate(components, self$weights)
+      # Public fields remain readable for compatibility. Reconstruct a hierarchy
+      # to change aggregation inputs; otherwise a cached direct fit can refer to
+      # different data from the displayed indirect aggregate.
+      private$aggregation_signature <- list(
+        names = names(components), weights = self$weights,
+        series = lapply(components, function(x) x$ts))
 
       # create/initialise spec for aggregate series using updateFun
       private$params_internal <- private$updateFun(
@@ -286,6 +205,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @param verbose if `FALSE` (the default), the results of the run will
     #'   be returned invisibly
     run = function(verbose = FALSE) {
+      private$check_aggregation_inputs()
       ## indirect: run child components first (they fill their own outputs)
       lapply(self$components, function(component) {
         component$run(verbose = verbose)
@@ -296,9 +216,11 @@ hierarchicalTimeSeries <- R6::R6Class(
       invisible(NULL)
     },
 
-    #' @field components the sub series of the hierarchical time series
+    #' @field components The subseries. Reconstruct the hierarchy to replace
+    #'   components; changing model settings or direct/indirect choices is allowed.
     components = NULL,
-    #' @field weights the weights used for aggregating components
+    #' @field weights Aligned weights for weighted means (NULL for sums).
+    #'   Reconstruct the hierarchy to change weights after construction.
     weights = NULL,
     #' @field indirect whether to use direct or indirect adjustment
     indirect = NA,
@@ -427,11 +349,13 @@ hierarchicalTimeSeries <- R6::R6Class(
     result = function() private$result_internal,
     #' @field is_stale Whether the direct aggregate or a component fit has stale settings.
     is_stale = function() {
+      private$check_aggregation_inputs()
       (!is.null(private$output_internal) &&
          !identical(private$fit_signature, private$current_signature())) || super$is_stale
     },
     #' @field ts the aggregated time series
     ts = function() {
+      private$check_aggregation_inputs()
       private$ts_internal
     },
     #' @field params of all components and the aggregated series
@@ -450,6 +374,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @field adjustedIndirect results from the indirect adjustment where
     #'   all components are adjusted and then aggregated
     adjustedIndirect = function() {
+      private$check_aggregation_inputs()
       if (is.null(private$output_internal)) {
         return(NULL)
       }
@@ -462,6 +387,7 @@ hierarchicalTimeSeries <- R6::R6Class(
 
     #' @field adjusted results from the seasonal adjustment
     adjusted = function() {
+      private$check_aggregation_inputs()
       if (is.na(self$indirect)) {
         warning(
           "The decision between direct and indirect adjustment was not recorded yet. \nDirect adjustment is returned."
@@ -505,7 +431,20 @@ hierarchicalTimeSeries <- R6::R6Class(
     spec = NULL, # rjd3 spec object (if used directly)
     context_internal = NULL, # list of external regressors (calendar or other) for
     userdefined = NULL, # additional output values from rjd3
-    ts_internal = NULL, # aggregate series (sum or weighted sum)
+    ts_internal = NULL, # aggregate series (sum or weighted mean)
+    aggregation_signature = NULL,
+    check_aggregation_inputs = function() {
+      if (is.null(private$aggregation_signature)) return(invisible(NULL))
+      snapshot <- private$aggregation_signature
+      if (!identical(names(self$components), snapshot$names) ||
+          !identical(self$weights, snapshot$weights) ||
+          !all(vapply(self$components, is.persephone, logical(1))) ||
+          !identical(lapply(self$components, function(x) x$ts), snapshot$series)) {
+        stop("Aggregation inputs changed: reconstruct the hierarchy to change weights or component series.",
+             call. = FALSE)
+      }
+      invisible(NULL)
+    },
     output_internal = NULL, # output for direct aggregate
     params_internal = NULL, # spec for aggregate series
 
@@ -543,157 +482,29 @@ hierarchicalTimeSeries <- R6::R6Class(
       tsps[[1]]
     },
 
-    # aggregate = function(components, weights, which = "ts") {
-    #   tss <- lapply(components, function(component) {
-    #     if (which == "adjustedIndirect" &
-    #         "persephoneSingle" %in% class(component)) {
-    #       return(component[["adjusted"]])
-    #     }
-    #     if (which == "forecastsIndirect" &
-    #         "persephoneSingle" %in% class(component)) {
-    #       return(component[["forecasts"]])
-    #     }
-    #     component[[which]]
-    #   })
-    #   weights_ts <- NULL
-    #   if (!is.null(weights)) {
-    #     weights_ts <- lapply(tss, function(x) {
-    #       x <- x * 0 + 1
-    #       x[is.na(x)] <- 1
-    #     })
-    #     for (i in seq_along(tss)) {
-    #       if (startEndAsDecimal(end(weights[, i])) <
-    #           startEndAsDecimal(end(tss[[i]]))) {
-    #         weights_ts[[i]] <- ts(tail(weights[, i], 1),
-    #                               start = start(tss[[i]]),
-    #                               end = end(tss[[i]]), frequency = frequency(tss[[i]]))
-    #       } else {
-    #         weights_ts[[i]] <- window(weights[, i], start = start(tss[[i]]),
-    #                                   end = end(tss[[i]]))
-    #       }
-    #     }
-    #   }
-    #   out <- private$aggregate_ts(tss, weights_ts)
-    #   return(out)
-    # },
     aggregate = function(components, weights, which = "ts") {
-      # For each component, return the appropriate series (ts / adjusted / forecasts).
-      # If a component is itself a hierarchicalTimeSeries, compute its aggregated
-      # series recursively by calling private$aggregate on its subcomponents.
+      # Each hierarchical child owns its aggregation rule. In particular,
+      # 'adjusted' respects its selected direct/indirect fit; 'adjustedIndirect'
+      # recursively asks for the fully indirect child result.
       tss <- lapply(components, function(component) {
-        # If component is hierarchical, compute aggregate from its children
-        if ("hierarchicalTimeSeries" %in% class(component)) {
-          # component$components and component$weights are public, use them
-          return(private$aggregate(
-            component$components,
-            component$weights,
-            which = which
-          ))
+        if (inherits(component, "persephoneSingle")) {
+          if (which == "adjustedIndirect") return(component$adjusted)
+          if (which == "forecastsIndirect") return(component$forecasts)
         }
-
-        # For leaf-level persephoneSingle objects, handle special which-cases:
-        if (
-          which == "adjustedIndirect" &&
-            "persephoneSingle" %in% class(component)
-        ) {
-          return(component[["adjusted"]])
-        }
-        if (
-          which == "forecastsIndirect" &&
-            "persephoneSingle" %in% class(component)
-        ) {
-          return(component[["forecasts"]])
-        }
-
-        # Default: ask the component for the requested field
         component[[which]]
       })
-
-      # Build weights series (if provided) to match tss lengths/tsp
-      weights_ts <- NULL
-      if (!is.null(weights)) {
-        weights_ts <- lapply(tss, function(x) {
-          x <- x * 0 + 1
-          x[is.na(x)] <- 1
-        })
-        for (i in seq_along(tss)) {
-          # ensure we compare end times with the correct frequencies
-          if (
-            startEndAsDecimal(
-              end(weights[, i]),
-              freq = frequency(weights[, i])
-            ) <
-              startEndAsDecimal(end(tss[[i]]), freq = frequency(tss[[i]]))
-          ) {
-            weights_ts[[i]] <- ts(
-              tail(weights[, i], 1),
-              start = start(tss[[i]]),
-              end = end(tss[[i]]),
-              frequency = frequency(tss[[i]])
-            )
-          } else {
-            weights_ts[[i]] <- window(
-              weights[, i],
-              start = start(tss[[i]]),
-              end = end(tss[[i]])
-            )
-          }
-        }
-      }
-
-      out <- private$aggregate_ts(tss, weights_ts)
-      return(out)
-    },
-    aggregate_ts = function(ts_vec, weights_ts) {
-      if (!"mts" %in% class(ts_vec[[1]])) {
-        return(private$aggregate_ts0(ts_vec, weights_ts))
-      }
-      # combine by columns for multivariate series
-      out <- do.call(
-        "cbind",
-        lapply(
-          lapply(1:ncol(ts_vec[[1]]), function(ind) {
-            lapply(ts_vec, function(x) x[, ind])
-          }),
-          private$aggregate_ts0,
-          weights_ts = weights_ts
-        )
-      )
-      colnames(out) <- colnames(ts_vec[[1]])
-      return(out)
-    },
-
-    aggregate_ts0 = function(ts_vec, weights_ts) {
-      if (length(ts_vec) == 1) {
-        return(ts_vec[[1]])
-      }
-      if (!is.null(weights_ts)) {
-        ts_vec <- do.call("cbind", ts_vec)
-        weights_ts <- do.call("cbind", weights_ts)
-        out <- ts_vec[, 1] * 0
-        for (i in 1:nrow(ts_vec)) {
-          out[i] <- weighted.mean(ts_vec[i, ], weights_ts[i, ])
-        }
-      } else {
-        ts_vecX <- do.call("cbind", ts_vec)
-        out <- ts(
-          rowSums(ts_vecX),
-          start = start(ts_vecX),
-          frequency = frequency(ts_vecX)
-        )
-      }
-      return(out)
+      if (all(vapply(tss, is.null, logical(1)))) return(NULL)
+      hts_aggregate_series(tss, weights)
     },
 
     coerce_component_names = function(components) {
-      lapply(seq_along(components), function(i) {
-        parname <- names(components)[i]
-        if (!is.null(parname) && parname != "") {
-          return(parname)
-        } else {
-          stop("all components in 'hierarchicalTimeSeries' must be named")
-        }
-      })
+      component_names <- names(components)
+      if (!length(components) || is.null(component_names) || anyNA(component_names) ||
+          any(!nzchar(component_names)) || anyDuplicated(component_names)) {
+        stop("all components in 'hierarchicalTimeSeries' must have distinct nonempty names",
+             call. = FALSE)
+      }
+      component_names
     },
 
     # update specification helper: centralizes spec creation / update logic
@@ -801,7 +612,16 @@ hierarchicalTimeSeries <- R6::R6Class(
 #' @param weights  either a vector if the same weight is used for all time
 #'   points or a list of ts objects or a mts object if the weight varies for
 #'   different time points. They must have the same length as the number of
-#'   components.
+#'   components. Unweighted aggregation sums components; weighted aggregation
+#'   computes a weighted mean. Named weights are matched to component names.
+#'   Weight histories must cover the first observation. Values after the last
+#'   supplied weight use its final value, preserving earlier variation.
+#'   For nested weighted groups, omitted group weights are their child-weight
+#'   sums. Explicit weights for all immediate components override those group
+#'   totals; weights for only the non-hierarchical children retain inherited
+#'   group totals. Mixed weighted/unweighted groups need explicit weights for
+#'   all immediate components. Reconstruct the object to change weights or
+#'   component series after construction.
 #' @param iterate logical, if TRUE apply the given spec/params also to all components recursively
 #'   (only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
 #'   method and template only if iterate is TRUE; otherwise they are created with the
@@ -880,4 +700,173 @@ startEndAsDecimal <- function(x, freq = 12) {
   year <- as.numeric(x[1])
   period <- as.numeric(x[2])
   year + (period - 1) / freq
+}
+
+# Internal aggregation primitives. Keeping these independent of a computation
+# engine lets calendar alignment and weighted values be checked without Java.
+hts_series_domain <- function(series) {
+  if (!length(series) || any(vapply(series, function(x) {
+    !is.ts(x) || !is.numeric(x) || !NROW(x)
+  }, logical(1)))) {
+    stop("Every component must provide a nonempty numeric time series.", call. = FALSE)
+  }
+  domains <- lapply(series, tsp)
+  if (!all(vapply(domains, function(x) {
+    isTRUE(all.equal(x, domains[[1]], tolerance = 1e-9))
+  }, logical(1)))) {
+    stop("All components need the same time instances and frequency.", call. = FALSE)
+  }
+  dimensions <- vapply(series, NCOL, integer(1))
+  if (any(dimensions != dimensions[1])) {
+    stop("All component series must have the same number of columns.", call. = FALSE)
+  }
+  if (dimensions[1] > 1 && !all(vapply(series, function(x) {
+    identical(colnames(x), colnames(series[[1]]))
+  }, logical(1)))) {
+    stop("Multivariate component column names must match.", call. = FALSE)
+  }
+  domains[[1]]
+}
+
+hts_order_named <- function(values, expected, supplied_names = names(values)) {
+  if (is.null(supplied_names)) return(values)
+  if (anyNA(supplied_names) || any(!nzchar(supplied_names)) ||
+      anyDuplicated(supplied_names) || !setequal(supplied_names, expected)) {
+    stop("Weight names must match the intended component names exactly.", call. = FALSE)
+  }
+  values[match(expected, supplied_names)]
+}
+
+hts_weight_list <- function(weights) {
+  if (is.ts(weights) && is.matrix(weights)) {
+    result <- lapply(seq_len(ncol(weights)), function(i) weights[, i])
+    names(result) <- colnames(weights)
+    return(result)
+  }
+  if (is.ts(weights)) return(list(weights))
+  if (is.list(weights)) return(weights)
+  if (is.numeric(weights) && is.null(dim(weights))) return(as.list(weights))
+  stop("Weights must be a numeric vector, a list of ts weights, or an mts object.",
+       call. = FALSE)
+}
+
+hts_weight_values <- function(weight, target, component) {
+  if (!is.numeric(weight) || !length(weight) || any(!is.finite(weight))) {
+    stop("Weights for '", component, "' must be nonempty, finite and nonmissing.",
+         call. = FALSE)
+  }
+  if (!is.ts(weight)) {
+    if (length(weight) != 1L || !is.null(dim(weight))) {
+      stop("Varying weights for '", component, "' must be a univariate ts.", call. = FALSE)
+    }
+    return(rep(as.numeric(weight), NROW(target)))
+  }
+  if (NCOL(weight) != 1L || frequency(weight) != frequency(target)) {
+    stop("Weight frequency and dimensions must match component '", component, "'.",
+         call. = FALSE)
+  }
+  shift <- (tsp(target)[1] - tsp(weight)[1]) * frequency(target)
+  if (abs(shift - round(shift)) > 1e-6) {
+    stop("Weight time indices must align with component '", component, "'.", call. = FALSE)
+  }
+  if (shift < -1e-6) {
+    stop("Weights for '", component, "' are missing the beginning of the component history.",
+         call. = FALSE)
+  }
+  positions <- seq_len(NROW(target)) + round(shift)
+  # Preserve every supplied historic value and extend only beyond its tail.
+  as.numeric(weight)[pmin(positions, length(weight))]
+}
+
+hts_align_weights <- function(weights, target, component_names) {
+  if (is.null(weights)) return(NULL)
+  weights <- hts_weight_list(weights)
+  if (length(weights) != length(component_names)) {
+    stop("Weight count must equal the number of immediate components.", call. = FALSE)
+  }
+  weights <- hts_order_named(weights, component_names)
+  values <- lapply(seq_along(weights), function(i) {
+    hts_weight_values(weights[[i]], target, component_names[i])
+  })
+  values <- do.call(cbind, values)
+  totals <- rowSums(values)
+  if (any(!is.finite(totals)) || any(totals == 0)) {
+    stop("Total component weight must be finite and nonzero in every period.", call. = FALSE)
+  }
+  result <- ts(values, start = stats::start(target), frequency = frequency(target))
+  colnames(result) <- component_names
+  result
+}
+
+hts_prepare_weights <- function(components, weights) {
+  series <- lapply(components, function(x) x$ts)
+  hts_series_domain(series)
+  component_names <- names(components)
+  nested <- vapply(components, inherits, logical(1), "hierarchicalTimeSeries")
+  group_weights <- lapply(components[nested], function(x) x$weights)
+  weighted_groups <- !vapply(group_weights, is.null, logical(1))
+  if (is.null(weights) && !any(weighted_groups)) return(NULL)
+
+  supplied <- if (is.null(weights)) list() else hts_weight_list(weights)
+  if (!is.null(weights) && length(supplied) == length(components)) {
+    # Explicit weights refer to immediate nodes, even if a node is a group.
+    supplied <- hts_order_named(supplied, component_names)
+  } else {
+    if (length(supplied) != sum(!nested)) {
+      stop("Weight count must match all immediate components or just the non-hierarchical children.",
+           call. = FALSE)
+    }
+    if (any(!weighted_groups)) {
+      stop(paste0("Mixed weighted/unweighted components require explicit weights for all ",
+                  "immediate components; inherited group weights require every group to be weighted."),
+           call. = FALSE)
+    }
+    leaf_weights <- hts_order_named(supplied, component_names[!nested])
+    supplied <- vector("list", length(components))
+    supplied[!nested] <- leaf_weights
+    for (i in which(nested)) {
+      child <- components[[i]]$weights
+      supplied[[i]] <- ts(rowSums(as.matrix(child)), start = stats::start(child),
+                          frequency = frequency(child))
+    }
+  }
+  names(supplied) <- component_names
+
+  # Retain explicitly supplied future weights for later forecast aggregation.
+  # Shorter series are aligned/extended independently, without cbind's NA fill.
+  reference <- series[[1]]
+  for (i in seq_along(supplied)) {
+    hts_weight_values(supplied[[i]], reference, component_names[i])
+  }
+  last <- max(c(tsp(reference)[2], vapply(supplied, function(x) {
+    if (is.ts(x)) tsp(x)[2] else tsp(reference)[2]
+  }, numeric(1))))
+  count <- round((last - tsp(reference)[1]) * frequency(reference)) + 1
+  target <- ts(rep(0, count), start = stats::start(reference), frequency = frequency(reference))
+  hts_align_weights(supplied, target, component_names)
+}
+
+hts_aggregate_series <- function(series, weights = NULL) {
+  domain <- hts_series_domain(series)
+  component_names <- names(series)
+  if (is.null(component_names)) component_names <- paste0("component", seq_along(series))
+  aligned <- hts_align_weights(weights, series[[1]], component_names)
+  columns <- NCOL(series[[1]])
+  result <- lapply(seq_len(columns), function(column) {
+    values <- do.call(cbind, lapply(series, function(x) {
+      if (is.null(dim(x))) as.numeric(x) else x[, column]
+    }))
+    if (is.null(aligned)) return(rowSums(values))
+    weights_matrix <- as.matrix(aligned)
+    terms <- values * weights_matrix
+    # Match weighted.mean: a zero-weight missing component contributes nothing.
+    terms[weights_matrix == 0] <- 0
+    rowSums(terms) / rowSums(weights_matrix)
+  })
+  if (columns == 1L) {
+    return(ts(result[[1]], start = domain[1], frequency = domain[3]))
+  }
+  result <- ts(do.call(cbind, result), start = domain[1], frequency = domain[3])
+  colnames(result) <- colnames(series[[1]])
+  result
 }

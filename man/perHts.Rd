@@ -57,7 +57,16 @@ returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[r
 \item{weights}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies for
 different time points. They must have the same length as the number of
-components.}
+components. Unweighted aggregation sums components; weighted aggregation
+computes a weighted mean. Named weights are matched to component names.
+Weight histories must cover the first observation. Values after the last
+supplied weight use its final value, preserving earlier variation.
+For nested weighted groups, omitted group weights are their child-weight
+sums. Explicit weights for all immediate components override those group
+totals; weights for only the non-hierarchical children retain inherited
+group totals. Mixed weighted/unweighted groups need explicit weights for
+all immediate components. Reconstruct the object to change weights or
+component series after construction.}
 
 \item{iterate}{logical, if TRUE apply the given spec/params also to all components recursively
 (only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
