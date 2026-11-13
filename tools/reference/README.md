@@ -159,3 +159,21 @@ It pins and preserves this original corpus. Use `verify-extended.R` for its
 Java-free invariants and `verify-extended.R --live` for exact pinned replay.
 Release/source identification and the independently authored native modules'
 references are recorded in [NATIVE_PROVENANCE.md](NATIVE_PROVENANCE.md).
+
+## Fixed integrated likelihood qualification
+
+[Diffuse likelihood probes](diffuse-notes.md) compare explicit fixed SARIMA
+specifications, public JD+ diffuse likelihood quantities and independent
+probability identities. They make no writes or changes to the corpus:
+
+```sh
+Rscript tools/reference/verify-diffuse.R
+# Compare an installed native development package with the pinned oracle.
+Rscript tools/reference/verify-diffuse.R --native --second-order
+# Or use an already compiled source tree without rebuilding it.
+Rscript tools/reference/verify-diffuse.R --native --source --second-order
+```
+
+The additional second-order lane reports accepted cases separately from a
+registered numerical rejection. Neither a bounded likelihood comparison nor
+a documented rejection establishes full seasonal-adjustment support.
