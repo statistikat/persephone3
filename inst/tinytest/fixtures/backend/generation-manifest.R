@@ -1,0 +1,5 @@
+list(schema_version = 1L, scripts_sha256 = c(fixtures.R = "8a9662549fa72d1f3e284704502d1179dd092fd1081e2b4e6db9823eb9b0be8c",
+generate.R = "ef8e15dd871c774305c90e0f088d915abaaa68a4a09c4a805bb3fa5397b86d77",
+compare.R = "f4fa1e240c782073d7fdf544a0b1a479e56b8716afdd14749b13122b25794b6b",
+verify.R = "fc971de7ee5b1486a2f156e0e15b0d306e510720bf5e006fcb54ee04244e5b79"
+))
