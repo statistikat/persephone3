@@ -97,7 +97,7 @@ ht_europe
 
 # Weights
 
-Weights can be used to customize the aggregation step, so the hierarchical time series is not just the sum of its components, but the weighted sum. This can be especially helpful if the timeseries are indices.
+Weights change aggregation from a sum to a weighted mean. This is useful when the time series are indices. Named weights are matched to component names; varying weights retain their historical values and extend only their final value beyond the supplied history.
 
 ## Time-invariant weights
 

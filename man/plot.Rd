@@ -83,7 +83,7 @@ data(AirPassengers, package = "datasets")
 tsAir1 <- perTramo(AirPassengers, "rsa1")
 tsAir2 <- perTramo(AirPassengers, "rsa1")
 # Generate a hierarchicalTimeSeries object
-htAir <- perHts(tsAir1=tsAir1, tsAir1=tsAir1)
+htAir <- perHts(tsAir1 = tsAir1, tsAir2 = tsAir2)
 # Plot before run of persephone object
 plot(htAir, drawPoints = TRUE)
 htAir$run()
