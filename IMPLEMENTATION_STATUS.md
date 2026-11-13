@@ -1,23 +1,27 @@
 # Implementation status and next-work plan
 
-Reassessed: **2026-11-13**. Source snapshot: **`dd38e10`**, package **0.1.0**, branch
-`codex/implementation-items-1-3`, based on `master` at `463aca8`.
+Updated: **2026-11-13**. Implementation source: **`0e121ae`**, package **0.1.0**,
+branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
+The original reassessment below refers to **`dd38e10`**.
 
 ## Assessment
 
-The package builds, its current tests pass, and the main dashboards render.
-However, a fresh review reproduced failures and incorrect results in public
-model-maintenance, specification-update, forecast, hierarchy, calendar, and
-diagnostic paths. **The next phase should prioritize numerical and API
-correctness before release sign-off.** A clean R CMD check does not establish
-correct seasonal-adjustment results or complete migration to the current rjd3 API.
+The shared backend adapter, reference corpus and first compiled C++/Rcpp
+primitives are implemented. Correctness items **6–13** are delivered for the
+current rjd3 path, with **1,373 passing installed-package assertions**. These
+cover fitted values, updates, outliers, calendars, hierarchy decisions,
+forecasts, reports and dashboard behavior. Each item was committed separately.
 
-**New target:** replace the Java/rjd3 computation dependency with a C++ engine
-connected through Rcpp. Items **16–27** below define that migration and are
-aligned with the outstanding items **6–15**. No complete native seasonal-adjustment
-engine exists yet; delivered foundations are recorded below.
-The correctness fixes remain necessary and will establish the contracts and
-reference tests used by both engines during migration.
+**The Java replacement is not complete.** Native code currently provides time
+domains, differencing polynomials, convolution and finite filters. It does not
+estimate SARIMA models or perform X-11/TRAMO/SEATS adjustment. rjd3 remains the
+explicit transitional default; selecting an unsupported native fit fails with
+a capability error and never falls back silently. rjd3 packages are optional
+dependencies and are no longer loaded when the package itself loads.
+
+Items **16–19** have delivered foundations, **14** has workflow improvements,
+and **20–27** remain numerical implementation and qualification work. Passing
+package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
 is tracked in the delivery log, with outstanding gates stated explicitly.
@@ -44,6 +48,7 @@ the native-backend plan below.
 | 17b — result validation follow-up | Reject contradictory canonical-specification and observed-series frequencies during result normalization | Covered by the backend contract suite; ordinary model construction already rejected the mismatch. |
 | 18b — inventory integrity follow-up | Prevent inventory-only writes from invalidating or mislabelling an existing reference corpus; require complete regeneration | Temporary-copy checks confirm rejected commands preserve file hashes/mtimes and full regeneration still passes all 12 corpus checks. The repository corpus was unchanged. |
 | 14a — validation workflow corrections | Full CI requires reference dependencies, prints/uploads tinytest logs, adds a Linux PDF-manual lane, aligns coverage/pkgdown to Java 21 and builds non-deploying pkgdown previews for pull requests | Workflow YAML parses locally. Remote runs, minimum-version qualification, pinned-versus-current dependency lanes and coverage thresholds remain open; the native-only lane stays separate. |
+| 17c — lazy backend reinitialization | Restore an existing protobuf descriptor database after R's example cleanup detaches its lookup pool; isolate and validate the optional compatibility bridge | 14 fresh-process assertions cover constructor/fit/setter recovery for both methods, namespace reloads, duplicate-pool prevention and incompatible-pool errors; package/native capability loading still initializes no Java. |
 
 Each numbered slice is committed separately. A delivered foundation does not
 mean that native X-13/TRAMO-SEATS or the later release gates are complete.
@@ -58,25 +63,43 @@ mean that native X-13/TRAMO-SEATS or the later release gates are complete.
 | 4 | `2d10eb3` | Dashboard HTML/lifecycle tests and startup independent of working directory |
 | 5 | `dd38e10` | Full local package checks, PDF-manual fixes, responsive cards, aggregate-panel/reactivity fixes, and plot-color regression tests |
 
-These items are complete within their delivered scope. They do **not** imply
-that every forecast accessor, numerical diagnostic, model-fixing operation, or
-nested aggregation rule is correct. In particular, working forecast *plots*
-currently read a different backend field than the broken public forecast
-*accessors*.
+These earlier items are complete within their delivered scope. The later
+delivery log records the additional numerical/API corrections and the now
+working public forecast contract; the earlier rendering checks alone did not
+establish those behaviors.
 
 ## Implemented capabilities and confidence
 
 | Area | Present implementation | Current assessment |
 | --- | --- | --- |
-| X-13 and TRAMO/SEATS | R6 constructors, execution, result access | Basic runs work; specification changes and model maintenance need correction |
-| Batch/hierarchical processing | Components, nesting, direct/indirect adjustment, weights | Basic cases work; chosen nested adjustments and incomplete weight series produce wrong results |
-| Forecast plotting | Original-series forecasts, optional intervals, aggregate outliers | Focused tests and browser checks passed; public forecast accessors remain broken |
-| Calendar regressors | Fixed/Easter-relative holidays, exact/approximate centering, quarterly aggregation | Numerical and input-contract defects reproduced |
-| Diagnostics/reports | Outlier/regressor extraction, diagnostic and quality-report tables | Inconsistent outlier metadata and API/dashboard classifications; deeper statistical validation needed |
-| Dashboards | Single/comparison HTML, batch/hierarchy Shiny application | Basic rendering/startup works; data interpretation and series identity require hardening |
-| Documentation/delivery | README, five vignettes, manuals, pkgdown and CI configuration | Local build validated; declared compatibility range and remote workflows unverified |
+| X-13 and TRAMO/SEATS | Lazy rjd3 adapter, explicit backend selection, spec/result snapshots | Direct-backend parity and atomic update/rerun checks pass; native fitting is unimplemented |
+| Batch/hierarchical processing | Nested selected/fully indirect adjustment, named time-aligned weighted means | Hand-calculated and fitted fixtures pass; component/weight replacement requires reconstruction |
+| Forecasts and plotting | Public point/error contract, per-field domains and existing plots | Direct fields match the backend; unsupported aggregate factors/covariance are explicit |
+| Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
+| Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
+| Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
+| Native numerical code | C++17/Rcpp domains, differencing, convolution and filters | 58 boundary assertions and standalone sanitizers pass; full fits and cross-platform execution remain open |
+| Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
+
+### Implementation validation
+
+- Installed the compiled package in a temporary library; **1,373 assertions**
+  pass across **20 test files**. No reference-backed test was skipped.
+- All **12 pinned direct-backend replays** and corpus integrity/corruption
+  checks pass. The corpus is synthetic and does not copy Java implementation.
+- With Java-related R packages inaccessible in an isolated library, package
+  loading, capability errors and **58 compiled primitive assertions** pass.
+  This is not a claim that the system JVM was removed or native fitting works.
+- Independently compiled the C++ core with strict warnings and ASan/UBSan using
+  the local Homebrew Clang toolchain; checks pass.
+- Browser checks confirm literal markup labels, separate duplicate-name nodes,
+  selection across sorting/paging, off-page close and refreshed reopen, with no
+  injected label elements or duplicate output IDs. Local test servers were stopped.
+- Artifacts are under `/tmp/persephone-implementation-validation`; browser
+  snapshots are under `/tmp/persephone-release-validation/.playwright-cli`.
+  Temporary artifacts are evidence, not required repository inputs.
 
 ### Previously completed validation, rechecked as evidence
 
@@ -94,7 +117,7 @@ currently read a different backend field than the broken public forecast
   user R library was not modified. These temporary files are not repository
   artifacts and may disappear.
 
-### New reassessment
+### Original reassessment
 
 Reviewed the core model classes, hierarchy/weight implementation, extraction and
 reporting code, calendar utility, dashboard consumers, tests, and workflows.
@@ -154,7 +177,7 @@ g <- genTd(firstYear = 2020, lastYear = 2021,
 max(abs(g[[3]][, 1:6] - g[[2]]))       # approximately 1.593642, should be 0
 ```
 
-### Why the current tests missed these cases
+### Why the baseline tests missed these cases
 
 - `test_fix.R` checks `fixOutlier()` only **before** fitting, then checks that
   the fitted output exists without calling the fixer again.
@@ -168,14 +191,14 @@ max(abs(g[[3]][, 1:6] - g[[2]]))       # approximately 1.593642, should be 0
 - The hierarchy test labelled as a known quality-table issue only asserts the
   hierarchy object is non-NULL. It is not evidence of quality-report accuracy.
 
-## Detailed next-work plan
+## Correctness plan and delivery status
 
-Continue numbering from the completed items 1–5. Each item below should be a
-separate reviewable commit with a failing regression first, the fix, relevant
-documentation, and a status-report update. Add tests alongside each fix; do not
-postpone correctness tests until the final validation step.
+The original acceptance criteria are retained below. Items 6–13 have now been
+implemented and tested; their delivery details and explicit limitations are in
+the log above. Items 14–15 remain broader compatibility/release work. Numerical
+backend items 16–27 follow later in this document.
 
-### 6. Normalize outlier extraction and empty-result semantics — P1, first
+### 6. Normalize outlier extraction and empty-result semantics — delivered
 
 **Addresses:** F3. **Dependencies:** none. **Scope:** `R/get_functions.R`,
 `R/diagnosticsTable.R`, their consumers, and new extraction tests.
@@ -195,7 +218,7 @@ method, monthly/quarterly data, or aggregate objects; zero-outlier counts are
 zero; no coercion warnings; fixed coefficients have documented uncertainty
 fields; legacy/current supported date representations have explicit fixtures.
 
-### 7. Migrate `fixOutlier()` to the current backend — P1
+### 7. Migrate `fixOutlier()` to the current backend — delivered
 
 **Addresses:** F1. **Depends on:** 6. **Scope:** `R/fixOutlier.R`, method wrappers,
 manual, and `test_fix.R`.
@@ -217,7 +240,7 @@ outliers remain specified, recent ones remain eligible for detection, repeated
 fixing is idempotent, and no-outlier/disabled-detection cases work. Include
 monthly and quarterly, single and hierarchical cases with actual fitted data.
 
-### 8. Make specification updates explicit and consistent — P1
+### 8. Make specification updates explicit and consistent — delivered
 
 **Addresses:** F8; model-maintenance semantics. **Dependencies:** none for the
 basic update fix; reuse item 6 fixtures where relevant.
@@ -241,7 +264,7 @@ specification; unrelated settings survive incremental updates; invalid updates
 leave the prior state intact; recursive/selective updates touch only intended
 nodes; rerun/state behavior and model-fixing behavior are tested and documented.
 
-### 9. Correct hierarchy decisions and weight alignment — P1
+### 9. Correct hierarchy decisions and weight alignment — delivered
 
 **Addresses:** F4/F5. **Dependencies:** none; specification tests from 8 help
 construct differentiated model fixtures. **Scope:** aggregation in `R/perHts.R`.
@@ -265,7 +288,7 @@ fully indirect results remain distinct where appropriate; the short-weight
 reproduction either gives 51 initially or fails clearly before calculation;
 monthly/quarterly and mismatched-span cases are covered.
 
-### 10. Restore the public forecast API — P1
+### 10. Restore the public forecast API — delivered
 
 **Addresses:** F2. **Depends on:** 9 for indirect aggregation.
 
@@ -283,7 +306,7 @@ matching requested backend series; indirect points equal independently
 aggregated component points; forecast dates/horizons are correct; pre-run,
 missing-output, mixed-horizon, and weighted cases have defined behavior.
 
-### 11. Validate and correct calendar regressors — P1
+### 11. Validate and correct calendar regressors — delivered
 
 **Addresses:** F6. **Dependencies:** none; can proceed independently of 6–10.
 
@@ -303,7 +326,7 @@ corrections appropriately; leap-year and quarterly sums are correct; duplicate
 holiday handling is deterministic; invalid inputs fail clearly; output shape,
 column meaning, and results are tested under more than one locale.
 
-### 12. Unify numerical diagnostics and reporting — P1
+### 12. Unify numerical diagnostics and reporting — delivered
 
 **Addresses:** F7 and downstream F3 effects. **Depends on:** 6.
 
@@ -321,7 +344,7 @@ boundary cases at 0.001/0.01/0.05/0.1 are explicit; categorical `Present` is not
 silently lost; zero and unavailable are distinct; representative X-13 and
 TRAMO/SEATS reports match backend values or independently calculated references.
 
-### 13. Decouple dashboard identities from labels — P2
+### 13. Decouple dashboard identities from labels — delivered
 
 **Addresses:** F9. **Dependencies:** none; coordinate data display with 12.
 
@@ -342,7 +365,7 @@ unambiguously or rejected early by a documented rule; no label executes as
 markup/script; reopened panels show current data and do not accumulate work;
 startup failure/interruption leaves no child process or open port.
 
-### 14. Establish a numerical and compatibility regression matrix — P2
+### 14. Establish a numerical and compatibility regression matrix — partial
 
 **Addresses:** F10 and the testing gaps above. **Depends on:** correctness fixes
 for a green final matrix; the test infrastructure can be prepared earlier.
@@ -392,19 +415,27 @@ flows, and an explicit release decision with documented scope.
 
 ## Recommended order and decisions
 
-Start the migration with **16 → 17 → 18**, bringing the reference-fixture part
-of **14** forward. Capture raw backend evidence before changing projections.
-Then implement **6 → 7**, **8 → 9 → 10**, and **12** (after 6) through the common
-contracts. Calendar work **11** and UI identities **13** can proceed independently.
-Adapter extraction must remain small; it should not delay reproduced correctness
-fixes while the numerical engine is developed. The integrated sequence and
-native milestones are specified below. Tests accompany every fix and port.
+The adapter/reference foundation and items 6–13 are delivered. The settled API
+contracts are: named forecast points/errors with separate domains; weighted
+means with tail-only weight extension; outlier tail windows in months with
+explicit recursion; and template replacement distinct from incremental setters,
+with retained results marked stale until rerun.
 
-Before changing behavior, settle four API decisions in the relevant item:
-forecast return schema (10), weighted mean versus weighted sum and extension
-policy (9), `fixOutlier()` tail units/recursion (7), and template replacement plus
-stale-result behavior (8). Current source offers conflicting or incomplete
-contracts; these choices need explicit documentation and compatibility tests.
+The next commits should be:
+
+| Next slice | Concrete work | Required evidence before advancing |
+| --- | --- | --- |
+| 16b / 18c | Resolve oracle source/provenance and numerical-code licensing choices; qualify tolerances and add fixed/free regressors, missingness, LS/TC and future-context fixtures | Audited references/support decisions and independent invariants, without rebasing discrepancies away |
+| 19b | Select and integrate portable QR/Cholesky/linear-system support; add transforms and regressor-domain validation | Rank-deficient/ill-conditioned fixtures, compiler/sanitizer checks and platform builds |
+| 20a | Implement fixed-parameter SARIMA state-space initialization, exact/diffuse likelihood and missing-observation handling | Intermediate innovations, variances, effective sample and likelihood normalization match qualified references |
+| 20b–d | Estimate regression/ARMA coefficients, enforce root constraints, compute covariance/residuals, forecast/backcast with future regressors | Fixed/free parameter and uncertainty parity, explicit convergence failures, serialized plain-data results |
+| 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
+| 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
+| 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
+
+The next native milestone is a verified fixed-model likelihood and then an
+end-to-end fixed-model X-13 slice, not a default-engine switch. The detailed
+acceptance criteria below remain in force.
 
 Defer performance tuning, broad plot-style unification, unrelated dependency
 slimming, and removal of archival code until correctness and compatibility are

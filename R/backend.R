@@ -78,6 +78,36 @@ backend_rjd3_function <- function(package, name) {
                           "using backend = \"rjd3\"."), required), call. = FALSE)
     }
   }
+  # rjd3 resolves protobuf descriptors as bare symbols (for example x13.Spec).
+  # cleanEx() can detach their search-path database while leaving all namespaces
+  # loaded, so requireNamespace() alone cannot restore those lookups. Reattach
+  # the existing database without resetting schemas or reinitializing Java.
+  # RProtoBuf's attachDescriptorPool() cannot do this: it skips initialized pools.
+  # Keep this compatibility bridge to its unexported OTABLE isolated here and
+  # verify its type and the public descriptor API before trusting the lookup.
+  if (!"RProtoBuf:DescriptorPool" %in% search()) {
+    proto_namespace <- asNamespace("RProtoBuf")
+    pool <- get0("OTABLE", envir = proto_namespace, inherits = FALSE)
+    if (!inherits(pool, "UserDefinedDatabase") || typeof(pool) != "externalptr") {
+      stop(paste0("The rjd3 backend could not restore RProtoBuf's descriptor pool. ",
+                  "Restart R and use compatible RProtoBuf and rjd3 package versions."),
+           call. = FALSE)
+    }
+    base::attach(pool, pos = length(search()), name = "RProtoBuf:DescriptorPool")
+    descriptor_name <- switch(package, rjd3x13 = "x13.Spec",
+                              rjd3tramoseats = "tramoseats.Spec", "jd3.TsData")
+    restored <- tryCatch({
+      descriptor <- getExportedValue("RProtoBuf", "P")(descriptor_name)
+      visible <- get(descriptor_name, envir = as.environment("RProtoBuf:DescriptorPool"),
+                     inherits = FALSE)
+      inherits(descriptor, "Descriptor") && inherits(visible, "Descriptor")
+    }, error = function(e) FALSE)
+    if (!restored) {
+      stop(paste0("The rjd3 backend restored RProtoBuf's pool but its required ",
+                  "descriptors are unavailable. Restart R and use compatible ",
+                  "RProtoBuf and rjd3 package versions."), call. = FALSE)
+    }
+  }
   getExportedValue(package, name)
 }
 

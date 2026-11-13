@@ -43,6 +43,7 @@ Imports:
 LinkingTo: Rcpp
 SystemRequirements: C++17
 Suggests:
+    RProtoBuf,
     rjd3toolkit (>= 3.5.0),
     rjd3x13 (>= 3.5.0),
     rjd3tramoseats (>= 3.5.0),
