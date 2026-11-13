@@ -14,8 +14,18 @@ persephone::Interrupt linear_interrupt() {
     return [] { Rcpp::checkUserInterrupt(); };
 }
 
+double rank_threshold(SEXP input) {
+    if (Rf_isNull(input)) return 1e-10;
+    if ((TYPEOF(input) != REALSXP && TYPEOF(input) != INTSXP) ||
+        Rf_isFactor(input) || Rf_xlength(input) != 1 ||
+        !Rf_isNull(Rf_getAttrib(input, R_DimSymbol))) {
+        throw std::invalid_argument("rank tolerance must be one real numeric scalar");
+    }
+    return Rf_asReal(input);
+}
+
 persephone::DenseMatrix owned_matrix(SEXP input, const char* name, bool allow_vector) {
-    if (TYPEOF(input) != REALSXP && TYPEOF(input) != INTSXP) {
+    if ((TYPEOF(input) != REALSXP && TYPEOF(input) != INTSXP) || Rf_isFactor(input)) {
         throw std::invalid_argument(std::string(name) + " must be a real numeric matrix or vector");
     }
     std::size_t rows = 0;
@@ -72,10 +82,11 @@ Rcpp::List native_cholesky_solve(SEXP matrix, SEXP rhs) {
 }
 
 // [[Rcpp::export(name = ".native_qr_solve")]]
-Rcpp::List native_qr_solve(SEXP matrix, SEXP rhs, double rank_tolerance = 1e-10) {
+Rcpp::List native_qr_solve(SEXP matrix, SEXP rhs, SEXP rank_tolerance = R_NilValue) {
+    const double tolerance = rank_threshold(rank_tolerance);
     const auto a = owned_matrix(matrix, "matrix", false);
     const auto b = owned_matrix(rhs, "right-hand side", true);
-    const auto result = persephone::qr_least_squares(a, b, rank_tolerance, linear_interrupt());
+    const auto result = persephone::qr_least_squares(a, b, tolerance, linear_interrupt());
     return Rcpp::List::create(
         Rcpp::Named("coefficients") = as_matrix(result.coefficients),
         Rcpp::Named("residuals") = as_matrix(result.residuals),

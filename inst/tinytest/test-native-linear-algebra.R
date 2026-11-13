@@ -145,6 +145,12 @@ expect_error(qr_solve(design, 1:5), "dimensions")
 for (bad in c(-1, 0, 1, 2, NA_real_, NaN, Inf)) {
   expect_error(qr_solve(design, response, bad), "rank tolerance")
 }
+for (bad in list(1e-10 + 1i, "1e-10", TRUE, factor("1e-10"),
+                 c(1e-10, 1e-8), numeric(), matrix(1e-10),
+                 array(1e-10, c(1, 1, 1)), list(1e-10))) {
+  expect_error(qr_solve(design, response, bad), "rank tolerance.*real numeric scalar")
+}
+expect_equal(qr_solve(design, response, NULL), fit)
 
 # Inputs are owned copies, including after an exception, and results are plain
 # R objects suitable for serialization across later dashboard processes.
@@ -155,3 +161,7 @@ expect_equal(qr_solve(design, response), fit)
 expect_equal(design, saved_design)
 expect_equal(response, saved_response)
 expect_equal(unserialize(serialize(fit, NULL)), fit)
+
+# Categorical storage codes are not numerical observations.
+expect_error(getFromNamespace(".native_qr_solve", "persephone3")(diag(2), factor(c("a", "b"))), "real numeric")
+expect_error(getFromNamespace(".native_cholesky_solve", "persephone3")(diag(2), factor(c("a", "b"))), "real numeric")

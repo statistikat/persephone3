@@ -75,14 +75,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // native_qr_solve
-Rcpp::List native_qr_solve(SEXP matrix, SEXP rhs, double rank_tolerance);
+Rcpp::List native_qr_solve(SEXP matrix, SEXP rhs, SEXP rank_tolerance);
 RcppExport SEXP _persephone3_native_qr_solve(SEXP matrixSEXP, SEXP rhsSEXP, SEXP rank_toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type matrix(matrixSEXP);
     Rcpp::traits::input_parameter< SEXP >::type rhs(rhsSEXP);
-    Rcpp::traits::input_parameter< double >::type rank_tolerance(rank_toleranceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rank_tolerance(rank_toleranceSEXP);
     rcpp_result_gen = Rcpp::wrap(native_qr_solve(matrix, rhs, rank_tolerance));
     return rcpp_result_gen;
 END_RCPP

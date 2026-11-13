@@ -21,7 +21,7 @@
     .Call(`_persephone3_native_cholesky_solve`, matrix, rhs)
 }
 
-.native_qr_solve <- function(matrix, rhs, rank_tolerance = 1e-10) {
+.native_qr_solve <- function(matrix, rhs, rank_tolerance = NULL) {
     .Call(`_persephone3_native_qr_solve`, matrix, rhs, rank_tolerance)
 }
 
