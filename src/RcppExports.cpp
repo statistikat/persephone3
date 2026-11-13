@@ -137,6 +137,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_regression_likelihood
+Rcpp::List native_regression_likelihood(SEXP values, SEXP design, SEXP coefficients, SEXP ar, SEXP ma, SEXP seasonal_ar, SEXP seasonal_ma, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP variance, SEXP rank_tolerance);
+RcppExport SEXP _persephone3_native_regression_likelihood(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP arSEXP, SEXP maSEXP, SEXP seasonal_arSEXP, SEXP seasonal_maSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP varianceSEXP, SEXP rank_toleranceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type design(designSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coefficients(coefficientsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ar(arSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ma(maSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_ar(seasonal_arSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_ma(seasonal_maSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type d(dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_d(seasonal_dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type variance(varianceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rank_tolerance(rank_toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_regression_likelihood(values, design, coefficients, ar, ma, seasonal_ar, seasonal_ma, period, d, seasonal_d, mean, variance, rank_tolerance));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_stationary_likelihood
 Rcpp::List native_stationary_likelihood(SEXP values, SEXP transition, SEXP observation, SEXP noise_loading, SEXP observation_variance, SEXP mean, SEXP variance);
 RcppExport SEXP _persephone3_native_stationary_likelihood(SEXP valuesSEXP, SEXP transitionSEXP, SEXP observationSEXP, SEXP noise_loadingSEXP, SEXP observation_varianceSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
@@ -207,6 +230,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_cholesky_solve", (DL_FUNC) &_persephone3_native_cholesky_solve, 2},
     {"_persephone3_native_qr_solve", (DL_FUNC) &_persephone3_native_qr_solve, 3},
     {"_persephone3_native_parallel_info", (DL_FUNC) &_persephone3_native_parallel_info, 0},
+    {"_persephone3_native_regression_likelihood", (DL_FUNC) &_persephone3_native_regression_likelihood, 13},
     {"_persephone3_native_stationary_likelihood", (DL_FUNC) &_persephone3_native_stationary_likelihood, 7},
     {"_persephone3_native_arma_likelihood", (DL_FUNC) &_persephone3_native_arma_likelihood, 8},
     {"_persephone3_native_transform", (DL_FUNC) &_persephone3_native_transform, 2},

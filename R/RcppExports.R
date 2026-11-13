@@ -37,6 +37,10 @@
     .Call(`_persephone3_native_parallel_info`)
 }
 
+.native_regression_likelihood <- function(values, design, coefficients, ar, ma, seasonal_ar, seasonal_ma, period, d = NULL, seasonal_d = NULL, mean = NULL, variance = NULL, rank_tolerance = NULL) {
+    .Call(`_persephone3_native_regression_likelihood`, values, design, coefficients, ar, ma, seasonal_ar, seasonal_ma, period, d, seasonal_d, mean, variance, rank_tolerance)
+}
+
 .native_stationary_likelihood <- function(values, transition, observation, noise_loading, observation_variance = NULL, mean = NULL, variance = NULL) {
     .Call(`_persephone3_native_stationary_likelihood`, values, transition, observation, noise_loading, observation_variance, mean, variance)
 }

@@ -235,11 +235,16 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                           double mean, double variance, const Interrupt& interrupt,
                           detail::CountsHistoryCertificate* history = nullptr,
                           detail::SparseHistoryBasis* stable_history = nullptr,
-                          detail::FiniteStateFactor* finite_factor = nullptr) {
+                          detail::FiniteStateFactor* finite_factor = nullptr,
+                          bool save_gains = false) {
     series.validate();
     validate_model(model, state, mean, variance, interrupt);
     validate_basis(basis, interrupt, "initial diffuse loading is numerically rank deficient");
     const auto m = model.transition.rows(), n = series.values.size(), initial_rank = basis.columns;
+    if (save_gains && n > static_cast<std::size_t>(std::numeric_limits<int>::max()) / m) {
+        throw std::length_error("regression gain history exceeds the supported matrix range");
+    }
+    std::vector<double> observation_gains(save_gains ? m * n : 0, 0);
     if (history) {
         if (history->dimension() != initial_rank || history->rank() != 0) {
             throw std::logic_error("exact history certificate disagrees with initial diffuse rank");
@@ -367,6 +372,7 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
                 if (exact_zero) ++exact_zero_count;
                 update_kind[t] = 2;
             }
+            if (save_gains) std::copy(gain.begin(), gain.end(), observation_gains.begin() + static_cast<std::ptrdiff_t>(m * t));
             for (std::size_t i = 0; i < m; ++i) state[i] = checked(static_cast<long double>(state[i]) + static_cast<long double>(gain[i]) * innovation);
             observation_null_certified = true;
             if (stable_history) stable_history->observe(static_cast<std::uint64_t>(t) + 1, interrupt);
@@ -438,7 +444,8 @@ DiffuseLikelihood filter(const MaskedSeries& series, const DiffuseStateSpace& mo
              finite_factor != nullptr,
              finite_factor ? finite_factor->compression_count() : 0,
              finite_factor ? finite_factor->clipped_negative_count() : 0,
-             finite_factor ? finite_factor->initialization_residual() : 0}};
+             finite_factor ? finite_factor->initialization_residual() : 0},
+            std::move(observation_gains)};
 }
 
 } // namespace
@@ -459,7 +466,8 @@ DiffuseLikelihood diffuse_innovations(const MaskedSeries& series, const DiffuseS
 SarimaLikelihood sarima_innovations(const MaskedSeries& series, const std::vector<double>& ar,
                                    const std::vector<double>& ma, const std::vector<double>& seasonal_ar,
                                    const std::vector<double>& seasonal_ma, int period, int d,
-                                   int seasonal_d, double mean, double variance, const Interrupt& interrupt) {
+                                   int seasonal_d, double mean, double variance, const Interrupt& interrupt,
+                                   bool save_gains) {
     if (period != 4 && period != 12) throw std::invalid_argument("SARIMA period must be 4 or 12");
     if (d < 0 || d > 2 || seasonal_d < 0 || seasonal_d > 2) throw std::invalid_argument("d and seasonal_d must be between 0 and 2");
     if (!std::isfinite(mean)) throw std::invalid_argument("mean must be finite");
@@ -496,7 +504,7 @@ SarimaLikelihood sarima_innovations(const MaskedSeries& series, const std::vecto
     auto likelihood = filter(series, model, std::vector<double>(m, 0), std::move(initial_finite),
                               std::move(basis), mean, variance, interrupt,
                               k > 0 ? &history : nullptr, k > 0 ? &stable_history : nullptr,
-                              finite_factor.get());
+                              finite_factor.get(), save_gains);
     return {std::move(model), std::move(arma.ar), std::move(arma.ma),
             std::move(difference), std::move(likelihood)};
 }

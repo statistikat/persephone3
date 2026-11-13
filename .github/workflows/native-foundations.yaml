@@ -105,14 +105,25 @@ jobs:
                 "$RUNNER_TEMP/persephone-parallel-$mode"
             else "$RUNNER_TEMP/persephone-parallel-$mode"; fi
           done
-          for harness in linear_algebra state_space diffuse_state_space; do
+          for harness in linear_algebra state_space diffuse_state_space regression_likelihood; do
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
               $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
               src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
-              src/diffuse_state_space.cpp "tools/native-tests/test_${harness}.cpp" \
+              src/diffuse_state_space.cpp src/regression_likelihood.cpp "tools/native-tests/test_${harness}.cpp" \
               $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
               $(R CMD config FLIBS) $(R CMD config --ldflags) \
               -o "$RUNNER_TEMP/persephone-${harness}"
             "$RUNNER_TEMP/persephone-${harness}"
           done
+          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic -fopenmp \
+            -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
+            $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
+            src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
+            src/diffuse_state_space.cpp src/regression_likelihood.cpp \
+            tools/native-tests/test_regression_likelihood.cpp \
+            $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
+            $(R CMD config FLIBS) $(R CMD config --ldflags) \
+            -o "$RUNNER_TEMP/persephone-regression-openmp"
+          PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE \
+            "$RUNNER_TEMP/persephone-regression-openmp"

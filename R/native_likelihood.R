@@ -49,6 +49,32 @@ native_likelihood_window <- function(series, estimation_start = NULL,
   list(series = selected, source_domain = source, source_rows = rows)
 }
 
+# Shared adjustment preserves original observations even when regression effects
+# are subsequently removed on the transformed scale.
+native_likelihood_adjustment <- function(inputs, degree, source_rows) {
+  observed <- which(!inputs$missing)
+  selected <- observed
+  if (inputs$transformation == "log" && length(observed)) {
+    selected <- observed[observed - observed[1L] >= degree]
+  }
+  terms <- rep(0, length(inputs$original))
+  terms[selected] <- as.numeric(inputs$log_jacobian)[selected]
+  correction <- sum(terms)
+  if (!is.finite(correction)) stop("The log-Jacobian correction is nonfinite.", call. = FALSE)
+  list(policy = if (inputs$transformation == "log") "jdplus_3.9.0_calendar_window" else "identity",
+       difference_degree = degree, local_rows = selected, source_rows = source_rows[selected],
+       terms = stats::ts(terms, start = inputs$observed_domain$start,
+                         frequency = inputs$observed_domain$frequency),
+       log_jacobian = correction)
+}
+
+native_likelihood_traces <- function(kernel, domain) {
+  fields <- c("predictions", "innovations", "standardized_innovations",
+              "finite_variances", "diffuse_variances", "update_kind", "rank_before", "rank_after")
+  stats::setNames(lapply(fields, function(field) stats::ts(kernel[[field]],
+    start = domain$start, frequency = domain$frequency)), fields)
+}
+
 # The window endpoints are inclusive (year, period) pairs. Excluded earlier
 # observations never condition the model: initialization is fresh at its start.
 # Selection precedes transformation; missing times inside the window survive.
@@ -63,25 +89,13 @@ native_fixed_likelihood <- function(series, ar = numeric(), ma = numeric(),
     seasonal_ar, seasonal_ma, inputs$observed_domain$frequency,
     d, seasonal_d, mean, variance)
 
-  observed <- which(!inputs$missing)
   degree <- length(kernel$difference_polynomial) - 1L
   # Pinned JD+ direct-window convention: exclude k CALENDAR positions after
   # the first observed value, not k observed values or the diffuse update rows.
   # This is an explicit compatibility adjustment to an improper likelihood;
   # it is not asserted to be a universal original-scale probability density.
-  selected <- observed
-  if (transformation == "log" && length(observed)) {
-    selected <- observed[observed - observed[1L] >= degree]
-  }
-  terms <- rep(0, length(window$series))
-  terms[selected] <- as.numeric(inputs$log_jacobian)[selected]
-  correction <- sum(terms)
-  if (!is.finite(correction)) {
-    stop("The log-Jacobian correction is nonfinite.", call. = FALSE)
-  }
-  as_series <- function(values) stats::ts(values, start = inputs$observed_domain$start,
-                                         frequency = inputs$observed_domain$frequency)
-  policy <- if (transformation == "log") "jdplus_3.9.0_calendar_window" else "identity"
+  adjustment <- native_likelihood_adjustment(inputs, degree, window$source_rows)
+  correction <- adjustment$log_jacobian
   structure(list(
     schema_version = 1L, backend = "native", operation = "fixed_sarima_likelihood",
     initialization = "fresh_prior_at_span_start",
@@ -103,15 +117,7 @@ native_fixed_likelihood <- function(series, ar = numeric(), ma = numeric(),
       profiled_variance = kernel$profiled_variance,
       observed_count = kernel$observed_count,
       diffuse_count = kernel$diffuse_count, finite_count = kernel$finite_count),
-    adjustment = list(policy = policy, difference_degree = degree,
-      local_rows = selected, source_rows = window$source_rows[selected],
-      terms = as_series(terms), log_jacobian = correction),
-    traces = list(predictions = as_series(kernel$predictions),
-      innovations = as_series(kernel$innovations),
-      standardized_innovations = as_series(kernel$standardized_innovations),
-      finite_variances = as_series(kernel$finite_variances),
-      diffuse_variances = as_series(kernel$diffuse_variances),
-      update_kind = as_series(kernel$update_kind),
-      rank_before = as_series(kernel$rank_before), rank_after = as_series(kernel$rank_after)),
+    adjustment = adjustment,
+    traces = native_likelihood_traces(kernel, inputs$observed_domain),
     kernel = kernel), class = "persephone_native_likelihood")
 }

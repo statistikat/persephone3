@@ -4,7 +4,8 @@ The C++ core is independently authored and contains no translated JDemetra+
 source. It currently supplies time indexing, differencing polynomials,
 convolution, finite filters, transformations, LAPACK adapters and a stationary
 fixed-parameter innovations likelihood, with a separate exact diffuse kernel
-for integrated SARIMA models. It does **not** fit seasonal-adjustment
+for integrated SARIMA models, plus concentrated regression likelihood with
+fixed ARMA parameters. It does **not** fit seasonal-adjustment
 models.
 
 Run from the repository root with any supported C++17 compiler:
@@ -77,8 +78,8 @@ period, requires finite regressors throughout the entire requested observed,
 backcast and forecast domain, and crops only unused extra supplied periods.
 Missing responses are allowed; missing regressors, padding, recycling and
 implicit extrapolation are not. Output is a serializable plain-data contract.
-Estimation spans, context-object conversion, coefficient constraints and
-automatic transformation selection remain later pipeline work.
+Estimation spans and coefficient constraints are connected by 20a.3/20b.1 below;
+context-object conversion and automatic transformation selection remain later work.
 
 The standalone transform harness uses no R headers or libraries:
 
@@ -116,8 +117,8 @@ effective sample count and numerical rejection rules are documented in
 At most 32 total states are supported, including at most 16 stationary ARMA
 states. Ordinary and seasonal differencing orders range from zero to two,
 subject to that total bound. The common monthly airline model uses 27 states.
-Nonzero mean/drift for integrated models is intentionally rejected until the
-preprocessing/regression contract defines it. Unresolved diffuse states produce
+The scalar mean for integrated models stays zero; 20b.1 below supplies drift as
+an explicit regressor. Unresolved diffuse states produce
 an explicit unavailable likelihood, not a successful objective for optimization.
 
 `test-native-diffuse.R` uses closed forms, differencing and an independent joint
@@ -138,5 +139,31 @@ maps, and reports transformed and adjusted objectives separately. The log
 adjustment follows the named pinned JD+ direct-window calendar convention;
 it is not inferred from diffuse pivot positions. See
 [fixed-likelihood-contract.md](fixed-likelihood-contract.md) and the independent
-identities in `inst/tinytest/test-native-fixed-likelihood.R`. Regression, drift,
-ARMA estimation and native seasonal adjustment remain unavailable.
+identities in `inst/tinytest/test-native-fixed-likelihood.R`. Regression and drift
+are added through the separate 20b.1 contract below; ARMA estimation and native
+seasonal adjustment remain unavailable.
+
+## Optional OpenMP (19d)
+
+Independent filter, convolution and transformation outputs may use bounded
+OpenMP regions when the C++17 compile/link/runtime probe succeeds. Serial
+fallback is automatic. `PERSEPHONE_NUM_THREADS` requests 1..64 threads (default
+two), capped by the OpenMP runtime. See [openmp-contract.md](openmp-contract.md)
+for thread safety, deterministic arithmetic, cancellation and standalone checks.
+
+## Fixed-SARIMA regression (20b.1)
+
+`native_regression_likelihood()` connects named fixed/free regressors, estimated
+stationary mean or integrated drift, shared-gain whitening, rank-aware GLS and
+explicit ML/residual-df covariance scales. It retains window/log/context semantics
+and reports nonidentifiable coefficients without dropping columns. The exact
+contract and numerical limits are in
+[regression-likelihood-contract.md](regression-likelihood-contract.md).
+
+Compile `test_regression_likelihood.cpp` with `numerics.cpp`,
+`linear_algebra.cpp`, `state_space.cpp`, `sparse_history.cpp`,
+`finite_state_factor.cpp`, `diffuse_state_space.cpp`, `regression_likelihood.cpp`
+and the R LAPACK/BLAS flags above. Run both serial and `-fopenmp` builds where
+supported; `PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE`
+requires actual workers in the latter. The harness checks identical coefficients,
+whitening, covariance and likelihood, plus main-thread cancellation/reuse.

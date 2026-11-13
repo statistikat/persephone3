@@ -78,6 +78,9 @@ struct DiffuseLikelihood {
     DenseMatrix final_finite_covariance;
     DenseMatrix final_diffuse_covariance;
     DiffuseNumerics numerics;
+    // Optional m x n, column-major gain history for regression whitening.
+    // Empty unless requested; missing-time columns are zero.
+    std::vector<double> observation_gains;
 };
 
 // y_t = mean + Z a_t + e_t; a_(t+1) = T a_t + L u_t.
@@ -110,7 +113,8 @@ SarimaLikelihood sarima_innovations(
     const MaskedSeries& series, const std::vector<double>& ar,
     const std::vector<double>& ma, const std::vector<double>& seasonal_ar,
     const std::vector<double>& seasonal_ma, int period, int d, int seasonal_d,
-    double mean = 0, double variance = 1, const Interrupt& interrupt = {});
+    double mean = 0, double variance = 1, const Interrupt& interrupt = {},
+    bool save_gains = false);
 
 } // namespace persephone
 #endif

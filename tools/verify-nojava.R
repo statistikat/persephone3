@@ -59,6 +59,13 @@ if ("--native" %in% args) {
             identical(windowed$adjustment$policy, "jdplus_3.9.0_calendar_window"),
             isTRUE(all.equal(windowed$likelihood$adjusted_fixed,
                              2 * dnorm(1, log = TRUE) - 5)))
+  regress <- getFromNamespace("native_regression_likelihood", "persephone3")
+  x <- ts(seq_len(20), start = c(2000, 1), frequency = 4)
+  regression <- regress(2 + 3 * x, list(x = x), include_mean = TRUE)
+  stopifnot("regression_likelihood" %in% cap$primitives,
+            regression$regression$rank == 2L,
+            isTRUE(all.equal(unname(regression$regression$coefficients), c(3, 2))),
+            regression$likelihood$finite_count == 20L)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",
