@@ -127,3 +127,15 @@ package is required by the native kernel or its regular test suite. The
 standalone sanitizer harness is `test_diffuse_state_space.cpp`; compile it with
 `numerics.cpp`, `linear_algebra.cpp`, `state_space.cpp`,
 `diffuse_state_space.cpp` and the R LAPACK/BLAS flags above.
+
+## Fixed-model windows and transformations (20a.3)
+
+`native_fixed_likelihood()` selects an explicit inclusive estimation window,
+prepares identity/log inputs and evaluates the fixed SARIMA model with a fresh
+prior at that window's start. It preserves domains, missing positions and row
+maps, and reports transformed and adjusted objectives separately. The log
+adjustment follows the named pinned JD+ direct-window calendar convention;
+it is not inferred from diffuse pivot positions. See
+[fixed-likelihood-contract.md](fixed-likelihood-contract.md) and the independent
+identities in `inst/tinytest/test-native-fixed-likelihood.R`. Regression, drift,
+ARMA estimation and native seasonal adjustment remain unavailable.

@@ -160,7 +160,7 @@ original 32 preprocessing fits or their independent identities. All `d,D` in
 `(+0.3,+0.2)`, and airline MA `+0.2`/seasonal MA `-0.4`. Coefficients use the
 native/R convention: the public JD+ bridge negates regular/seasonal AR
 coefficients and preserves MA signs. Public autocovariance identities guard that
-conversion.
+conversion. See [fixed-likelihood-notes.md](fixed-likelihood-notes.md).
 
 Inputs are the bounded deterministic formula
 `sin(t*sqrt(2)) + 0.5*cos(t*sqrt(3)) + t/40`, `t=1:120`. Six missingness masks
@@ -231,9 +231,10 @@ their likelihood selection determined by the estimator pipeline; summing every
 observed term at the primitive boundary would miss this pinned convention.
 
 This original example alone covers complete, no-regression `d=1` data. The
-fixed-likelihood window contract and broader Jacobian selections are the next
-20a.3 integration slice. Regression effects, estimated models and preadjustments
-remain separate integration gates.
+subsequent [fixed-likelihood probes](fixed-likelihood-notes.md) establish the
+bounded `jdplus_3.9.0_calendar_window` policy across `d,D=0:2`, fixed ARMA models,
+missing data and direct inclusive windows. Regression effects, estimated models
+and preadjustments remain separate integration gates.
 
 Fixed model agreement also does not establish the correct objective for every
 future optimizer. Profile, diffuse and marginal likelihoods can differ when the

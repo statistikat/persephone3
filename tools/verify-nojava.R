@@ -50,6 +50,15 @@ if ("--native" %in% args) {
             walk$remaining_diffuse_rank == 0,
             isTRUE(all.equal(walk$fixed_log_likelihood,
               dnorm(1, log = TRUE) + dnorm(2, sd = sqrt(2), log = TRUE))))
+  fixed_likelihood <- getFromNamespace("native_fixed_likelihood", "persephone3")
+  windowed <- fixed_likelihood(ts(exp(c(0, 1, 2, 3)), start = c(2000, 1),
+                                 frequency = 12), d = 1, transformation = "log",
+                              estimation_start = c(2000, 2))
+  stopifnot("fixed_likelihood" %in% cap$primitives,
+            identical(windowed$initialization, "fresh_prior_at_span_start"),
+            identical(windowed$adjustment$policy, "jdplus_3.9.0_calendar_window"),
+            isTRUE(all.equal(windowed$likelihood$adjusted_fixed,
+                             2 * dnorm(1, log = TRUE) - 5)))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

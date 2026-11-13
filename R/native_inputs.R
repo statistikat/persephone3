@@ -64,7 +64,8 @@ native_prepare_inputs <- function(series, regressors = NULL, transformation = "n
   if (count > .Machine$integer.max) {
     stop("Required domain exceeds the supported matrix row range.", call. = FALSE)
   }
-  if (!is.character(transformation) || length(transformation) != 1L ||
+  if (!is.character(transformation) || !is.null(dim(transformation)) ||
+      length(transformation) != 1L ||
       is.na(transformation) || !transformation %in% c("none", "log")) {
     stop("transformation must be 'none' or 'log'.", call. = FALSE)
   }
