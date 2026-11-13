@@ -3,6 +3,7 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^README\.Rmd$
+^IMPLEMENTATION_STATUS\.md$
 ^\.travis\.yml$
 .lintr
 ^inst/devel/

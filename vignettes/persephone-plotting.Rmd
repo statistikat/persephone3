@@ -73,7 +73,7 @@ plotResiduals(obj, which = "pacf")
 
 # Highcharter Alternative
 
-For alternative styling, use `hchart()` which leverages the `highcharter` package:
+For alternative styling, use `hchart()` which uses the `highcharter` package:
 
 ```{r hchart-plot}
 hchart(obj)
@@ -87,6 +87,27 @@ Some methods return `plotly` objects directly, allowing further customization:
 # ACF plot with plotly
 p <- plotResiduals(obj, which = "acf")
 p  # The plotly object can be further customized
+```
+
+# Hierarchical Plots
+
+For a hierarchy, `plot()` shows the original aggregate and its direct and
+indirect seasonal adjustments. Forecasts and 95% prediction intervals refer to
+the original aggregate's direct model. AO, LS, and TC markers also come from
+that model, rather than from its individual components. If forecast standard
+errors are absent, only the forecast line is shown.
+
+```{r hierarchical-plot}
+hts <- perHts(a = AirPassengers, b = AirPassengers, method = "x13")
+hts$run()
+plot(hts, forecasts = TRUE, showOutliers = TRUE)
+```
+
+Both features can be hidden independently. Before `run()`, only the original
+aggregate is plotted.
+
+```{r hierarchical-plot-options}
+plot(hts, forecasts = FALSE, showOutliers = FALSE)
 ```
 
 # Repository

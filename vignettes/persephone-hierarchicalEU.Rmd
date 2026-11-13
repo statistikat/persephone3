@@ -34,17 +34,17 @@ data(Exports, package = "rjd3toolkit")
 For all countries' time series we now want to generate a persephone object with Tramo as method.
 
 ```{r}
-# EU countries only (27 member states, excluding UK and non-EU countries)
+# Selected countries available in this dataset (26 series; Belgium is absent)
 eu_countries <- c("France", "Luxembourg", "Netherlands", "Germany", "Italy",
                   "Ireland", "Denmark", "Greece", "Portugal",
                   "Spain", "Sweden", "Finland", "Austria", "Malta", "Estonia",
                   "Latvia", "Lithuania", "Poland", "Czech.Republic", "Slovakia",
                   "Hungary", "Slovenia", "Cyprus", "Bulgaria", "Romania", "Croatia")
 
-ts_28 <- lapply(Exports[eu_countries], perTramo)
+country_series <- lapply(Exports[eu_countries], perTramo)
 ```
 
-We generate a additional layer based on a certain regional grouping of the countries.
+We generate an additional layer based on a certain regional grouping of the countries.
 
 ```{r}
 # Define regional groupings using the actual country names from the dataset
@@ -57,20 +57,20 @@ southern_europe <- c("Italy", "Spain", "Portugal", "Malta")
 western_europe <- c("France", "Netherlands")
 ```
 
-The list argument can be used to create a hierachical persephone object based on a list of persephone objects.
+The list argument can be used to create a hierarchical persephone object based on a list of persephone objects.
 
 ```{r}
-hts_see <- perHts(list = ts_28[south_eastern_europe])
-hts_ne <- perHts(list = ts_28[northern_europe])
-hts_ce <- perHts(list = ts_28[central_europe])
-hts_se <- perHts(list = ts_28[southern_europe])
-hts_we <- perHts(list = ts_28[western_europe])
+hts_see <- perHts(list = country_series[south_eastern_europe])
+hts_ne <- perHts(list = country_series[northern_europe])
+hts_ce <- perHts(list = country_series[central_europe])
+hts_se <- perHts(list = country_series[southern_europe])
+hts_we <- perHts(list = country_series[western_europe])
 ```
 
 
-An additional layer is only the nothern part and southern part
+An additional layer is only the northern part and southern part
 ```{r}
-hts_np <- perHts(norhtern_europe = hts_ne,
+hts_np <- perHts(northern_europe = hts_ne,
                  western_europe = hts_we,
                  central_europe = hts_ce
 )
@@ -79,7 +79,8 @@ hts_sp <- perHts(southern_europe = hts_se,
 )
 ```
 
-Finally we aggregate them to the whole of EU.
+Finally we aggregate the selected countries. This illustrative grouping is not
+a complete EU aggregate.
 ```{r}
 ht_europe <- perHts(north_part = hts_np,
                  south_part = hts_sp
@@ -96,7 +97,7 @@ ht_europe
 
 # Weights
 
-Weights can be used to customize the aggregation step, so the hierachical time series is not just the sum of its components, but the weighted sum. This can be especially helpful if the timeseries are indices.
+Weights can be used to customize the aggregation step, so the hierarchical time series is not just the sum of its components, but the weighted sum. This can be especially helpful if the timeseries are indices.
 
 ## Time-invariant weights
 
@@ -104,11 +105,11 @@ The weights parameter will be set as numeric vector with length equal to the num
 
 Almost the same call, but with weights, one for each component.
 ```{r}
-hts_see <- perHts(list = ts_28[south_eastern_europe], weights=c(1,2,3,4))
-hts_ne <- perHts(list = ts_28[northern_europe], weights = c(5,6,7,8)) # 4 countries: Denmark, Finland, Sweden, Ireland
-hts_ce <- perHts(list = ts_28[central_europe], weights = rep(1,12))
-hts_se <- perHts(list = ts_28[southern_europe], weights = c(8,9,10,10.5))
-hts_we <- perHts(list = ts_28[western_europe], weights = c(11,12)) # 2 countries: France, Netherlands
+hts_see <- perHts(list = country_series[south_eastern_europe], weights=c(1,2,3,4))
+hts_ne <- perHts(list = country_series[northern_europe], weights = c(5,6,7,8)) # 4 countries: Denmark, Finland, Sweden, Ireland
+hts_ce <- perHts(list = country_series[central_europe], weights = rep(1,12))
+hts_se <- perHts(list = country_series[southern_europe], weights = c(8,9,10,10.5))
+hts_we <- perHts(list = country_series[western_europe], weights = c(11,12)) # 2 countries: France, Netherlands
 ```
 
 In additional aggregation steps, the weight is automatically summed up. So e.g. the weight for central europe is 12, the sum of 12 times 1.
@@ -143,21 +144,22 @@ We are starting with weights equal to 1 and then only change the weight of Germa
 # Convert list to mts (multi-time series) object
 weights_eu <- do.call(cbind, Exports[eu_countries]) * 0 + 1
 weights_eu[is.na(weights_eu)] <- 1
+set.seed(123)
 weights_eu[,"Germany"] <- weights_eu[,"Germany"] + rlnorm(nrow(weights_eu))
 ```
 
 
 We can now call the `perHts` function with the mts as input.
 ```{r}
-hts_see <- perHts(list = ts_28[south_eastern_europe],
+hts_see <- perHts(list = country_series[south_eastern_europe],
                    weights=weights_eu[,south_eastern_europe])
-hts_ne <- perHts(list = ts_28[northern_europe],
+hts_ne <- perHts(list = country_series[northern_europe],
                   weights=weights_eu[,northern_europe])
-hts_ce <- perHts(list = ts_28[central_europe],
+hts_ce <- perHts(list = country_series[central_europe],
                   weights=weights_eu[,central_europe])
-hts_se <- perHts(list = ts_28[southern_europe],
+hts_se <- perHts(list = country_series[southern_europe],
                   weights=weights_eu[,southern_europe])
-hts_we <- perHts(list = ts_28[western_europe],
+hts_we <- perHts(list = country_series[western_europe],
                   weights=weights_eu[,western_europe])
 ```
 

@@ -37,6 +37,8 @@ navbar:
   - text: Hierarchies
     icon: fas fa-layer-group
     href: articles/persephone-hierarchical.html
+  - text: Diagnostics
+    href: articles/persephone-diagnostics.html
   - text: News
     icon: fas fa-newspaper
     href: news/

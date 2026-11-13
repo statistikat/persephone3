@@ -54,7 +54,7 @@ display_result <- function(ts) {
 hts$run()
 
 # Direct adjustment (seasonally adjusted aggregate series)
-display_result(hts$adjusted)
+display_result(hts$adjustedDirect)
 
 # Seasonally adjusted component series "a"
 display_result(hts$components$a$adjusted)
@@ -121,22 +121,32 @@ The `automdl.enabled = FALSE` setting was applied to both the aggregate series a
 
 ```{r}
 # Check aggregate spec
-hts_custom$paramsDirect$automdl.enabled
+hts_custom$paramsDirect$tramo$automodel$enabled
 
 # Check component a spec
-hts_custom$components$a$paramsDirect$automdl.enabled
+hts_custom$components$a$params$regarima$automodel$enabled
 
 # Check component b spec
-hts_custom$components$b$paramsDirect$automdl.enabled
+hts_custom$components$b$params$tramo$automodel$enabled
 ```
+
+Existing `perX13()` and `perTramo()` components retain their adjustment method;
+recursive updates change their specifications, not their class. Use plain `ts`
+components to apply one `method` to the whole hierarchy. Specifications are
+accessed through `$params` on a single-series component and `$paramsDirect`
+for a hierarchy's aggregate. X-13 settings are under `$regarima`, and TRAMO/SEATS
+settings are under `$tramo`. The hierarchy's `$params` contains specifications
+for both the aggregate and its children.
 
 To modify individual components after creation, access them directly:
 
 ```{r, warning=FALSE}
 # Re-enable automdl for component a only
 hts_custom$components$a$updateParams(automdl.enabled = TRUE)
-hts_custom$components$a$paramsDirect$automdl.enabled
+hts_custom$components$a$params$regarima$automodel$enabled
 ```
+
+Call `hts_custom$run()` again to update results after changing specifications.
 
 # Next Steps
 
