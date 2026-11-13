@@ -1,3 +1,170 @@
+# Normalize dates explicitly: current rjd3 specs use ISO strings, while older
+# serialized specs may hold Date values or numeric days since 1970-01-01.
+outlier_date <- function(value) {
+  if (length(value) != 1L || is.na(value)) {
+    stop("An outlier date must be a single non-missing value.", call. = FALSE)
+  }
+  if (inherits(value, "Date")) return(as.Date(value))
+  if (inherits(value, "POSIXt")) return(as.Date(value, tz = "UTC"))
+  if (is.numeric(value) && is.finite(value) && value == floor(value)) {
+    return(as.Date(value, origin = "1970-01-01"))
+  }
+  if (is.character(value) && grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", value)) {
+    result <- as.Date(value, format = "%Y-%m-%d")
+    if (!is.na(result) && identical(format(result, "%Y-%m-%d"), value)) return(result)
+  }
+  stop("Unsupported outlier date; use an ISO date, Date, POSIXt, or numeric epoch day.",
+       call. = FALSE)
+}
+
+outlier_period_index <- function(date, frequency) {
+  if (!frequency %in% c(1, 2, 3, 4, 6, 12)) {
+    stop("Outlier dates require a frequency that divides 12.", call. = FALSE)
+  }
+  year <- as.integer(format(date, "%Y"))
+  month <- as.integer(format(date, "%m"))
+  year * frequency + floor((month - 1) * frequency / 12)
+}
+
+outlier_period_dates <- function(index, frequency) {
+  year <- floor(index / frequency)
+  month <- (index %% frequency) * (12 / frequency) + 1
+  as.Date(sprintf("%04d-%02d-01", as.integer(year), as.integer(month)))
+}
+
+outlier_label <- function(type, date, frequency) {
+  index <- outlier_period_index(date, frequency)
+  year <- floor(index / frequency)
+  period <- index %% frequency + 1
+  paste0(type, year, if (frequency == 1) "" else paste0(".", period))
+}
+
+fitted_regression_spec <- function(x) {
+  # Relate a fitted result to the specification used for that fit, even after
+  # updateParams() changes the current settings. Legacy objects lack $result.
+  spec <- x$result$specification$parameters
+  if (is.null(spec)) {
+    spec <- if (inherits(x, "hierarchicalTimeSeries")) x$paramsDirect else x$params
+  }
+  if (!is.null(spec$regarima)) spec$regarima else spec$tramo
+}
+
+manual_outlier_table <- function(spec) {
+  records <- spec$regression$outliers
+  if (!length(records)) {
+    return(data.frame(type = character(), name = character(), date = as.Date(character())))
+  }
+  data.frame(type = vapply(records, function(value) as.character(value$code), ""),
+             name = vapply(records, function(value) {
+               if (is.null(value$name)) "" else as.character(value$name)
+             }, ""),
+             date = as.Date(vapply(records, function(value) as.numeric(outlier_date(value$pos)),
+                                   numeric(1)), origin = "1970-01-01"),
+             stringsAsFactors = FALSE)
+}
+
+outlier_variable_dates <- function(variables, manual) {
+  value <- vapply(variables, function(variable) {
+    for (field in c("pos", "date")) {
+      if (!is.null(variable[[field]])) return(as.numeric(outlier_date(variable[[field]])))
+    }
+    # A manually supplied display name need not contain a date. Resolve it
+    # against the fitted specification before parsing standard backend labels.
+    index <- which(manual$type == variable$type & manual$name == variable$name)
+    dates <- unique(manual$date[index])
+    if (length(dates) == 1L) return(as.numeric(dates))
+    label <- regmatches(variable$name, regexpr("[0-9]{4}-[0-9]{2}-[0-9]{2}", variable$name))
+    if (length(label) == 1L) return(as.numeric(outlier_date(label)))
+    stop(sprintf("Cannot determine the date of outlier '%s'.", variable$name), call. = FALSE)
+  }, numeric(1))
+  as.Date(value, origin = "1970-01-01")
+}
+
+empty_outlier_table <- function() {
+  structure(data.frame(name = character(), type = character(), coef.value = double(),
+                       stde = double(), t = double(), pvalue = double(),
+                       date = as.Date(character()), coef.type = character(),
+                       autoout = logical(), recentout = logical(), stringsAsFactors = FALSE),
+            class = c("persephoneOutliers", "data.frame"))
+}
+
+regression_coefficient_table <- function(preprocessing) {
+  variables <- preprocessing$description$variables
+  rows <- lapply(seq_along(variables), function(index) {
+    variable <- variables[[index]]
+    coefficients <- variable$coef
+    # Current backends return a data frame; older/plain result fixtures may
+    # represent the same coefficient columns as a list.
+    n <- length(coefficients$value)
+    if (!n) return(NULL)
+    coefficient_type <- as.character(coefficients$type)
+    if (!length(coefficient_type)) coefficient_type <- rep(NA_character_, n)
+    if (!length(coefficient_type) %in% c(1L, n)) {
+      stop("Regression coefficient values and types have inconsistent lengths.", call. = FALSE)
+    }
+    labels <- rownames(coefficients)
+    if (is.null(labels)) labels <- rep(variable$name, n)
+    data.frame(variable = index, name = labels, type = variable$type,
+               value = as.numeric(coefficients$value),
+               coef.type = rep_len(coefficient_type, n),
+               stringsAsFactors = FALSE)
+  })
+  rows <- do.call(rbind, rows)
+  if (is.null(rows)) return(NULL)
+  rownames(rows) <- NULL
+  estimated <- rows$coef.type %in% "ESTIMATED"
+  rows$stde <- rep(NA_real_, nrow(rows))
+  covariance <- preprocessing$estimation$bvar
+  if (length(covariance)) {
+    n <- sum(estimated)
+    if (!is.matrix(covariance) || !identical(dim(covariance), c(n, n))) {
+      warning("bvar does not match the number of estimated regression coefficients; standard errors are unavailable.", call. = FALSE)
+    } else {
+      variance <- diag(covariance)
+      if (any(!is.na(variance) & variance < 0)) {
+        warning("Negative regression coefficient variance; affected standard errors are unavailable.", call. = FALSE)
+        variance[!is.na(variance) & variance < 0] <- NA_real_
+      }
+      rows$stde[estimated] <- sqrt(variance)
+    }
+  }
+  rows$t <- rep(NA_real_, nrow(rows))
+  rows$t[estimated] <- rows$value[estimated] / rows$stde[estimated]
+  rows$pvalue <- rep(NA_real_, nrow(rows))
+  likelihood <- preprocessing$estimation$likelihood
+  ndf <- likelihood$neffectiveobs - likelihood$nparams
+  if (length(ndf) == 1L && is.finite(ndf) && ndf > 0) {
+    rows$pvalue[estimated] <- 2 * stats::pt(abs(rows$t[estimated]), ndf, lower.tail = FALSE)
+  }
+  rows
+}
+
+outlier_estimation_periods <- function(series, spec) {
+  frq <- stats::frequency(series)
+  indices <- round(as.numeric(stats::time(series)) * frq)
+  observed <- which(!is.na(series))
+  if (!length(observed)) return(numeric())
+  indices <- indices[seq.int(min(observed), max(observed))]
+  select <- function(indices, span) {
+    if (is.null(span) || is.null(span$type) || span$type == "ALL") return(indices)
+    dates <- outlier_period_dates(indices, frq)
+    count <- function(n) if (n < 0) -n * frq else n
+    switch(span$type,
+           FROM = indices[dates >= outlier_date(span$d0)],
+           TO = indices[dates < outlier_date(span$d1)],
+           BETWEEN = indices[dates >= outlier_date(span$d0) & dates < outlier_date(span$d1)],
+           FIRST = head(indices, count(span$n0)),
+           LAST = tail(indices, count(span$n1)),
+           EXCLUDING = {
+             first <- count(span$n0) + 1L
+             last <- length(indices) - count(span$n1)
+             if (last < first) numeric() else indices[seq.int(first, last)]
+           },
+           stop("Unsupported estimation span type.", call. = FALSE))
+  }
+  select(select(indices, spec$basic$span), spec$estimate$span)
+}
+
 #' Extract outlier information from a Persephone object
 #'
 #' This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
@@ -28,6 +195,11 @@
 #'     the estimation span are never flagged.}
 #'
 #' @details
+#' A fitted model without outliers returns a typed zero-row data frame. A model
+#' that has not been run raises an error. Manual dates accept ISO strings, Date
+#' objects, POSIXt values (UTC), and legacy numeric days since 1970-01-01. Dates
+#' are matched and returned at the model's period boundary.
+#'
 #' X-13ARIMA-SEATS and TRAMO/SEATS do not directly report standard errors,
 #' t-statistics, or p-values for outlier effects. These quantities are computed
 #' here from the estimated coefficients and the covariance matrix (`bvar`),
@@ -43,10 +215,12 @@
 #' The output of a run does not distinguish manually specified from
 #' automatically detected outliers. `autoout` therefore compares the
 #' `type`/`date` pairs of the run output with the manually specified outliers
-#' read from the model specification (`regarima$regression$outliers` for x13,
+#' read from the specification used for the fit (`regarima$regression$outliers` for x13,
 #' `tramo$regression$outliers` for tramoseats). `recentout` is evaluated
 #' independently of `autoout`, so a manually specified outlier close to the
-#' end of the series is flagged as well.
+#' end of the series is flagged as well when it is inside the estimation span.
+#' For legacy objects without a fitted specification snapshot, the current
+#' direct specification is used (including `paramsDirect` for aggregates).
 #'
 #' @note This is an internal function used by other get* functions and diagnostics.
 #' @keywords internal
@@ -57,141 +231,39 @@
 #' # getOutliers(obj)                  # all outliers
 #' # subset(getOutliers(obj), autoout) # without the manually specified one
 getOutliers <- function(x) {
-  if (is.null(x$output)) {
-    stop("No results from run available.\n")
-  }
+  if (is.null(x$output)) stop("No results from run available.\n")
   stopifnot(inherits(x$output, c("JD3_X13_RSLTS", "JD3_TRAMOSEATS_RSLTS")))
-
   variables <- x$output$preprocessing$description$variables
-  vartype <- sapply(variables, function(v) v$type)
-  otlind <- which(vartype %in% c("AO", "TC", "LS"))
-  outliers <- variables[otlind]
+  selected <- which(vapply(variables, function(variable) variable$type %in% c("AO", "LS", "TC"), logical(1)))
+  if (!length(selected)) return(empty_outlier_table())
 
-  if (length(outliers) > 0) {
-    outliers <- as.data.frame(do.call(
-      rbind,
-      lapply(outliers, function(x) unlist(x))
-    ))
-    # outliers$origname <- outliers$name
-    outliers$coef.value <- as.numeric(outliers$coef.value)
-    outliers$date <- substr(outliers$name, 5, 14)
-    newname <- lapply(strsplit(substr(outliers$date, 1, 7), "-"), as.numeric)
-    outliers$date <- as.Date(outliers$date, origin = "1970-01-01")
-
-    if (frequency(x$ts) == 12) {
-      outliers$name <- lapply(newname, function(nn) paste0(nn, collapse = "."))
-    } else {
-      newname <- lapply(newname, function(nn) {
-        c(nn[1], lubridate::quarter(nn[2]))
-      })
-      outliers$name <- lapply(newname, function(nn2) {
-        paste0(nn2, collapse = ".")
-      })
-    }
-    outliers$name <- paste0(outliers$type, outliers$name)
-
-    # bvar only covers the ESTIMATED coefficients, in the order of all
-    # regression variables. FIXED ones (e.g. manually specified outliers
-    # outside the estimation range) get no standard error. Same mapping as
-    # in getRegressors(). One regression variable can carry several
-    # coefficients (trading days: one per weekday), so everything below is
-    # indexed per coefficient, not per variable.
-    coef_types <- lapply(
-      variables,
-      function(v) {
-        n <- NROW(v$coef)
-        if (n == 0) {
-          character(0)
-        } else if (is.null(v$coef$type)) {
-          rep(NA_character_, n)
-        } else {
-          as.character(v$coef$type)
-        }
-      }
-    )
-    coef_n <- vapply(coef_types, length, integer(1L))
-    coef_type <- unlist(coef_types, use.names = FALSE)
-    stde_all <- rep(NA_real_, length(coef_type))
-    bvar <- x$output$preprocessing$estimation$bvar
-    if (length(bvar) > 0) {
-      sel <- coef_type == "ESTIMATED"
-      if (nrow(bvar) == sum(sel)) {
-        stde_all[sel] <- sqrt(diag(bvar))
-      } else {
-        warning(
-          "bvar does not match the number of estimated regression ",
-          "coefficients. Standard errors are unreliable."
-        )
-      }
-    }
-    # outliers always carry exactly one coefficient, so the index of an
-    # outlier in the flattened vector is the cumulated number of coefficients
-    # up to its variable
-    stde <- stde_all[cumsum(coef_n)[otlind]]
-    t <- outliers$coef.value / stde
-    ndf <- x$output$preprocessing$estimation$likelihood$neffectiveobs -
-      x$output$preprocessing$estimation$likelihood$nparams
-    pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
-    outliers$stde <- stde
-    outliers$t <- t
-    outliers$pvalue <- pval
-
-    # The output of the run does not distinguish manually specified from
-    # automatically detected outliers; only the specification knows the manual
-    # ones (regarima$regression$outliers for x13, tramo$regression$outliers
-    # for tramoseats). Matching works on the type/date pair.
-    spec <- unclass(x$params)
-    spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
-    spec_outliers <- spec$regression$outliers
-    manual <- if (length(spec_outliers) == 0) {
-      NULL
-    } else {
-      data.frame(
-        type = vapply(spec_outliers, function(o) as.character(o$code), ""),
-        date = as.Date(
-          vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
-          origin = "1970-01-01"
-        )
-      )
-    }
-    outliers$autoout <- if (is.null(manual)) {
-      TRUE
-    } else {
-      !(paste(outliers$type, outliers$date) %in% paste(manual$type, manual$date))
-    }
-
-    # recentout: outliers falling into the last 5 (monthly) or 3 (quarterly)
-    # observations of the series, regardless of how they entered the model
-    frq <- frequency(x$ts)
-    k <- if (frq == 12) 5 else if (frq == 4) 3 else 1
-    per <- if (frq == 12) {
-      lubridate::year(outliers$date) +
-        (lubridate::month(outliers$date) - 1) / 12
-    } else {
-      lubridate::year(outliers$date) +
-        (lubridate::quarter(outliers$date) - 1) / 4
-    }
-    lag_periods <- round((as.numeric(tail(time(x$ts), 1)) - per) * frq)
-    outliers$recentout <- lag_periods >= 0 & lag_periods <= k - 1
-
-    rownames(outliers) <- NULL
-    outliers <- outliers[, c(
-      "name",
-      "type",
-      "coef.value",
-      "stde",
-      "t",
-      "pvalue",
-      "date",
-      "coef.type",
-      "autoout",
-      "recentout"
-    )]
-    class(outliers) <- c("persephoneOutliers", "data.frame")
-  } else {
-    outliers <- NA
+  records <- regression_coefficient_table(x$output$preprocessing)
+  selected_rows <- which(records$variable %in% selected)
+  if (length(selected_rows) != length(selected)) {
+    stop("Each outlier must have exactly one regression coefficient.", call. = FALSE)
   }
-  outliers
+  records <- records[selected_rows, , drop = FALSE]
+  spec <- fitted_regression_spec(x)
+  manual <- manual_outlier_table(spec)
+  frq <- stats::frequency(x$ts)
+  dates <- outlier_variable_dates(variables[selected], manual)
+  periods <- outlier_period_index(dates, frq)
+  # Match model periods: a date inside a quarter refers to that quarter, not
+  # necessarily to its first calendar day.
+  manual_keys <- paste(manual$type, outlier_period_index(manual$date, frq))
+  keys <- paste(records$type, periods)
+  k <- if (frq == 12) 5L else if (frq == 4) 3L else 1L
+  last <- round(tail(as.numeric(stats::time(x$ts)), 1L) * frq)
+  recent <- periods > last - k & periods <= last &
+    periods %in% outlier_estimation_periods(x$ts, spec)
+
+  structure(data.frame(name = outlier_label(records$type, dates, frq),
+                       type = records$type, coef.value = records$value,
+                       stde = records$stde, t = records$t, pvalue = records$pvalue,
+                       date = outlier_period_dates(periods, frq), coef.type = records$coef.type,
+                       autoout = !keys %in% manual_keys, recentout = recent,
+                       stringsAsFactors = FALSE, row.names = NULL),
+            class = c("persephoneOutliers", "data.frame"))
 }
 
 #' Extract regression coefficients from a Persephone object
@@ -231,92 +303,20 @@ getOutliers <- function(x) {
 #' # obj$run()
 #' # getRegressors(obj)
 getRegressors <- function(x) {
-  if (is.null(x$output)) {
-    stop("No results from run available.\n")
-  }
+  if (is.null(x$output)) stop("No results from run available.\n")
   stopifnot(inherits(x$output, c("JD3_X13_RSLTS", "JD3_TRAMOSEATS_RSLTS")))
   q <- x$output$preprocessing
-  variables <- q$description$variables
-
-  if (length(variables) > 0) {
-    regs <- do.call(
-      "rbind",
-      lapply(variables, function(z) {
-        z$coef
-      })
-    )
-    xregs <- cbind(
-      name = unlist(rownames(regs)),
-      regs,
-      stde = NA,
-      t = NA,
-      pvalue = NA
-    )
-    rownames(xregs) <- NULL
-    # regs$type is the type of the *coefficient* (ESTIMATED/FIXED) and is kept
-    # apart because the returned table uses `type` for the kind of regressor
-    coef_type <- as.character(xregs$type)
-    xregs$type <- NULL
-    # same mapping as in getOutliers(): bvar covers the ESTIMATED coefficients
-    # only, in the order of all regression variables and of the coefficients
-    # within a variable
-    stde <- rep(NA_real_, nrow(xregs))
-    sel <- coef_type == "ESTIMATED"
-    bvar <- q$estimation$bvar
-    if (length(bvar) > 0) {
-      if (nrow(bvar) == sum(sel)) {
-        stde[sel] <- sqrt(diag(bvar))
-      } else {
-        warning(
-          "bvar does not match the number of estimated regression ",
-          "coefficients. Standard errors are unreliable."
-        )
-      }
-    }
-    t <- xregs$value[sel] / stde[sel]
-    ndf <- q$estimation$likelihood$neffectiveobs -
-      q$estimation$likelihood$nparams
-    pval <- 2 * pt(abs(t), ndf, lower.tail = FALSE)
-    xregs$stde[sel] <- stde[sel]
-    xregs$t[sel] <- t
-    xregs$pvalue[sel] <- pval
-
-    # outliers are recognized by the type of their regression variable, not by
-    # their name; all other regressors keep the name they are reported with
-    vartype <- unlist(lapply(variables, function(z) as.character(z$type)))
-    coef_n <- vapply(variables, function(z) NROW(z$coef), integer(1L))
-    # the type of a variable repeats for each of its coefficients
-    # (trading days: mon ... sat)
-    regtype <- rep(vartype, times = coef_n)
-    regtype[regtype %in% c("AO", "LS", "TC")] <- "outlier"
-    otlvar <- which(vartype %in% c("AO", "LS", "TC"))
-    # outliers always carry exactly one coefficient, so their row in the
-    # flattened table is the cumulated number of coefficients up to them
-    otlind <- cumsum(coef_n)[otlvar]
-    otltype <- vartype[otlvar]
-    date <- substr(xregs$name[otlind], 5, 14)
-    newname <- lapply(strsplit(substr(date, 1, 7), "-"), as.numeric)
-    if (frequency(x$ts) == 12) {
-      xregs$name[otlind] <- vapply(newname, function(nn) {
-        paste0(nn, collapse = ".")
-      }, "")
-    } else {
-      newname <- lapply(newname, function(nn) {
-        c(nn[1], ceiling(as.numeric(nn[2]) / 3))
-      })
-      xregs$name[otlind] <- vapply(newname, function(nn2) {
-        paste0(nn2, collapse = ".")
-      }, "")
-    }
-    xregs$name[otlind] <- paste0(otltype, xregs$name[otlind])
-
-    xregs$type <- regtype
-    xregs <- xregs[, c("name", "type", "value", "stde", "t", "pvalue")]
-    class(xregs) <- c("persephoneRegressors", "data.frame")
-    xregs
-  } else {
-    NULL
+  records <- regression_coefficient_table(q)
+  if (is.null(records)) return(NULL)
+  selected <- which(records$type %in% c("AO", "LS", "TC"))
+  if (length(selected)) {
+    manual <- manual_outlier_table(fitted_regression_spec(x))
+    dates <- outlier_variable_dates(q$description$variables[records$variable[selected]], manual)
+    records$name[selected] <- outlier_label(records$type[selected], dates, stats::frequency(x$ts))
+    records$type[selected] <- "outlier"
   }
+  structure(records[, c("name", "type", "value", "stde", "t", "pvalue"), drop = FALSE],
+            class = c("persephoneRegressors", "data.frame"))
 }
 
 #' Print method for the outlier table of a Persephone object
@@ -432,72 +432,24 @@ getRegressors_formatted <- function(x) {
 #' # otl[[2]]  # dates for event annotations
 gettsout <- function(x) {
   outliers <- getOutliers(x)
-  if (frequency(x$ts) == 12) {
-    outliers$mq <- lubridate::month(outliers$date)
-    outliers$y <- lubridate::year(outliers$date)
-  } else {
-    outliers$mq <- lubridate::quarter(outliers$date)
-    outliers$y <- lubridate::year(outliers$date)
-  }
-  #Date format für dyevent
-
-  dateout <- list()
-  for (i in 1:nrow(outliers)) {
-    dateout[[length(dateout) + 1]] <- outliers[i, ]$date
-    names(dateout)[length(dateout)] <- outliers[i, ]$type
-  }
-
-  #outliersAO <-outliers[outliers$name %in% "AO1953.7",c("y","mq")]
-
-  outliersAO <- outliers[outliers$type %in% "AO", c("y", "mq")]
-  outliersLS <- outliers[outliers$type %in% "LS", c("y", "mq")]
-  outliersTC <- outliers[outliers$type %in% "TC", c("y", "mq")]
-
-  tsout <- list()
-
-  if (nrow(outliersAO) > 0) {
-    otlAO <- ts(
-      start = start(x$ts),
-      end = end(x$ts),
-      frequency = frequency(x$ts)
-    )
-    for (i in 1:nrow(outliersAO)) {
-      wi <- as.numeric(outliersAO[i, ])
-      window(otlAO, start = wi, end = wi) <- window(x$ts, start = wi, end = wi)
-    }
-    tsout[[length(tsout) + 1]] <- otlAO
-    names(tsout)[length(tsout)] <- "otlAO"
-  }
-  if (nrow(outliersLS) > 0) {
-    otlLS <- ts(
-      start = start(x$ts),
-      end = end(x$ts),
-      frequency = frequency(x$ts)
-    )
-    for (i in 1:nrow(outliersLS)) {
-      wi <- as.numeric(outliersLS[i, ])
-      window(otlLS, start = wi, end = wi) <- window(x$ts, start = wi, end = wi)
-    }
-    tsout[[length(tsout) + 1]] <- otlLS
-    names(tsout)[length(tsout)] <- "otlLS"
-  }
-  if (nrow(outliersTC) > 0) {
-    otlTC <- ts(
-      start = start(x$ts),
-      end = end(x$ts),
-      frequency = frequency(x$ts)
-    )
-    for (i in 1:nrow(outliersTC)) {
-      wi <- as.numeric(outliersTC[i, ])
-      window(otlTC, start = wi, end = wi) <- window(x$ts, start = wi, end = wi)
-    }
-    tsout[[length(tsout) + 1]] <- otlTC
-    names(tsout)[length(tsout)] <- "otlTC"
-  }
-
-  tsout <- do.call(cbind, tsout)
-
-  return(list(tsout, dateout))
+  frq <- stats::frequency(x$ts)
+  periods <- round(as.numeric(stats::time(x$ts)) * frq)
+  index <- match(outlier_period_index(outliers$date, frq), periods)
+  # Fixed outliers outside the observed series have no point to annotate.
+  outliers <- outliers[!is.na(index), , drop = FALSE]
+  index <- index[!is.na(index)]
+  if (!nrow(outliers)) return(list(NULL, list()))
+  dates <- as.list(outliers$date)
+  names(dates) <- outliers$type
+  types <- intersect(c("AO", "LS", "TC"), outliers$type)
+  points <- lapply(types, function(type) {
+    y <- rep(NA_real_, length(x$ts))
+    positions <- index[outliers$type == type]
+    y[positions] <- x$ts[positions]
+    stats::ts(y, start = stats::start(x$ts), frequency = frq)
+  })
+  names(points) <- paste0("otl", types)
+  list(do.call(cbind, points), dates)
 }
 
 #' Run multiple diagnostic extraction functions on a Persephone object

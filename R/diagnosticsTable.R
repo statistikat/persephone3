@@ -193,9 +193,9 @@ generate_diagnostics_table <- function(x) {
 
   qStat <- x$output$mstats$q
   qStat2 <- x$output$mstats$qm2
-  out_p <- userdef$regression.nout / length(x$ts)
   fTest <- userdef$`regression.td-ftest`$pvalue[1]
   out <- getOutliers(x)
+  out_p <- nrow(out) / length(x$ts)
 
   data.frame(
     run = !is.null(x$output),
@@ -220,9 +220,9 @@ generate_diagnostics_table <- function(x) {
     logTransform = preproc$description$log,
     arimaMdl = bpbdbq,
     nOutliers_Q = classify_outl(out_p),
-    nOutliers = ifelse(is.null(nrow(out)), NA, nrow(out)),
-    nAutoout = ifelse(is.null(nrow(out)), NA, sum(out$autoout)),
-    nRecentout = ifelse(is.null(nrow(out)), NA, sum(out$recentout)),
+    nOutliers = nrow(out),
+    nAutoout = sum(out$autoout),
+    nRecentout = sum(out$recentout),
     Q = ifelse(is.null(qStat), NA, round(qStat, digits = 2)),
     Q2 = ifelse(is.null(qStat2), NA, round(qStat2, digits = 2)),
     TotalQ = userdef$quality.summary

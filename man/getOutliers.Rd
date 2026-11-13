@@ -38,6 +38,11 @@ It processes the raw output from X-13ARIMA-SEATS or TRAMO/SEATS into a clean
 data frame with formatted dates and names.
 }
 \details{
+A fitted model without outliers returns a typed zero-row data frame. A model
+that has not been run raises an error. Manual dates accept ISO strings, Date
+objects, POSIXt values (UTC), and legacy numeric days since 1970-01-01. Dates
+are matched and returned at the model's period boundary.
+
 X-13ARIMA-SEATS and TRAMO/SEATS do not directly report standard errors,
 t-statistics, or p-values for outlier effects. These quantities are computed
 here from the estimated coefficients and the covariance matrix (\code{bvar}),
@@ -53,10 +58,12 @@ of adjustment quality.
 The output of a run does not distinguish manually specified from
 automatically detected outliers. \code{autoout} therefore compares the
 \code{type}/\code{date} pairs of the run output with the manually specified outliers
-read from the model specification (\code{regarima$regression$outliers} for x13,
+read from the specification used for the fit (\code{regarima$regression$outliers} for x13,
 \code{tramo$regression$outliers} for tramoseats). \code{recentout} is evaluated
 independently of \code{autoout}, so a manually specified outlier close to the
-end of the series is flagged as well.
+end of the series is flagged as well when it is inside the estimation span.
+For legacy objects without a fitted specification snapshot, the current
+direct specification is used (including \code{paramsDirect} for aggregates).
 }
 \note{
 This is an internal function used by other get* functions and diagnostics.

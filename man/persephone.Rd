@@ -426,8 +426,8 @@ see \code{\link[=getOutliers]{getOutliers()}}
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    A data frame as described in \code{\link[=getOutliers]{getOutliers()}}, \code{NA} if the model
-contains no outliers
+    A typed data frame as described in \code{\link[=getOutliers]{getOutliers()}}, with zero rows
+for a fitted model without outliers. An unrun model cannot be extracted.
   }
 }
 

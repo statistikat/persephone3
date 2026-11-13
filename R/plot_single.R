@@ -226,9 +226,9 @@ plot.persephoneSingle <- function(
 
     otlTF <- FALSE
     # Outliers
-    if (showOutliers & !all(is.na(getOutliers(x)))) {
+    if (isTRUE(showOutliers) && nrow(getOutliers(x)) > 0L) {
         otl <- gettsout(x)
-        otlTF <- TRUE
+        otlTF <- !is.null(otl[[1]])
       }
 
     # Initialize Graph Object

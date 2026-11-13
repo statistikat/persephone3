@@ -168,8 +168,8 @@ persephone <- R6::R6Class(
     },
     #' @description extract outlier information from the model run,
     #'   see [getOutliers()]
-    #' @return A data frame as described in [getOutliers()], `NA` if the model
-    #'   contains no outliers
+    #' @return A typed data frame as described in [getOutliers()], with zero rows
+    #'   for a fitted model without outliers. An unrun model cannot be extracted.
     getOutliers = function() {
       getOutliers(self)
     },

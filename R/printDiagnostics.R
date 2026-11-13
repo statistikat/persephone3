@@ -41,9 +41,9 @@ printDiagnostics <- function(x) {
     seasonality = userdef$`diagnostics.seas-si-combined`,
     logTransform = preproc$description$log,
     arimaMdl = bpbdbq,
-    nOutliers = ifelse(is.null(nrow(out)), NA, nrow(out)),
-    nAutoout = ifelse(is.null(nrow(out)), NA, sum(out$autoout)),
-    nRecentout = ifelse(is.null(nrow(out)), NA, sum(out$recentout)),
+    nOutliers = nrow(out),
+    nAutoout = sum(out$autoout),
+    nRecentout = sum(out$recentout),
     Q = ifelse(is.null(qStat), NA, round(qStat, digits = 2)),
     Q2 = ifelse(is.null(qStat2), NA, round(qStat2, digits = 2)),
     TotalQ = userdef$quality.summary
