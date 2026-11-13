@@ -8,7 +8,7 @@
 #' @section Columns:
 #' * __component__ is a column added by `iterate()` and informs where in the
 #'   hierarchy a certain component is.
-#' * __Method__ is `TS` for [tramoseats_fast()] and `x13` for [x13_fast()]
+#' * __Method__ is `TS` for [rjd3tramoseats::tramoseats_fast()] and `x13` for [rjd3x13::x13_fast()]
 #' * __Period__ is `12` for yearly measurements and `4` for quarterly
 #'   measurements
 #' * __Start__ denotes the start of the time series

@@ -7,7 +7,12 @@
 \usage{
 is.persephone(x)
 
-as.persephone(x, method = c("tramoseats", "x13"), template = NULL)
+as.persephone(
+  x,
+  method = c("tramoseats", "x13"),
+  template = NULL,
+  backend = NULL
+)
 }
 \arguments{
 \item{x}{R object to be tested or converted.}
@@ -18,6 +23,8 @@ whose method is fixed by their class.}
 
 \item{template}{template name passed to the corresponding spec function;
 if NULL, the method-specific default is used.}
+
+\item{backend}{Backend for new objects. Existing objects retain their recorded backend.}
 }
 \description{
 Check if an R object is of or derives from the class \code{persephone} or convert

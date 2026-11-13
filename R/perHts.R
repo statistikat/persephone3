@@ -59,6 +59,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' passed to the rjd3 specification functions internally. As alternative input to `...`.
     #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
     #'   returned by [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()].
+    #' @param backend Backend for the aggregate and new components; existing objects retain theirs.
     #' @param weights either a vector if the same weight is used for all time
     #'   points or a list of ts objects or a mts object if the weight varies
     #'   for different time points. They must have the same length as the
@@ -75,10 +76,12 @@ hierarchicalTimeSeries <- R6::R6Class(
       spec = NULL,
       weights = NULL,
       iterate = TRUE,
-      speclist = NULL
+      speclist = NULL,
+      backend = NULL
     ) {
       #browser()
       private$method <- match.arg(method)
+      private$backend_internal <- resolve_backend(backend)
       # template default and validation depending on method
       if (missing(template) || is.null(template)) {
         template <- "rsa3"
@@ -86,7 +89,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       check_template(template, private$method)
       private$template <- template
       # keep context and userdefined in private state for runDirect
-      private$context <- context
+      private$context_internal <- context
       # userdefined_default expected to be defined elsewhere in the package
       private$userdefined <- union(userdefined, userdefined_default)
       private$params_internal <- spec
@@ -144,11 +147,12 @@ hierarchicalTimeSeries <- R6::R6Class(
           components,
           as.persephone,
           method = private$method,
-          template = private$template
+          template = private$template,
+          backend = self$backend
         )
         check_component_method(components, private$method, iterate)
       } else {
-        components <- lapply(components, as.persephone)
+        components <- lapply(components, as.persephone, backend = self$backend)
       }
       componentsHts <- sapply(
         components,
@@ -403,6 +407,18 @@ hierarchicalTimeSeries <- R6::R6Class(
 
   # ---- Active Bindings ----
   active = list(
+    #' @field specification Canonical specification for the direct aggregate.
+    specification = function() {
+      new_backend_spec(self$method, private$template, frequency(private$ts_internal),
+                       private$params_internal, self$backend)
+    },
+    #' @field result Canonical result of the direct aggregate fit.
+    result = function() private$result_internal,
+    #' @field is_stale Whether the direct aggregate or a component fit has stale settings.
+    is_stale = function() {
+      (!is.null(private$output_internal) &&
+         !identical(private$fit_signature, private$current_signature())) || super$is_stale
+    },
     #' @field ts the aggregated time series
     ts = function() {
       private$ts_internal
@@ -476,7 +492,7 @@ hierarchicalTimeSeries <- R6::R6Class(
     method = NULL, # one of c("tramoseats","x13")
     spec_list = NULL, # specification parameters
     spec = NULL, # rjd3 spec object (if used directly)
-    context = NULL, # list of external regressors (calendar or other) for
+    context_internal = NULL, # list of external regressors (calendar or other) for
     userdefined = NULL, # additional output values from rjd3
     ts_internal = NULL, # aggregate series (sum or weighted sum)
     output_internal = NULL, # output for direct aggregate
@@ -684,22 +700,20 @@ hierarchicalTimeSeries <- R6::R6Class(
       # if still NULL -> create a new spec using template
       if (is.null(init_spec)) {
         tmpl <- if (!is.null(name)) name else private$template
-        init_spec <- if (private$method == "x13") {
-          rjd3x13::x13_spec(name = tmpl)
-        } else {
-          rjd3tramoseats::tramoseats_spec(name = tmpl)
-        }
+        init_spec <- backend_default_spec(private$method, tmpl, freq, self$backend)
       }
+      init_spec <- backend_spec_parameters(init_spec, private$method, self$backend)
       # if spec_list not provided, construct from ... to allow passing named spec args
       if (is.null(spec_list)) {
         spec_list <- list(...)
       }
       if (length(spec_list) > 0) {
-        spec_new <- update_spec(
+        spec_new <- backend_update_spec(
           spec = init_spec,
           method = if (private$method == "x13") "x13" else "tramoseats",
           freq = freq,
-          spec_list = spec_list
+          spec_list = spec_list,
+          backend = self$backend
         )
       } else {
         spec_new <- init_spec
@@ -722,28 +736,19 @@ hierarchicalTimeSeries <- R6::R6Class(
     },
 
     runDirect = function(ts) {
-      spec <- private$params_internal
-      if (is.null(spec)) {
-        spec <- if (private$method == "x13") {
-          rjd3x13::x13_spec(name = private$template)
-        } else {
-          rjd3tramoseats::tramoseats_spec(name = private$template)
-        }
-        private$params_internal <- spec
+      if (is.null(private$params_internal)) {
+        private$params_internal <- backend_default_spec(
+          private$method, private$template, frequency(private$ts_internal), self$backend)
       }
-
-      methodFunction <- switch(
-        private$method,
-        tramoseats = rjd3tramoseats::tramoseats_fast,
-        x13 = rjd3x13::x13_fast
-      )
-
-      private$output_internal <- methodFunction(
-        ts = private$ts_internal,
-        spec = private$params_internal,
-        userdefined = private$userdefined,
-        context = private$context
-      )
+      output <- backend_fit(
+        ts = private$ts_internal, spec = private$params_internal,
+        userdefined = private$userdefined, context = private$context_internal,
+        method = private$method, backend = self$backend)
+      normalized <- normalize_backend_result(output, private$method, self$backend,
+                                              private$params_internal, private$ts_internal)
+      private$output_internal <- output
+      private$result_internal <- normalized
+      private$fit_signature <- private$current_signature()
     }
   )
 )
@@ -780,6 +785,8 @@ hierarchicalTimeSeries <- R6::R6Class(
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #'   returned by [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()].
+#' @param backend Backend for the aggregate and newly created components. Existing
+#'   component objects retain their recorded backend, independently of iterate.
 #' @param weights  either a vector if the same weight is used for all time
 #'   points or a list of ts objects or a mts object if the weight varies for
 #'   different time points. They must have the same length as the number of
@@ -824,7 +831,8 @@ perHts <- function(
   speclist = NULL,
   spec = NULL,
   weights = NULL,
-  iterate = TRUE
+  iterate = TRUE,
+  backend = NULL
 ) {
   hierarchicalTimeSeries$new(
     ...,
@@ -836,7 +844,8 @@ perHts <- function(
     spec = spec,
     list = list,
     weights = weights,
-    iterate = iterate
+    iterate = iterate,
+    backend = backend
   )
 }
 

@@ -4,7 +4,13 @@
 \alias{update_spec}
 \title{Update rjd3-spec object for seasonal adjustment}
 \usage{
-update_spec(spec = NULL, method = c("x13", "tramoseats"), freq, spec_list)
+update_spec(
+  spec = NULL,
+  method = c("x13", "tramoseats"),
+  freq,
+  spec_list,
+  backend = NULL
+)
 }
 \arguments{
 \item{spec}{an rjd3-specification object.}
@@ -16,6 +22,8 @@ Used for parsing outlier dates.}
 
 \item{spec_list}{a list containing the additional arguments for customizing the model specifications.
 Passed to the rjd3 specification functions internally. See \code{\link{perX13}} or \code{\link{perTramo}} for more details.}
+
+\item{backend}{Effective backend name.}
 }
 \value{
 An updated specification object (JD3_*_SPEC).

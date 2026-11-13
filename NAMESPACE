@@ -9,6 +9,7 @@ S3method(print,persephoneRegressors)
 export("%>%")
 export(as.persephone)
 export(autoplot)
+export(backend_capabilities)
 export(createDashboard)
 export(dashboard_compare)
 export(dashboard_single)
@@ -45,53 +46,62 @@ import(ggplot2)
 import(htmlwidgets)
 importFrom(DT,DTOutput)
 importFrom(R6,R6Class)
-importFrom(graphics,plot.new)
-importFrom(rjd3toolkit,set_arima)
-importFrom(shinycssloaders,withSpinner)
-importFrom(stats,qqnorm)
-importFrom(stats,tsp)
-importFrom(stringr,str_count)
-importFrom(utils,tail)
-import(rjd3tramoseats)
-import(rjd3x13)
-importFrom(dygraphs,dyAnnotation)
-importFrom(dygraphs,dyCSS)
-importFrom(dygraphs,dyEvent)
-importFrom(dygraphs,dyHighlight)
-importFrom(dygraphs,dyLegend)
-importFrom(dygraphs,dyPlotter)
-importFrom(dygraphs,dyRangeSelector)
-importFrom(dygraphs,dySeries)
-importFrom(dygraphs,dygraph)
+importFrom(dygraphs,
+  dyAnnotation,
+  dyCSS,
+  dyEvent,
+  dyHighlight,
+  dyLegend,
+  dyPlotter,
+  dyRangeSelector,
+  dySeries,
+  dygraph
+)
 importFrom(ggplot2,autoplot)
-importFrom(highcharter,"%>%")
-importFrom(highcharter,hc_title)
-importFrom(highcharter,hchart)
-importFrom(lubridate,month)
-importFrom(lubridate,quarter)
-importFrom(lubridate,year)
+importFrom(graphics,plot.new)
+importFrom(highcharter,
+  "%>%",
+  hc_title,
+  hchart
+)
+importFrom(lubridate,
+  month,
+  quarter,
+  year
+)
 importFrom(magrittr,"%>%")
-importFrom(stats,"window<-")
-importFrom(stats,acf)
-importFrom(stats,aggregate.ts)
-importFrom(stats,cycle)
-importFrom(stats,density)
-importFrom(stats,dnorm)
-importFrom(stats,end)
-importFrom(stats,frequency)
-importFrom(stats,lag)
-importFrom(stats,pacf)
-importFrom(stats,printCoefmat)
-importFrom(stats,pt)
-importFrom(stats,qnorm)
-importFrom(stats,spec.ar)
-importFrom(stats,spec.pgram)
-importFrom(stats,start)
-importFrom(stats,time)
-importFrom(stats,ts)
-importFrom(stats,window)
+importFrom(shinycssloaders,withSpinner)
+importFrom(stats,
+  "window<-",
+  acf,
+  aggregate.ts,
+  cycle,
+  density,
+  dnorm,
+  end,
+  frequency,
+  lag,
+  pacf,
+  printCoefmat,
+  pt,
+  qnorm,
+  qqnorm,
+  spec.ar,
+  spec.pgram,
+  start,
+  time,
+  ts,
+  tsp,
+  window
+)
+importFrom(stringr,str_count)
 importFrom(timeDate,Easter)
-importFrom(utils,capture.output)
-importFrom(utils,data)
-importFrom(zoo,as.Date)
-importFrom(zoo,as.yearmon)
+importFrom(utils,
+  capture.output,
+  data,
+  tail
+)
+importFrom(zoo,
+  as.Date,
+  as.yearmon
+)

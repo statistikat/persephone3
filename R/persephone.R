@@ -26,8 +26,8 @@
 #'
 #' @section Read-Only fields:
 #'
-#' - `params`: A parameters object of class `SA_spec`. See [x13_spec] and
-#'   [tramoseats_spec].
+#' - `params`: A parameters object of class `SA_spec`. See [rjd3x13::x13_spec] and
+#'   [rjd3tramoseats::tramoseats_spec].
 #' - `ts`: The time series.
 #' - `output`: The return value from the underlying functions `x13_fast` or
 #'   `tramoseats_fast`. This slot will
@@ -39,8 +39,6 @@
 #'   run? If `FALSE` (the default), the output will be returned invisibly.
 #' @section derived classes:
 #' [perX13()], [perTramo()], [perHts()]
-#' @import rjd3x13
-#' @import rjd3tramoseats
 #' @export
 persephone <- R6::R6Class(
   "persephone",
@@ -190,8 +188,23 @@ persephone <- R6::R6Class(
   # ---- Active Bindings ----
   ## read-only access to params, ts, and output
   active = list(
-    #' @field params A parameters object of class `SA_spec`. See [x13_spec()]
-    #'   and [tramoseats_spec()].
+    #' @field backend Effective computation backend, fixed at construction.
+    backend = function() private$backend_internal %||% "rjd3",
+    #' @field specification Versioned specification envelope; raw params remain available.
+    specification = function() {
+      new_backend_spec(self$method, private$template_internal,
+                       frequency(private$ts_internal), private$params_internal,
+                       self$backend)
+    },
+    #' @field result Versioned result from the last successful run, or NULL.
+    result = function() private$result_internal,
+    #' @field is_stale Whether the settings have changed since the last successful fit.
+    is_stale = function() {
+      !is.null(private$output_internal) &&
+        !identical(private$fit_signature, private$current_signature())
+    },
+    #' @field params A parameters object of class `SA_spec`. See [rjd3x13::x13_spec()]
+    #'   and [rjd3tramoseats::tramoseats_spec()].
     params = function() {
       private$params_internal
     },
@@ -213,7 +226,7 @@ persephone <- R6::R6Class(
     output = function() {
       private$output_internal
     },
-    #' @field context passed to [x13_fast()] and [tramoseats_fast()] when the
+    #' @field context passed to [rjd3x13::x13_fast()] and [rjd3tramoseats::tramoseats_fast()] when the
     #'   `$run()` method is invoked
     context = function() {
       private$context_internal
@@ -226,7 +239,7 @@ persephone <- R6::R6Class(
     adjustedDirect = function() {
       self$output$user_defined$sa
     },
-    # # ' @field spec specifications passed to [x13_fast()] and [tramoseats_fast()] when the
+    # # ' @field spec specifications passed to [rjd3x13::x13_fast()] and [rjd3tramoseats::tramoseats_fast()] when the
     # # '   `$run()` method is invoked
     # spec = function() {
     #   private$params_internal
@@ -250,6 +263,14 @@ persephone <- R6::R6Class(
       } else {
         return(res)
       }
+    },
+    backend_internal = NULL,
+    template_internal = NULL,
+    result_internal = NULL,
+    fit_signature = NULL,
+    current_signature = function() {
+      list(ts = private$ts_internal, params = private$params_internal,
+           context = self$context, userdefined = private$userdefined)
     },
     ts_internal = NULL,
     tsp_internal = NULL,

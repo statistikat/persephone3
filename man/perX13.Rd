@@ -10,7 +10,8 @@ perX13(
   context = NULL,
   userdefined = NULL,
   speclist = NULL,
-  ...
+  ...,
+  backend = NULL
 )
 }
 \arguments{
@@ -22,10 +23,10 @@ Must be one of:
 Defaults to \code{"rsa3"}.}
 
 \item{context}{a list of external regressors (calendar or other) to be used for estimation,
-passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
+passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}}.}
 
 \item{userdefined}{a character vector of user-defined variables to be included in the output,
-passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}.}
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}}.}
 
 \item{speclist}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
@@ -54,16 +55,19 @@ Supported spec-blocks and their corresponding functions:
 \item \code{td}           → \code{\link[rjd3toolkit:set_tradingdays]{rjd3toolkit::set_tradingdays}}
 \item \code{transform}    → \code{\link[rjd3toolkit:set_transform]{rjd3toolkit::set_transform}}
 \item \code{addout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_outlier}}
-\item \code{remout}       → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_outlier}}
-\item \code{addramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::add_ramp}}
-\item \code{remramp}      → \code{\link[rjd3toolkit:add_outlier]{rjd3toolkit::remove_ramp}}
+\item \code{remout}       → \code{\link[rjd3toolkit:remove_outlier]{rjd3toolkit::remove_outlier}}
+\item \code{addramp}      → \code{\link[rjd3toolkit:add_ramp]{rjd3toolkit::add_ramp}}
+\item \code{remramp}      → \code{\link[rjd3toolkit:remove_ramp]{rjd3toolkit::remove_ramp}}
 \item \code{usrdefvar}    → \code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar}}
-\item \code{x11}          → \code{\link[rjd3x13:x11_spec]{rjd3x13::set_x11}} (x13 only)
+\item \code{x11}          → \code{\link[rjd3x13:set_x11]{rjd3x13::set_x11}} (x13 only)
 \item \code{benchmarking} → \code{\link[rjd3toolkit:set_benchmarking]{rjd3toolkit::set_benchmarking}}
 }
 
 The package offers convenient options for setting certain parameters to improve usability.
 Documentation pending.}
+
+\item{backend}{Backend name, or NULL to use option persephone.backend (default rjd3).
+Native fitting is not yet implemented; unsupported requests fail explicitly.}
 }
 \value{
 An object of class \code{\link{x13Single}} representing an x13 seasonal
@@ -129,5 +133,5 @@ see the rjd3x13 documentation:
 \url{https://rjdverse.github.io/rjd3x13/}
 }
 \seealso{
-\code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}, \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}
+\code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}, \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}}
 }

@@ -16,13 +16,14 @@ is.persephone <- function(x) {
 #' @param method SA method used when coercing a bare ts object, i.e.
 #'   "tramoseats" (default) or "x13". Ignored for existing persephone objects,
 #'   whose method is fixed by their class.
+#' @param backend Backend for new objects. Existing objects retain their recorded backend.
 #' @param template template name passed to the corresponding spec function;
 #'   if NULL, the method-specific default is used.
 #' @examples
 #' obj <- as.persephone(AirPassengers)
 #' obj_x13 <- as.persephone(AirPassengers, method = "x13", template = "rsa3")
 #' @export
-as.persephone <- function(x, method = c("tramoseats", "x13"), template = NULL) {
+as.persephone <- function(x, method = c("tramoseats", "x13"), template = NULL, backend = NULL) {
   method <- match.arg(method)
   # bestehende Objekte behalten Methode und Template (Methode = R6-Klasse)
   if (is.persephone(x)) {
@@ -35,8 +36,8 @@ as.persephone <- function(x, method = c("tramoseats", "x13"), template = NULL) {
     check_template(template, method)
   }
   if (method == "x13") {
-    if (is.null(template)) perX13(x) else perX13(x, template = template)
+    if (is.null(template)) perX13(x, backend = backend) else perX13(x, template = template, backend = backend)
   } else {
-    if (is.null(template)) perTramo(x) else perTramo(x, template = template)
+    if (is.null(template)) perTramo(x, backend = backend) else perTramo(x, template = template, backend = backend)
   }
 }

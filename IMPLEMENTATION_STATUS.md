@@ -30,6 +30,7 @@ the native-backend plan below.
 | Item / slice | Delivered | Validation and remaining scope |
 | --- | --- | --- |
 | 16a — scope and pinned artifacts | Reproducible inventory of 15 spec blocks/113 setter parameters, 57 output requests, 13 expanded templates, wrapper/JVM metadata and 20 JAR hashes | Actual reference is rjd3/JD+ 3.9.0; see `tools/reference/SCOPE.md`. Source-SHA mapping, numerical-code licence choice and full support review remain item 16 gates. No Java implementation or JAR was copied. |
+| 17a — shared adapter and additive contracts | Explicit persistent backend selection for singles/batches/hierarchies, lazy rjd3 loading, optional dependencies, serializable spec/result envelopes and stale-fit detection | 260 installed-package R assertions pass, including 43 dashboard checks and direct backend parity. Installed-package loading and capability errors pass with Java-related R packages absent. Native fits remain unimplemented; richer normalized regressors/diagnostics continue in 6/10/12. |
 
 Each numbered slice is committed separately. A delivered foundation does not
 mean that native X-13/TRAMO-SEATS or the later release gates are complete.

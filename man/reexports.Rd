@@ -14,8 +14,8 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{ggplot2}{\code{\link[ggplot2]{autoplot}}}
+  \item{ggplot2}{\code{\link[ggplot2:autoplot]{autoplot()}}}
 
-  \item{highcharter}{\code{\link[highcharter:highcharter-exports]{\%>\%}}, \code{\link[highcharter]{hc_title}}, \code{\link[highcharter]{hchart}}}
+  \item{highcharter}{\code{\link[highcharter:\%>\%]{\%>\%}}, \code{\link[highcharter:hc_title]{hc_title()}}, \code{\link[highcharter:hchart]{hchart()}}}
 }}
 

@@ -10,16 +10,19 @@ persephoneSingle <- R6::R6Class(
   public = list(
     #' @description create a new single object
     #' @param ts a time series object
-    #' @param template passed as the `spec` argument of [x13_fast()] or
-    #'   [tramoseats_fast()]
-    #' @param context passed as the `context` argument of [x13_fast()] or
-    #'   [tramoseats_fast()], a list of external regressors (calendar or other) to be used for estimation
-    #' @param userdefined passed as the `userdefined` argument of [x13_fast()] or
-    #'   [tramoseats_fast()]
+    #' @param template passed as the `spec` argument of [rjd3x13::x13_fast()] or
+    #'   [rjd3tramoseats::tramoseats_fast()]
+    #' @param context passed as the `context` argument of [rjd3x13::x13_fast()] or
+    #'   [rjd3tramoseats::tramoseats_fast()], a list of external regressors (calendar or other) to be used for estimation
+    #' @param userdefined passed as the `userdefined` argument of [rjd3x13::x13_fast()] or
+    #'   [rjd3tramoseats::tramoseats_fast()]
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #' passed to the rjd3 specification functions internally. As alternative input to `...`.
-    #' @param ... passed to [x13_spec()] or [tramoseats_spec()] if no speclist parameter is set.
-    initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL, speclist = NULL, ...) {
+    #' @param ... passed to [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()] if no speclist parameter is set.
+    #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
+    initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL, speclist = NULL, ..., backend = NULL) {
+      private$backend_internal <- resolve_backend(backend)
+      private$template_internal <- template
       private$ts_internal <- ts
       private$tsp_internal <- tsp(ts)
       private$context_internal <- context
@@ -38,7 +41,11 @@ persephoneSingle <- R6::R6Class(
                                spec = private$params_internal,
                                context = private$context_internal,
                                userdefined = private$userdefined)
+      normalized <- normalize_backend_result(output, self$method, self$backend,
+                                              private$params_internal, private$ts_internal)
       private$output_internal <- output
+      private$result_internal <- normalized
+      private$fit_signature <- private$current_signature()
       if (!verbose)
         invisible(output)
       else

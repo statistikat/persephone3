@@ -22,6 +22,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Angelika Meraner \email{angelika.meraner@statistik.gv.at}
 
+Authors:
+\itemize{
+  \item Angelika Meraner \email{angelika.meraner@statistik.gv.at}
+}
+
 Other contributors:
 \itemize{
   \item Alexander Kowarik \email{alexander.kowarik@statistik.gv.at} [contributor]

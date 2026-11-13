@@ -31,71 +31,76 @@ bt
 
 
 ## ------------------------------------------------
-## Method `multipleTimeSeries$run`
+## Method `multipleTimeSeries$run()`
 ## ------------------------------------------------
 
 perX13(AirPassengers)$run()
 }
 \section{Super class}{
-\code{\link[persephone3:persephone]{persephone3::persephone}} -> \code{multipleTimeSeries}
+\code{\link[persephone3:persephone]{persephone}} -> \code{multipleTimeSeries}
 }
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{components}}{the series of the multiple time series}
-}
-\if{html}{\out{</div>}}
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{components}}{the series of the multiple time series}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{ts}}{the time series (inherited from persephone)}
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{specification}}{Canonical specifications of the component series.}
 
-\item{\code{adjusted}}{results from the seasonal adjustment}
+    \item{\code{result}}{Canonical results of the component series.}
 
-\item{\code{params}}{of all components}
+    \item{\code{is_stale}}{Whether any component's settings changed since fitting.}
 
-\item{\code{forecasts}}{get forecasts}
-}
-\if{html}{\out{</div>}}
+    \item{\code{ts}}{the time series (inherited from persephone)}
+
+    \item{\code{adjusted}}{results from the seasonal adjustment}
+
+    \item{\code{params}}{of all components}
+
+    \item{\code{forecasts}}{get forecasts}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-multipleTimeSeries-new}{\code{multipleTimeSeries$new()}}
-\item \href{#method-multipleTimeSeries-run}{\code{multipleTimeSeries$run()}}
-\item \href{#method-multipleTimeSeries-print}{\code{multipleTimeSeries$print()}}
-\item \href{#method-multipleTimeSeries-iterate}{\code{multipleTimeSeries$iterate()}}
-\item \href{#method-multipleTimeSeries-getComponent}{\code{multipleTimeSeries$getComponent()}}
-\item \href{#method-multipleTimeSeries-updateParams}{\code{multipleTimeSeries$updateParams()}}
-\item \href{#method-multipleTimeSeries-generateQrTable}{\code{multipleTimeSeries$generateQrTable()}}
-\item \href{#method-multipleTimeSeries-clone}{\code{multipleTimeSeries$clone()}}
+  \itemize{
+    \item \href{#method-multipleTimeSeries-initialize}{\code{multipleTimeSeries$new()}}
+    \item \href{#method-multipleTimeSeries-run}{\code{multipleTimeSeries$run()}}
+    \item \href{#method-multipleTimeSeries-print}{\code{multipleTimeSeries$print()}}
+    \item \href{#method-multipleTimeSeries-iterate}{\code{multipleTimeSeries$iterate()}}
+    \item \href{#method-multipleTimeSeries-getComponent}{\code{multipleTimeSeries$getComponent()}}
+    \item \href{#method-multipleTimeSeries-updateParams}{\code{multipleTimeSeries$updateParams()}}
+    \item \href{#method-multipleTimeSeries-generateQrTable}{\code{multipleTimeSeries$generateQrTable()}}
+    \item \href{#method-multipleTimeSeries-clone}{\code{multipleTimeSeries$clone()}}
+  }
 }
-}
-\if{html}{\out{
-<details><summary>Inherited methods</summary>
+\if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone3::persephone$diagnosticsTable()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getOutliers"><a href='../../persephone3/html/persephone.html#method-persephone-getOutliers'><code>persephone3::persephone$getOutliers()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getRegressors"><a href='../../persephone3/html/persephone.html#method-persephone-getRegressors'><code>persephone3::persephone$getRegressors()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plot"><a href='../../persephone3/html/persephone.html#method-persephone-plot'><code>persephone3::persephone$plot()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotResiduals"><a href='../../persephone3/html/persephone.html#method-persephone-plotResiduals'><code>persephone3::persephone$plotResiduals()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSeasIrrCal"><a href='../../persephone3/html/persephone.html#method-persephone-plotSeasIrrCal'><code>persephone3::persephone$plotSeasIrrCal()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone3::persephone$plotSiRatios()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone3::persephone$plotSpectrum()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone$diagnosticsTable()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone$fixModel()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone$fixOutlier()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getOutliers"><a href='../../persephone3/html/persephone.html#method-persephone-getOutliers'><code>persephone$getOutliers()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getRegressors"><a href='../../persephone3/html/persephone.html#method-persephone-getRegressors'><code>persephone$getRegressors()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone$hchart()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plot"><a href='../../persephone3/html/persephone.html#method-persephone-plot'><code>persephone$plot()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotResiduals"><a href='../../persephone3/html/persephone.html#method-persephone-plotResiduals'><code>persephone$plotResiduals()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSeasIrrCal"><a href='../../persephone3/html/persephone.html#method-persephone-plotSeasIrrCal'><code>persephone$plotSeasIrrCal()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone$plotSiRatios()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone$plotSpectrum()</code></a></span></li>
 </ul>
-</details>
-}}
+</details>}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-multipleTimeSeries-new"></a>}}
-\if{latex}{\out{\hypertarget{method-multipleTimeSeries-new}{}}}
-\subsection{Method \code{new()}}{
-create a new multiple time series object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$new(
+\if{html}{\out{<a id="method-multipleTimeSeries-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-multipleTimeSeries-initialize}{}}}
+\subsection{\code{multipleTimeSeries$new()}}{
+  create a new multiple time series object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$new(
   list = NULL,
   method = c("tramoseats", "x13"),
   template = NULL,
@@ -103,197 +108,197 @@ create a new multiple time series object
   userdefined = NULL,
   speclist = NULL,
   spec = NULL,
-  ...
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{list}}{a list of persephone objects as alternative input to \code{...}.
+  ...,
+  backend = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{list}}{a list of persephone objects as alternative input to \code{...}.
 This argument can also handle mts objects}
-
-\item{\code{method}}{specifies the method to be used for the direct adjustment of
+      \item{\code{method}}{specifies the method to be used for the direct adjustment of
 the aggregate series, i.e. "tramoseats" or "x13"}
-
-\item{\code{template}}{the name of the predefined specification template, passed
+      \item{\code{template}}{the name of the predefined specification template, passed
 as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
-
-\item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation,
-passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
-
-\item{\code{userdefined}}{a character vector of user-defined variables to be included in the output,
-passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
-
-\item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
+      \item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation,
+passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}}
+      \item{\code{userdefined}}{a character vector of user-defined variables to be included in the output,
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}}
+      \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}}
-
-\item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
-
-\item{\code{...}}{one or more objects which are either of class persephone or
+      \item{\code{spec}}{a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC}
+      \item{\code{...}}{one or more objects which are either of class persephone or
 can be coerced to persephone objects with asPersephone. If more than
 one element is supplied, the underlying time series must have the same
 time instances. All elements supplied in ... must be named.
 In addition to the ts/mts/persephone objects,
 \code{...} accepts arguments for customizing the model specifications as alternative input to speclist}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-A batch has no aggregate series, so \code{method}, \code{template} and any spec
+      \item{\code{backend}}{Backend for newly created components; existing objects retain their backend.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Details}{
+    A batch has no aggregate series, so \code{method}, \code{template} and any spec
 arguments in \code{...}/\code{speclist} always apply to all components.
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-run"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-run}{}}}
-\subsection{Method \code{run()}}{
-run the model
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$run(verbose = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{if \code{FALSE} (the default), the results of the run will
+\subsection{\code{multipleTimeSeries$run()}}{
+  run the model
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$run(verbose = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{verbose}}{if \code{FALSE} (the default), the results of the run will
 be returned invisibly}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Examples}{
+    \if{html}{\out{<div class="r example copy">}}
+    \preformatted{perX13(AirPassengers)$run()
 }
-\if{html}{\out{</div>}}
+    \if{html}{\out{</div>}}
+  }
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{perX13(AirPassengers)$run()
-}
-\if{html}{\out{</div>}}
 
-}
-
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-print"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-print}{}}}
-\subsection{Method \code{print()}}{
-print mutliple timeseries to screen
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$print()}\if{html}{\out{</div>}}
+\subsection{\code{multipleTimeSeries$print()}}{
+  print mutliple timeseries to screen
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$print()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-iterate"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-iterate}{}}}
-\subsection{Method \code{iterate()}}{
-iterate over all components
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$iterate(
+\subsection{\code{multipleTimeSeries$iterate()}}{
+  iterate over all components
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$iterate(
   fun,
   asTable = FALSE,
   component = "",
   unnest = FALSE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{fun}}{a function that takes a persephone object as a parameter}
-
-\item{\code{asTable}}{if true, the return value of this method will be coerced
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{fun}}{a function that takes a persephone object as a parameter}
+      \item{\code{asTable}}{if true, the return value of this method will be coerced
 to a data.frame}
-
-\item{\code{component}}{the id of the component}
-
-\item{\code{unnest}}{if \code{asTable = FALSE}, converts the return value from a
+      \item{\code{component}}{the id of the component}
+      \item{\code{unnest}}{if \code{asTable = FALSE}, converts the return value from a
 nested list into a flat list}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-this function is similar to \code{lapply()} in the sense that it
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Details}{
+    this function is similar to \code{lapply()} in the sense that it
 can be used to apply a function to several persephone objects
 simultaniusely
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-getComponent"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-getComponent}{}}}
-\subsection{Method \code{getComponent()}}{
-extract a component series
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$getComponent(componentId)}\if{html}{\out{</div>}}
+\subsection{\code{multipleTimeSeries$getComponent()}}{
+  extract a component series
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$getComponent(componentId)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{componentId}}{the id of a component}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{componentId}}{the id of a component}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-updateParams"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-updateParams}{}}}
-\subsection{Method \code{updateParams()}}{
-change all or some parameters of components
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$updateParams(component = NULL, ...)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{component}}{character vector with names of the components
+\subsection{\code{multipleTimeSeries$updateParams()}}{
+  change all or some parameters of components
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$updateParams(component = NULL, ...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{component}}{character vector with names of the components
 for which the parameters should be changed. If NULL (default) the
 parameters of all components will be changed}
-
-\item{\code{...}}{named arguments to be changed}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-this functions provides the possibility to update
+      \item{\code{...}}{named arguments to be changed}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Details}{
+    this functions provides the possibility to update
 parameters of one or more persephone single objects
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-generateQrTable"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-generateQrTable}{}}}
-\subsection{Method \code{generateQrTable()}}{
-Generate a table for the eurostat quality report
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$generateQrTable(component = "", ...)}\if{html}{\out{</div>}}
+\subsection{\code{multipleTimeSeries$generateQrTable()}}{
+  Generate a table for the eurostat quality report
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$generateQrTable(component = "", ...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{component}}{(optional) a sub-component to create the report for}
+      \item{\code{...}}{additional arguments for the generate qr table function}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{component}}{(optional) a sub-component to create the report for}
-
-\item{\code{...}}{additional arguments for the generate qr table function}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-multipleTimeSeries-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-multipleTimeSeries-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{multipleTimeSeries$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{multipleTimeSeries$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{multipleTimeSeries$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

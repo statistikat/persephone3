@@ -18,7 +18,7 @@ report for each component of a hierarchical \code{persephone} object
 \itemize{
 \item \strong{component} is a column added by \code{iterate()} and informs where in the
 hierarchy a certain component is.
-\item \strong{Method} is \code{TS} for \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} and \code{x13} for \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}}
+\item \strong{Method} is \code{TS} for \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}} and \code{x13} for \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}}
 \item \strong{Period} is \code{12} for yearly measurements and \code{4} for quarterly
 measurements
 \item \strong{Start} denotes the start of the time series

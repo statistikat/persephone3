@@ -28,6 +28,7 @@
 #' [rjd3tramoseats::tramoseats_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+#' @param backend Backend for newly created components; existing objects retain their backend.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #' @examples
 #' \dontrun{
@@ -69,6 +70,7 @@ multipleTimeSeries <- R6::R6Class(
     #'   passed as the `userdefined` argument to [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #'   passed to the rjd3 specification functions internally. As alternative input to `...`
+    #' @param backend Backend for newly created components; existing objects retain their backend.
     #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
     #' @details A batch has no aggregate series, so `method`, `template` and any spec
     #'   arguments in `...`/`speclist` always apply to all components.
@@ -86,10 +88,12 @@ multipleTimeSeries <- R6::R6Class(
       userdefined = NULL,
       speclist = NULL,
       spec = NULL,
-      ...
+      ...,
+      backend = NULL
     ) {
       #browser()
       private$method <- match.arg(method)
+      private$backend_internal <- resolve_backend(backend)
       # A batch has no aggregate series, so there is no `iterate`: method,
       # template and spec arguments always apply to every component.
       if ("iterate" %in% names(list(...))) {
@@ -108,7 +112,7 @@ multipleTimeSeries <- R6::R6Class(
       check_template(template, private$method)
       private$template <- template
       # keep context and userdefined in private state for runDirect
-      private$context <- context
+      private$context_internal <- context
       # userdefined_default expected to be defined elsewhere in the package
       private$userdefined <- union(userdefined, userdefined_default)
       private$params_internal <- spec
@@ -164,7 +168,8 @@ multipleTimeSeries <- R6::R6Class(
         components,
         as.persephone,
         method = private$method,
-        template = private$template
+        template = private$template,
+        backend = self$backend
       )
       check_component_method(components, private$method)
       private$check_classes(components)
@@ -266,6 +271,12 @@ multipleTimeSeries <- R6::R6Class(
   ),
   # ---- Active Bindings ----
   active = list(
+    #' @field specification Canonical specifications of the component series.
+    specification = function() lapply(self$components, function(x) x$specification),
+    #' @field result Canonical results of the component series.
+    result = function() lapply(self$components, function(x) x$result),
+    #' @field is_stale Whether any component's settings changed since fitting.
+    is_stale = function() any(vapply(self$components, function(x) x$is_stale, logical(1))),
     #' @field ts the time series (inherited from persephone)
     ts = function() {
       lapply(self$components, function(x) x$ts)
@@ -289,7 +300,7 @@ multipleTimeSeries <- R6::R6Class(
     method = NULL, # one of c("tramoseats","x13")
     spec_list = NULL,
     spec = NULL, # rjd3 spec object (if used directly)
-    context = NULL,
+    context_internal = NULL,
     userdefined = NULL,
 
     check_classes = function(components) {
@@ -352,6 +363,7 @@ multipleTimeSeries <- R6::R6Class(
 #' [rjd3tramoseats::tramoseats_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+#' @param backend Backend for newly created components; existing objects retain their backend.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #' @export
 perBatch <- function(
@@ -362,7 +374,8 @@ perBatch <- function(
   context = NULL,
   userdefined = NULL,
   speclist = NULL,
-  spec = NULL
+  spec = NULL,
+  backend = NULL
 ) {
   multipleTimeSeries$new(
     ...,
@@ -372,6 +385,7 @@ perBatch <- function(
     context = context,
     userdefined = userdefined,
     speclist = speclist,
-    spec = spec
+    spec = spec,
+    backend = backend
   )
 }

@@ -43,12 +43,12 @@ addition to a line going through the point.}
 \item{annualComparison}{integer corresponding to the month or quarter which
 should be highlighted in the plot for every year.}
 
-\item{...}{other plotting parameters to affect the plot. Not currently used.}
-
 \item{forecasts}{logical flag indicating if forecasts should be plotted}
 
 \item{showOutliers}{logical flag specifying if outliers should be highlighted
 in the plot}
+
+\item{...}{other plotting parameters to affect the plot. Not currently used.}
 }
 \value{
 Returns an object of class \code{dygraphs}.
@@ -64,7 +64,7 @@ well as one year forecasts with prediction intervals of the original series.
 For \code{\link[=perHts]{perHts()}} objects, the function plots the original
 aggregate series
 as well as the directly and indirectly seasonally adjusted aggregate series.
-Forecasts and 95% prediction intervals refer to the original aggregate's
+Forecasts and 95\% prediction intervals refer to the original aggregate's
 direct model. If forecast standard errors are unavailable, only the forecast
 line is shown. Outlier markers (AO, LS, TC) refer to that same aggregate
 model, not to outliers in individual components.

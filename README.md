@@ -35,6 +35,22 @@ remotes::install_github("rjdverse/rjd3tramoseats@*release")
 remotes::install_github("statistikat/persephone3")
 ```
 
+## Backend migration
+
+Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
+its optional packages and Java runtime. The package itself can now load without
+them. `backend_capabilities("native")` reports the native implementation status;
+native model fitting is not implemented yet and never falls back silently.
+
+Each object records its backend at construction. An explicit `backend` argument
+overrides `options(persephone.backend = "rjd3")`; changing the option does not
+change existing objects. `$params` and `$output` retain the legacy representation.
+`$specification` and `$result` add versioned data envelopes, and `$is_stale`
+indicates whether settings changed after fitting. Rerun the model after updates.
+
+See [the implementation plan](IMPLEMENTATION_STATUS.md) for the C++/Rcpp migration
+and [the reference corpus](tools/reference/SCOPE.md) for pinned backend evidence.
+
 ## Usage
 
 Objects can be constructed with `perX13()` or `perTramo()`.

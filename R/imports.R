@@ -6,7 +6,6 @@
 #' @importFrom utils capture.output tail
 #' @importFrom graphics plot.new
 #' @importFrom R6 R6Class
-#' @importFrom rjd3toolkit set_arima
 #' @importFrom DT DTOutput
 #' @importFrom shinycssloaders withSpinner
 #' @importFrom stringr str_count

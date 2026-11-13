@@ -4,115 +4,111 @@
 \alias{persephoneSingle}
 \title{Class for single time series}
 \description{
-Class for single time series
-
-Class for single time series
-}
-\details{
 A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSingle}
 }
 \section{Super class}{
-\code{\link[persephone3:persephone]{persephone3::persephone}} -> \code{persephoneSingle}
+\code{\link[persephone3:persephone]{persephone}} -> \code{persephoneSingle}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-persephoneSingle-new}{\code{persephoneSingle$new()}}
-\item \href{#method-persephoneSingle-run}{\code{persephoneSingle$run()}}
-\item \href{#method-persephoneSingle-clone}{\code{persephoneSingle$clone()}}
+  \itemize{
+    \item \href{#method-persephoneSingle-initialize}{\code{persephoneSingle$new()}}
+    \item \href{#method-persephoneSingle-run}{\code{persephoneSingle$run()}}
+    \item \href{#method-persephoneSingle-clone}{\code{persephoneSingle$clone()}}
+  }
 }
-}
-\if{html}{\out{
-<details><summary>Inherited methods</summary>
+\if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone3::persephone$diagnosticsTable()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone3::persephone$fixModel()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone3::persephone$fixOutlier()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="generateQrTable"><a href='../../persephone3/html/persephone.html#method-persephone-generateQrTable'><code>persephone3::persephone$generateQrTable()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getOutliers"><a href='../../persephone3/html/persephone.html#method-persephone-getOutliers'><code>persephone3::persephone$getOutliers()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getRegressors"><a href='../../persephone3/html/persephone.html#method-persephone-getRegressors'><code>persephone3::persephone$getRegressors()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone3::persephone$hchart()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="iterate"><a href='../../persephone3/html/persephone.html#method-persephone-iterate'><code>persephone3::persephone$iterate()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plot"><a href='../../persephone3/html/persephone.html#method-persephone-plot'><code>persephone3::persephone$plot()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotResiduals"><a href='../../persephone3/html/persephone.html#method-persephone-plotResiduals'><code>persephone3::persephone$plotResiduals()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSeasIrrCal"><a href='../../persephone3/html/persephone.html#method-persephone-plotSeasIrrCal'><code>persephone3::persephone$plotSeasIrrCal()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone3::persephone$plotSiRatios()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone3::persephone$plotSpectrum()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="print"><a href='../../persephone3/html/persephone.html#method-persephone-print'><code>persephone3::persephone$print()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="updateParams"><a href='../../persephone3/html/persephone.html#method-persephone-updateParams'><code>persephone3::persephone$updateParams()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="diagnosticsTable"><a href='../../persephone3/html/persephone.html#method-persephone-diagnosticsTable'><code>persephone$diagnosticsTable()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixModel"><a href='../../persephone3/html/persephone.html#method-persephone-fixModel'><code>persephone$fixModel()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="fixOutlier"><a href='../../persephone3/html/persephone.html#method-persephone-fixOutlier'><code>persephone$fixOutlier()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="generateQrTable"><a href='../../persephone3/html/persephone.html#method-persephone-generateQrTable'><code>persephone$generateQrTable()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getOutliers"><a href='../../persephone3/html/persephone.html#method-persephone-getOutliers'><code>persephone$getOutliers()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="getRegressors"><a href='../../persephone3/html/persephone.html#method-persephone-getRegressors'><code>persephone$getRegressors()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="hchart"><a href='../../persephone3/html/persephone.html#method-persephone-hchart'><code>persephone$hchart()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="iterate"><a href='../../persephone3/html/persephone.html#method-persephone-iterate'><code>persephone$iterate()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plot"><a href='../../persephone3/html/persephone.html#method-persephone-plot'><code>persephone$plot()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotResiduals"><a href='../../persephone3/html/persephone.html#method-persephone-plotResiduals'><code>persephone$plotResiduals()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSeasIrrCal"><a href='../../persephone3/html/persephone.html#method-persephone-plotSeasIrrCal'><code>persephone$plotSeasIrrCal()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSiRatios"><a href='../../persephone3/html/persephone.html#method-persephone-plotSiRatios'><code>persephone$plotSiRatios()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="plotSpectrum"><a href='../../persephone3/html/persephone.html#method-persephone-plotSpectrum'><code>persephone$plotSpectrum()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="print"><a href='../../persephone3/html/persephone.html#method-persephone-print'><code>persephone$print()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="updateParams"><a href='../../persephone3/html/persephone.html#method-persephone-updateParams'><code>persephone$updateParams()</code></a></span></li>
 </ul>
-</details>
-}}
+</details>}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-persephoneSingle-new"></a>}}
-\if{latex}{\out{\hypertarget{method-persephoneSingle-new}{}}}
-\subsection{Method \code{new()}}{
-create a new single object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$new(
+\if{html}{\out{<a id="method-persephoneSingle-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-persephoneSingle-initialize}{}}}
+\subsection{\code{persephoneSingle$new()}}{
+  create a new single object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephoneSingle$new(
   ts,
   template = "rsa3",
   context = NULL,
   userdefined = NULL,
   speclist = NULL,
-  ...
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ts}}{a time series object}
-
-\item{\code{template}}{passed as the \code{spec} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
-
-\item{\code{context}}{passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}, a list of external regressors (calendar or other) to be used for estimation}
-
-\item{\code{userdefined}}{passed as the \code{userdefined} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}}
-
-\item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
+  ...,
+  backend = NULL
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{ts}}{a time series object}
+      \item{\code{template}}{passed as the \code{spec} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}}
+      \item{\code{context}}{passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}, a list of external regressors (calendar or other) to be used for estimation}
+      \item{\code{userdefined}}{passed as the \code{userdefined} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}}
+      \item{\code{speclist}}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
+      \item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}} if no speclist parameter is set.}
+      \item{\code{backend}}{Backend name, or NULL to use option persephone.backend (default rjd3).}
+    }
+    \if{html}{\out{</div>}}
+  }
+}
 
-\item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}} if no speclist parameter is set.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephoneSingle-run"></a>}}
 \if{latex}{\out{\hypertarget{method-persephoneSingle-run}{}}}
-\subsection{Method \code{run()}}{
-run the model
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$run(verbose = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{persephoneSingle$run()}}{
+  run the model
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephoneSingle$run(verbose = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{verbose}}{wether to display outputs after the run}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{wether to display outputs after the run}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephoneSingle-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-persephoneSingle-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{persephoneSingle$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephoneSingle$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

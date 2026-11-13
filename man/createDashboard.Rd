@@ -7,13 +7,26 @@
 \alias{createDashboard_compare}
 \title{Create diagnostic dashboard for time series objects}
 \usage{
-createDashboard(x, y = NULL, title = NULL, file = NULL,
-  launch.browser = TRUE, startup.timeout = 30, ...)
+createDashboard(
+  x,
+  y = NULL,
+  title = NULL,
+  file = NULL,
+  launch.browser = TRUE,
+  startup.timeout = 30,
+  ...
+)
 
 createDashboard_single(x, title = "Series Diagnostics", file = NULL, ...)
 
-createDashboard_hts(x, title = NULL, file = NULL,
-  launch.browser = TRUE, startup.timeout = 30, ...)
+createDashboard_hts(
+  x,
+  title = NULL,
+  file = NULL,
+  launch.browser = TRUE,
+  startup.timeout = 30,
+  ...
+)
 
 createDashboard_compare(x, y, title = "Series Comparison", file = NULL, ...)
 }

@@ -14,7 +14,8 @@ perHts(
   speclist = NULL,
   spec = NULL,
   weights = NULL,
-  iterate = TRUE
+  iterate = TRUE,
+  backend = NULL
 )
 }
 \arguments{
@@ -41,11 +42,11 @@ Must be one of:
 Defaults to \code{"rsa3"}.}
 
 \item{context}{a list of external regressors (calendar or other) to be used for estimation,
-passed as the \code{context} argument of \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}..}
+passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}..}
 
 \item{userdefined}{a character vector of user-defined variables to be included in the output,
-passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} or
-\code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}}.}
+passed as the \code{userdefined} argument to \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or
+\code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}.}
 
 \item{speclist}{a list of additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally. As alternative input to \code{...}.}
@@ -62,6 +63,9 @@ components.}
 (only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
 method and template only if iterate is TRUE; otherwise they are created with the
 method-specific defaults of \code{\link[=perTramo]{perTramo()}} / \code{\link[=perX13]{perX13()}}.}
+
+\item{backend}{Backend for the aggregate and newly created components. Existing
+component objects retain their recorded backend, independently of iterate.}
 }
 \description{
 Combine mutliple objects of persephone objects into a new persephone object.

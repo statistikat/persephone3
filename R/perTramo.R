@@ -34,17 +34,18 @@ tramoseatsSingle <- R6::R6Class(
       }
       # Falls das auch NULL ist (z. B. beim ersten Mal), erzeuge neues Spec
       if (is.null(init_spec)) {
-        init_spec <- rjd3tramoseats::tramoseats_spec(name = name)
+        init_spec <- backend_default_spec("tramoseats", name, freq, self$backend)
       }
       if (is.null(method)) {
         method <- "tramoseats"
       }
+      init_spec <- backend_spec_parameters(init_spec, method, self$backend)
       if(is.null(spec_list)) {
         # extract additional parameters from ...
         spec_list <- list(...) # extra arguments
       }
       if(length(spec_list) > 0) {
-        spec_new <- update_spec(spec = init_spec, method = method, freq = freq, spec_list = spec_list)
+        spec_new <- backend_update_spec(spec = init_spec, method = method, freq = freq, spec_list = spec_list, backend = self$backend)
       } else {
         spec_new <- init_spec
       }
@@ -53,7 +54,7 @@ tramoseatsSingle <- R6::R6Class(
       return(spec_new)
     },
     runFun = function(...) {
-      rjd3tramoseats::tramoseats_fast(...)
+      backend_fit(..., method = "tramoseats", backend = self$backend)
     }
   )
 )
@@ -158,12 +159,14 @@ tramoseatsSingle <- R6::R6Class(
 #' For more details on tramoseats specifications and the underlying implementation,
 #' see the rjd3tramoseats documentation:
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
+#' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
+#'   Native fitting is not yet implemented; unsupported requests fail explicitly.
 #' @export
 perTramo <- function(ts,
                    template = c("rsa3","rsafull", "rsa0", "rsa1", "rsa2",  "rsa4", "rsa5"),
                    context = NULL,
                    userdefined = NULL,
                    speclist = NULL,
-                   ...) {
-  tramoseatsSingle$new(ts, match.arg(template), context, userdefined, speclist, ...)
+                   ..., backend = NULL) {
+  tramoseatsSingle$new(ts, match.arg(template), context, userdefined, speclist, ..., backend = backend)
 }

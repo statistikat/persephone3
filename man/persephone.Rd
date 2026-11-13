@@ -61,96 +61,108 @@ run? If \code{FALSE} (the default), the output will be returned invisibly.
 }
 
 \section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{params}}{A parameters object of class \code{SA_spec}. See \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{backend}}{Effective computation backend, fixed at construction.}
+
+    \item{\code{specification}}{Versioned specification envelope; raw params remain available.}
+
+    \item{\code{result}}{Versioned result from the last successful run, or NULL.}
+
+    \item{\code{is_stale}}{Whether the settings have changed since the last successful fit.}
+
+    \item{\code{params}}{A parameters object of class \code{SA_spec}. See \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}}
 and \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.}
 
-\item{\code{method}}{SA method used}
+    \item{\code{method}}{SA method used}
 
-\item{\code{ts}}{the (unajusted) time series}
+    \item{\code{ts}}{the (unajusted) time series}
 
-\item{\code{tsp}}{the \code{\link[=tsp]{tsp()}} of the underlying time series}
+    \item{\code{tsp}}{the \code{\link[=tsp]{tsp()}} of the underlying time series}
 
-\item{\code{output}}{The return value from the underlying functions x13_fast() or
+    \item{\code{output}}{The return value from the underlying functions x13_fast() or
 tramoseats_fast(). This slot will be empty (NULL) before run() is called for
 the first time.}
 
-\item{\code{context}}{passed to \code{\link[rjd3x13:x13]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats]{rjd3tramoseats::tramoseats_fast()}} when the
+    \item{\code{context}}{passed to \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} and \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}} when the
 \verb{$run()} method is invoked}
 
-\item{\code{adjusted}}{get the adjusted series}
+    \item{\code{adjusted}}{get the adjusted series}
 
-\item{\code{adjustedDirect}}{see \link{perHts}}
+    \item{\code{adjustedDirect}}{see \link{perHts}}
 
-\item{\code{forecasts}}{get forecasts from the model}
+    \item{\code{forecasts}}{get forecasts from the model}
 
-\item{\code{forecastsDirect}}{get direct forecasts from the model}
-}
-\if{html}{\out{</div>}}
+    \item{\code{forecastsDirect}}{get direct forecasts from the model}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-persephone-new}{\code{persephone$new()}}
-\item \href{#method-persephone-run}{\code{persephone$run()}}
-\item \href{#method-persephone-updateParams}{\code{persephone$updateParams()}}
-\item \href{#method-persephone-plot}{\code{persephone$plot()}}
-\item \href{#method-persephone-hchart}{\code{persephone$hchart()}}
-\item \href{#method-persephone-plotResiduals}{\code{persephone$plotResiduals()}}
-\item \href{#method-persephone-plotSeasIrrCal}{\code{persephone$plotSeasIrrCal()}}
-\item \href{#method-persephone-plotSiRatios}{\code{persephone$plotSiRatios()}}
-\item \href{#method-persephone-plotSpectrum}{\code{persephone$plotSpectrum()}}
-\item \href{#method-persephone-print}{\code{persephone$print()}}
-\item \href{#method-persephone-diagnosticsTable}{\code{persephone$diagnosticsTable()}}
-\item \href{#method-persephone-iterate}{\code{persephone$iterate()}}
-\item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
-\item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
-\item \href{#method-persephone-fixOutlier}{\code{persephone$fixOutlier()}}
-\item \href{#method-persephone-getOutliers}{\code{persephone$getOutliers()}}
-\item \href{#method-persephone-getRegressors}{\code{persephone$getRegressors()}}
-\item \href{#method-persephone-clone}{\code{persephone$clone()}}
-}
+  \itemize{
+    \item \href{#method-persephone-initialize}{\code{persephone$new()}}
+    \item \href{#method-persephone-run}{\code{persephone$run()}}
+    \item \href{#method-persephone-updateParams}{\code{persephone$updateParams()}}
+    \item \href{#method-persephone-plot}{\code{persephone$plot()}}
+    \item \href{#method-persephone-hchart}{\code{persephone$hchart()}}
+    \item \href{#method-persephone-plotResiduals}{\code{persephone$plotResiduals()}}
+    \item \href{#method-persephone-plotSeasIrrCal}{\code{persephone$plotSeasIrrCal()}}
+    \item \href{#method-persephone-plotSiRatios}{\code{persephone$plotSiRatios()}}
+    \item \href{#method-persephone-plotSpectrum}{\code{persephone$plotSpectrum()}}
+    \item \href{#method-persephone-print}{\code{persephone$print()}}
+    \item \href{#method-persephone-diagnosticsTable}{\code{persephone$diagnosticsTable()}}
+    \item \href{#method-persephone-iterate}{\code{persephone$iterate()}}
+    \item \href{#method-persephone-generateQrTable}{\code{persephone$generateQrTable()}}
+    \item \href{#method-persephone-fixModel}{\code{persephone$fixModel()}}
+    \item \href{#method-persephone-fixOutlier}{\code{persephone$fixOutlier()}}
+    \item \href{#method-persephone-getOutliers}{\code{persephone$getOutliers()}}
+    \item \href{#method-persephone-getRegressors}{\code{persephone$getRegressors()}}
+    \item \href{#method-persephone-clone}{\code{persephone$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-persephone-new"></a>}}
-\if{latex}{\out{\hypertarget{method-persephone-new}{}}}
-\subsection{Method \code{new()}}{
-create a new persephone object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$new()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-this function should not be used directly because this class is
+\if{html}{\out{<a id="method-persephone-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-persephone-initialize}{}}}
+\subsection{\code{persephone$new()}}{
+  create a new persephone object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$new()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Details}{
+    this function should not be used directly because this class is
 abstract. Only initialize derived classes.
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-run"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-run}{}}}
-\subsection{Method \code{run()}}{
-perform a run of the model
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$run(verbose = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$run()}}{
+  perform a run of the model
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$run(verbose = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{verbose}}{whether to show outputs}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{whether to show outputs}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-updateParams"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-updateParams}{}}}
-\subsection{Method \code{updateParams()}}{
-update parameters for the adjustment
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$updateParams(
+\subsection{\code{persephone$updateParams()}}{
+  update parameters for the adjustment
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$updateParams(
   template = NULL,
   speclist = NULL,
   spec = NULL,
@@ -159,273 +171,294 @@ update parameters for the adjustment
   iterate = FALSE,
   component = "",
   ...
-)}\if{html}{\out{</div>}}
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{template}}{template name passed to \code{x13_spec()} or \code{tramoseats_spec()}}
+      \item{\code{speclist}}{a list of additional arguments for customizing the model specifications}
+      \item{\code{spec}}{a specification object to use as starting point}
+      \item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation}
+      \item{\code{userdefined}}{character vector of user-defined output variables}
+      \item{\code{iterate}}{logical, whether to iterate (for hierarchical objects)}
+      \item{\code{component}}{character, component id for hierarchical objects}
+      \item{\code{...}}{additional arguments passed to \code{x13_spec()} or \code{tramoseats_spec()}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{template}}{template name passed to \code{x13_spec()} or \code{tramoseats_spec()}}
-
-\item{\code{speclist}}{a list of additional arguments for customizing the model specifications}
-
-\item{\code{spec}}{a specification object to use as starting point}
-
-\item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation}
-
-\item{\code{userdefined}}{character vector of user-defined output variables}
-
-\item{\code{iterate}}{logical, whether to iterate (for hierarchical objects)}
-
-\item{\code{component}}{character, component id for hierarchical objects}
-
-\item{\code{...}}{additional arguments passed to \code{x13_spec()} or \code{tramoseats_spec()}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-plot}{}}}
-\subsection{Method \code{plot()}}{
-visualize the results of an adjustment
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$plot(...)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$plot()}}{
+  visualize the results of an adjustment
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$plot(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=plot]{plot()}}
+see plot method for persephoneSingle or hierarchicalTimeSeries objects}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=plot]{plot()}}
-see plot method for persephoneSingle or hierarchicalTimeSeries objects}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-hchart"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-hchart}{}}}
-\subsection{Method \code{hchart()}}{
-visualize the results of an adjustment
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$hchart(...)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$hchart()}}{
+  visualize the results of an adjustment
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$hchart(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=hchart]{hchart()}}
+see the hchart method for persephoneSingle or hierarchicalTimeSeries objects}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=hchart]{hchart()}}
-see the hchart method for persephoneSingle or hierarchicalTimeSeries objects}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-plotResiduals"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-plotResiduals}{}}}
-\subsection{Method \code{plotResiduals()}}{
-visualize residuals
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$plotResiduals(...)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$plotResiduals()}}{
+  visualize residuals
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$plotResiduals(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=plotResiduals]{plotResiduals()}}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=plotResiduals]{plotResiduals()}}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-plotSeasIrrCal"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-plotSeasIrrCal}{}}}
-\subsection{Method \code{plotSeasIrrCal()}}{
-visualize the seasonal component, irregular
+\subsection{\code{persephone$plotSeasIrrCal()}}{
+  visualize the seasonal component, irregular
 component and calendar effects for a persephone object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$plotSeasIrrCal(...)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$plotSeasIrrCal(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=plotSeasIrrCal]{plotSeasIrrCal()}}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-plotSiRatios"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-plotSiRatios}{}}}
-\subsection{Method \code{plotSiRatios()}}{
-visualize SI-ratios (and, in case of x11, of seasonal factors) by
+\subsection{\code{persephone$plotSiRatios()}}{
+  visualize SI-ratios (and, in case of x11, of seasonal factors) by
 period
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$plotSiRatios(...)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$plotSiRatios(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=plotSiRatios]{plotSiRatios()}}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=plotSiRatios]{plotSiRatios()}}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-plotSpectrum"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-plotSpectrum}{}}}
-\subsection{Method \code{plotSpectrum()}}{
-visualize the periodogram or the autogregressive spectrum.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$plotSpectrum(...)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$plotSpectrum()}}{
+  visualize the periodogram or the autogregressive spectrum.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$plotSpectrum(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{passed to \code{\link[=plotSpectrum]{plotSpectrum()}}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{passed to \code{\link[=plotSpectrum]{plotSpectrum()}}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-print"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-print}{}}}
-\subsection{Method \code{print()}}{
-display a persephone object in the console
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$print()}\if{html}{\out{</div>}}
+\subsection{\code{persephone$print()}}{
+  display a persephone object in the console
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$print()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-diagnosticsTable"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-diagnosticsTable}{}}}
-\subsection{Method \code{diagnosticsTable()}}{
-display a persephone object in the console
+\subsection{\code{persephone$diagnosticsTable()}}{
+  display a persephone object in the console
 
 
-create a table for the eurostat quality report
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$diagnosticsTable()}\if{html}{\out{</div>}}
+  create a table for the eurostat quality report
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$diagnosticsTable()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-iterate"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-iterate}{}}}
-\subsection{Method \code{iterate()}}{
-see \link{perHts}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$iterate(fun, asTable = FALSE, unnest = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$iterate()}}{
+  see \link{perHts}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$iterate(fun, asTable = FALSE, unnest = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{fun}}{see \link{perHts}}
+      \item{\code{asTable}}{see \link{perHts}}
+      \item{\code{unnest}}{see \link{perHts}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{fun}}{see \link{perHts}}
-
-\item{\code{asTable}}{see \link{perHts}}
-
-\item{\code{unnest}}{see \link{perHts}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-generateQrTable"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-generateQrTable}{}}}
-\subsection{Method \code{generateQrTable()}}{
-create a table for the eurostat quality report
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$generateQrTable()}\if{html}{\out{</div>}}
+\subsection{\code{persephone$generateQrTable()}}{
+  create a table for the eurostat quality report
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$generateQrTable()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-fixModel"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixModel}{}}}
-\subsection{Method \code{fixModel()}}{
-fix the arima model
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$fixModel(...)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$fixModel()}}{
+  fix the arima model
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$fixModel(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{additional arguments passed to \code{\link{fixModel}}}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{additional arguments passed to \code{\link{fixModel}}}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-fixOutlier"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-fixOutlier}{}}}
-\subsection{Method \code{fixOutlier()}}{
-create a new single object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$fixOutlier(...)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{additional arguments passed to \code{\link{fixOutlier}}}
-
-\item{\code{timespan}}{number of months from the end of the time series
+\subsection{\code{persephone$fixOutlier()}}{
+  create a new single object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$fixOutlier(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{additional arguments passed to \code{\link{fixOutlier}}}
+      \item{\code{timespan}}{number of months from the end of the time series
 where outliers are not fixed}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-getOutliers"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-getOutliers}{}}}
-\subsection{Method \code{getOutliers()}}{
-extract outlier information from the model run,
+\subsection{\code{persephone$getOutliers()}}{
+  extract outlier information from the model run,
 see \code{\link[=getOutliers]{getOutliers()}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$getOutliers()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$getOutliers()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame as described in \code{\link[=getOutliers]{getOutliers()}}, \code{NA} if the model
+contains no outliers
+  }
 }
 
-\subsection{Returns}{
-A data frame as described in \code{\link[=getOutliers]{getOutliers()}}, \code{NA} if the model
-contains no outliers
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-getRegressors"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-getRegressors}{}}}
-\subsection{Method \code{getRegressors()}}{
-extract the coefficients of all regression variables of
+\subsection{\code{persephone$getRegressors()}}{
+  extract the coefficients of all regression variables of
 the model run, see \code{\link[=getRegressors]{getRegressors()}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$getRegressors()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$getRegressors()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame as described in \code{\link[=getRegressors]{getRegressors()}}, \code{NULL} if the
+model contains no regression variables
+  }
 }
 
-\subsection{Returns}{
-A data frame as described in \code{\link[=getRegressors]{getRegressors()}}, \code{NULL} if the
-model contains no regression variables
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-persephone-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-persephone-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{persephone$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{persephone$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{persephone$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }
