@@ -51,8 +51,9 @@
 #'
 #' Hierarchies aggregate level forecasts using their usual sum or weighted mean.
 #' Selected indirect forecasts honor nested children's direct/indirect choices,
-#' whereas `$forecastsIndirect` uses fully indirect child results. Multiplicative
-#' seasonal, irregular and calendar factors cannot be summed; these aggregate
+#' whereas `$forecastsIndirect` uses fully indirect child results. For multiple
+#' components, multiplicative seasonal, irregular and calendar factors cannot
+#' be summed; these aggregate
 #' fields remain unavailable unless all decompositions are additive. Uncertainty
 #' for multiple components requires cross-component covariance and is therefore
 #' unavailable. Before fitting or with no available horizon, the result is NULL.
