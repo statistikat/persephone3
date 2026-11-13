@@ -2,7 +2,9 @@
 
 The C++ core is independently authored and contains no translated JDemetra+
 source. It currently supplies time indexing, differencing polynomials,
-convolution and finite filters. It does **not** fit seasonal-adjustment models.
+convolution, finite filters, transformations, LAPACK adapters and a stationary
+fixed-parameter innovations likelihood. It does **not** fit seasonal-adjustment
+models.
 
 Run from the repository root with any supported C++17 compiler:
 
@@ -55,7 +57,7 @@ ${CXX:-c++} -std=c++17 -Wall -Wextra -Wconversion -pedantic \
   $(R CMD config --cppflags) src/linear_algebra.cpp \
   tools/native-tests/test_linear_algebra.cpp \
   $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
-  $(R CMD config --ldflags) -o /tmp/persephone-linear-algebra
+  $(R CMD config FLIBS) $(R CMD config --ldflags) -o /tmp/persephone-linear-algebra
 /tmp/persephone-linear-algebra
 ```
 
@@ -86,3 +88,16 @@ c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
   -o /tmp/persephone-transforms
 /tmp/persephone-transforms
 ```
+
+## Stationary likelihood (20a.1)
+
+The fixed-parameter stationary state-space/ARMA pilot, mathematical conventions,
+scale normalization, missing-data behavior and explicit numerical limits are
+documented in [state-space-contract.md](state-space-contract.md).
+The standalone `test_state_space.cpp` harness links `src/numerics.cpp`,
+`src/linear_algebra.cpp` and `src/state_space.cpp` with the same R LAPACK/BLAS
+flags shown above. It exercises callback cancellation at every boundary and
+subsequent successful reuse. Installed R tests compare closed forms, an
+independent multivariate Gaussian density, and R's public Kalman/ARIMA APIs.
+These establish the stated kernel contract, not JD+ likelihood conventions or
+full SARIMA/seasonal-adjustment parity.

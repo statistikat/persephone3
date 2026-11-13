@@ -14,14 +14,16 @@ forecasts, reports and dashboard behavior. Each item was committed separately.
 
 **The Java replacement is not complete.** Native code currently provides time
 domains, differencing polynomials, convolution, finite filters, and LAPACK-backed
-Cholesky/QR linear algebra, transformations and aligned regressor inputs. It does not
+Cholesky/QR linear algebra, transformations, aligned regressor inputs and a
+fixed-parameter stationary ARMA/state-space likelihood. It does not
 estimate SARIMA models or perform X-11/TRAMO/SEATS adjustment. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
 dependencies and are no longer loaded when the package itself loads.
 
 Items **16–19** have delivered foundations, **14** has workflow improvements,
-and **20–27** remain numerical implementation and qualification work. Passing
+**20a.1** delivers a restricted stationary likelihood pilot, and the rest of
+**20–27** remains numerical implementation and qualification work. Passing
 package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
@@ -40,8 +42,9 @@ the native-backend plan below.
 | 18a — direct-backend reference corpus | 12 synthetic fixed/manual AO/automatic fits across X-13/TRAMO-SEATS and monthly/quarterly data; raw outputs, exact field schemas, checksums and per-field comparator | Integrity/corruption tests and all 12 pinned live replays pass. Tolerances are provisional; external-context, missingness, LS/TC, benchmarking, difficult-model and multi-platform cases remain open. |
 | 18c — additive reference coverage | Eight separate `extended-v1` direct-backend fixtures for fixed LS/free TC, quarterly internal gaps, fixed/free external regressors and paired future-context shifts; parent corpus preserved | All eight exact pinned replays, 90 independent formula/domain/coefficient/forecast invariants, checksum and corruption checks pass. No tolerance was widened: 229 paths retain provisional rules and one coefficient path remains unreviewed/fail-closed. Full item 18 qualification remains open. |
 | 19a — C++17/Rcpp numerical foundations | Registered compiled routines for monthly/quarterly domains, differencing polynomials, convolution and finite filters with explicit missing masks; native-only CI workflow | 58 installed-package Rcpp assertions and standalone strict-warning/ASan/UBSan checks pass locally. Compiled primitives run with Java-related R packages inaccessible. Linux/Windows CI is configured, not remotely verified; no SARIMA estimation or seasonal-adjustment fit is implemented. |
-| 19b — numerical linear algebra | Owned column-major matrices; R-supported LAPACK Cholesky solves, log determinants and condition estimates; pivoted QR minimum-norm least squares with rank and original-domain residuals | 102 Rcpp assertions and strict-warning/ASan/UBSan core checks pass. Rank-deficient, underdetermined, zero-rank, ill-conditioned and malformed inputs are covered. OS builds and statistical model qualification remain open. |
-| 19c — transformations and model inputs | Mask-preserving identity/log transforms, per-observation log Jacobians and point inverse transforms; serializable monthly/quarterly input contract with full regressor-domain validation | 148 Rcpp/input assertions and standalone transform sanitizers pass. Future/backcast contexts must cover every requested period. No automatic transform selection, estimation-span policy or lognormal mean adjustment is implied. |
+| 19b — numerical linear algebra | Owned column-major matrices; R-supported LAPACK Cholesky solves, log determinants and condition estimates; pivoted QR minimum-norm least squares with rank and original-domain residuals | 114 Rcpp assertions and strict-warning/ASan/UBSan core checks pass. Rank-deficient, underdetermined, zero-rank, ill-conditioned and malformed inputs are covered. OS builds and statistical model qualification remain open. |
+| 19c — transformations and model inputs | Mask-preserving identity/log transforms, per-observation log Jacobians and point inverse transforms; serializable monthly/quarterly input contract with full regressor-domain validation | 150 Rcpp/input assertions and standalone transform sanitizers pass. Future/backcast contexts must cover every requested period. No automatic transform selection, estimation-span policy or lognormal mean adjustment is implied. |
+| 20a.1 — stationary likelihood pilot | Fixed-parameter scalar-observation state-space and seasonal ARMA likelihood; stationary Lyapunov initialization/stability certificate, Joseph covariance update, explicit missingness, fixed/profile likelihoods and intermediate innovations | 247 R assertions against closed forms, an independent joint Gaussian density and public R Kalman/ARIMA routines; strict C++/sanitizer and cancellation/reuse checks pass. At most 16 states/loading columns; no diffuse states, integrated SARIMA, optimization or native seasonal-adjustment fit. JD+ likelihood conventions remain to be qualified. |
 | 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
@@ -84,7 +87,7 @@ establish those behaviors.
 | Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
 | Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
 | Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
-| Native numerical code | C++17/Rcpp domains, differencing, convolution and filters | 58 boundary assertions and standalone sanitizers pass; full fits and cross-platform execution remain open |
+| Native numerical code | C++17/Rcpp domains, filters, transforms, validated inputs, LAPACK algebra and stationary fixed-parameter likelihood | 569 boundary/input assertions and standalone sanitizers pass; no integrated/diffuse models, coefficient estimation or native SA fits; cross-platform execution remains open |
 | Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
@@ -442,14 +445,18 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20a | Implement fixed-parameter SARIMA state-space initialization, exact/diffuse likelihood and missing-observation handling | Intermediate innovations, variances, effective sample and likelihood normalization match qualified references |
-| 20b–d | Estimate regression/ARMA coefficients, enforce root constraints, compute covariance/residuals, forecast/backcast with future regressors | Fixed/free parameter and uncertainty parity, explicit convergence failures, serialized plain-data results |
+| 20a.2 | Extend the stationary pilot to integrated SARIMA with exact diffuse initialization and explicit diffuse rank/count | Random-walk/seasonal identities and independently sourced diffuse references; verify initial/gap transitions, effective sample and normalized likelihood separately |
+| 20a.3 | Connect validated inputs, estimation spans, differencing and transform Jacobians to a fixed-model likelihood contract | Original-domain likelihood identities; complete domain/missing-mask preservation; documented JD+ versus native normalization differences |
+| 20b.1 / 20b.2 | Add concentrated regression likelihood with fixed/free coefficients, then optimize ARMA parameters under explicit root constraints | Collinear/zero/fixed coefficient fixtures, parameter identifiability, convergence failure semantics and independent likelihood optima |
+| 20c / 20d | Compute coefficient covariance, standardized/interpolated residuals and forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
 | 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
 
-The next native milestone is a verified fixed-model likelihood and then an
-end-to-end fixed-model X-13 slice, not a default-engine switch. The detailed
+The next native milestone is an integrated/diffuse fixed-model likelihood,
+followed by regression/parameter estimation and an end-to-end fixed-model X-13
+slice. The stationary pilot is an independently tested numerical foundation;
+it does not yet demonstrate JD+ statistical parity or justify a default switch. The detailed
 acceptance criteria below remain in force.
 
 Defer performance tuning, broad plot-style unification, unrelated dependency
@@ -725,6 +732,43 @@ and interrupts return safely without leaks or corrupting subsequent calls.
   fixed orders from fixed coefficients. Record convergence failures explicitly.
 - Split into commits for fixed-parameter likelihood, coefficient estimation,
   covariance/residuals and forecasting; validate each before automatic search.
+
+**Delivered 20a.1:** the stationary, fixed-parameter pilot and its exact
+contract are in `tools/native-tests/state-space-contract.md`. Its bounded
+Kronecker/LAPACK initialization is intentionally a small-model implementation:
+rank/residual/conditioning failures are explicit, and no large-variance diffuse
+approximation is used. Common integration orders still need 20a.2 before this
+can support a fixed SARIMA preprocessing pipeline.
+
+**Next implementation sequence:**
+
+1. **20a.2 — diffuse initialization.** Separate stationary and integrated states;
+   propagate finite/diffuse covariance parts and report the rank lost at each
+   observation. Cover ordinary/seasonal random walks, leading/internal/trailing
+   gaps, short inputs and diffuse states that observations cannot identify.
+   Freeze the likelihood constant and effective-sample convention before
+   comparison with the pinned Java reference. Avoid a large-prior approximation.
+2. **20a.3 — preprocessing likelihood contract.** Add explicit estimation spans
+   and mean/drift semantics to item 19c's input object. Select log-Jacobian terms
+   according to the actual likelihood observations; preserve original dates and
+   gaps. Record one normalization decision for later diagnostics/AIC consumers.
+3. **20b.1 — regression likelihood.** Filter response and design columns through
+   the same state model; subtract fixed effects before estimating free effects.
+   Use rank-aware least squares, expose nonidentifiability, and test the extended
+   fixed/free and future-context fixtures without treating reference estimates
+   as exact theoretical coefficients.
+4. **20b.2 — ARMA optimization.** Define admissible parameter transforms, root
+   checks, objective/gradient accuracy, stopping rules and explicit failure
+   results. Validate independent optima and near-unit/collinear cases before
+   freezing native comparison tolerances.
+5. **20c/20d — uncertainty and forecasts.** Derive covariance and original-domain
+   forecast/backcast errors, including regression uncertainty and documented
+   log back-transformation. Keep fixed horizons/context coverage and item 10's
+   separate point/error domains. Only then connect the restricted X-11 slice.
+
+Each substep remains a separate implementation/test/documentation commit.
+Parameter estimation and a complete native constructor remain unavailable until
+their advertised contract is actually supported.
 
 **Acceptance:** fixed-spec coefficients, likelihood, covariance, residuals and
 forecast means/errors meet predeclared tolerances, including near-unit roots,

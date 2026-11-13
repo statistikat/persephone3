@@ -25,6 +25,14 @@
     .Call(`_persephone3_native_qr_solve`, matrix, rhs, rank_tolerance)
 }
 
+.native_stationary_likelihood <- function(values, transition, observation, noise_loading, observation_variance = NULL, mean = NULL, variance = NULL) {
+    .Call(`_persephone3_native_stationary_likelihood`, values, transition, observation, noise_loading, observation_variance, mean, variance)
+}
+
+.native_arma_likelihood <- function(values, ar, ma, seasonal_ar, seasonal_ma, period, mean = NULL, variance = NULL) {
+    .Call(`_persephone3_native_arma_likelihood`, values, ar, ma, seasonal_ar, seasonal_ma, period, mean, variance)
+}
+
 .native_transform <- function(values, transformation = NULL) {
     .Call(`_persephone3_native_transform`, values, transformation)
 }
