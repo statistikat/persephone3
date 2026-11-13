@@ -2,7 +2,7 @@
 % Please edit documentation in R/genTd.R
 \name{genTd}
 \alias{genTd}
-\title{Generation of trading day regressors}
+\title{Generation of trading-day regressors}
 \usage{
 genTd(
   freq = 12,
@@ -14,39 +14,65 @@ genTd(
 )
 }
 \arguments{
-\item{freq}{frequency of series}
+\item{freq}{Output frequency, either 12 (monthly) or 4 (quarterly).}
 
-\item{firstYear}{first year of calculation of trading day regressor}
+\item{firstYear, lastYear}{First and last Gregorian years, integers from 1583
+through 9999, with \code{firstYear <= lastYear}.}
 
-\item{lastYear}{last year of calculation of trading day regressor}
+\item{hd}{Character vector or list of scalar character holiday definitions.
+Use fixed dates (\code{"mm-dd"}), Easter-relative dates (\code{"easter"},
+\code{"easter+39"}, \code{"easter-2"}), or the named aliases listed below. Easter
+offsets must be integers between -80 and 250, keeping every possible date
+in the same calendar year. \code{character()} gives a calendar without holidays.}
 
-\item{hd}{holidays, list of 1. exact date ("mm-dd") and/or 2. name of day
-(listHolidays() from timeDate function) and/or
-3. easter relation (e.g. "easter+39", "easter-3")}
+\item{weight}{Numeric nonnegative finite vector with one value per holiday.
+Zero ignores a holiday, one transfers a full day, and fractional values
+transfer part of a day. Values above one remain supported as legacy scaling
+weights. Coincident definitions use their maximum, not their sum.}
 
-\item{weight}{vector of individual weights for each holiday with length of hd}
-
-\item{adjustEaster}{"exact" or "approximate" to employ theoretical distribution of easter dates
-(default) or approximate distribution of easter dates for centering of trading days}
+\item{adjustEaster}{Either \code{"exact"} or \code{"approximate"}, selecting the packaged
+Easter-date probability distribution used for centering.}
 }
 \value{
-list with three list elements. 1. matrix of trading day counts for each
-individual day, month and year. Holidays which are delivered through the
-parameter hd are assigned to the number of sundays. 2. multiple time
-series object with 6 non-centered trading day regressors plus 1
-non-centered working day regressor (columns 1 to 6 refer to Mondays to
-Saturdays, colunm 7 refers to the one-regressor case of 5 working days).
-In case of trading day adjustment the first 6 columns have to be selected,
-in case of wording day adjustment only column 7 has to be selected.
-3. multiple time series object with 6 centered trading day regressors
-plus 1 centered working day regressor
+An unnamed list of three multivariate \code{ts} objects:
+\enumerate{
+\item Seven raw weekday counts, Monday through Sunday, before holidays.
+\item Six holiday-adjusted, uncentered contrasts: Monday through Saturday
+minus the adjusted Sunday count.
+\item The six centered contrasts followed by \code{lpYear}, which is 0.75 for leap
+February, -0.25 for other Februaries, and zero otherwise.
+}
 }
 \description{
-User defined trading day regressors are generated depending on a list of
-country-specific holidays and associated weights. Each holiday can be given
-a specific weight depending on the extent of the work load of that specific holiday.
+Generate calendar counts and trading-day contrasts with weighted holidays.
+A holiday transfers its weight from its weekday to Sunday. Holidays on Sunday
+have no effect. Coincident holidays use the largest weight, so duplicate
+declarations do not count the same day twice.
+}
+\details{
+Supported fixed-date aliases are \code{NewYearsDay}, \code{SolemnityOfMary}, \code{Epiphany},
+\code{Annunciation}, \code{LaborDay}, \code{AssumptionOfMary}, \code{BirthOfVirginMary},
+\code{AllSaints}, \code{AllSouls}, \code{ChristmasEve}, \code{ChristmasDay}, \code{BoxingDay}, and
+\code{NewYearsEve}. Easter-relative aliases are \code{Easter}, \code{EasterSunday},
+\code{EasterMonday}, \code{GoodFriday}, \code{AshWednesday}, \code{PalmSunday}, \code{Ascension},
+\code{Pentecost}, \code{PentecostMonday}, \code{TrinitySunday}, and \code{CorpusChristi}.
+Other names from \code{timeDate::listHolidays()} are not implicitly evaluated.
+
+The centering correction uses a uniform weekday convention for fixed dates
+and the selected probability distribution over March 22 through April 25 for
+Easter-relative dates. Fixed-date occurrence counts (including February 29)
+are averaged over the requested years. Easter probabilities are shifted on
+each year's calendar and averaged over those years. Only the additional
+holiday weight beyond an overlapping fixed holiday is included in the Easter
+correction. All corrections use the supplied weights.
+
+The first result deliberately retains the historical implementation's raw
+weekday counts. Holiday-adjusted contrasts, rather than adjusted counts,
+are returned in the second and third results. No working-day regressor is
+returned. Quarterly values are sums of the three corresponding months.
 }
 \examples{
-library(rjd3toolkit)
-
+calendar <- genTd(firstYear = 2020, lastYear = 2021,
+  hd = c("NewYearsDay", "easter+1", "12-24"), weight = c(1, 1, 0.5))
+calendar[[3]][, 1:6]
 }

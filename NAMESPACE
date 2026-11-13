@@ -96,14 +96,8 @@ importFrom(stats,
   window
 )
 importFrom(stringr,str_count)
-importFrom(timeDate,Easter)
 importFrom(utils,
   capture.output,
-  data,
   tail
-)
-importFrom(zoo,
-  as.Date,
-  as.yearmon
 )
 useDynLib(persephone3, .registration = TRUE)
