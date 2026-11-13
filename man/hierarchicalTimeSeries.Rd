@@ -259,7 +259,11 @@ simultaneously
   component = "",
   iterate = TRUE,
   speclist = NULL,
-  ...
+  ...,
+  template = NULL,
+  spec = NULL,
+  context = NULL,
+  userdefined = NULL
 )}
     \if{html}{\out{</div>}}
   }
@@ -270,6 +274,10 @@ simultaneously
       \item{\code{iterate}}{logical: if TRUE, apply parameter changes to all components recursively}
       \item{\code{speclist}}{list with named arguments to be changed}
       \item{\code{...}}{named arguments to be changed (spec options forwarded to updateFun)}
+      \item{\code{template}}{Replacement template, or NULL for incremental changes.}
+      \item{\code{spec}}{Complete replacement specification; mutually exclusive with template.}
+      \item{\code{context}}{Replacement regressor/calendar context when supplied.}
+      \item{\code{userdefined}}{Replacement additional output requests when supplied.}
     }
     \if{html}{\out{</div>}}
   }

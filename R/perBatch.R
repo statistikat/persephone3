@@ -249,14 +249,15 @@ multipleTimeSeries <- R6::R6Class(
     #' parameters of all components will be changed
     #' @param ... named arguments to be changed
     updateParams = function(component = NULL, ...) {
-      #browser()
-      if (is.null(component)) {
-        invisible(lapply(self$components, function(x) x$updateParams(...)))
-      } else {
-        invisible(lapply(self$components[component], function(x) {
-          x$updateParams(...)
-        }))
+      if (!is.null(component) && (!is.character(component) || !length(component) ||
+          anyNA(component) || anyDuplicated(component) ||
+          any(!component %in% names(self$components)))) {
+        stop("'component' must name existing, distinct batch components.", call. = FALSE)
       }
+      targets <- if (is.null(component)) self$components else self$components[component]
+      for (node in targets) node$clone(deep = TRUE)$updateParams(...)
+      for (node in targets) node$updateParams(...)
+      invisible(NULL)
     },
     #' @description Generate a table for the eurostat quality report
     #' @param component (optional) a sub-component to create the report for
@@ -296,6 +297,12 @@ multipleTimeSeries <- R6::R6Class(
   ),
   # ---- Private Methods ----
   private = list(
+    deep_clone = function(name, value) {
+      # R6's default deep clone does not descend into lists of R6 objects.
+      if (name == "components") return(lapply(value, function(x) x$clone(deep = TRUE)))
+      if (inherits(value, "R6")) return(value$clone(deep = TRUE))
+      value
+    },
     template = NULL, # one of c("rsa3", "rsa0", "rsa1", "rsa2c", "rsa4", "rsa5c")
     method = NULL, # one of c("tramoseats","x13")
     spec_list = NULL,

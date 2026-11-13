@@ -42,7 +42,7 @@ persephoneSingle <- R6::R6Class(
                                context = private$context_internal,
                                userdefined = private$userdefined)
       normalized <- normalize_backend_result(output, self$method, self$backend,
-                                              private$params_internal, private$ts_internal)
+                                              self$specification, private$ts_internal)
       private$output_internal <- output
       private$result_internal <- normalized
       private$fit_signature <- private$current_signature()

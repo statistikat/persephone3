@@ -2,7 +2,7 @@
 % Please edit documentation in R/fixModel.R
 \name{fixModel}
 \alias{fixModel}
-\title{Fix ARIMA model parameters}
+\title{Fix ARIMA model orders}
 \usage{
 fixModel(x, verbose = FALSE)
 }
@@ -12,5 +12,7 @@ fixModel(x, verbose = FALSE)
 \item{verbose}{if TRUE the changed parameters will be reported}
 }
 \description{
-Fixes the ARIMA model parameters to prevent re-estimation
+Keeps the fitted ARIMA orders and disables automatic order
+selection. This does not fix free coefficient values; they can be
+re-estimated on the next run. Existing fixed-coefficient constraints remain.
 }

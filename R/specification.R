@@ -36,3 +36,54 @@ backend_spec_parameters <- function(spec, method, backend) {
   }
   spec
 }
+
+# Build changes before touching R6 state. Template replacement, a complete
+# specification and incremental setters have distinct, deterministic meanings.
+specification_changes <- function(speclist, dots) {
+  if (!is.null(speclist) && length(dots)) {
+    stop("Use either 'speclist' or named parameter arguments, not both.", call. = FALSE)
+  }
+  changes <- if (is.null(speclist)) dots else speclist
+  if (!is.list(changes) || (length(changes) &&
+      (is.null(names(changes)) || anyNA(names(changes)) ||
+       any(!nzchar(names(changes))) || anyDuplicated(names(changes))))) {
+    stop("Specification changes must be a uniquely named list.", call. = FALSE)
+  }
+  changes
+}
+
+prepare_specification_update <- function(current, method, frequency, backend,
+                                         template = NULL, spec = NULL,
+                                         changes = list()) {
+  if (!is.null(template) && !is.null(spec)) {
+    stop("Supply either 'template' or a complete 'spec', not both.", call. = FALSE)
+  }
+  if (!is.null(spec)) {
+    if (inherits(spec, "persephone_spec") &&
+        !identical(as.numeric(spec$frequency), as.numeric(frequency))) {
+      stop("Specification frequency does not match the series.", call. = FALSE)
+    }
+    proposed <- backend_spec_parameters(spec, method, backend)
+    expected <- if (method == "x13") "JD3_X13_SPEC" else "JD3_TRAMOSEATS_SPEC"
+    if (backend == "rjd3" && !inherits(proposed, expected)) {
+      stop("A complete rjd3 specification must have class ", expected, ".", call. = FALSE)
+    }
+  } else if (!is.null(template)) {
+    proposed <- backend_default_spec(method, template, frequency, backend)
+  } else {
+    proposed <- current
+  }
+  if (length(changes)) {
+    proposed <- backend_update_spec(proposed, method, frequency, changes, backend)
+  }
+  proposed
+}
+
+validate_update_context <- function(context, userdefined) {
+  if (!is.null(context) && !is.list(context)) {
+    stop("'context' must be NULL or a list of calendars/regressors.", call. = FALSE)
+  }
+  if (!is.null(userdefined) && (!is.character(userdefined) || anyNA(userdefined))) {
+    stop("'userdefined' must be NULL or a character vector without missing values.", call. = FALSE)
+  }
+}

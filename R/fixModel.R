@@ -1,6 +1,8 @@
-#' Fix ARIMA model parameters
+#' Fix ARIMA model orders
 #'
-#' @description Fixes the ARIMA model parameters to prevent re-estimation
+#' @description Keeps the fitted ARIMA orders and disables automatic order
+#'   selection. This does not fix free coefficient values; they can be
+#'   re-estimated on the next run. Existing fixed-coefficient constraints remain.
 #'
 #' @param x a persephone object
 #' @param verbose if TRUE the changed parameters will be reported

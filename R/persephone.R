@@ -56,6 +56,10 @@ persephone <- R6::R6Class(
       stop("implement this function")
     },
     #' @description update parameters for the adjustment
+    #' @details A non-NULL template replaces the specification. A complete spec
+    #'   also replaces it; the two cannot be supplied together. Named changes
+    #'   are incremental. Previous output is retained and is_stale records changed
+    #'   settings until run() succeeds. Invalid updates leave state unchanged.
     #' @param template template name passed to `x13_spec()` or `tramoseats_spec()`
     #' @param speclist a list of additional arguments for customizing the model specifications
     #' @param spec a specification object to use as starting point
@@ -74,26 +78,18 @@ persephone <- R6::R6Class(
       component = "",
       ...
     ) {
-      #browser()
-      if (!missing(context)) {
-        private$context_internal <- context
-      }
-      if (!missing(userdefined)) {
-        private$userdefined <- union(userdefined, userdefined_default)
-      }
-      init_spec <- if (!missing(spec) && !is.null(spec)) {
-        spec
-      } else {
-        private$params_internal
-      }
-
-      private$params_internal <- private$updateFun(
-        name = template,
-        freq = frequency(private$ts_internal),
-        init_spec = init_spec,
-        spec_list = speclist,
-        ...
-      )
+      changes <- specification_changes(speclist, list(...))
+      validate_update_context(context, userdefined)
+      proposed <- prepare_specification_update(
+        private$params_internal, self$method, frequency(private$ts_internal),
+        self$backend, template, spec, changes)
+      # Validation/setters above must succeed before any state is changed.
+      private$params_internal <- proposed
+      if (!is.null(template)) private$template_internal <- template
+      if (!is.null(spec)) private$template_internal <- NULL
+      if (!missing(context)) private$context_internal <- context
+      if (!missing(userdefined)) private$userdefined <- union(userdefined, userdefined_default)
+      invisible(proposed)
     },
     #' @description visualize the results of an adjustment
     #' @param ...  passed to [plot()]

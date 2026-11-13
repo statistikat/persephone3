@@ -188,6 +188,12 @@ abstract. Only initialize derived classes.
     }
     \if{html}{\out{</div>}}
   }
+  \subsection{Details}{
+    A non-NULL template replaces the specification. A complete spec
+also replaces it; the two cannot be supplied together. Named changes
+are incremental. Previous output is retained and is_stale records changed
+settings until run() succeeds. Invalid updates leave state unchanged.
+  }
 }
 
 \if{html}{\out{<hr>}}

@@ -362,39 +362,50 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @description change parameters of components or aggregate
     #' @param component character scalar name of the component to change; if empty, operate on aggregate
     #' @param iterate logical: if TRUE, apply parameter changes to all components recursively
+    #' @param template Replacement template, or NULL for incremental changes.
+    #' @param spec Complete replacement specification; mutually exclusive with template.
+    #' @param context Replacement regressor/calendar context when supplied.
+    #' @param userdefined Replacement additional output requests when supplied.
     #' @param speclist list with named arguments to be changed
     #' @param ... named arguments to be changed (spec options forwarded to updateFun)
     updateParams = function(
-      component = "",
-      iterate = TRUE,
-      speclist = NULL,
-      ...
+      component = "", iterate = TRUE, speclist = NULL, ...,
+      template = NULL, spec = NULL, context = NULL, userdefined = NULL
     ) {
-      # If a specific subcomponent is requested, forward the call to that subcomponent
-      # nzchar is a fast way to find out if elements of a character vector are non-empty strings.
-
+      if (!is.character(component) || length(component) != 1L || is.na(component)) {
+        stop("'component' must be a single path.", call. = FALSE)
+      }
+      if (!is.logical(iterate) || length(iterate) != 1L || is.na(iterate)) {
+        stop("'iterate' must be TRUE or FALSE.", call. = FALSE)
+      }
+      changes <- specification_changes(speclist, list(...))
+      validate_update_context(context, userdefined)
+      args <- list(template = template, spec = spec, speclist = changes, iterate = iterate)
+      if (!missing(context)) args$context <- context
+      if (!missing(userdefined)) args$userdefined <- userdefined
+      # Keep explicit NULL values so contexts and optional outputs can be cleared.
+      if (!missing(context) && is.null(context)) args["context"] <- list(NULL)
+      if (!missing(userdefined) && is.null(userdefined)) args["userdefined"] <- list(NULL)
       if (nzchar(component)) {
         root <- self$getComponent(component)
-        root$updateParams(iterate = iterate, speclist = speclist, ...) # subtree handles recursion itself
+        if (is.null(root)) stop("Unknown component: ", component, call. = FALSE)
+        do.call(root$updateParams, args)
         return(invisible(NULL))
       }
-
-      # Update aggregate spec using updateFun (applies ... to aggregate spec)
-      private$updateFun(
-        name = private$template,
-        freq = frequency(private$ts_internal),
-        init_spec = private$params_internal,
-        spec_list = speclist,
-        ...
-      )
-
-      # If requested, apply the same changes to all components recursively
-      if (isTRUE(iterate)) {
-        lapply(self$components, function(node) {
-          node$updateParams(iterate = TRUE, speclist = speclist, ...)
-          invisible(NULL)
-        })
+      proposed <- prepare_specification_update(
+        private$params_internal, self$method, frequency(private$ts_internal),
+        self$backend, template, spec, changes)
+      # Preflight clones to avoid partially changing a hierarchy when a later
+      # node rejects an option. Real component identities are preserved.
+      if (iterate) {
+        for (node in self$components) do.call(node$clone(deep = TRUE)$updateParams, args)
       }
+      private$params_internal <- proposed
+      if (!is.null(template)) private$template <- template
+      if (!is.null(spec)) private$template <- NULL
+      if (!missing(context)) private$context_internal <- context
+      if (!missing(userdefined)) private$userdefined <- union(userdefined, userdefined_default)
+      if (iterate) for (node in self$components) do.call(node$updateParams, args)
       invisible(NULL)
     },
 
@@ -745,7 +756,7 @@ hierarchicalTimeSeries <- R6::R6Class(
         userdefined = private$userdefined, context = private$context_internal,
         method = private$method, backend = self$backend)
       normalized <- normalize_backend_result(output, private$method, self$backend,
-                                              private$params_internal, private$ts_internal)
+                                              self$specification, private$ts_internal)
       private$output_internal <- output
       private$result_internal <- normalized
       private$fit_signature <- private$current_signature()

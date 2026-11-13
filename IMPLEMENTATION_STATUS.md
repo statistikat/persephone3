@@ -33,6 +33,7 @@ the native-backend plan below.
 | 17a — shared adapter and additive contracts | Explicit persistent backend selection for singles/batches/hierarchies, lazy rjd3 loading, optional dependencies, serializable spec/result envelopes and stale-fit detection | 260 installed-package R assertions pass, including 43 dashboard checks and direct backend parity. Installed-package loading and capability errors pass with Java-related R packages absent. Native fits remain unimplemented; richer normalized regressors/diagnostics continue in 6/10/12. |
 | 18a — direct-backend reference corpus | 12 synthetic fixed/manual AO/automatic fits across X-13/TRAMO-SEATS and monthly/quarterly data; raw outputs, exact field schemas, checksums and per-field comparator | Integrity/corruption tests and all 12 pinned live replays pass. Tolerances are provisional; external-context, missingness, LS/TC, benchmarking, difficult-model and multi-platform cases remain open. |
 | 19a — C++17/Rcpp numerical foundations | Registered compiled routines for monthly/quarterly domains, differencing polynomials, convolution and finite filters with explicit missing masks; native-only CI workflow | 58 installed-package Rcpp assertions and standalone strict-warning/ASan/UBSan checks pass locally. Compiled primitives run with Java-related R packages inaccessible. Linux/Windows CI is configured, not remotely verified; no SARIMA estimation or seasonal-adjustment fit is implemented. |
+| 8 — specification updates | Template/full-spec replacement, incremental setters, atomic invalid-update handling across batches/nested hierarchies, deep cloning of child lists and documented model-order fixing | 52 focused assertions pass, including recursive/selective changes, mixed-method rejection without partial mutation, canonical-spec imports and stale-result/rerun behavior. F8 is resolved. |
 
 Each numbered slice is committed separately. A delivered foundation does not
 mean that native X-13/TRAMO-SEATS or the later release gates are complete.
@@ -93,7 +94,7 @@ marked **source inspection**. Probe scripts/logs are under
 `/tmp/persephone-reassessment`; essential inputs and observed results are also
 recorded here so the plan does not depend on temporary files.
 
-## Findings
+## Findings at the reassessment baseline
 
 Priority **P1** means a correctness issue to resolve before release sign-off.
 **P2** means compatibility, input handling, or delivery hardening. Source
@@ -114,7 +115,9 @@ locations refer to `dd38e10` and may move as fixes are implemented.
 
 ### Minimal reproduction examples
 
-These demonstrate existing failures; they are not proposed usage patterns.
+These reproduce failures at the `dd38e10` assessment baseline. Consult the
+delivery log for fixes implemented since then; resolved examples no longer
+produce the annotated failure. They are not proposed usage patterns.
 
 ```r
 library(persephone3)
