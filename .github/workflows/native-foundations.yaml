@@ -45,7 +45,9 @@ jobs:
             stopifnot(length(results) > 0L, all(as.logical(results)))
           }
       - name: Verify frozen reference artifacts without Java
-        run: Rscript tools/reference/verify.R
+        run: |
+          Rscript tools/reference/verify.R
+          Rscript tools/reference/verify-extended.R
       - name: Sanitize independent C++ core
         if: runner.os == 'Linux'
         shell: bash

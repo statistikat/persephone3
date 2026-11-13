@@ -150,3 +150,12 @@ LS/TC, fixed coefficients, full external contexts, benchmarking, unusual modes,
 all templates, near-boundary selection or difficult SEATS models. Extend it
 with independent invariants and domain-reviewed cases before claiming item
 18's full acceptance matrix or any production native compatibility.
+
+## Additive reference coverage
+
+[Extended v1](EXTENDED_FIXTURES.md) adds eight cases for mixed fixed/free
+outliers, internal missingness, external regressors and future-context effects.
+It pins and preserves this original corpus. Use `verify-extended.R` for its
+Java-free invariants and `verify-extended.R --live` for exact pinned replay.
+Release/source identification and the independently authored native modules'
+references are recorded in [NATIVE_PROVENANCE.md](NATIVE_PROVENANCE.md).
