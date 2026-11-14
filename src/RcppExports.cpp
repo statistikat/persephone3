@@ -535,6 +535,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_seasonal_spec
+Rcpp::List native_x11_seasonal_spec(SEXP type, SEXP frequency, SEXP available, SEXP side);
+RcppExport SEXP _persephone3_native_x11_seasonal_spec(SEXP typeSEXP, SEXP frequencySEXP, SEXP availableSEXP, SEXP sideSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type available(availableSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type side(sideSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_seasonal_spec(type, frequency, available, side));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_x11_seasonal_filter
+Rcpp::List native_x11_seasonal_filter(SEXP values, SEXP type, SEXP frequency);
+RcppExport SEXP _persephone3_native_x11_seasonal_filter(SEXP valuesSEXP, SEXP typeSEXP, SEXP frequencySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_seasonal_filter(values, type, frequency));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
@@ -568,6 +595,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_x11_mean_filter", (DL_FUNC) &_persephone3_native_x11_mean_filter, 2},
     {"_persephone3_native_x11_musgrave_spec", (DL_FUNC) &_persephone3_native_x11_musgrave_spec, 5},
     {"_persephone3_native_x11_musgrave_filter", (DL_FUNC) &_persephone3_native_x11_musgrave_filter, 4},
+    {"_persephone3_native_x11_seasonal_spec", (DL_FUNC) &_persephone3_native_x11_seasonal_spec, 4},
+    {"_persephone3_native_x11_seasonal_filter", (DL_FUNC) &_persephone3_native_x11_seasonal_filter, 3},
     {NULL, NULL, 0}
 };
 

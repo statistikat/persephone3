@@ -125,3 +125,11 @@
     .Call(`_persephone3_native_x11_musgrave_filter`, values, frequency, length, ic_ratio)
 }
 
+.native_x11_seasonal_spec <- function(type, frequency, available, side) {
+    .Call(`_persephone3_native_x11_seasonal_spec`, type, frequency, available, side)
+}
+
+.native_x11_seasonal_filter <- function(values, type, frequency) {
+    .Call(`_persephone3_native_x11_seasonal_filter`, values, type, frequency)
+}
+

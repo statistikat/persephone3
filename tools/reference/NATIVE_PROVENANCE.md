@@ -307,3 +307,24 @@ An independent dense extension/convolution operator and rational quarterly
 control qualify 22 frozen public cases and their short-series behavior. Old
 corpora/reports are unchanged. This explicit processor does not yet establish
 its placement in B/C/D passes or any automatic policy.
+
+### Explicit seasonal endpoints (22a.2b.2a)
+
+`src/core/x11_seasonal_endpoints.hpp` and `src/x11_seasonal_endpoints.cpp`
+independently implement the fixed seasonal filter definitions in published
+Census/ABS documentation. Census Technical Paper 15, Appendix B, supplies the
+method-defining 3×1/3×9 weights. The ABS 2001 introductory time-series course
+supplies virtual-value constructions for 3×3/3×5; integer convolution derives
+their rational coefficients. Exact references and the definitions are in
+`tools/native-tests/x11-seasonal-contract.md`. A separate R oracle pads actual
+annual values and convolves them for 3×3/3×5. No full-precision Musgrave formula
+is substituted for the published fixed seasonal definitions.
+
+Reference inspection used only public enum/factory/processor signatures and
+execution. No numerical Java source, bytecode or implementation constants were
+read or translated. 120 additive public cases pin endpoint operators and full
+points; four short S3X1 controls record a separate stable-selection behavior.
+Core code needs no R/Rcpp, BLAS or LAPACK linkage. Calendar/mask metadata belongs
+to the adapter; native runtime never reads fixtures or calls the reference
+backend. Existing corpora/reports are unchanged. Remaining 3×15 endpoints,
+automatic selection and decomposition integration are separate work.

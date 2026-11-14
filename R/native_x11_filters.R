@@ -11,10 +11,16 @@ native_x11_musgrave_spec <- function(frequency,length,available,ic_ratio,side="r
   structure(result,class="persephone_native_x11_filter_spec")
 }
 
+native_x11_seasonal_spec <- function(type,frequency,available,side="right") {
+  result <- .native_x11_seasonal_spec(type,frequency,available,side)
+  names(result$weights) <- as.character(result$offsets)
+  structure(result,class="persephone_native_x11_filter_spec")
+}
+
 native_x11_filter <- function(series,type,length=NULL,endpoints="none",ic_ratio=NULL) {
   if(!is.character(endpoints) || length(endpoints)!=1L || is.na(endpoints) ||
-      !is.null(dim(endpoints)) || !endpoints %in% c("none","musgrave","mean"))
-    stop("endpoints must be 'none', 'musgrave' or 'mean'.",call.=FALSE)
+      !is.null(dim(endpoints)) || !endpoints %in% c("none","musgrave","mean","seasonal"))
+    stop("endpoints must be 'none', 'musgrave', 'mean' or 'seasonal'.",call.=FALSE)
   if(endpoints!="musgrave" && !is.null(ic_ratio))
     stop("ic_ratio requires Musgrave endpoints.",call.=FALSE)
   domain <- native_regular_domain(series)
@@ -40,6 +46,19 @@ native_x11_filter <- function(series,type,length=NULL,endpoints="none",ic_ratio=
     boundary <- left>0L | right>0L
     result$endpoint_rows <- data.frame(row=rows[boundary],
       left_padding=left[boundary],right_padding=right[boundary])
+  } else if(endpoints=="seasonal") {
+    result <- .native_x11_filter_spec(type,domain$frequency,length)
+    applied <- .native_x11_seasonal_filter(as.numeric(series),type,domain$frequency)
+    result$values <- applied$values;result$missing <- applied$missing
+    result$endpoint_policy <- "seasonal_x11";result$scope <- "seasonal_filter_with_endpoints"
+    result$minimum_phase_length <- max(5L,result$terms)
+    r <- result$radius;n <- as.integer(domain$length);f <- as.integer(domain$frequency)
+    rows <- c(seq_len(r),seq.int(n-r+1L,n))
+    periods <- as.integer(stats::cycle(series))
+    result$phase_lengths <- stats::setNames(tabulate(periods,nbins=f),as.character(seq_len(f)))
+    result$endpoint_rows <- data.frame(row=rows,period=periods[rows],
+      side=rep(c("left","right"),each=r),
+      available=c((seq_len(r)-1L)%/%f,rev((seq_len(r)-1L)%/%f)))
   } else result <- .native_x11_filter(as.numeric(series),type,domain$frequency,length)
   names(result$weights) <- as.character(result$offsets)
   result$values <- stats::ts(result$values,start=domain$start,frequency=domain$frequency)
