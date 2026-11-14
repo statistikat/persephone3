@@ -41,3 +41,35 @@ mkdir /tmp/persephone-interpolation-report
 PERSEPHONE_NUM_THREADS=2 OMP_NUM_THREADS=2 Rscript tools/reference/verify-interpolation.R \
   --timing --output=/tmp/persephone-interpolation-report
 ```
+
+## Optional ARMA prediction uncertainty
+
+`verify-interpolation-arma.R` qualifies `method="delta_profile_ml"` against an
+independent dense Gaussian joint Hessian and independently differentiated
+Schur-complement predictions. The 64 fitted cases include 32 nonempty prediction
+covariances and 32 empty-domain controls. The prospective normalized covariance
+relative budget is `2e-5`; the point-sensitivity budget is
+`2e-7*(1+abs(target))`. Neither budget uses the production derivative error
+estimate as its acceptance threshold. Fixed/free directions, refitted regression
+effects, transformations, units and missing domains remain explicit.
+
+Only accurate observed profile-ML ARMA covariance enters `G V_theta G'`. The
+conditional covariance is retained and the additional covariance is unavailable
+when stationarity, information, point sensitivity or range checks fail. No
+upstream numerical code or bytecode was consulted for this derivation.
+
+Public X-13/TRAMO calls supply 128 comparison fits and timing baselines. Their
+missing-value standard errors remain conditional and are **not** targets for
+the delta-method result. The timing protocol measures four prepared fit/output
+workloads: native conditional, native delta, public X-13 and public TRAMO.
+Native returns full covariance and its components, so the workloads differ.
+Three warmed rounds alternate engine order and calibrate batches to at least
+50 ms; setup/loading/startup and explicit pre-batch GC are excluded, while
+natural in-batch GC is included. Versioned source hashes, qualification rows
+and timings are under `information/2026-11-14-interpolation-arma/`.
+
+```sh
+mkdir /tmp/persephone-interpolation-arma-report
+PERSEPHONE_NUM_THREADS=2 OMP_NUM_THREADS=2 Rscript tools/reference/verify-interpolation-arma.R \
+  --timing --output=/tmp/persephone-interpolation-arma-report
+```

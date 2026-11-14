@@ -1,11 +1,12 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **20c.2b.2a (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **20c.2b.2b (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
-reporting. Conditional interpolation prediction errors are implemented;
-optional ARMA uncertainty propagation is next in **20c.2b.2b**.
+reporting. Conditional interpolation prediction errors and optional accurate
+profile-ML ARMA propagation are implemented. Forecasts/backcasts are next in
+**20d.1**.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -25,8 +26,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **27,131 passing installed-package
-assertions** across **40 files**, including the native numerical additions. These
+current rjd3 path. The full check has **28,766 passing installed-package
+assertions** across **41 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -73,7 +74,9 @@ the likelihood or covariance. Conditional interpolation prediction covariance
 now separates process uncertainty and the additional estimated-regression
 component, with explicit ML/residual-df scale. Public transformed missing-value
 standard errors agree across 404 fits; full covariance has independent Gaussian
-qualification. Optional ARMA propagation and wider platform qualification remain open;
+qualification. Optional first-order ARMA propagation now adds a separately
+labelled profile-ML delta increment, retaining conditional results on failure.
+Forecasts/backcasts and wider platform qualification remain open;
 native X-11/TRAMO/SEATS adjustment is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
@@ -124,6 +127,7 @@ the native-backend plan below.
 | 20c.2b.1a — accurate residual/interpolation points | Time-aligned observed finite innovations, ML/residual-df scaling, separate complete-span residuals, internal Gaussian interpolation with restored effects and explicit log inverse-point semantics | 2,353 new mandatory assertions, 64 dense projection cases and 32 independent chronological Gaussian predictions pass; strict C++/ASan/UBSan covers 108 cancellation boundaries. Public reporting matches 104/128 matrix fits; 24 reflected-point/residual differences remain explicitly unqualified. Closed seasonal example: accurate point 24, public point −7, both likelihoods `Q=130`. User requested Java-free legacy comparison next; interpolation errors remain unavailable. |
 | 20c.2b.1b — Java-free legacy residual/interpolation reporting | Explicit `reporting="legacy"`, original-scale preliminary filling, odd/even differencing sign, complete versus compressed Householder residuals, labelled reporting dates and retained accurate outputs | 2,795 new mandatory assertions include 30 frozen AR(1) rounding controls. All 404 public fits pass unchanged `2e-8` scaled budgets; maximum residual error `1.591e-13`. Strict C++/ASan/UBSan covers 90 seasonal and 93 AR(1) cancellation boundaries. No Java/target/state input, no change to fitting or uncertainty; broader platform/model parity and prediction errors remain open. |
 | 20c.2b.2a — conditional interpolation prediction errors | Java-free `native_interpolation_information()`, full missing-value covariance, separate known/estimated-regression components, explicit `Q/n` or `Q/(n-r-k)`, transformed errors and distinct point/error availability | 2,310 new mandatory assertions include intrinsic Gaussian precision/Schur comparisons for 64 fitted and 96 focused cases. All 404 public transformed-error comparisons pass unchanged `2e-8`; maximum error `5.181e-15`. Strict C++/ASan/UBSan covers 177 cancellation boundaries, range guards and serial/OpenMP covariance equality. ARMA and scale uncertainty are not propagated; original-scale lognormal moments remain a later transform/forecast step. |
+| 20c.2b.2b — optional ARMA interpolation uncertainty | Explicit `method="delta_profile_ml"`, centered refitted point sensitivities and accurate observed profile-ML `G V_ARMA G'`; shared budgets and retained conditional results on failure | 1,635 new mandatory assertions, independent dense Gaussian Hessians for 32 nonempty fitted cases and 32 empty controls, closed AR(1) derivatives, units/range/budget gates and a 260-point OpenMP comparison. Strict C++/ASan/UBSan covers 1,147 cancellation boundaries. Public conditional errors are not delta targets. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -655,6 +659,65 @@ and raw timing rows are in
 `tools/reference/information/2026-11-14-interpolation-conditional/`. Earlier
 reports remain unchanged.
 
+### Optional ARMA interpolation uncertainty (20c.2b.2b)
+
+`native_interpolation_information(..., method="delta_profile_ml")` now adds
+`G V_theta G'` to conditional ML prediction covariance. `G` differentiates the
+accurate interpolation points in free physical ARMA coefficients while refitting
+free regression effects. Final fitted effects, known means and fixed homogeneous
+diffuse levels are removed before dimensionless three-scale/Richardson checks.
+Only qualified accurate observed profile-ML ARMA covariance is admissible;
+legacy, Gauss-Newton and residual-df estimators cannot enter this approximation.
+Parent information and point samples share an explicit evaluation budget,
+excluding the single initial conditional diagnostic. A Gram construction forms
+the increment with owned OpenMP entries and explicit range/underflow guards.
+
+The conditional covariance, components, errors and accurate points remain
+available when propagation fails. Selected propagated covariance is withheld
+and selected errors are `NA`; the result never silently substitutes conditional
+errors. Empty prediction domains skip information/derivatives, and fixed ARMA
+returns the conditional covariance exactly. Innovation-scale uncertainty and
+original-scale lognormal moments are not included in this delta approximation.
+
+The **1,635 new mandatory assertions** check 32 nonempty fitted predictions
+against independent dense Gaussian Hessians and Schur point sensitivities, plus
+32 empty controls. Closed AR(1) derivatives include fitted-mean sensitivity.
+Units, shifts, fixed/free directions, exact zero sensitivities, weak/unqualified
+information, evaluation boundaries, serialization and explicit conditional
+retention are covered. A 260-point matrix exercises actual OpenMP covariance
+loops. Strict C++/ASan/UBSan passes **1,147 interruption boundaries** and reuse.
+The full build/check passes **28,766 assertions / 41 files**, zero errors and the
+existing R-header compiler warning and DESCRIPTION note. The isolated Java-free
+suite passes **27,437 native assertions / 21 files + 34 backend assertions**
+with two actual workers; the separate serial build passes **27,433 / 21** with
+no `libomp` linkage. Logs are under `/tmp/persephone-interpolation-arma/`.
+
+The reference run passes **2,049 qualification/timing checks** across the
+64 native cases and **128 public fits**. Maximum normalized covariance relative
+error is **4.985e-8** against the predeclared `2e-5` budget; maximum scaled point
+sensitivity error is **9.480e-8** against `2e-7`. Public missing-value standard
+errors are conditional and are not targets for the propagated covariance.
+The timing run records **10,338 calls**, including warm-up/calibration. Three
+warmed alternating rounds use calibrated batches of at least 50 ms where
+possible. Median summed prepared fit/output time over 64 cases:
+
+| Workload | Seconds |
+| --- | ---: |
+| Native conditional interpolation covariance | 9.340855 |
+| Native conditional plus profile-ML ARMA propagation | 12.400250 |
+| JDemetra X-13 processing plus public missing-value errors | 0.214949 |
+| JDemetra TRAMO processing plus public missing-value errors | 0.198065 |
+
+ARMA propagation adds about **32.75%** to the native conditional workload.
+The native delta workload takes about **57.69× / 62.61×** the public X-13/TRAMO
+time. Native returns full covariance, components and derivative diagnostics;
+public accessors return conditional errors. These scopes differ, and no speed
+improvement is claimed. Setup/loading/startup and explicit pre-batch GC are
+excluded; natural in-batch GC is included. Source/runtime hashes, qualification
+and timing rows are in `tools/reference/information/2026-11-14-interpolation-arma/`.
+Earlier evidence remains unchanged. Next is **20d.1**, conditional endpoint
+forecast/backcast distributions with explicit regressor and calendar coverage.
+
 ### Previously completed validation, rechecked as evidence
 
 - The retained full `R CMD check` log ends in **Status: OK**: zero errors,
@@ -982,8 +1045,8 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20c.2b.2b — next | Optional ARMA propagation into interpolation errors | Differentiate accurate conditional points in free physical coefficients, require qualified accurate profile-ML ARMA covariance, and add `G V_ARMA G'` with shared budgets, derivative/range gates and independent sensitivity checks. Retain conditional components when propagation is unavailable; keep this delta-method approximation distinct from the delivered conditional-ARMA result |
-| 20d | Forecast/backcast points/errors with complete future regressors | Extend the accurate conditional distribution to requested domains, preserve item 10's separate point/error coverage, and document transformed, inverse-point and lognormal mean/error semantics |
+| 20d.1 — next | Conditional forecast/backcast points and full covariance with complete future/past regressors | Extend Gaussian prediction to explicit endpoint domains; retain the original estimation window's likelihood scale and fitted coefficient convention. Qualify independent dense conditioning, closed AR(1)/random-walk formulas, endpoint gaps, windows and separate point/error horizons |
+| 20d.2 | Original-scale lognormal moments and optional ARMA forecast propagation | Expose inverse-point medians separately from mean-adjusted points and original-scale covariance; qualify range/cancellation and cross-domain covariance. Reuse accurate profile-ML information with refitted endpoint sensitivities and explicit conditional retention on failure |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
@@ -1001,8 +1064,9 @@ Conditional estimated-ARMA regression uncertainty is also delivered.
 Joint profile-ML regression/ARMA uncertainty is delivered as a separate option.
 Accurate standardized innovations, complete residual/interpolation points and the
 requested Java-free legacy reporting option are delivered. Conditional interpolation
-errors now include estimated-regression uncertainty. Next add optional ARMA
-propagation and forecasts before an end-to-end fixed-model X-13 slice.
+errors include estimated-regression uncertainty and optional first-order ARMA
+propagation. Next add forecasts/backcasts and lognormal moments before an
+end-to-end fixed-model X-13 slice.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
 and does not justify a default switch. The detailed acceptance criteria below
 remain in force.
@@ -1420,21 +1484,32 @@ contract and are not universally the covariance residual vector.
    scaled by the original observed likelihood count, with ML and residual-df
    conventions explicit. Independent conditional Gaussian and closed bridge
    formulas validate diagonal and off-diagonal entries; public missing standard
-   errors are qualified separately from legacy point errors. Next, 20c.2b.2b
+   errors are qualified separately from legacy point errors. Delivered 20c.2b.2b
    optionally propagates accurate profile-ML ARMA uncertainty through point
    sensitivities, retaining conditional outputs if curvature or derivatives are
-   unavailable. Use centered, dimensionless point sensitivities and the existing
-   three-scale derivative/error checks, a shared information/evaluation budget,
-   and `G V_ARMA G'` as a separately labelled delta-method increment. Require ML
-   scale for that joint approximation; do not substitute legacy, Gauss-Newton
-   or residual-df ARMA covariance. Qualify fixed/free constraints, units, missing
-   domains, exact zero sensitivities, weak/nonstationary fits and interruption
-   recovery before forecasting. No unavailable coefficient direction may silently
+   unavailable. Centered, dimensionless point sensitivities use three-scale
+   derivative/error checks and a shared information/evaluation budget;
+   `G V_ARMA G'` is a separately labelled delta-method increment. ML scale is
+   required; legacy, Gauss-Newton or residual-df ARMA covariance cannot be
+   substituted. Fixed/free constraints, units, missing domains, exact zero
+   sensitivities, weak/nonstationary fits and interruption recovery are qualified. No unavailable coefficient direction may silently
    acquire a zero standard error. Forecasts consume these accurate contracts.
-3. **20d — forecasts and backcasts.** Derive original-domain points and errors
-   with regression uncertainty, future-regressor coverage and documented log
-   back-transformation. Keep fixed horizons and item 10's separate point/error
-   domains. Only then connect the restricted X-11 slice.
+3. **20d — forecasts and backcasts.** First deliver **20d.1**, explicit endpoint
+   Gaussian points and full conditional covariance including estimated regression.
+   Require complete supplied regressor coverage across the selected window and
+   requested past/future; never extrapolate regressors or use held-out response
+   observations outside the window. Retain original-window Q/count/df scaling.
+   Backcasts are chronological; requested horizons start at the selected window
+   boundaries even when endpoint observations are missing. Preserve item 10's
+   separate point/error horizons and qualify both directions against independent
+   Gaussian conditioning, closed AR(1)/random-walk formulas and public accessors.
+   Then **20d.2** exposes transformed moments, inverse-point medians `exp(m)`,
+   lognormal means `exp(m+Vii/2)` and original covariance separately, with explicit
+   overflow/underflow handling. Optional accurate profile-ML delta propagation
+   must refit regression effects at perturbed ARMA coefficients and retain the
+   conditional result on failure. Document any public reporting discrepancy
+   separately; do not replace accurate predictions with legacy targets. Only
+   then connect the restricted X-11 slice.
 
 Obtain supported-platform results for the new native matrix before asserting
 wider fitted parity. Candidate evaluations and LAPACK stay on the main thread;

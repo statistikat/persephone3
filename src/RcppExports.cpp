@@ -168,8 +168,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // native_interpolation_information
-Rcpp::List native_interpolation_information(SEXP values, SEXP design, SEXP coefficients, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian, SEXP scale);
-RcppExport SEXP _persephone3_native_interpolation_information(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP, SEXP scaleSEXP) {
+Rcpp::List native_interpolation_information(SEXP values, SEXP design, SEXP coefficients, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian, SEXP scale, SEXP method, SEXP control);
+RcppExport SEXP _persephone3_native_interpolation_information(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP, SEXP scaleSEXP, SEXP methodSEXP, SEXP controlSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -187,7 +187,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
     Rcpp::traits::input_parameter< SEXP >::type log_jacobian(log_jacobianSEXP);
     Rcpp::traits::input_parameter< SEXP >::type scale(scaleSEXP);
-    rcpp_result_gen = Rcpp::wrap(native_interpolation_information(values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale));
+    Rcpp::traits::input_parameter< SEXP >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type control(controlSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_interpolation_information(values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale, method, control));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -434,7 +436,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_information", (DL_FUNC) &_persephone3_native_arma_information, 17},
     {"_persephone3_native_joint_regression_information", (DL_FUNC) &_persephone3_native_joint_regression_information, 14},
     {"_persephone3_native_arma_residuals", (DL_FUNC) &_persephone3_native_arma_residuals, 16},
-    {"_persephone3_native_interpolation_information", (DL_FUNC) &_persephone3_native_interpolation_information, 14},
+    {"_persephone3_native_interpolation_information", (DL_FUNC) &_persephone3_native_interpolation_information, 16},
     {"_persephone3_native_arma_optimize", (DL_FUNC) &_persephone3_native_arma_optimize, 14},
     {"_persephone3_native_diffuse_likelihood", (DL_FUNC) &_persephone3_native_diffuse_likelihood, 10},
     {"_persephone3_native_sarima_likelihood", (DL_FUNC) &_persephone3_native_sarima_likelihood, 10},

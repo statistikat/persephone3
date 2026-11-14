@@ -590,9 +590,13 @@ Rcpp::List native_interpolation_information(SEXP values,SEXP design,SEXP coeffic
     SEXP specification,SEXP initial,SEXP coordinates,SEXP period,
     SEXP d=R_NilValue,SEXP seasonal_d=R_NilValue,SEXP mean=R_NilValue,
     SEXP rank_tolerance=R_NilValue,SEXP margin=R_NilValue,SEXP log_jacobian=R_NilValue,
-    SEXP scale=R_NilValue) {
+    SEXP scale=R_NilValue,SEXP method=R_NilValue,SEXP control=R_NilValue) {
     const auto selected=information_option(scale,"prediction scale","ml");
     if(selected!="ml" && selected!="residual_df")throw std::invalid_argument("prediction scale must be ml or residual_df");
+    const auto mode=information_option(method,"prediction uncertainty method","conditional");
+    if(mode!="conditional" && mode!="delta_profile_ml")throw std::invalid_argument("prediction method must be conditional or delta_profile_ml");
+    if(mode=="delta_profile_ml" && selected!="ml")throw std::invalid_argument("ARMA propagation requires ML scale");
+    const auto c=information_control(control);
     const auto map=parameter_map(specification,initial,margin);
     const auto data=objective_data(values,design,coefficients);
     const auto result=persephone::interpolation_information(data.input,data.regression,map,
@@ -622,6 +626,42 @@ Rcpp::List native_interpolation_information(SEXP values,SEXP design,SEXP coeffic
     out["center"]=objective_output(*fit.center,fit.free_arma);
     out["method"]="conditional_ARMA_with_estimated_regression";
     out["propagates_ARMA_uncertainty"]=false;
+    if(mode=="delta_profile_ml") {
+        const auto propagated=persephone::interpolation_arma_information(result,data.input,data.regression,map,
+            Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+            integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+            scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+            c,[] {Rcpp::checkUserInterrupt();});
+        out["conditional_status"]=result.status;
+        out["conditional_available"]=result.status=="available" || result.status=="no_internal_missing";
+        out["conditional_covariance"]=matrix_or_null(result.covariance);
+        out["conditional_standard_errors"]=numeric(result.standard_errors);
+        out["status"]=propagated.status;out["message"]=propagated.message;
+        out["available"]=propagated.status=="available" || propagated.status=="no_internal_missing";
+        out["covariance"]=matrix_or_null(propagated.covariance);
+        out["arma_increment"]=matrix_or_null(propagated.increment);
+        out["standard_errors"]=numeric(propagated.standard_errors);
+        out["sensitivity"]=matrix_or_null(propagated.sensitivity);
+        out["sensitivity_error"]=matrix_or_null(propagated.sensitivity_error);
+        if(propagated.derivatives.status=="not_required") {
+            out["sensitivity"]=Rcpp::NumericMatrix(static_cast<int>(rows.size()),static_cast<int>(fit.free_arma));
+            out["sensitivity_error"]=Rcpp::NumericMatrix(static_cast<int>(rows.size()),static_cast<int>(fit.free_arma));
+        }
+        out["sensitivity_status"]=propagated.derivatives.status;
+        out["sensitivity_steps"]=numeric(propagated.derivatives.steps);
+        out["sensitivity_evaluations"]=propagated.derivatives.evaluations;
+        out["sensitivity_refinements"]=propagated.derivatives.refinements;
+        Rcpp::IntegerVector rejected;Rcpp::CharacterVector reasons;
+        for(const auto& entry:propagated.derivatives.rejected) {reasons.push_back(entry.first);rejected.push_back(entry.second);}
+        rejected.attr("names")=reasons;out["sensitivity_rejected"]=rejected;
+        out["arma_information"]=propagated.arma ? static_cast<SEXP>(arma_information_output(*propagated.arma,c,"profile_ml",R_NilValue)) : R_NilValue;
+        out["evaluations"]=propagated.evaluations;out["evaluation_budget"]=c.max_evaluations;
+        out["evaluation_scope"]="ARMA_information_plus_point_sensitivity_samples_excludes_conditional_diagnostic";
+        out["method"]="delta_profile_ml";out["propagates_ARMA_uncertainty"]=true;
+        out["inference"]="first_order_delta_method_with_accurate_profile_ML_ARMA";
+        out["sensitivity_coordinates"]="free_physical_ARMA_coefficients";
+        out["sensitivity_centering"]="fitted_regression_known_mean_and_integrated_homogeneous_levels";
+    }
     return out;
 }
 

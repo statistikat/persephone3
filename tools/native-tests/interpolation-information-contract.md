@@ -1,4 +1,4 @@
-# Conditional interpolation uncertainty (20c.2b.2a)
+# Interpolation uncertainty (20c.2b.2a–b)
 
 The internal Java-free API is:
 
@@ -10,9 +10,9 @@ native_interpolation_information(context, fitted_coordinates, scale = "residual_
 It supplies accurate Gaussian points and prediction-error covariance at internal
 missing observations. It conditions on the supplied admissible ARMA coefficients
 and accounts for estimated regression effects. It neither optimizes ARMA nor
-propagates its estimation error. Thus it can evaluate a nonoptimal parameter
-point; it makes no claim of a qualified information matrix there. Optional ARMA
-propagation is the separate next step, 20c.2b.2b.
+propagates its estimation error by default. Thus the conditional method can
+evaluate a nonoptimal parameter point; it makes no claim of a qualified
+information matrix there. Optional ARMA propagation is described below.
 
 ## Covariance components
 
@@ -106,3 +106,58 @@ Accurate points and full covariance are independently qualified; public
 Legacy public points are not accepted as accurate targets. Versioned evidence
 and fit-plus-output timing are in
 `tools/reference/information/2026-11-14-interpolation-conditional/`.
+
+## Optional ARMA propagation (20c.2b.2b)
+
+```r
+native_interpolation_information(context, fitted_coordinates,
+    method = "delta_profile_ml", control = list(max_evaluations = 1000L))
+```
+
+This is a first-order delta approximation on the transformed scale:
+
+```
+G = d(refitted accurate conditional points) / d(free physical ARMA coefficients)
+V_prediction = V_conditional_ML + G V_theta_profile_ML G'
+```
+
+The selected method requires `scale="ml"`. `V_theta_profile_ML` must pass the
+existing stationarity, structural-identification, curvature, derivative and
+range gates for accurate observed profile-ML information. Neither legacy
+optimizer covariance, residual Gauss-Newton covariance nor a residual-df scale
+is substituted. Innovation-scale estimation uncertainty is not propagated.
+This is distinct from an exact joint predictive distribution or a claim that
+JDemetra's conditional errors include ARMA estimation uncertainty.
+
+Point derivatives use three-scale differences and Richardson/error checks.
+Each physical-coefficient perturbation refits the free regression coefficients;
+fixed coefficients remain fixed. Subtracting final fitted effects and known
+mean before perturbing avoids cancellation of large fitted levels. Integrated
+models also remove a fixed homogeneous level (periodic when `D>0`), which leaves
+the derivative unchanged. Scaling points by their conditional errors qualifies
+the derivative in dimensionless units before converting `sensitivity` and
+`sensitivity_error` back to the transformed-data units. The increment is formed
+as a Gram matrix using the qualified ARMA covariance, with explicit range and
+nonzero-diagonal-underflow guards. Independent loading, covariance and error
+entries can use OpenMP; model evaluations, callbacks and LAPACK stay on the
+calling thread.
+
+`conditional_covariance`, `conditional_standard_errors`, conditional status,
+components and accurate points are retained regardless of propagation success.
+If information or point derivatives cannot be qualified, selected covariance
+is unavailable and selected errors are `NA`; conditional errors are never
+silently relabelled as propagated errors. Diagnostics report the parent ARMA
+information and point-derivative statuses separately. The shared evaluation
+budget counts parent information and point samples; the single initial
+conditional diagnostic is outside this budget. Empty predictions do no
+information/derivative work. With no free ARMA coefficients, the increment is
+zero and conditional covariance is returned exactly without differentiation.
+
+The mandatory suite checks 32 nonempty fitted predictions against independent
+dense Gaussian Hessians and Schur-complement point derivatives, plus 32 empty
+controls. Closed AR(1) derivatives include refitted-mean sensitivity; tests cover
+units, fixed/free directions, exact zero sensitivity, weak/unqualified fits,
+shared-budget boundaries, range failures, and a 260-point actual OpenMP
+comparison. The standalone sanitizer harness visits 1,147 cancellation
+boundaries. `verify-interpolation-arma.R` records independent qualification and
+public JDemetra fit timings; public conditional errors are not delta targets.

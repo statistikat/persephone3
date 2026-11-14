@@ -205,3 +205,14 @@ AR(1), OLS and seasonal-bridge formulas check the full covariance. Only public
 missing-value standard-error accessors supply differential evidence. No legacy
 point, upstream numerical source or bytecode enters the calculation. See
 `interpolation-notes.md` and `tools/native-tests/interpolation-information-contract.md`.
+
+Slice 20c.2b.2b independently propagates accurate profile-ML ARMA covariance
+through the derivative of refitted conditional Gaussian points. Centered
+correction responses, homogeneous diffuse levels, dimensionless Richardson
+derivatives and a Gram-matrix increment implement the elementary first-order
+delta formula. An independent dense Gaussian Hessian and Schur-complement point
+derivative, together with closed AR(1) formulas including fitted-mean effects,
+qualify the result. Public JDemetra calls provide fitting/timing comparisons,
+not propagated-covariance targets. No upstream numerical implementation or
+bytecode was inspected, copied or translated. See `interpolation-notes.md` and
+`tools/native-tests/interpolation-information-contract.md`.

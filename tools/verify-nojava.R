@@ -119,6 +119,16 @@ if ("--native" %in% args) {
     abs(interpolation$points_original[1]-3.25)<1e-12,
     abs(interpolation$covariance[1,2]-8.75/16)<1e-12,
     !interpolation$propagates_ARMA_uncertainty)
+  missing_series <- ts(sin(seq_len(80)*1.7)+.3*cos(seq_len(80)*.6),frequency=4)
+  missing_series[31] <- NA_real_
+  missing_context <- objective_setup(missing_series,ar=NA_real_)
+  missing_fit <- optimize_arma(missing_context)
+  propagated <- getFromNamespace("native_interpolation_information","persephone3")(
+    missing_context,missing_fit$coordinates,method="delta_profile_ml")
+  stopifnot("interpolation_arma_information" %in% cap$primitives,propagated$available,
+    propagated$conditional_available,propagated$arma_information_status=="available",
+    propagated$covariance[1,1]>=propagated$conditional_covariance[1,1],
+    propagated$propagates_ARMA_uncertainty,propagated$sensitivity_status=="available")
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",
