@@ -105,3 +105,11 @@
     .Call(`_persephone3_native_inverse_transform`, values, transformation)
 }
 
+.native_x11_filter_spec <- function(type, frequency, length = NULL) {
+    .Call(`_persephone3_native_x11_filter_spec`, type, frequency, length)
+}
+
+.native_x11_filter <- function(values, type, frequency, length = NULL) {
+    .Call(`_persephone3_native_x11_filter`, values, type, frequency, length)
+}
+

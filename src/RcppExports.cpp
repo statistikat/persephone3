@@ -467,6 +467,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_filter_spec
+Rcpp::List native_x11_filter_spec(SEXP type, SEXP frequency, SEXP length);
+RcppExport SEXP _persephone3_native_x11_filter_spec(SEXP typeSEXP, SEXP frequencySEXP, SEXP lengthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type length(lengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_filter_spec(type, frequency, length));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_x11_filter
+Rcpp::List native_x11_filter(SEXP values, SEXP type, SEXP frequency, SEXP length);
+RcppExport SEXP _persephone3_native_x11_filter(SEXP valuesSEXP, SEXP typeSEXP, SEXP frequencySEXP, SEXP lengthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type length(lengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_filter(values, type, frequency, length));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
@@ -495,6 +522,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_likelihood", (DL_FUNC) &_persephone3_native_arma_likelihood, 8},
     {"_persephone3_native_transform", (DL_FUNC) &_persephone3_native_transform, 2},
     {"_persephone3_native_inverse_transform", (DL_FUNC) &_persephone3_native_inverse_transform, 2},
+    {"_persephone3_native_x11_filter_spec", (DL_FUNC) &_persephone3_native_x11_filter_spec, 3},
+    {"_persephone3_native_x11_filter", (DL_FUNC) &_persephone3_native_x11_filter, 4},
     {NULL, NULL, 0}
 };
 

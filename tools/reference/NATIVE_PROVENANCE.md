@@ -250,3 +250,20 @@ numerical source, bytecode or optimizer internals were used. Public X-13/TRAMO
 endpoint accessors supply separately labelled timing workloads only, never
 native runtime inputs or delta-covariance targets. The core remains Rcpp-free;
 its existing R BLAS/LAPACK ABI linkage is unchanged.
+
+### Symmetric X-11 filters: item 22a.1
+
+`x11_filters.cpp` independently constructs centered seasonal-period trend
+averages, seasonal uniform-average convolutions and the closed Henderson cubic
+smoother. Mathematical sources and conventions are in
+`tools/native-tests/x11-symmetric-contract.md`: ABS/Census documentation for
+seasonal averaging and Alexandrov et al. (2008), section 4.2, for Henderson's
+minimum-third-difference/cubic-reproduction criterion. An independent constrained
+roughness solve, polynomial/seasonal identities and direct tap sums qualify the
+implementation. Only public JDemetra filter factory, coefficient and application
+APIs/signatures were used; no numerical source or bytecode was consulted.
+The 114-case public fixture is additive and does not modify the original corpus.
+Its raw inputs are deterministic formulas independent of backend output.
+Both filter core files and their standalone harness compile and link without
+R/Rcpp, BLAS or LAPACK. The package boundary still uses Rcpp. Asymmetric endpoints,
+automatic selection, decomposition passes and full native SA remain separate.

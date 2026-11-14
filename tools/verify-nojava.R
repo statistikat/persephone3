@@ -143,6 +143,12 @@ if ("--native" %in% args) {
     endpoint_delta$conditional_available,endpoint_delta$arma_information_status=="available",
     all(diag(endpoint_delta$covariance)>=diag(endpoint_delta$conditional_covariance)),
     endpoint_delta$propagates_ARMA_uncertainty,endpoint_delta$sensitivity_status=="available")
+  x11_filter <- getFromNamespace("native_x11_filter","persephone3")
+  filtered <- x11_filter(ts(1:20,frequency=4),"trend")
+  identity <- x11_filter(ts(1:20,frequency=4),"henderson",3L)
+  stopifnot("x11_symmetric_filters" %in% cap$primitives,
+    max(abs(filtered$values[3:18]-(3:18)))<1e-12,
+    identical(as.numeric(identity$values),as.numeric(1:20)),!cap$fit)
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,
