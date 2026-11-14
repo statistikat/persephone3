@@ -178,6 +178,10 @@ if ("--native" %in% args) {
   stopifnot("x11_seasonal_stage_policy" %in% cap$primitives,
     pending_msr$requires_msr,all(is.na(pending_msr$resolved_filters)),
     !mixed_plan$global_msr,identical(unname(mixed_plan$resolved_filters),c("s3x5","s3x5","s3x3","stable")))
+  msr <- getFromNamespace("native_x11_msr_table","persephone3")(
+    ts(1:20,frequency=4),ts(2*(1:20),frequency=4))
+  stopifnot("x11_msr_tables" %in% cap$primitives,msr$status=="available",
+    abs(msr$global_msr-2*1.01779/1.55291)<1e-12,all(msr$phases$changes==4L))
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

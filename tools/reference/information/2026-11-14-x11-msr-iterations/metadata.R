@@ -1,0 +1,17 @@
+list(schema_version = 1L, captured_utc = "2026-11-14 16:03:10 UTC",
+    oracle_manifest_sha256 = "a2394411ca585589c5308ae423c1299050774f7d50a79fcbac566878f85be23c",
+    source_sha256 = c(`probe-x11-msr-iterations.R` = "2c85b4200b7161ae5f32faec4152ff1506ce5702926210b39e3a1157c567945c",
+    `x11-msr-reference.R` = "742d90c142a748ef2c76e848233bba8d6f1402db16c151a25d232913887c685c",
+    `x11-msr-cases.R` = "2b5f62799e667369bda8d73dabb8c4d82543e9057d85f4b49aeecc4a9034d93c"
+    ), java = list(version = "27.0.1.0.2", vendor = "Eclipse Adoptium",
+        runtime_version = "27.0.1.0.2+1", vm_name = "OpenJDK 64-Bit Server VM",
+        architecture = "aarch64"), amplitude = 2.61337973800089,
+    frequency = 4L, start = c(2000L, 1L), mode = "additive",
+    public = list(iterations = 16L, choice = "S3X9", using_default = FALSE,
+        seasonal = c(0.313810847241601, 0.313810847241601, 0.313810847241601,
+        0.313810847241601), irregular = c(2.26316069848064, 2.26316069848064,
+        2.26316069848064, 2.26316069848064), global = 7.2118625547008),
+    independent_public_maximum_error = 3.5527136788005e-15, published_maximum_years_removed = 5L,
+    published_choice = "S3X5", published_source = "Ladiray and Quenneville (2000), section 4.3.10, page 152: maximum five years removed, then default 3x5.",
+    source_url = "https://www.census.gov/content/dam/Census/library/working-papers/2000/adrm/x11-french.pdf",
+    scope = "One independent 20-year method-policy control. Public behavior and published cap select different filters. Does not establish statistical superiority, threshold equalities or native selector qualification.")

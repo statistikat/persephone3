@@ -404,3 +404,16 @@ resolved filters. Mixed requests preserve the public context's disabled-global-M
 semantics. This policy has at most twelve requests and needs no OpenMP or
 callback. Core/header code links without R/Rcpp, BLAS or LAPACK. Numerical
 passes and their stage placement remain separate qualification work.
+## MSR component tables (22a.2b.3c.2a)
+
+`src/x11_msr.cpp` and its Rcpp-free header independently implement annual
+component changes and the correction formulas published in Ladiray and
+Quenneville (2000), table 4.112. Public JD+ 3.9.0 `MsrTable` execution qualifies
+the explicit decimal/count conventions, calendars and available/unsupported
+domains; no numerical source, bytecode or decompilation was read. Runtime
+computes rounded radicals from the formulas and does not load fixture values.
+The direct R difference/weighted-mean oracle is separate from the C++ scaled
+arithmetic. Bounded owned OpenMP changes retain deterministic caller reductions.
+See `tools/native-tests/x11-msr-contract.md`, `tools/reference/x11-msr-notes.md`
+and `inst/tinytest/fixtures/native/x11-msr/`. This step supplies no pilot,
+trimming, final filter selection or B/C/D decomposition.

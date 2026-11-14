@@ -506,6 +506,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_msr_table
+Rcpp::List native_x11_msr_table(SEXP seasonal, SEXP irregular, SEXP frequency, SEXP first_period, SEXP mode);
+RcppExport SEXP _persephone3_native_x11_msr_table(SEXP seasonalSEXP, SEXP irregularSEXP, SEXP frequencySEXP, SEXP first_periodSEXP, SEXP modeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type seasonal(seasonalSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type irregular(irregularSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type first_period(first_periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mode(modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_msr_table(seasonal, irregular, frequency, first_period, mode));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_x11_musgrave_spec
 Rcpp::List native_x11_musgrave_spec(SEXP frequency, SEXP length, SEXP available, SEXP ic_ratio, SEXP side);
 RcppExport SEXP _persephone3_native_x11_musgrave_spec(SEXP frequencySEXP, SEXP lengthSEXP, SEXP availableSEXP, SEXP ic_ratioSEXP, SEXP sideSEXP) {
@@ -649,6 +664,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_x11_filter_spec", (DL_FUNC) &_persephone3_native_x11_filter_spec, 3},
     {"_persephone3_native_x11_filter", (DL_FUNC) &_persephone3_native_x11_filter, 4},
     {"_persephone3_native_x11_mean_filter", (DL_FUNC) &_persephone3_native_x11_mean_filter, 2},
+    {"_persephone3_native_x11_msr_table", (DL_FUNC) &_persephone3_native_x11_msr_table, 5},
     {"_persephone3_native_x11_musgrave_spec", (DL_FUNC) &_persephone3_native_x11_musgrave_spec, 5},
     {"_persephone3_native_x11_musgrave_filter", (DL_FUNC) &_persephone3_native_x11_musgrave_filter, 4},
     {"_persephone3_native_x11_seasonal_spec", (DL_FUNC) &_persephone3_native_x11_seasonal_spec, 4},

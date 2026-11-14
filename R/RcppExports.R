@@ -117,6 +117,10 @@
     .Call(`_persephone3_native_x11_mean_filter`, values, frequency)
 }
 
+.native_x11_msr_table <- function(seasonal, irregular, frequency, first_period, mode) {
+    .Call(`_persephone3_native_x11_msr_table`, seasonal, irregular, frequency, first_period, mode)
+}
+
 .native_x11_musgrave_spec <- function(frequency, length, available, ic_ratio, side) {
     .Call(`_persephone3_native_x11_musgrave_spec`, frequency, length, available, ic_ratio, side)
 }
