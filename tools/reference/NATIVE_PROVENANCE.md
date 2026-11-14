@@ -388,3 +388,19 @@ those public differences as controls. B/C/D placement remains unqualified; the
 low-level final selector is not substituted for every intermediate stage.
 See `tools/native-tests/x11-trend-selection-contract.md` and
 `tools/reference/x11-trend-selection-notes.md` for the exact supported scope.
+
+### Staged seasonal request policy (22a.2b.3c.1)
+
+`x11_seasonal_plan.cpp` is an independently authored bounded policy for fixed,
+X11Default and MSR requests. The documented stage sequence and public validated
+spec/context getters establish initial/final mappings and global MSR eligibility.
+336 frozen contexts cover request forms, calendars, spans and modes; no numerical
+Java source, bytecode or implementation constants were consulted. Runtime does
+not read reference targets or invoke Java.
+
+The all-MSR final stage deliberately stays unresolved until data-driven MSR
+selection is implemented; provisional 3×5 mappings are exposed separately from
+resolved filters. Mixed requests preserve the public context's disabled-global-MSR
+semantics. This policy has at most twelve requests and needs no OpenMP or
+callback. Core/header code links without R/Rcpp, BLAS or LAPACK. Numerical
+passes and their stage placement remain separate qualification work.

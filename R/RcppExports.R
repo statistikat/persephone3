@@ -133,6 +133,10 @@
     .Call(`_persephone3_native_x11_seasonal_filter`, values, type, frequency)
 }
 
+.native_x11_seasonal_plan <- function(frequency, filters, requested_stage) {
+    .Call(`_persephone3_native_x11_seasonal_plan`, frequency, filters, requested_stage)
+}
+
 .native_x11_seasonal_process <- function(values, frequency, start_period, filters, short_series) {
     .Call(`_persephone3_native_x11_seasonal_process`, values, frequency, start_period, filters, short_series)
 }

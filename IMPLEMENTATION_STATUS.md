@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **22a.2b.3b (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **22a.2b.3c.1 (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
@@ -15,7 +15,8 @@ are delivered in **22a.1**, with explicit Musgrave Henderson endpoints in
 **22a.2b.2a**, with the remaining 3×15 convention delivered in **22a.2b.2b**.
 Stable, mixed-phase and explicit short-series seasonal processing is delivered
 in **22a.2b.3a**. Automatic Henderson/I-C conventions are delivered in
-**22a.2b.3b**. Staged seasonal/MSR choices follow in **22a.2b.3c**.
+**22a.2b.3b**. Staged seasonal request resolution is delivered in **22a.2b.3c.1**;
+numerical MSR estimation and iterative selection follow in **22a.2b.3c.2**.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -35,8 +36,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **102,027 passing installed-package
-assertions** across **51 files**, including the native numerical additions. These
+current rjd3 path. The full check has **126,407 passing installed-package
+assertions** across **52 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -108,7 +109,9 @@ Independent phase means also use owned OpenMP with preserved summation order.
 Automatic Henderson pilot ratios, quarterly scaling, threshold choices and
 separate endpoint-default ratios are also delivered. Undefined/missing and
 unsupported relative-component ratios retain explicit unavailable statuses.
-Staged seasonal/MSR selection and decomposition passes remain open.
+Staged fixed/X11Default/MSR requests and global MSR eligibility are now resolved
+explicitly. An all-MSR D-final request retains a pending status until numerical
+MSR estimation/selection is delivered; decomposition passes remain open.
 Wider platform qualification remains open; native X-11/TRAMO/SEATS adjustment
 is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
@@ -121,7 +124,8 @@ foundations, and the rest of
 **20–27** remains numerical implementation and qualification work. Symmetric
 X-11 filter primitives, explicit Musgrave endpoints and centered-trend mean
 padding, all five explicit seasonal endpoint filters and fixed-choice seasonal
-processing plus automatic Henderson selection are delivered in **22a.1–2b.3b**. Passing
+processing, automatic Henderson selection and staged seasonal policies are delivered
+in **22a.1–2b.3c.1**. Passing
 package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
@@ -174,6 +178,7 @@ the native-backend plan below.
 | 22a.2b.2b — explicit seasonal 3×15 endpoints | Independently generated mean-extension weights with five-decimal constant-preserving closure, declared coefficient convention and conservative twenty-per-phase support | 6,389 new assertions across 30 public cases, dense extension/convolution/closure, 24 separate short-series controls, masks/calendars/units and serial/OpenMP checks. Standalone C++/ASan/UBSan adds 106 interruption boundaries and retains the prior 68. Automatic selection remains a separate policy. |
 | 22a.2b.3a — fixed seasonal processing | Stable or per-calendar-period filter choices, explicit short-series policy, available endpoint support and phase-mean middle rows; requested/selected choices, reasons and row methods; owned OpenMP phase means | 31,345 new assertions across 756 public cases and independent full operators; short/partial-year gates, rotations, missingness, range and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 57 interruption boundaries without R/BLAS/LAPACK linkage. Data-driven choices and B/C/D placement remain separate. |
 | 22a.2b.3b — Henderson selection and I/C conventions | Symmetric pilot, absolute/positive-relative component changes, explicit extension trimming, quarterly scaling, exact threshold selection and separate conventional endpoint ratios | 7,915 new assertions across 376 ratio cases, 20 exact/adjacent-threshold cases and 102 default-ratio cases with 292 endpoint rows; independent pilot/constrained solves, statuses, units and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 490 interruption boundaries without R/BLAS/LAPACK linkage. B/C/D placement remains separate. |
+| 22a.2b.3c.1 — staged seasonal request resolution | Explicit B/C/D initial/final policies for fixed/X11Default/MSR requests; full-calendar ordering, global MSR eligibility, mixed-request reasons and unresolved final selection | 24,380 new assertions across 336 public contexts and 2,016 stage cases; standalone strict C++/ASan/UBSan without R/BLAS/LAPACK. An all-MSR D-final plan returns `requires_msr` with missing resolved choices, never a provisional filter presented as final. Numerical MSR and B/C/D passes remain separate. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -1512,6 +1517,63 @@ unchanged. Next is **22a.2b.3c.1**, staged seasonal request resolution, then
 **22a.2b.3c.2**, the MSR pilot, finite-length conventions and iterative selection.
 B/C/D placement and native full-fit capability remain unavailable.
 
+### Staged seasonal request resolution (22a.2b.3c.1)
+
+`native_x11_seasonal_plan()` resolves scalar or full-calendar requests for six
+explicit B/C/D initial/final stages. Fixed choices persist. X11Default resolves
+to 3×3 initially and 3×5 finally. Global MSR is enabled only when every calendar
+period requests it; mixed requests retain their stage-specific fixed mappings.
+An all-MSR D-final plan returns `requires_msr`, missing `resolved_filters`, and
+separately labelled provisional `base_filters`. No unresolved choice can be
+passed silently to the fixed seasonal processor. Length-dependent fallbacks
+remain the responsibility of `native_x11_seasonal_process()`.
+
+Named requests must identify every calendar period exactly once and are reordered
+by calendar, independently of data start. Plans retain requested/base/resolved
+choices, reasons, global eligibility and stage/status metadata. The bounded
+4/12-period core uses standard C++ only and has no OpenMP workload. Numerical
+processing retains the previously qualified owned OpenMP implementation.
+
+**24,380 new assertions** cover 336 independently captured public contexts and
+2,016 stage cases: scalar/uniform/mixed requests, four spans, two starts and four
+mode labels. Public spec validation, frequency checks, context construction and
+getters supply the reference; native outputs never participate in capture.
+Standalone strict C++/ASan/UBSan validates all stage policies, every mixed-MSR
+position and invalid inputs without R/Rcpp, BLAS or LAPACK linkage.
+
+The full installed-package check passes **126,407 assertions / 52 files**, with
+zero errors and the existing R-header warning and DESCRIPTION note. The isolated
+Java-free suite passes **125,078 native assertions / 32 files + 34 backend
+assertions**, with two actual workers. A separately compiled serial build passes
+**125,074 / 32** without `libomp` linkage. Logs are under
+`/tmp/persephone-x11-seasonal-plan-final/`; focused and strict harness evidence
+is under `/tmp/persephone-x11-seasonal-plan-next/`.
+
+The installed offline verifier passes **8,070 checks** without Java namespaces.
+Live replay and timing pass **8,658 checks**, including **165,319 timed calls**
+with warm-up/calibration. Median summed times from three warmed alternating
+rounds are:
+
+| Policy matrix | Native seconds | JDemetra seconds |
+| --- | ---: | ---: |
+| 42 request bundles, covering all six stages | 0.002113 | 0.043115 |
+
+Native takes about 20.4× less time for this bounded policy workload. Each native
+bundle makes six explicit plan calls and returns additional per-stage metadata;
+each public bundle constructs one validated context and serializes its shared
+initial/final choices and MSR flag. These are policy timings, not numerical
+filtering, decomposition or fit timings. Loading and explicit pre-batch GC are
+excluded; natural in-batch GC is included. Raw times, exact scope and source
+hashes are in `tools/reference/information/2026-11-14-x11-seasonal-plan/`.
+
+Frozen targets, contract and methodology are in
+`inst/tinytest/fixtures/native/x11-seasonal-plan/`,
+`tools/native-tests/x11-seasonal-plan-contract.md` and
+`tools/reference/x11-seasonal-plan-notes.md`. Earlier corpora/reports remain
+unchanged. Next is **22a.2b.3c.2a**, finite-length MSR change tables, followed by
+**22a.2b.3c.2b**, the seven-term pilot, whole-year trimming and iterative choice.
+B/C/D passes and native full-fit capability remain unavailable.
+
 ### Previously completed validation, rechecked as evidence
 
 - The retained full `R CMD check` log ends in **Status: OK**: zero errors,
@@ -1839,8 +1901,8 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 22a.2b.3c.1 — next | Resolve fixed/X11Default/MSR requests by explicit initial/intermediate-final/final stage, keeping global MSR eligibility distinct from per-period choices | Public context fixtures, scalar/per-period requests, mixed-MSR controls, calendar ordering and explicit pending data-driven selection |
-| 22a.2b.3c.2 | Implement the MSR pilot, per-phase/global ratios, finite-length conventions and iterative filter choice | Independent seven-term mean-extension operators and change calculations, public phase/whole-year trimming and iteration fixtures, exact threshold/dead-band boundaries, short/undefined cases and recorded convention differences |
+| 22a.2b.3c.2a — next | Implement per-phase/global MSR change tables with finite-length corrections and explicit unavailable statuses | Published correction formulas plus public length/calendar/relative-change controls; independent change/weight calculations, decimal/count conventions, short/zero/missing cases and serial/OpenMP equality |
+| 22a.2b.3c.2b | Add the seven-term MSR pilot, whole-year trimming and iterative filter choice; resolve pending D-final plans | Independent mean-extension operators, public phase/whole-year trimming and iteration fixtures, exact threshold/dead-band boundaries, short/undefined cases and recorded convention differences |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a performance follow-up | Profile seasonal filter arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-workload gaps (7.62× for the first-four matrix, 6.41× for the separate 3×15 matrix, and 3.72× for the different fixed-processing matrix); preserve full output semantics and rerun each unchanged warmed workload after optimization |
 | 22a.2b.3c / 22b / 22c | Qualify staged seasonal/MSR choices, then B/C/D passes and extreme-value treatment, then connect a restricted fixed-model native X-13 fit | Threshold-boundary and stage-context fixtures, public intermediate tables, decomposition identities, selected-filter metadata and final/forecast agreement for the advertised subset |

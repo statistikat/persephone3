@@ -172,6 +172,12 @@ if ("--native" %in% args) {
   stopifnot("x11_trend_selection" %in% cap$primitives,trend_choice$status=="available",
     abs(trend_choice$comparison_ic_ratio-504/25)<1e-10,
     trend_choice$selected_length==7L,trend_choice$endpoint_ic_ratio==4.5)
+  seasonal_plan <- getFromNamespace("native_x11_seasonal_plan","persephone3")
+  pending_msr <- seasonal_plan(4,"msr","d_final")
+  mixed_plan <- seasonal_plan(4,c("msr","x11default","s3x3","stable"),"d_final")
+  stopifnot("x11_seasonal_stage_policy" %in% cap$primitives,
+    pending_msr$requires_msr,all(is.na(pending_msr$resolved_filters)),
+    !mixed_plan$global_msr,identical(unname(mixed_plan$resolved_filters),c("s3x5","s3x5","s3x3","stable")))
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,
