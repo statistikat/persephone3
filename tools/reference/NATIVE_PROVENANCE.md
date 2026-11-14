@@ -461,3 +461,21 @@ The core/header link without R/Rcpp, BLAS or LAPACK. See
 `tools/native-tests/x11-normalization-contract.md` and
 `tools/reference/x11-normalization-notes.md`; complete B/C/D placement remains
 separate work.
+
+## Fixed additive initial tables (22b.2)
+
+`src/x11_initial.cpp` independently composes the annual mean, additive removal,
+fixed seasonal processing and additive normalization into B1/B2/B3/B4a/B4anorm/
+B4d, following Ladiray and Quenneville (2000), §4.1. Public JD+ 3.9.0 B-step
+getters and a matched public primitive chain qualify 336 separate cases. No
+numerical upstream implementation is inspected. An independent R operator chain
+and structural missing-support graph qualify the native results; six gap cases
+explicitly audit JD+'s omitted-missing stable mean against the native propagated
+missingness contract. Neither production code nor capture loads native targets.
+
+Original/cropped calendars and original-row mappings are explicit. Shared Rcpp
+serialization remains outside the R/Rcpp-free core, which links without BLAS or
+LAPACK. Fixed per-row arithmetic and owned OpenMP preserve worker equality; all
+callbacks stay on the caller. See `tools/native-tests/x11-initial-contract.md`
+and `tools/reference/x11-initial-notes.md`. Extreme correction and complete
+B/C/D decomposition remain subsequent work.

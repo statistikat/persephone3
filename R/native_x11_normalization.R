@@ -9,6 +9,10 @@ native_x11_seasonal_normalize <- function(series,filters,extend=0L,mode="additiv
     filters<-filters[match(periods,names(filters))]
   }
   result<-.native_x11_seasonal_normalize(as.numeric(series),f,domain$start[2L],filters,extend)
+  native_x11_normalization_result(result,series,domain,mode)
+}
+native_x11_normalization_result <- function(result,series,domain,mode) {
+  f<-domain$frequency;periods<-as.character(seq_len(f))
   ordinal<-domain$start_ordinal-result$extend
   result$output_domain<-.native_time_domain(floor(ordinal/f),ordinal%%f+1,f,length(result$values))
   result$output_domain$start_ordinal<-ordinal

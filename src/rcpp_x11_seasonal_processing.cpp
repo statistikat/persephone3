@@ -1,4 +1,4 @@
-#include <Rcpp.h>
+#include "rcpp_x11_table_support.hpp"
 #include "core/x11_seasonal_processing.hpp"
 #include <cmath>
 #include <limits>
@@ -22,12 +22,7 @@ int filter_length(const std::string& type) {
     if(type=="s3x15")return 15;
     throw std::invalid_argument("seasonal processing supports stable, s3x1, s3x3, s3x5, s3x9 and s3x15");
 }
-std::string filter_name(int length) {return length==0 ? "stable" : "s3x"+std::to_string(length);}
-const char* convention(int length) {
-    if(length==0)return "phase_mean";
-    if(length==15)return "x11_decimal_5";
-    return length==3 || length==5 ? "virtual_values_rational" : "published_fixed_weights";
-}
+
 }
 // [[Rcpp::export(name = ".native_x11_seasonal_process")]]
 Rcpp::List native_x11_seasonal_process(SEXP values,SEXP frequency,SEXP start_period,
@@ -61,27 +56,5 @@ Rcpp::List native_x11_seasonal_process(SEXP values,SEXP frequency,SEXP start_per
     const auto result=persephone::x11_seasonal_process(input,f,start,choices,
         policy=="reject" ? persephone::X11ShortSeriesPolicy::reject : persephone::X11ShortSeriesPolicy::x11,
         [] {Rcpp::checkUserInterrupt();});
-    Rcpp::NumericVector output(n);Rcpp::LogicalVector missing(n);
-    Rcpp::CharacterVector methods(n);Rcpp::IntegerVector available(n);
-    const char* method_names[]{"stable","symmetric","left_endpoint","right_endpoint","short_phase_mean"};
-    for(std::size_t i=0;i<n;++i) {
-        if((i&4095U)==0)Rcpp::checkUserInterrupt();
-        const auto at=static_cast<R_xlen_t>(i);
-        output[at]=result.values.missing[i] ? NA_REAL : result.values.values[i];missing[at]=result.values.missing[i]!=0;
-        methods[at]=method_names[static_cast<std::size_t>(result.row_methods[i])];
-        available[at]=result.available[i]<0 ? NA_INTEGER : result.available[i];
-    }
-    Rcpp::CharacterVector requested(f),selected(f),reasons(f),conventions(f);Rcpp::IntegerVector lengths(f);
-    const char* reason_names[]{"requested_filter","requested_stable","fewer_than_five_complete_years",
-        "s3x15_span_below_twenty_years","insufficient_endpoint_support"};
-    for(int period=0;period<f;++period) {
-        const auto p=static_cast<std::size_t>(period);
-        requested[period]=filter_name(choices[p]);selected[period]=filter_name(result.selected_filters[p]);
-        reasons[period]=reason_names[static_cast<std::size_t>(result.reasons[p])];
-        conventions[period]=convention(result.selected_filters[p]);lengths[period]=static_cast<int>(result.phase_lengths[p]);
-    }
-    return Rcpp::List::create(Rcpp::_["values"]=output,Rcpp::_["missing"]=missing,
-        Rcpp::_["requested_filters"]=requested,Rcpp::_["selected_filters"]=selected,
-        Rcpp::_["phase_lengths"]=lengths,Rcpp::_["selection_reasons"]=reasons,
-        Rcpp::_["coefficient_conventions"]=conventions,Rcpp::_["row_methods"]=methods,Rcpp::_["available"]=available);
+    return persephone_x11_rcpp::seasonal_result(result,f,choices);
 }

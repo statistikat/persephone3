@@ -197,6 +197,11 @@ if ("--native" %in% args) {
   stopifnot("x11_additive_normalization" %in% cap$primitives,
     max(abs(as.numeric(normalized$values)-c(0,0,-2,-1,rep(0,20),1,2,0,0)))<1e-12,
     all(normalized$endpoint_policies=="nearest_central_mean"),identical(normalized$original_rows,3:26))
+  initial <- getFromNamespace("native_x11_initial_additive","persephone3")(
+    ts(1:80,start=c(2000,4),frequency=4),"s3x3")
+  stopifnot("x11_additive_initial_tables" %in% cap$primitives,
+    identical(initial$row_basis$B2,3:78),max(abs(initial$tables$B2-(3:78)))<1e-12,
+    max(abs(initial$tables$B4d))<1e-12,initial$complete,!initial$complete_b_pass)
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

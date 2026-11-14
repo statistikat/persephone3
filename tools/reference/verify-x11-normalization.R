@@ -84,7 +84,7 @@ assert(identical(reference_sha256(file.path(fixture_dir,manifest$file)),manifest
 if(!'--live' %in% args)assert(!any(c('rJava','rjd3toolkit','rjd3x13','rjd3tramoseats') %in% loadedNamespaces()),'offline without Java')
 files<-c(file.path(tooling,c('verify-x11-normalization.R','x11-normalization-reference.R','fit-timing.R')),file.path(root,c(
   'src/x11_normalization.cpp','src/core/x11_normalization.hpp','src/x11_filters.cpp','src/core/x11_filters.hpp',
-  'src/numerics.cpp','src/core/numerics.hpp','src/core/parallel.hpp','src/rcpp_x11_normalization.cpp','R/native_x11_normalization.R',
+  'src/rcpp_x11_table_support.cpp','src/rcpp_x11_table_support.hpp','src/numerics.cpp','src/core/numerics.hpp','src/core/parallel.hpp','src/rcpp_x11_normalization.cpp','R/native_x11_normalization.R',
   'R/native_inputs.R','src/RcppExports.cpp','R/RcppExports.R','inst/tinytest/fixtures/native/x11-normalization-cases.R')))
 report<-do.call(rbind,rows)
 metadata<-list(schema_version=1L,captured_utc=format(Sys.time(),tz='UTC',usetz=TRUE),

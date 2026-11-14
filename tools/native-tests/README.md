@@ -254,3 +254,13 @@ full joint curvature, budgets, conditioning and exhaustive cancellation. Add
 `src/vector_jacobian.cpp` and `src/joint_regression_information.cpp` to the ARMA
 harness source list. See the same regression-information contract for the
 Schur identity, estimator distinction and versioned timing procedure.
+
+## Initial additive X-11 tables
+
+The standalone `test_x11_initial.cpp` links the C++ numerical/filter sources
+listed in [x11-initial-contract.md](x11-initial-contract.md), without R/Rcpp,
+BLAS or LAPACK. Serial and owned-OpenMP sanitizer runs exercise closed additive
+controls, masks/ranges, caller-only interruption and reuse. Mandatory R tests
+add public intermediate-table comparisons, independent complete operators,
+calendars, missing-support audits and serialization. These are initial B tables;
+they do not expose a full native seasonal-adjustment fit.

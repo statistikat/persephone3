@@ -9,6 +9,10 @@ native_x11_seasonal_process <- function(series,filters,short_series="x11") {
     filters<-filters[match(periods,names(filters))]
   }
   result<-.native_x11_seasonal_process(as.numeric(series),f,domain$start[2L],filters,short_series)
+  native_x11_seasonal_result(result,series,domain,short_series)
+}
+native_x11_seasonal_result <- function(result,series,domain,short_series) {
+  f<-as.integer(domain$frequency);periods<-as.character(seq_len(f))
   result$values<-stats::ts(result$values,start=domain$start,frequency=f)
   for(field in c("requested_filters","selected_filters","phase_lengths","selection_reasons","coefficient_conventions"))
     names(result[[field]])<-periods

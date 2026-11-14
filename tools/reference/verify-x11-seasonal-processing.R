@@ -106,7 +106,7 @@ assert(identical(before,extended_parent_hashes(base)),'original corpus unchanged
 assert(identical(reference_sha256(file.path(fixture_dir,manifest$file)),manifest$sha256),'processing corpus unchanged')
 if(!'--live' %in% args)assert(!any(c('rJava','rjd3toolkit','rjd3x13','rjd3tramoseats') %in% loadedNamespaces()),'offline without Java namespaces')
 files<-c(file.path(tooling,c('verify-x11-seasonal-processing.R','x11-seasonal-processing-reference.R','fit-timing.R')),
-  file.path(root,c('src/x11_seasonal_processing.cpp','src/core/x11_seasonal_processing.hpp','src/rcpp_x11_seasonal_processing.cpp',
+  file.path(root,c('src/rcpp_x11_table_support.cpp','src/rcpp_x11_table_support.hpp','src/x11_seasonal_processing.cpp','src/core/x11_seasonal_processing.hpp','src/rcpp_x11_seasonal_processing.cpp',
     'R/native_x11_seasonal_processing.R','src/x11_seasonal_endpoints.cpp','src/core/x11_seasonal_endpoints.hpp',
     'src/x11_filters.cpp','src/core/x11_filters.hpp','src/numerics.cpp','src/core/parallel.hpp','R/RcppExports.R','src/RcppExports.cpp',
     'inst/tinytest/fixtures/native/x11-symmetric-cases.R','inst/tinytest/fixtures/native/x11-seasonal-cases.R',

@@ -113,6 +113,10 @@
     .Call(`_persephone3_native_x11_filter`, values, type, frequency, length)
 }
 
+.native_x11_initial_additive <- function(input, frequency, first_period, filters) {
+    .Call(`_persephone3_native_x11_initial_additive`, input, frequency, first_period, filters)
+}
+
 .native_x11_mean_filter <- function(values, frequency) {
     .Call(`_persephone3_native_x11_mean_filter`, values, frequency)
 }
