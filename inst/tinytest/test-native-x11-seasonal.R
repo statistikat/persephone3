@@ -84,8 +84,8 @@ local({
     expect_error(spec(type,frequency,-1L))
   }
   y <- x11_symmetric_input(12L)
-  for(type in list('trend','henderson','s3x15','stable','automatic',NA_character_,matrix('s3x3'),c('s3x3','s3x5'),NULL,1))expect_error(spec(type,12L,0L))
-  expect_error(filter(y,'s3x15',endpoints='seasonal'),'currently support')
+  for(type in list('trend','henderson','s3x25','stable','automatic',NA_character_,matrix('s3x3'),c('s3x3','s3x5'),NULL,1))expect_error(spec(type,12L,0L))
+  expect_error(filter(y,'s3x25',endpoints='seasonal'),'unsupported')
   expect_error(filter(y,'trend',endpoints='seasonal'),'currently support')
   expect_error(filter(y,'henderson',13L,endpoints='seasonal'),'currently support')
   expect_error(filter(y,'s3x3',length=3L,endpoints='seasonal'),'only supplied for Henderson')

@@ -51,7 +51,8 @@ native_x11_filter <- function(series,type,length=NULL,endpoints="none",ic_ratio=
     applied <- .native_x11_seasonal_filter(as.numeric(series),type,domain$frequency)
     result$values <- applied$values;result$missing <- applied$missing
     result$endpoint_policy <- "seasonal_x11";result$scope <- "seasonal_filter_with_endpoints"
-    result$minimum_phase_length <- max(5L,result$terms)
+    result$minimum_phase_length <- applied$minimum_phase_length
+    result$coefficient_convention <- applied$coefficient_convention
     r <- result$radius;n <- as.integer(domain$length);f <- as.integer(domain$frequency)
     rows <- c(seq_len(r),seq.int(n-r+1L,n))
     periods <- as.integer(stats::cycle(series))

@@ -83,6 +83,7 @@ jobs:
           Rscript tools/reference/verify-x11-musgrave.R
           Rscript tools/reference/verify-x11-mean.R
           Rscript tools/reference/verify-x11-seasonal.R
+          Rscript tools/reference/verify-x11-seasonal15.R
       - name: Sanitize independent C++ core
         if: runner.os == 'Linux' && matrix.openmp == 'default'
         shell: bash

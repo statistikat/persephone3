@@ -6,8 +6,8 @@
 namespace persephone {
 namespace {
 void validate_length(int length) {
-    if(length!=1 && length!=3 && length!=5 && length!=9)
-        throw std::invalid_argument("seasonal endpoints currently support 3x1, 3x3, 3x5 and 3x9");
+    if(length!=1 && length!=3 && length!=5 && length!=9 && length!=15)
+        throw std::invalid_argument("seasonal endpoints currently support 3x1, 3x3, 3x5, 3x9 and 3x15");
 }
 X11FilterDefinition endpoint(int frequency,int length,int available,X11SeasonalSide side) {
     const int h=(length+1)/2;
@@ -29,15 +29,27 @@ X11FilterDefinition endpoint(int frequency,int length,int available,X11SeasonalS
         numerators=table[static_cast<std::size_t>(available)];denominator=1000;
     } else {
         // Construct exact rational coefficients by convolving the 3xN kernel
-        // with the published virtual-value rule. Nearest missing annual
-        // values use the first h+1 mean; the furthest uses observation h-1.
-        const int pool=h+1;denominator=3*length*pool;
+        // with virtual values. For 3x3/3x5 the nearest missing annual values
+        // use the first h+1 mean; the furthest uses observation h-1. For
+        // 3x15 all eight virtual values use the first five mean, followed
+        // by the finite-decimal convention characterized via public APIs.
+        const int pool=length==15 ? 5 : h+1;denominator=3*length*pool;
         for(int j=0;j<length+2;++j) {
             const int base=std::min({j+1,3,length+2-j});
             const int index=available+j-h;
             if(index>=0)numerators[static_cast<std::size_t>(index)]+=base*pool;
-            else if(-index<h)for(int k=0;k<pool;++k)numerators[static_cast<std::size_t>(k)]+=base;
+            else if(length==15 || -index<h)for(int k=0;k<pool;++k)numerators[static_cast<std::size_t>(k)]+=base;
             else numerators[static_cast<std::size_t>(h-1)]+=base*pool;
+        }
+        if(length==15) {
+            // Integer nearest rounding to five decimals (no ties at /225).
+            // Close the farthest observed tap so the defined row sums to one.
+            int remainder=100000;
+            for(int j=0;j<m-1;++j) {
+                auto& value=numerators[static_cast<std::size_t>(j)];
+                value=(value*100000+denominator/2)/denominator;remainder-=value;
+            }
+            numerators.back()=remainder;denominator=100000;
         }
     }
     for(int j=0;j<m;++j) {
@@ -67,6 +79,10 @@ void apply(const MaskedSeries& input,MaskedSeries& output,std::size_t row,
     output.values[row]=value;output.missing[row]=0;
 }
 }
+int x11_seasonal_minimum_phase_length(int length) {
+    validate_length(length);
+    return length==15 ? 20 : std::max(5,length+2);
+}
 X11FilterDefinition x11_seasonal_endpoint_definition(int frequency,int length,
     int available,X11SeasonalSide side,const Interrupt& interrupt) {
     validate_length(length);
@@ -78,7 +94,7 @@ MaskedSeries x11_seasonal_endpoints(const MaskedSeries& series,int frequency,
     validate_length(length);
     const auto full=x11_filter_definition(X11FilterKind::seasonal,frequency,length,interrupt);
     const auto f=static_cast<std::size_t>(frequency),n=series.values.size();
-    const auto minimum=std::max(std::size_t{5},full.weights.size());
+    const auto minimum=static_cast<std::size_t>(x11_seasonal_minimum_phase_length(length));
     if(n<f*minimum)throw std::invalid_argument("seasonal endpoints require at least "+std::to_string(minimum)+" observations in every phase");
     auto out=finite_filter(series,full.weights,full.offsets,interrupt);
     for(int q=0;q<(length+1)/2;++q) {

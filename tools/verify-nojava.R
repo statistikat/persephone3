@@ -159,6 +159,9 @@ if ("--native" %in% args) {
   stopifnot("x11_seasonal_endpoints" %in% cap$primitives,
     abs(seasonal_endpoints$values[1]-sum(c(1,13,25)*c(11,11,5)/27))<1e-12,
     identical(seasonal_endpoints$available_rows,1:60),seasonal_endpoints$minimum_phase_length==5L)
+  seasonal15 <- x11_filter(ts(1:240,frequency=12),"s3x15",endpoints="seasonal")
+  stopifnot(abs(seasonal15$values[1]-sum(seq(1,97,12)*c(rep(.16,5),.06667,.06667,.04444,.02222)))<1e-12,
+    seasonal15$minimum_phase_length==20L,seasonal15$coefficient_convention=="x11_decimal_5")
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

@@ -7,10 +7,12 @@ native_x11_seasonal_spec("s3x3", 12L, available=0L, side="left")
 
 This Java-free primitive applies one explicitly chosen seasonal filter to every
 phase of a quarterly or monthly input. Types are `s3x1`, `s3x3`, `s3x5` and
-`s3x9`. Each phase needs at least `max(5,N+2)` observations for a 3×N filter.
+`s3x9` in this initial slice; 3×15 is added separately in
+`x11-seasonal15-contract.md`. Each phase needs at least `max(5,N+2)` observations
+for the first four 3×N filters.
 Partial years and any starting period are supported when that minimum holds.
-Symmetric-only remains the default. An I/C ratio, 3×15 endpoints, mixed phase
-choices and automatic/short-series selection are outside this step.
+Symmetric-only remains the default. An I/C ratio, mixed phase choices and
+automatic/short-series selection are outside this step.
 
 ## Method definitions and independent construction
 

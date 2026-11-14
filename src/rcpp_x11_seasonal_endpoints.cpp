@@ -24,7 +24,12 @@ int length_for(const std::string& type) {
     if(type=="s3x3")return 3;
     if(type=="s3x5")return 5;
     if(type=="s3x9")return 9;
-    throw std::invalid_argument("seasonal endpoints currently support s3x1, s3x3, s3x5 and s3x9");
+    if(type=="s3x15")return 15;
+    throw std::invalid_argument("seasonal endpoints currently support s3x1, s3x3, s3x5, s3x9 and s3x15");
+}
+const char* convention(int length) {
+    if(length==15)return "x11_decimal_5";
+    return length==3 || length==5 ? "virtual_values_rational" : "published_fixed_weights";
 }
 }
 // [[Rcpp::export(name = ".native_x11_seasonal_spec")]]
@@ -39,7 +44,8 @@ Rcpp::List native_x11_seasonal_spec(SEXP type,SEXP frequency,SEXP available,SEXP
     return Rcpp::List::create(Rcpp::_["schema_version"]=1,Rcpp::_["type"]=name,
         Rcpp::_["frequency"]=period,Rcpp::_["length_parameter"]=length,
         Rcpp::_["terms"]=static_cast<int>(filter.weights.size()),Rcpp::_["radius"]=static_cast<int>(filter.radius),
-        Rcpp::_["minimum_phase_length"]=std::max(5,length+2),Rcpp::_["annual_radius"]=(length+1)/2,Rcpp::_["weights"]=filter.weights,Rcpp::_["offsets"]=offsets,
+        Rcpp::_["minimum_phase_length"]=persephone::x11_seasonal_minimum_phase_length(length),
+        Rcpp::_["coefficient_convention"]=convention(length),Rcpp::_["annual_radius"]=(length+1)/2,Rcpp::_["weights"]=filter.weights,Rcpp::_["offsets"]=offsets,
         Rcpp::_["side"]=direction,Rcpp::_["available"]=q,Rcpp::_["endpoint_policy"]="seasonal_x11",
         Rcpp::_["scope"]="seasonal_endpoint_filter_only",Rcpp::_["backend"]="native");
 }
@@ -65,5 +71,7 @@ Rcpp::List native_x11_seasonal_filter(SEXP values,SEXP type,SEXP frequency) {
         output[static_cast<R_xlen_t>(i)]=filtered.missing[i] ? NA_REAL : filtered.values[i];
         missing[static_cast<R_xlen_t>(i)]=filtered.missing[i]!=0;
     }
-    return Rcpp::List::create(Rcpp::_["values"]=output,Rcpp::_["missing"]=missing);
+    return Rcpp::List::create(Rcpp::_["values"]=output,Rcpp::_["missing"]=missing,
+        Rcpp::_["minimum_phase_length"]=persephone::x11_seasonal_minimum_phase_length(length),
+        Rcpp::_["coefficient_convention"]=convention(length));
 }

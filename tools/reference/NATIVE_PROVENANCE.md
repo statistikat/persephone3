@@ -328,3 +328,22 @@ Core code needs no R/Rcpp, BLAS or LAPACK linkage. Calendar/mask metadata belong
 to the adapter; native runtime never reads fixtures or calls the reference
 backend. Existing corpora/reports are unchanged. Remaining 3×15 endpoints,
 automatic selection and decomposition integration are separate work.
+
+### Explicit 3×15 seasonal endpoints (22a.2b.2b)
+
+The seasonal core now independently constructs 3×15 endpoint coefficients by
+collapsing a symmetric convolution onto actual observations after extension
+with the nearest five-observation mean. Integer arithmetic applies the
+five-decimal/constant-preserving closure convention characterized by public
+factory/processor basis probes. No coefficient table is copied into runtime.
+An independently composed dense R extension/convolution matrix with decimal
+closure qualifies all thirty public cases. The unrounded operator is retained
+as a separately reported mathematical control, not substituted for the declared
+filter convention. See `tools/native-tests/x11-seasonal15-contract.md`.
+
+No numerical Java source, bytecode or implementation constants were consulted.
+Thirty additive operator/point captures and twenty-four separate short-series
+selection controls use only public calls. All prior frozen artifacts remain
+unchanged. The native core stays Java/R/Rcpp/BLAS/LAPACK-free; owned OpenMP and
+caller-only interruption semantics are unchanged. Automatic selection and
+decomposition integration are separate qualification steps.
