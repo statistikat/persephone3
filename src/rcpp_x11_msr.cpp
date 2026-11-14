@@ -1,9 +1,8 @@
-#include <Rcpp.h>
-#include "core/x11_msr.hpp"
+#include "rcpp_x11_msr_support.hpp"
 #include <cmath>
 #include <limits>
 #include <stdexcept>
-namespace {
+namespace persephone_msr_rcpp {
 int integer(SEXP value,const char* label) {
     if((TYPEOF(value)!=REALSXP && TYPEOF(value)!=INTSXP) || Rf_isFactor(value) || Rf_xlength(value)!=1 ||
         !Rf_isNull(Rf_getAttrib(value,R_DimSymbol)))throw std::invalid_argument(std::string(label)+" must be one integer");
@@ -50,17 +49,15 @@ Rcpp::CharacterVector statuses(const std::vector<persephone::X11MsrStatus>& valu
     for(std::size_t j=0;j<values.size();++j)out[static_cast<R_xlen_t>(j)]=status(values[j]);
     return out;
 }
-}
-// [[Rcpp::export(name = ".native_x11_msr_table")]]
-Rcpp::List native_x11_msr_table(SEXP seasonal,SEXP irregular,SEXP frequency,SEXP first_period,SEXP mode) {
-    const auto f=integer(frequency,"frequency"),first=integer(first_period,"first period");
-    if(TYPEOF(mode)!=STRSXP || Rf_xlength(mode)!=1 || STRING_ELT(mode,0)==NA_STRING ||
-        !Rf_isNull(Rf_getAttrib(mode,R_DimSymbol)))throw std::invalid_argument("provide one supported X-11 mode");
-    const auto name=Rcpp::as<std::string>(mode);const bool relative=name=="multiplicative";
+persephone::X11MsrMode mode(SEXP value) {
+    if(TYPEOF(value)!=STRSXP || Rf_xlength(value)!=1 || STRING_ELT(value,0)==NA_STRING ||
+        !Rf_isNull(Rf_getAttrib(value,R_DimSymbol)))throw std::invalid_argument("provide one supported X-11 mode");
+    const auto name=Rcpp::as<std::string>(value);const bool relative=name=="multiplicative";
     if(!relative && name!="additive" && name!="log_additive" && name!="pseudo_additive")throw std::invalid_argument("unsupported X-11 mode");
-    const auto s=series(seasonal),i=series(irregular);
-    const auto result=persephone::x11_msr_table(s,i,f,first,relative ? persephone::X11MsrMode::relative :
-        persephone::X11MsrMode::absolute,[]{Rcpp::checkUserInterrupt();});
+    return relative ? persephone::X11MsrMode::relative : persephone::X11MsrMode::absolute;
+}
+Rcpp::List table_result(const persephone::X11MsrTable& result,int f,persephone::X11MsrMode mode) {
+    const bool relative=mode==persephone::X11MsrMode::relative;
     Rcpp::IntegerVector counts(f),changes(f);
     for(int p=0;p<f;++p) {counts[p]=static_cast<int>(result.observations[static_cast<std::size_t>(p)]);
         changes[p]=static_cast<int>(result.changes[static_cast<std::size_t>(p)]);}
@@ -73,4 +70,12 @@ Rcpp::List native_x11_msr_table(SEXP seasonal,SEXP irregular,SEXP frequency,SEXP
     return Rcpp::List::create(Rcpp::_["frequency"]=f,Rcpp::_["status"]=status(result.status),Rcpp::_["global_msr"]=optional(result.global_msr),
         Rcpp::_["global_seasonal_mean"]=optional(result.seasonal.global_mean),Rcpp::_["global_irregular_mean"]=optional(result.irregular.global_mean),
         Rcpp::_["change_measure"]=relative ? "relative_absolute_change" : "absolute_change",Rcpp::_["phases"]=phases);
+}
+} // namespace persephone_msr_rcpp
+// [[Rcpp::export(name = ".native_x11_msr_table")]]
+Rcpp::List native_x11_msr_table(SEXP seasonal,SEXP irregular,SEXP frequency,SEXP first_period,SEXP mode) {
+    using namespace persephone_msr_rcpp;
+    const auto f=integer(frequency,"frequency"),first=integer(first_period,"first period");
+    const auto measure=persephone_msr_rcpp::mode(mode);const auto s=series(seasonal),i=series(irregular);
+    return table_result(persephone::x11_msr_table(s,i,f,first,measure,[]{Rcpp::checkUserInterrupt();}),f,measure);
 }

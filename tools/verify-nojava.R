@@ -182,6 +182,16 @@ if ("--native" %in% args) {
     ts(1:20,frequency=4),ts(2*(1:20),frequency=4))
   stopifnot("x11_msr_tables" %in% cap$primitives,msr$status=="available",
     abs(msr$global_msr-2*1.01779/1.55291)<1e-12,all(msr$phases$changes==4L))
+  msr_select <- getFromNamespace("native_x11_msr_select","persephone3")
+  year <- seq_len(20L)
+  msr_input <- ts(rep(year+2.6133797380008934*sin(1.37*year),each=4L),frequency=4)
+  jd_choice <- msr_select(msr_input)
+  capped_choice <- msr_select(msr_input,iteration_policy="x11_five_year_cap")
+  resolved <- getFromNamespace("native_x11_msr_resolve","persephone3")(pending_msr,jd_choice)
+  stopifnot(all(c("x11_msr_pilot","x11_msr_selection") %in% cap$primitives),
+    jd_choice$iterations==16L,jd_choice$selected_filter=="s3x9",!jd_choice$using_default,
+    capped_choice$iterations==6L,capped_choice$reason=="five_year_cap",capped_choice$using_default,
+    !resolved$requires_msr,all(resolved$resolved_filters=="s3x9"))
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

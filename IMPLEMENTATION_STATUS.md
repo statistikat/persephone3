@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **22a.2b.3c.2a (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **22a.2b.3c.2b (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
@@ -16,8 +16,9 @@ are delivered in **22a.1**, with explicit Musgrave Henderson endpoints in
 Stable, mixed-phase and explicit short-series seasonal processing is delivered
 in **22a.2b.3a**. Automatic Henderson/I-C conventions are delivered in
 **22a.2b.3b**. Staged seasonal request resolution is delivered in **22a.2b.3c.1**,
-and MSR component change tables in **22a.2b.3c.2a**. Pilot estimation and
-iterative selection follow in **22a.2b.3c.2b**, pending the default-policy choice.
+and MSR component change tables in **22a.2b.3c.2a**. Pilot estimation, iterative
+selection and D-final resolution are delivered in **22a.2b.3c.2b**, with both
+Java-free policies and JDemetra behavior as the maintainer-selected default.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -37,8 +38,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **152,087 passing installed-package
-assertions** across **53 files**, including the native numerical additions. These
+current rjd3 path. The full check has **205,563 passing installed-package
+assertions** across **54 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -113,8 +114,12 @@ unsupported relative-component ratios retain explicit unavailable statuses.
 Staged fixed/X11Default/MSR requests and global MSR eligibility are now resolved
 explicitly. MSR component change tables now qualify mode-specific annual
 changes, finite-length corrections, global weighting and unavailable cases.
-An all-MSR D-final request retains a pending status until pilot estimation and
-iterative selection are delivered; decomposition passes remain open.
+Seven-term MSR pilot estimation, explicit extension/calendar trimming and both
+iterative policies now resolve an all-MSR D-final request. The default follows
+JDemetra; the published five-year-removal cap is explicit. Both retain complete
+attempt traces and distinguish method defaults from unavailable/resource-limited
+results. Failed selections keep the D-final plan pending. Decomposition passes
+remain open.
 Wider platform qualification remains open; native X-11/TRAMO/SEATS adjustment
 is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
@@ -128,7 +133,7 @@ foundations, and the rest of
 X-11 filter primitives, explicit Musgrave endpoints and centered-trend mean
 padding, all five explicit seasonal endpoint filters and fixed-choice seasonal
 processing, automatic Henderson selection, staged seasonal policies and MSR
-component tables are delivered in **22a.1–2b.3c.2a**. Passing
+component tables and iterative selection are delivered in **22a.1–2b.3c.2b**. Passing
 package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
@@ -183,6 +188,7 @@ the native-backend plan below.
 | 22a.2b.3b — Henderson selection and I/C conventions | Symmetric pilot, absolute/positive-relative component changes, explicit extension trimming, quarterly scaling, exact threshold selection and separate conventional endpoint ratios | 7,915 new assertions across 376 ratio cases, 20 exact/adjacent-threshold cases and 102 default-ratio cases with 292 endpoint rows; independent pilot/constrained solves, statuses, units and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 490 interruption boundaries without R/BLAS/LAPACK linkage. B/C/D placement remains separate. |
 | 22a.2b.3c.1 — staged seasonal request resolution | Explicit B/C/D initial/final policies for fixed/X11Default/MSR requests; full-calendar ordering, global MSR eligibility, mixed-request reasons and unresolved final selection | 24,380 new assertions across 336 public contexts and 2,016 stage cases; standalone strict C++/ASan/UBSan without R/BLAS/LAPACK. An all-MSR D-final plan returns `requires_msr` with missing resolved choices, never a provisional filter presented as final. Numerical MSR and B/C/D passes remain separate. |
 | 22a.2b.3c.2a — MSR component tables | Per-calendar-phase annual changes, published finite-length factors with explicit decimal/count conventions, change-weighted global ratio, mode/range/missingness statuses and owned OpenMP changes | 25,680 new assertions across 640 public tables and sixteen public-selector mode audits; independent formulas/operators and 316 standalone serial/OpenMP ASan/UBSan interruption boundaries without R/BLAS/LAPACK. Pilot/trimming/iteration remain separate; a reproducible twenty-year control motivates the pending default-policy decision. |
+| 22a.2b.3c.2b — MSR pilot and iterative selection | Seven-term phase pilot, explicit calendar/horizon trimming, both iterative policies with JDemetra default, attempt traces, separate resource gates and D-final resolution | 53,476 new assertions across 530 public cases under both policies, 592 prefix tables and four exact scalar cutoffs; independent full operators, 354 standalone serial/OpenMP interruption points and Java-free qualification. Undefined/resource-limited selections remain unresolved. B/C/D passes and full fits remain separate. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -1652,49 +1658,138 @@ Evidence and scope are in `inst/tinytest/fixtures/native/x11-msr/`,
 Staged all-MSR D-final plans remain explicitly pending. Native X-11 passes and
 full fits remain unavailable.
 
-#### Next selector step and the iteration-policy decision (22a.2b.3c.2b)
+### MSR pilot, iterative policies and D-final resolution (22a.2b.3c.2b)
 
-The public backend and published method differ on ambiguous MSR bands. The
-published X-11 rule removes at most five years before defaulting to 3×5; pinned
-JD+ 3.9.0 continues removing years until a decisive ratio or insufficient
-remaining history. In an independently constructed twenty-year quarterly
-control, JD+ removes fifteen years and chooses 3×9; the published cap chooses
-3×5. The independent final component table agrees within **3.553e-15**.
-The complete input, sixteen ratios, public result and source hashes are in
-`tools/reference/information/2026-11-14-x11-msr-iterations/`, reproduced with
-`tools/reference/probe-x11-msr-iterations.R`. This is a method-policy difference;
-neither rule is claimed to be statistically superior.
+**Maintainer decision implemented (2026-11-14):** both policies run without
+Java, with `iteration_policy="jdplus"` by default. The optional
+`"x11_five_year_cap"` follows the published cap of five year removals. A
+separate `max_iterations=1000L` resource limit yields `budget_exhausted` with
+no selected filter if more method work remains; it never becomes a method
+default. Available final attempts complete normally at the resource limit.
 
-**Maintainer decision pending:** which policy should be the default, with both
-available as explicit Java-free choices? JDemetra behavior preserves existing
-backend choices; the five-year cap follows the published stopping rule. No
-default has been inferred from the earlier covariance/reporting decisions.
+`native_x11_msr_pilot()` independently applies a seven-term mean in each annual
+phase, padding each end with three copies of the nearest three-observation
+mean. Additive/log-additive/pseudo-additive MSR uses the centered difference
+between input and pilot; multiplicative MSR uses their ratio with positive
+input. Inputs are already on their working scale. Constant phases are preserved
+exactly, and failures return explicit statuses without partial pilot vectors.
+Owned OpenMP computes independent rows and changes with fixed-order reductions
+and caller-only callbacks. Core/header code remains independent of R/Rcpp,
+BLAS and LAPACK.
 
-After that decision, the implementation sequence is:
+`native_x11_msr_select()` removes explicit backcast/forecast row counts, then
+trims the trailing partial calendar year while retaining the initial partial
+year. It requires five years of rows for each attempt. Less initial history
+gives the method default 3×5, without a fabricated ratio or table. The scalar
+`native_x11_msr_policy()` qualifies exact cutoffs: below 2.5 selects 3×3;
+[3.5,5.5) selects 3×5; at least 6.5 selects 3×9; [2.5,3.5) and [5.5,6.5)
+are ambiguous. Positive infinity is meaningful; missing/undefined/range results
+never select through NaN.
 
-1. Add the per-phase seven-term pilot, padding three values at either end with
-   the mean of the nearest three actual values. Independently qualify full
-   operators, short/partial phases, missingness, range and owned OpenMP.
-2. Trim explicitly supplied extensions, then the trailing partial calendar
-   year, retaining the initial partial year and original calendar. Public
-   probes show that the low-level selector trims explicit extensions regardless
-   of the context's `excludeForecast` flag; qualify that distinction separately.
-3. Calculate MSR using the delivered table and mode-specific component assembly.
-   Qualify exact/adjacent 2.5/3.5/5.5/6.5 threshold semantics, ambiguous bands,
-   both iteration policies and five-year minimum history. Keep method limits
-   separate from explicit resource budgets and cancellation; exhausted budgets
-   must not become an apparently selected filter.
-4. Return a per-attempt trace with retained span, ratios, selected/default reason
-   and policy. Native undefined/missing/range statuses must not imitate JD+'s
-   NaN-to-3×9 behavior on constant series. Freeze that public difference as a
-   control, without claiming an available ratio or silently choosing a filter.
-5. Resolve all-MSR D-final plans with the selected 3×3/3×5/3×9 request, then use
-   the existing fixed processor for its separate length-dependent fallbacks.
-   Retain requested, data-selected and actually applied choices distinctly.
-6. Qualify public/independent traces, stable threshold controls, calendar and
-   extension shifts, interruption/reuse, serial/worker equality and matched
-   installed timings. Update this status and commit the selector separately
-   before continuing with B/C/D passes and extreme-value treatment.
+The independent twenty-year control gives sixteen JD+ attempts, removing
+fifteen years before selecting 3×9. The capped policy gives six attempts and
+defaults to 3×5. Results retain policy, reason, default flag, domains, original
+row bounds, final pilot/table and every attempt's span, ratio and status.
+`native_x11_msr_resolve()` accepts a canonical pending all-MSR D-final plan and
+matching selection. Success resolves the requested filter; failure or budget
+exhaustion keeps missing choices and a pending plan. Applying the resolved
+choice remains separate, preserving the fixed seasonal processor's own
+short-series stable fallback.
+
+This step also improves component-table subtraction: compute finite raw changes
+directly to retain tiny represented differences; normalize an absolute phase
+only if an individual subtraction would overflow. A phase average can remain
+finite despite that individual overflow. The earlier 25,680 table assertions
+continue to pass, with added small-change and overflow-average controls.
+
+The new frozen corpus contains **530 selector cases**, **592 public prefix
+tables** and **four exact public scalar thresholds**. It covers both
+frequencies, all four mode labels, calendar rotations, partial/minimum spans,
+explicit extensions and exclusion flags, constant/missing/signed controls,
+ambiguous ratios, both policies and near-cutoff inputs. Exact equality controls
+retain amplitudes in hexadecimal; whole-input near-boundary cases stay 1e-5
+from the cutoffs. Native unavailable controls are not reclassified to imitate
+public NaN or roundoff artifacts. Public calls use validated APIs only; no
+upstream numerical source, bytecode or decompilation was consulted.
+
+Validation:
+
+- **53,476 new mandatory assertions**, including independent complete pilot
+  operators, domain/trace/table comparisons, budget and resolution guards,
+  serialization, ranges, strict inputs and 100,003-row worker equality.
+- Strict C++17/ASan/UBSan serial and OpenMP harnesses pass **354 interruption
+  boundaries**, reuse and actual workers. Updated table harnesses still pass
+  **316 boundaries** in both builds. Standalone linkage has no R/BLAS/LAPACK.
+- Full installed-package check: **205,563 assertions / 54 files**, zero errors,
+  the existing R-header compiler warning and DESCRIPTION note.
+- Serial native suite: **204,230 / 34 files**, without OpenMP linkage.
+- Java-free native suite: **204,234 / 34 files**, plus **34 backend assertions**,
+  with two actual workers and all Java-related R packages absent.
+- Installed offline verifier: **7,859 checks / 1,060 policy evaluations**;
+  maximum scaled public error **1.584e-14**, independent **1.006e-14**.
+  The predeclared `2e-12` budget is unchanged. Source-mode live replay passes
+  **8,922 checks**, including all four exact equality controls.
+
+Final installed logs are in `/tmp/persephone-x11-msr-selection-final/`;
+standalone/focused evidence is in `/tmp/persephone-x11-msr-next/`. Sources,
+mandatory tests and numerical targets match the checked archive. The timing
+report below records installed optimized code with no competing heavy work.
+
+The retained `tools/reference/information/2026-11-14-x11-msr-selection/` report
+passes **9,167 live/timing checks**, recording **22,062 calls** including warm-up
+and calibration. Maximum scaled live-target error is
+**3.942e-15**. Three warmed alternating rounds compare the same default JD+
+iteration policy, including pilot, trimming, MSR tables and iteration:
+
+| Workload (median summed time) | Native seconds | JDemetra seconds |
+| --- | ---: | ---: |
+| 26 short selector calls | 0.0121923570 | 0.0178312631 |
+| 8 selector calls with 100,003 rows | 0.0232712418 | 0.0584636364 |
+
+Native takes approximately **31.6% less** time on the short workload and
+**60.2% less** on the long workload. Native also returns final pilot vectors,
+complete domains/statuses and attempt traces; public calls include validated
+context creation and final table serialization. These are selector timings,
+not full seasonal-adjustment fits. The two capped-policy native controls take
+**0.0009814766 seconds** in total; this is reported separately because JD+
+has no matching capped selector option. Loading/startup and explicit pre-batch
+GC are excluded, natural in-batch GC is included. Raw rounds, source/fixture
+hashes and actual worker metadata are retained.
+
+See `tools/native-tests/x11-msr-selection-contract.md`,
+`tools/reference/x11-msr-selection-notes.md` and the separate selection corpus.
+Previous corpora and numerical reports remain unchanged. Full native seasonal
+adjustment is still unavailable; no backend default has changed.
+
+#### Next decomposition sequence (22b)
+
+1. **22b.1 — additive seasonal normalization.** Implement centered annual
+   normalization with its explicitly qualified endpoint-copy policies and
+   periodic restoration of the shortened initial span. Qualify fixed/stable
+   and mixed requests, five/twenty-year boundaries, calendar offsets, complete
+   operators, missing/range handling and OpenMP. Keep restoration distinct from
+   ARIMA forecast/backcast generation. Public probes already show a separate
+   periodic normalization endpoint rule for stable/short phases; do not assume
+   the generic mean-padding endpoint primitive applies here.
+2. **22b.2 — fixed additive initial tables.** Compose B1/B2/B3 and the provisional
+   seasonal/normalized/irregular tables with explicit cropped calendars and
+   fixed filters. Validate each public intermediate and independent identity
+   before advertising a complete B pass.
+3. **22b.3 — default extreme-value treatment.** Independently implement moving
+   dispersion windows, sigma weights and same-calendar-phase replacement,
+   with exact boundary, zero-dispersion, protected-extension and iteration
+   evidence. Keep period/group-specific alternatives explicitly unsupported
+   until separately qualified.
+4. **22b.4 — fixed additive B/C/D passes.** Connect the qualified primitives,
+   retain intermediate tables and correction histories, qualify final
+   decomposition identities and original/extended domains, and then connect
+   the delivered automatic seasonal/Henderson policies at their proper stages.
+5. **22b.5 / 22c — remaining modes and restricted integration.** Add
+   multiplicative/log/pseudo-additive normalization and bias conventions in
+   separate tested increments. Connect a deliberately fixed preprocessing/X-11
+   specification only after all intermediates and deterministic-effect
+   allocations qualify. Broader defaults and automatic preprocessing remain
+   later items. Record matched JDemetra/native times after every delivered slice.
 
 ### Previously completed validation, rechecked as evidence
 
@@ -2023,7 +2118,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 22a.2b.3c.2b — next; default-policy decision pending | Add the seven-term MSR pilot, whole-year trimming and both iterative-choice policies; resolve pending D-final plans after the maintainer chooses the default | Independent mean-extension operators, public phase/whole-year trimming and iteration fixtures, exact threshold/dead-band boundaries, minimum-history/undefined cases, method/resource limits and recorded convention differences |
+| 22b.1 — next | Add additive seasonal normalization, fixed/stable/mixed endpoint-copy policies and periodic restoration of the shortened initial domain | Independent full operators and public normalizer fixtures; calendar/short-span/extension/range boundaries, worker equality and matched installed timings |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a performance follow-up | Profile seasonal filter/MSR arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-workload gaps (7.62× for the first-four matrix, 6.41× for the separate 3×15 matrix, 3.72× for fixed processing, and 1.29× for MSR tables); preserve full output semantics and rerun each unchanged warmed workload after optimization |
 | 22a.2b.3c / 22b / 22c | Qualify staged seasonal/MSR choices, then B/C/D passes and extreme-value treatment, then connect a restricted fixed-model native X-13 fit | Threshold-boundary and stage-context fixtures, public intermediate tables, decomposition identities, selected-filter metadata and final/forecast agreement for the advertised subset |
@@ -2050,9 +2145,10 @@ Explicit Musgrave Henderson and centered-trend mean endpoints are now delivered.
 All five explicit seasonal endpoint filters and stable/mixed-phase/short-series
 processing are also delivered. Automatic Henderson pilot ratios and final
 threshold/default policies, staged seasonal request resolution and MSR component
-tables are delivered. Next implement the MSR pilot and iterative choices after
-the default-policy decision, followed by decomposition passes before a
-fixed-model X-13 slice.
+tables, the seven-term MSR pilot and both iterative choices are delivered with
+the selected JDemetra default and explicit D-final resolution. Next implement
+additive normalization and the staged decomposition sequence before a fixed-model
+X-13 slice.
 Original Gaussian/lognormal moments are delivered, with unchanged inverse points
 and explicit standard-error/quantile semantics.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
@@ -2580,8 +2676,8 @@ Implement and commit these slices separately:
    ratios. B/C/D placement remains separate. **22a.2b.3c.1** resolves staged
    fixed/X11Default/MSR requests and global MSR eligibility. Delivered
    **22a.2b.3c.2a** qualifies component mode semantics, finite-length corrections,
-   phase/global ratios and explicit numerical statuses. **22a.2b.3c.2b** adds
-   the MSR pilot and iterative selection after the default-policy decision,
+   phase/global ratios and explicit numerical statuses. Delivered **22a.2b.3c.2b** adds
+   the MSR pilot and both iterative policies with JDemetra behavior by default,
    with public intermediate fixtures and explicit convention differences.
    Keep stage/input contracts and unavailable states explicit.
    Keep forecast/backcast

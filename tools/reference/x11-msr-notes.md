@@ -91,5 +91,6 @@ decision. One independent twenty-year control stays ambiguous for fifteen
 successive prefixes, then JD+ selects 3×9 after removing fifteen years. The
 published five-year removal cap instead defaults to 3×5. The independent final
 table agrees within 3.553e-15. This control establishes a policy difference, not
-statistical superiority or exact threshold equalities; the default remains a
-maintainer decision before selector implementation.
+statistical superiority or exact threshold equalities. The maintainer selected
+both policies with JD+ behavior as the default. Selector implementation and its
+separate equality evidence are recorded in `x11-msr-selection-notes.md`.

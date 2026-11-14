@@ -521,6 +521,48 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_msr_policy
+Rcpp::List native_x11_msr_policy(SEXP ratio);
+RcppExport SEXP _persephone3_native_x11_msr_policy(SEXP ratioSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type ratio(ratioSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_msr_policy(ratio));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_x11_msr_pilot
+Rcpp::List native_x11_msr_pilot(SEXP values, SEXP frequency, SEXP mode);
+RcppExport SEXP _persephone3_native_x11_msr_pilot(SEXP valuesSEXP, SEXP frequencySEXP, SEXP modeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mode(modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_msr_pilot(values, frequency, mode));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_x11_msr_select
+Rcpp::List native_x11_msr_select(SEXP values, SEXP frequency, SEXP first_period, SEXP mode, SEXP iteration_policy, SEXP backcasts, SEXP forecasts, SEXP max_iterations);
+RcppExport SEXP _persephone3_native_x11_msr_select(SEXP valuesSEXP, SEXP frequencySEXP, SEXP first_periodSEXP, SEXP modeSEXP, SEXP iteration_policySEXP, SEXP backcastsSEXP, SEXP forecastsSEXP, SEXP max_iterationsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type first_period(first_periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type iteration_policy(iteration_policySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type backcasts(backcastsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type forecasts(forecastsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type max_iterations(max_iterationsSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_msr_select(values, frequency, first_period, mode, iteration_policy, backcasts, forecasts, max_iterations));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_x11_musgrave_spec
 Rcpp::List native_x11_musgrave_spec(SEXP frequency, SEXP length, SEXP available, SEXP ic_ratio, SEXP side);
 RcppExport SEXP _persephone3_native_x11_musgrave_spec(SEXP frequencySEXP, SEXP lengthSEXP, SEXP availableSEXP, SEXP ic_ratioSEXP, SEXP sideSEXP) {
@@ -665,6 +707,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_x11_filter", (DL_FUNC) &_persephone3_native_x11_filter, 4},
     {"_persephone3_native_x11_mean_filter", (DL_FUNC) &_persephone3_native_x11_mean_filter, 2},
     {"_persephone3_native_x11_msr_table", (DL_FUNC) &_persephone3_native_x11_msr_table, 5},
+    {"_persephone3_native_x11_msr_policy", (DL_FUNC) &_persephone3_native_x11_msr_policy, 1},
+    {"_persephone3_native_x11_msr_pilot", (DL_FUNC) &_persephone3_native_x11_msr_pilot, 3},
+    {"_persephone3_native_x11_msr_select", (DL_FUNC) &_persephone3_native_x11_msr_select, 8},
     {"_persephone3_native_x11_musgrave_spec", (DL_FUNC) &_persephone3_native_x11_musgrave_spec, 5},
     {"_persephone3_native_x11_musgrave_filter", (DL_FUNC) &_persephone3_native_x11_musgrave_filter, 4},
     {"_persephone3_native_x11_seasonal_spec", (DL_FUNC) &_persephone3_native_x11_seasonal_spec, 4},

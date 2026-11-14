@@ -36,6 +36,7 @@ X11MsrComponent component(const MaskedSeries& input,std::size_t f,std::size_t fi
     const auto n=input.values.size();X11MsrComponent out;
     out.raw_mean.assign(f,missing);out.corrected_mean.assign(f,missing);out.correction.resize(f);
     out.status.assign(f,Status::available);std::vector<double> scale(f,0),largest(f,0),sum(f,0),changes(n,0);
+    std::vector<std::uint8_t> normalized(f,0);
     for(std::size_t p=0;p<f;++p) {
         out.correction[p]=correction(observations[p],seasonal);
         if(observations[p]<2)out.status[p]=Status::insufficient_observations;
@@ -45,13 +46,24 @@ X11MsrComponent component(const MaskedSeries& input,std::size_t f,std::size_t fi
         if(out.status[p]!=Status::available)continue;
         if(input.missing[j])out.status[p]=Status::missing_observations;
         else if(mode==X11MsrMode::relative && input.values[j]<=0)out.status[p]=Status::nonpositive_relative_component;
-        else scale[p]=std::max(scale[p],std::abs(input.values[j]));
+        else {
+            scale[p]=std::max(scale[p],std::abs(input.values[j]));
+            if(j>=f && mode==X11MsrMode::absolute && !std::isfinite(input.values[j]-input.values[j-f]))normalized[p]=1;
+        }
     }
     // Each worker owns one change. Status inspection/reductions and all polls
     // are on the caller; no shared phase accumulators are mutated in workers.
     parallel_for(n,8,interrupt,[&](std::size_t j) {
         const auto p=(j%f+first)%f;
-        if(j<f || out.status[p]!=Status::available || scale[p]==0)return;
+        if(j<f || out.status[p]!=Status::available)return;
+        // Direct subtraction preserves small representable changes in nearly
+        // constant components. Normalize a phase only if an absolute difference
+        // would overflow; its mean may still be representable after averaging.
+        if(!normalized[p]) {
+            changes[j]=std::abs(input.values[j]-input.values[j-f]);
+            if(mode==X11MsrMode::relative)changes[j]/=input.values[j-f];
+            return;
+        }
         const auto a=input.values[j]/scale[p],b=input.values[j-f]/scale[p];
         if((input.values[j]!=0 && a==0) || (input.values[j-f]!=0 && b==0)) {changes[j]=missing;return;}
         changes[j]=std::abs(a-b);
@@ -70,7 +82,7 @@ X11MsrComponent component(const MaskedSeries& input,std::size_t f,std::size_t fi
     for(std::size_t p=0;p<f;++p) {
         if(out.status[p]!=Status::available)continue;
         const auto unit=(sum[p]/static_cast<double>(observations[p]-1))*largest[p];
-        const auto raw=mode==X11MsrMode::relative ? unit : unit*scale[p];
+        const auto raw=normalized[p] ? unit*scale[p] : unit;
         const auto corrected=raw*out.correction[p];
         if(!std::isfinite(raw) || !std::isfinite(corrected) || (largest[p]>0 && (unit==0 || raw==0 || corrected==0))) {
             out.status[p]=Status::numerical_range;continue;

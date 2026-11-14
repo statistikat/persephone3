@@ -8,7 +8,8 @@ This Java-free primitive accepts two already estimated components on identical
 monthly/quarterly `ts` domains. It computes per-calendar-phase annual changes,
 finite-length corrections and ratios. It does not estimate a seven-term pilot,
 trim a partial year or extensions, select a seasonal filter, normalize seasonal
-factors or perform an X-11 pass. The staged D-final MSR plan remains pending.
+factors or perform an X-11 pass. The separate selector delivered in 22a.2b.3c.2b
+now supplies the pilot, trimming, iteration and D-final plan resolution.
 The core/header have no R/Rcpp, BLAS or LAPACK dependency.
 
 Additive, log-additive and pseudo-additive labels use mean absolute annual
@@ -61,7 +62,9 @@ dropped. If complete global aggregation or division fails its range gate, the
 global status is `numerical_range`. Infinite input values are invalid, whereas
 an exact zero-denominator positive-infinite ratio is a legitimate result.
 
-Per-phase input scaling avoids intermediate subtraction overflow. Change maxima
+Since 22a.2b.3c.2b, finite raw differences are computed directly to retain tiny
+represented changes. Per-phase input scaling is used for absolute phases only
+when subtraction would overflow; an average can still be finite. Change maxima
 normalize the fixed-order serial mean reductions; weighted global means are
 normalized and bounded by their largest input. Nonzero underflow and overflow
 retain unavailable status. Owned OpenMP computes independent changes, using

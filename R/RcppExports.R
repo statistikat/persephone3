@@ -121,6 +121,18 @@
     .Call(`_persephone3_native_x11_msr_table`, seasonal, irregular, frequency, first_period, mode)
 }
 
+.native_x11_msr_policy <- function(ratio) {
+    .Call(`_persephone3_native_x11_msr_policy`, ratio)
+}
+
+.native_x11_msr_pilot <- function(values, frequency, mode) {
+    .Call(`_persephone3_native_x11_msr_pilot`, values, frequency, mode)
+}
+
+.native_x11_msr_select <- function(values, frequency, first_period, mode, iteration_policy, backcasts, forecasts, max_iterations) {
+    .Call(`_persephone3_native_x11_msr_select`, values, frequency, first_period, mode, iteration_policy, backcasts, forecasts, max_iterations)
+}
+
 .native_x11_musgrave_spec <- function(frequency, length, available, ic_ratio, side) {
     .Call(`_persephone3_native_x11_musgrave_spec`, frequency, length, available, ic_ratio, side)
 }

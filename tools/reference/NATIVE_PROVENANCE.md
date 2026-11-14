@@ -417,3 +417,27 @@ arithmetic. Bounded owned OpenMP changes retain deterministic caller reductions.
 See `tools/native-tests/x11-msr-contract.md`, `tools/reference/x11-msr-notes.md`
 and `inst/tinytest/fixtures/native/x11-msr/`. This step supplies no pilot,
 trimming, final filter selection or B/C/D decomposition.
+
+## MSR pilot and iterative selection (22a.2b.3c.2b)
+
+`src/x11_msr_selection.cpp` and its Rcpp-free header independently implement
+the published seven-term phase mean extension, ambiguous bands and five-year
+removal cap from Ladiray and Quenneville (2000), §§4.3.9–4.3.10. Validated public
+JD+ 3.9.0 spec/context/selector/filter/table execution qualifies exact cutoffs,
+explicit horizon/calendar trimming and the separate uncapped method policy.
+Both policies are Java-free; the maintainer chose JD+ behavior as the default.
+The independent R oracle uses dense extension/averaging operators and direct
+component-change formulas. No numerical Java source, bytecode, decompilation
+or runtime reference lookup is used. Exact public ratio controls retain input
+amplitudes in hexadecimal to preserve doubles; they are test data only.
+
+The 530-case corpus and 592 prefix tables qualify both policies, controls and
+iteration histories. Undefined/range/missing values remain explicit; a separate
+resource budget does not become a method default. D-final plan resolution
+retains the selected-request/short-series-processing distinction. Owned OpenMP
+pilot rows and table changes are independent, with caller-only callbacks and
+fixed-order reductions. This step also improves component subtraction by using
+finite raw differences and scaling only overflowing absolute differences.
+See `tools/native-tests/x11-msr-selection-contract.md` and
+`tools/reference/x11-msr-selection-notes.md`. B/C/D placement, normalization,
+extreme-value treatment and native seasonal-adjustment fits remain unqualified.
