@@ -96,6 +96,11 @@ if ("--native" %in% args) {
   stopifnot("regression_information" %in% cap$primitives,regression_uncertainty$available,
     regression_uncertainty$free_regression==1L,!regression_uncertainty$propagates_ARMA_uncertainty,
     all(is.finite(regression_uncertainty$standard_errors)))
+  joint_context <- objective_setup(sin(x),ar=NA_real_,include_mean=TRUE)
+  joint_fit <- optimize_arma(joint_context)
+  joint_uncertainty <- regression_information(joint_context,joint_fit$coordinates,method="joint_profile_ml")
+  stopifnot("joint_regression_information" %in% cap$primitives,joint_uncertainty$available,
+    joint_uncertainty$propagates_ARMA_uncertainty,identical(dim(joint_uncertainty$joint_covariance),c(2L,2L)))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

@@ -175,3 +175,12 @@ OLS formulas validate the algebra; 64 direct fits per public preprocessing
 engine qualify the denominator and free/fixed directions. No new upstream
 implementation was inspected or copied. See the
 [regression information contract](../native-tests/regression-information-contract.md).
+
+Slice 20c.2a.2 derives joint profile-ML covariance from the Gaussian GLS
+first-order condition and block-Hessian inversion. `vector_jacobian.cpp` and
+`joint_regression_information.cpp` are independently authored; no upstream
+numerical implementation was consulted or translated. Correction-response GLS
+and dimensionless Richardson derivatives produce the sensitivity block. An
+independent full Gaussian Hessian and closed AR(1) formulas check the joint
+matrix. Public X-13/TRAMO calls supply timing comparisons, not joint-covariance
+targets; their conditional covariance is qualified separately in 20c.2a.1.

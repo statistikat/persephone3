@@ -244,4 +244,13 @@ changes. `test_regression_information.cpp` independently checks closed OLS
 covariance, residual df, range handling and cancellation. Link the same source
 set as `test_arma_information.cpp`. The
 [contract](regression-information-contract.md) distinguishes this conditional
-covariance from the planned joint profile-ML estimator.
+covariance from the joint profile-ML estimator.
+
+`test-native-joint-information.R` now covers the optional joint profile-ML
+estimator against full independent Gaussian Hessians. The standalone
+`test_vector_jacobian.cpp` checks analytic vector derivatives, and
+`test_joint_regression_information.cpp` checks closed AR(1) GLS derivatives,
+full joint curvature, budgets, conditioning and exhaustive cancellation. Add
+`src/vector_jacobian.cpp` and `src/joint_regression_information.cpp` to the ARMA
+harness source list. See the same regression-information contract for the
+Schur identity, estimator distinction and versioned timing procedure.

@@ -66,5 +66,25 @@ ResidualInformation residual_information(const ResidualFunction& residuals,
     const std::vector<double>& coefficients, const InformationControl& control = {},
     const Interrupt& interrupt = {});
 
+struct VectorSample {
+    std::string status;
+    std::vector<double> values;
+};
+using VectorFunction = std::function<VectorSample(const std::vector<double>&)>;
+struct VectorJacobian {
+    std::string status = "unavailable";
+    VectorSample center;
+    int evaluations = 0, refinements = 0;
+    std::vector<double> steps;
+    std::optional<DenseMatrix> jacobian, error;
+    std::map<std::string, int> rejected;
+};
+// Dimensionless outputs with three central stencils and Richardson agreement.
+// Unlike residual information this permits a zero center and does not infer a
+// statistical score, scale or covariance. Errors are numerical estimates.
+VectorJacobian vector_jacobian(const VectorFunction& function,
+    const std::vector<double>& coefficients, const InformationControl& control = {},
+    const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

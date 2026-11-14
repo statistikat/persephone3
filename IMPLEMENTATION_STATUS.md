@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **20c.2a.1 (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **20c.2a.2 (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
@@ -22,8 +22,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **17,797 passing installed-package
-assertions** across **36 files**, including the native numerical additions. These
+current rjd3 path. The full check has **19,673 passing installed-package
+assertions** across **37 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -55,15 +55,18 @@ retained optimizer working point, forward steps and damping from plain numeric
 state; it cannot infer that history from final coefficients alone.
 Estimated-ARMA conditional regression covariance now uses `Q/(n-r-k)`, with
 free-only labels and final-fit qualification, matching both pinned preprocessors.
-It does not propagate ARMA uncertainty. Joint regression uncertainty, residuals
-and wider platform qualification remain open;
+It does not propagate ARMA uncertainty. Optional joint profile-ML inference now
+adds regression/ARMA cross covariance and the full inverse-Hessian block matrix,
+using independently differentiated centered GLS corrections. Conditional and
+joint estimators remain explicitly distinct. Standardized/interpolated residual
+contracts and wider platform qualification remain open;
 native X-11/TRAMO/SEATS adjustment is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
 dependencies and are no longer loaded when the package itself loads.
 
 Items **16–19** have delivered foundations, **14** has workflow improvements,
-**20a.1–3/20b.1–2b.2/20c.1a–b.2/20c.2a.1** deliver restricted likelihood, regression, ARMA optimization and uncertainty
+**20a.1–3/20b.1–2b.2/20c.1a–b.2/20c.2a.1–2** deliver restricted likelihood, regression, ARMA optimization and uncertainty
 foundations, and the rest of
 **20–27** remains numerical implementation and qualification work. Passing
 package checks or primitive tests does not establish native statistical parity.
@@ -103,6 +106,7 @@ the native-backend plan below.
 | 6 — outlier extraction and zero-result semantics | Typed date handling, manual/automatic flags from the fitted spec, aggregate direct-spec extraction, fixed/estimated covariance alignment, zero-row no-outlier tables and zero diagnostic counts | 177 extraction assertions pass for both methods and frequencies, AO/LS/TC, fixed coefficients, legacy dates, custom labels, estimation spans and plot consumers. Existing plot/hierarchy tests also pass. F3 is resolved. |
 | 20c.1b.2 — accurate TRAMO covariance and Java-free legacy replay | Complete residual projection with missing-coordinate integration; qualified final-fit Jacobian by default; explicit `covariance="legacy"` replays numeric working-point/step/damping state in C++ | 2,346 new mandatory assertions; 1,217 public comparison/timing checks. Accurate covariance maximum relative dense-oracle error `2.625e-9`; legacy replay `1.158e-6` against 64 observed optimizer states, within unchanged `2e-5`. Strict C++/ASan/UBSan covers 31 residual plus 1,438 ARMA interruption boundaries. No automatic inference of LM history from BFGS final coefficients, no Java runtime fallback, no native SA/default switch. |
 | 20c.2a.1 — conditional estimated-ARMA regression covariance | Java-free `native_regression_information()` and nested ARMA-information output; QR-derived GLS covariance scaled by `Q/(n-r-k)`, free-only labels, retained estimates and explicit unavailable standard errors | 1,344 new mandatory assertions; 1,409 checks against 128 pinned X-13/TRAMO fits, with maximum relative covariance error `1.187e-13` and dense-oracle error `7.628e-14`. Strict C++/ASan/UBSan checks closed OLS entries, df/range gates and two interruption boundaries. This conditional matrix does not propagate ARMA uncertainty; joint profile-ML inference is the next separate step. |
+| 20c.2a.2 — joint profile-ML regression/ARMA covariance | Centered GLS correction derivatives, joint inverse-Hessian blocks and cross covariance, shared evaluation budgets, normalized conditioning/range gates and plain labelled R outputs | 1,871 new mandatory assertions; strict C++/ASan/UBSan passes 13 generic and 978 joint interruption boundaries. All 64 independent full Gaussian Hessians qualify: maximum standardized covariance error `2.636e-6`, identity defect `4.982e-6`, sensitivity error `8.352e-10`; 1,985 recorded checks including 128 reference fits and comparative timing. Conditional GLS remains separate; legacy/GN/residual-df ARMA matrices are rejected for joint inference. No native SA/default switch. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -144,7 +148,7 @@ establish those behaviors.
 | Calendar regressors | Weighted fixed/Easter holidays, centering and quarterly aggregation | Independent date/count/collision fixtures pass; supported inputs are validated |
 | Diagnostics/reports | Shared typed metrics, thresholds, outlier metadata and backend quality | Boundary, raw-reference and HTML values agree; stage-2 Henderson metadata is unavailable |
 | Dashboards | Escaped labels, opaque IDs, reusable panels and bounded startup probes | Unit, real-server and browser sort/page/reopen checks pass |
-| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, centered regression GLS, deterministic ARMA optimization, transfer diagnostics, observed information and optional OpenMP | Bounded fitted parity, profile/X-13 ARMA covariance, accurate TRAMO covariance with explicit Java-free legacy replay, and conditional estimated-ARMA regression covariance are delivered. Joint regression uncertainty, native SA fits and cross-platform evidence remain open |
+| Native numerical code | C++17 core with Rcpp boundaries, domains/filters/transforms, LAPACK algebra, stationary/diffuse likelihoods, stable sparse propagation, centered regression GLS, deterministic ARMA optimization, transfer diagnostics, observed information and optional OpenMP | Bounded fitted parity, profile/X-13 ARMA covariance, accurate TRAMO covariance with explicit Java-free legacy replay, conditional estimated-ARMA regression covariance and joint profile-ML regression/ARMA inference are delivered. Residual/interpolation contracts, native SA fits and cross-platform evidence remain open |
 | Documentation/delivery | Updated manuals and CI lanes for reference/native paths | Local validation recorded below; minimum-version qualification and remote workflows remain open |
 
 ## What was verified
@@ -412,6 +416,53 @@ overflow/underflow and two main-thread cancellation boundaries. See
 are under `/tmp/persephone-regression-information/`. Existing timing evidence is
 retained; this step adds no model fit or covariance timing claim.
 
+
+### Joint regression/ARMA qualification and comparative timing (20c.2a.2)
+
+The full source build and `R CMD check --as-cran` pass **19,673 assertions /
+37 files**, with zero errors, the same R-header Clang warning and existing
+DESCRIPTION note. The Java-free OpenMP library passes **18,344 native assertions /
+17 files + 34 backend assertions**, requiring two actual workers. The separately
+built serial library passes **18,340 / 17** and has no `libomp` linkage. The new
+joint suite contributes **1,871 assertions**, including persistent AR(1), fixed
+means, units/offsets, empty blocks, aliases, unavailable/budget/weak directions,
+serialization and serial/threaded results. Standalone strict Clang/ASan/UBSan
+passes analytic vector derivatives and closed AR(1) GLS/full-Hessian checks at
+**13 generic and 978 joint cancellation boundaries**. Logs and builds are under
+`/tmp/persephone-joint-information/`.
+
+The independent full Gaussian likelihood is differentiated in all free regression
+and ARMA coordinates, then its full Hessian is inverted directly. Across all
+64 cases, the maximum standardized covariance relative error is `2.636e-6`
+against a predeclared `2e-5` budget; the maximum inverse-identity defect is
+`4.982e-6` against `2e-5`, and the independent GLS sensitivity scaled error is
+`8.352e-10` against `2e-7`. This validates the Schur construction independently
+of production derivatives. The reference/timing tool passes **1,985 checks**,
+including **128 public reference fits**; JDemetra's conditional regression
+covariance is not used as a joint-covariance target.
+
+The additional prepared **fit plus regression/ARMA covariance** benchmark uses
+three warmed rounds, calibrated batches of at least 50 ms where possible and
+**9,365 calls** including warm-up/calibration, with two actual OpenMP workers.
+Median sums over the same 64 cases are:
+
+| Workload | Seconds | Native conditional / reference | Native joint / reference |
+| --- | ---: | ---: | ---: |
+| Native conditional GLS plus profile-ML ARMA information | 56.0480 | — | — |
+| Native joint profile-ML regression/ARMA inference | 64.0920 | — | — |
+| JDemetra X-13 preprocessing with its conditional covariance | 0.205697 | 272.5× | 311.6× |
+| JDemetra TRAMO preprocessing with its conditional covariance | 0.190499 | 294.2× | 336.4× |
+
+Setup/loading/startup and explicit pre-batch garbage collection are excluded;
+natural within-batch collection remains included. Native conditional and joint
+inference have different statistical scopes, and the public backends compute
+additional preprocessing outputs. These are labelled API workload comparisons,
+not matched-operation microbenchmarks. Native inference remains substantially
+slower. Profile repeated likelihood/GLS/curvature evaluations before changing
+algorithms or relaxing numerical acceptance. Versioned matrices, timing rows and
+source/runtime hashes are in
+`tools/reference/information/2026-11-14-regression-joint/`; earlier timing
+artifacts remain unchanged. See `tools/native-tests/regression-information-contract.md`.
 
 ### Previously completed validation, rechecked as evidence
 
@@ -740,8 +791,8 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20c.2a.2 — next | Joint profile-ML regression/ARMA uncertainty | Differentiate fitted GLS coefficients; validate cross covariance and the full Gaussian Schur complement. Keep conditional GLS distinctly labelled |
-| 20c.2 / 20d | Qualify joint regression uncertainty and standardized/interpolated residuals, then forecast/backcast points/errors with complete future regressors | Qualified uncertainty/normalization parity, domain alignment and serializable plain-data outputs; preserve item 10 forecast semantics |
+| 20c.2b.1 — next | Standardized fitted innovations and complete-residual/interpolation point contracts | Align observed/diffuse/missing row domains, ML versus residual-df scaling, original/transformed effects and public JD+ residual conventions; qualify against independent Gaussian projections without relabelling missing rows as observed innovations |
+| 20c.2b.2 / 20d | Missing-value prediction errors, then forecast/backcast points/errors with complete future regressors | Separate conditional-ARMA, regression-estimation and optional ARMA uncertainty; independent Gaussian conditional distributions and pinned API comparisons; preserve item 10 forecast domains and log-transform semantics |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
@@ -756,7 +807,8 @@ optimization is delivered with bounded controls and explicit first-order stoppin
 The prospective fitted-model matrix and structural redundancy screen are now
 qualified locally. Observed information and X-13 ARMA uncertainty are delivered.
 Conditional estimated-ARMA regression uncertainty is also delivered.
-Next implement joint profile-ML regression/ARMA uncertainty and qualify residuals,
+Joint profile-ML regression/ARMA uncertainty is delivered as a separate option.
+Next qualify standardized/interpolated residuals,
 then forecasts before an end-to-end fixed-model X-13 slice.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
 and does not justify a default switch. The detailed acceptance criteria below
@@ -1157,14 +1209,18 @@ contract and are not universally the covariance residual vector.
    Extend pinned persistent-model and platform evidence before claiming broader
    compatibility. See `tools/native-tests/tramo-information-contract.md`.
 2. **20c.2 — regression uncertainty and residuals.** Conditional estimated-ARMA
-   GLS covariance with `Q/(n-r-k)` is delivered (20c.2a.1). Next add optional joint
-   profile-ML regression/ARMA covariance and cross covariance (20c.2a.2), explicitly
-   distinguishing fixed-ARMA, estimated-ARMA and residual-df scales. Differentiate
-   centered fitted GLS corrections and validate the full Gaussian Schur
-   complement, with shared evaluation budgets and unavailable-state gates. Qualify
-   standardized/interpolated residuals, missing-row domains and effect restoration
-   against independent calculations and pinned APIs. No unavailable coefficient
-   direction may silently acquire a zero standard error.
+   GLS covariance with `Q/(n-r-k)` is delivered (20c.2a.1). Optional joint
+   profile-ML regression/ARMA covariance and cross covariance are delivered
+   (20c.2a.2), using centered GLS corrections, shared budgets, qualified
+   derivatives and joint conditioning gates. Accurate observed profile-ML ARMA
+   information is required; legacy/Gauss-Newton/residual-df estimators cannot be
+   substituted in the Schur formula. Next qualify standardized fitted innovations
+   and complete-span residual/interpolation points (20c.2b.1), preserving observed,
+   diffuse, internal missing and trimmed endpoint domains. Keep ML and residual-df
+   normalization explicit. Then add interpolation prediction errors (20c.2b.2),
+   distinguishing fixed-ARMA uncertainty, estimated regression effects and optional
+   ARMA propagation before using these contracts in forecasts. No unavailable
+   coefficient direction may silently acquire a zero standard error.
 3. **20d — forecasts and backcasts.** Derive original-domain points and errors
    with regression uncertainty, future-regressor coverage and documented log
    back-transformation. Keep fixed horizons and item 10's separate point/error

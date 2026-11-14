@@ -337,32 +337,10 @@ std::optional<persephone::LegacyCovarianceState> legacy_covariance_state(SEXP in
     state.effective_count=static_cast<std::size_t>(integer(list["effective_count"],"legacy effective count",0,std::numeric_limits<int>::max()));
     return state;
 }
-} // namespace
-
-// [[Rcpp::export(name = ".native_arma_information")]]
-Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
-    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
-    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
-    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
-    SEXP control=R_NilValue, SEXP method=R_NilValue, SEXP covariance=R_NilValue, SEXP legacy_state=R_NilValue) {
-    const auto c=information_control(control);
-    const auto map=parameter_map(specification,initial,margin);
-    const auto data=objective_data(values,design,coefficients);
-    const auto selected=information_option(method,"information method","profile_ml");
-    const auto covariance_mode=information_option(covariance,"covariance mode","accurate");
-    if(covariance_mode!="accurate" && covariance_mode!="legacy") throw std::invalid_argument("unknown covariance mode");
-    if(selected!="profile_ml" && selected!="conditional_residual_df" && selected!="tramo_residual") throw std::invalid_argument("unknown information method");
-    const bool conditional=selected=="conditional_residual_df";
-    const bool residual=selected=="tramo_residual";
-    const auto result=persephone::arma_information(data.input,data.regression,map,
-        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
-        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
-        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
-        c,[] { Rcpp::checkUserInterrupt(); }, residual ? persephone::ArmaInformationMode::TramoResidual :
-            conditional ? persephone::ArmaInformationMode::ConditionalResidualDF :
-            persephone::ArmaInformationMode::ProfileML,
-        covariance_mode=="legacy" ? persephone::ArmaCovarianceMode::Legacy : persephone::ArmaCovarianceMode::Accurate,
-        legacy_covariance_state(legacy_state));
+Rcpp::List arma_information_output(const persephone::ArmaInformation& result,
+    const persephone::InformationControl& c, const std::string& selected, SEXP legacy_state) {
+    const bool conditional=selected=="conditional_residual_df",residual=selected=="tramo_residual";
+    const std::string covariance_mode=result.covariance_mode==persephone::ArmaCovarianceMode::Legacy ? "legacy" : "accurate";
     const auto& info=result.information;
     Rcpp::List out;
     out["schema_version"]=1; out["status"]=info.status;
@@ -447,6 +425,91 @@ Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
         Rcpp::_["relative_tolerance"]=c.relative_tolerance,Rcpp::_["absolute_tolerance"]=c.absolute_tolerance,
         Rcpp::_["gradient_tolerance"]=c.gradient_tolerance,Rcpp::_["rank_tolerance"]=c.rank_tolerance,
         Rcpp::_["weak_tolerance"]=c.weak_tolerance);
+    return out;
+}
+} // namespace
+
+// [[Rcpp::export(name = ".native_arma_information")]]
+Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
+    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
+    SEXP control=R_NilValue, SEXP method=R_NilValue, SEXP covariance=R_NilValue, SEXP legacy_state=R_NilValue) {
+    const auto c=information_control(control);
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    const auto selected=information_option(method,"information method","profile_ml");
+    const auto covariance_mode=information_option(covariance,"covariance mode","accurate");
+    if(covariance_mode!="accurate" && covariance_mode!="legacy") throw std::invalid_argument("unknown covariance mode");
+    if(selected!="profile_ml" && selected!="conditional_residual_df" && selected!="tramo_residual") throw std::invalid_argument("unknown information method");
+    const bool conditional=selected=="conditional_residual_df";
+    const bool residual=selected=="tramo_residual";
+    const auto result=persephone::arma_information(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        c,[] { Rcpp::checkUserInterrupt(); }, residual ? persephone::ArmaInformationMode::TramoResidual :
+            conditional ? persephone::ArmaInformationMode::ConditionalResidualDF :
+            persephone::ArmaInformationMode::ProfileML,
+        covariance_mode=="legacy" ? persephone::ArmaCovarianceMode::Legacy : persephone::ArmaCovarianceMode::Accurate,
+        legacy_covariance_state(legacy_state));
+    return arma_information_output(result,c,selected,legacy_state);
+}
+
+// [[Rcpp::export(name = ".native_joint_regression_information")]]
+Rcpp::List native_joint_regression_information(SEXP values, SEXP design, SEXP coefficients,
+    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
+    SEXP control=R_NilValue) {
+    const auto c=information_control(control);
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    const auto result=persephone::joint_regression_information(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        c,[] { Rcpp::checkUserInterrupt(); });
+    const bool available=result.status=="available" || result.status=="no_free_parameters";
+    const auto r=static_cast<int>(result.free_columns.size()),k=static_cast<int>(map.initial_coordinates().size());
+    Rcpp::List out;
+    out["schema_version"]=1;out["status"]=result.status;out["available"]=available;
+    out["method"]="joint_profile_ml";out["conditioned_on"]="fixed_model_and_fixed_coefficients";
+    out["propagates_ARMA_uncertainty"]=true;out["scale_convention"]="profiled_ML_Q_over_n_finite";
+    out["inference"]="local_asymptotic_normal_approximation";
+    out["arma_information"]=arma_information_output(result.arma,c,"profile_ml",R_NilValue);
+    Rcpp::IntegerVector columns;
+    for(const auto j:result.free_columns) columns.push_back(static_cast<int>(j+1));
+    out["free_columns"]=columns;out["coefficients"]=numeric(result.coefficients);
+    out["covariance"]=matrix_or_null(result.covariance);
+    out["conditional_ml_covariance"]=matrix_or_null(result.conditional_ml_covariance);
+    out["joint_covariance"]=matrix_or_null(result.joint_covariance);
+    out["cross_covariance"]=matrix_or_null(result.cross_covariance);
+    out["sensitivity"]=matrix_or_null(result.sensitivity);
+    out["sensitivity_error"]=matrix_or_null(result.sensitivity_error);
+    if(available) {
+        if(!r) { out["covariance"]=Rcpp::NumericMatrix(0,0);out["conditional_ml_covariance"]=Rcpp::NumericMatrix(0,0); }
+        if(!r && !k) out["joint_covariance"]=Rcpp::NumericMatrix(0,0);
+        if(!r || !k) {
+            out["cross_covariance"]=Rcpp::NumericMatrix(r,k);
+            out["sensitivity"]=Rcpp::NumericMatrix(r,k);out["sensitivity_error"]=Rcpp::NumericMatrix(r,k);
+        }
+    }
+    const bool has_center=result.arma.estimation_center && result.arma.estimation_center->likelihood;
+    out["effective_count"]=has_center ? static_cast<double>(result.effective_count) : NA_REAL;
+    out["residual_df"]=has_center ? static_cast<double>(result.residual_df) : NA_REAL;
+    out["residual_variance"]=optional(result.ml_variance);
+    out["evaluations"]=result.evaluations;
+    out["sensitivity_status"]=result.derivatives.status;
+    out["sensitivity_evaluations"]=result.derivatives.evaluations;
+    out["sensitivity_refinements"]=result.derivatives.refinements;
+    out["sensitivity_steps"]=numeric(result.derivatives.steps);
+    out["sensitivity_scale"]="conditional_ML_coefficient_standard_deviations";
+    Rcpp::IntegerVector rejected;Rcpp::CharacterVector reasons;
+    for(const auto& entry:result.derivatives.rejected) { reasons.push_back(entry.first);rejected.push_back(entry.second); }
+    rejected.attr("names")=reasons;out["sensitivity_rejected"]=rejected;
+    out["joint_correlation_eigenvalues"]=numeric(result.normalized_eigenvalues);
+    out["joint_eigenvalue_ratio"]=result.normalized_eigenvalues.empty() ? NA_REAL : result.eigenvalue_ratio;
     return out;
 }
 
