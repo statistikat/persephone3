@@ -98,6 +98,7 @@ assert(identical(before,extended_parent_hashes(base_dir)),'frozen corpus unchang
 report <- do.call(rbind,rows)
 files <- c(file.path(tooling,c('verify-interpolation-arma.R','interpolation-reference.R','arma-fit-reference.R','fit-timing.R')),
   file.path(root,c('src/interpolation_arma_information.cpp','src/interpolation_information.cpp','src/core/interpolation_information.hpp',
+    'src/prediction_arma_information.cpp','src/core/prediction_arma_information.hpp',
     'src/arma_information.cpp','src/vector_jacobian.cpp','src/core/information.hpp','src/rcpp_arma_objective.cpp',
     'R/native_interpolation_information.R','inst/tinytest/fixtures/native/interpolation-arma-oracle.R',
     'inst/tinytest/fixtures/native/interpolation-oracle.R','inst/tinytest/fixtures/native/joint-information-oracle.R')))

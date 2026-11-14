@@ -85,3 +85,45 @@ fitting plus both transformed and original moments. Its native workload includes
 full original joint covariance when representable; public outputs remain marginal
 errors and inverse points. Earlier 20d.1 matrices/timings are preserved as
 historical evidence.
+
+## Optional ARMA propagation (20d.2b)
+
+`verify-forecast-arma.R` qualifies the optional `delta_profile_ml` result against
+independent dense Gaussian calculations over 64 nonempty endpoint domains.
+Stationary covariance is obtained from finite Yule-Walker equations, then dense
+whitening and an SVD least-squares projection supply missing/endpoint points.
+Independent OLS centering removes regression effects and a null-space basis of
+the differencing matrix before fixed h/h2 Richardson differences. This avoids
+precision-Schur cancellation on twice-integrated endpoint derivatives. A separate
+Schur calculation checks point levels and conditional covariance, and a full
+Gaussian Hessian supplies parameter covariance. Calendar alignment of prepended
+backcast regressors is explicitly checked against the original likelihood Q.
+The budgets are unchanged: `2e-7*(1+abs(G))` for sensitivities and `2e-5` relative
+error for covariance normalized by conditional errors. Closed AR(1) formulas
+also qualify the SVD derivative oracle and production implementation.
+
+Public X-13/TRAMO forecast/backcast accessors remain conditional reporting
+comparisons and are not targets for the delta increment. The benchmark reports
+four separate workloads: prepared native fit plus conditional endpoints, native
+fit plus delta endpoints, and the two public processing/serialization/accessor
+paths. Native workloads include full joint covariance and original moments;
+public workloads return points and marginal errors. Startup, preparation and
+explicit pre-batch GC are excluded; natural in-batch GC is included. The protocol
+uses three warmed alternating rounds with calibrated batches of at least 50 ms
+where possible. Source hashes, qualification matrix and timing rows are stored in
+`information/2026-11-14-forecast-arma/`. The earlier public reporting differences
+and historical artifacts are preserved.
+
+```sh
+mkdir /tmp/persephone-endpoint-delta-report
+PERSEPHONE_NUM_THREADS=2 OMP_NUM_THREADS=2 Rscript tools/reference/verify-forecast-arma.R \
+  --timing --output=/tmp/persephone-endpoint-delta-report
+```
+
+The captured report passes 2,305 checks across 64 independent delta covariances
+and 128 public fits. Maximum normalized covariance relative error is 3.688e-8
+and scaled sensitivity error is 1.563e-9. Across 7,458 timing calls, the median
+summed time for 64 prepared fits/outputs is 9.460556 s for native conditional,
+16.104000 s for native delta, 0.287880 s for JDemetra X-13 and 0.269339 s for
+JDemetra TRAMO. The optional native propagation adds about 70.2% in this matrix;
+these different output workloads are not an end-to-end performance parity claim.

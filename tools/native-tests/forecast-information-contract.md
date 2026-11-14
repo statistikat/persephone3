@@ -11,8 +11,9 @@ native_arma_forecasts(context, fitted_coordinates,
 This internal Java-free API predicts original-series endpoints conditional on
 supplied admissible ARMA coefficients, including estimated regression effects.
 It does not implement seasonal adjustment or change the package's transitional
-backend default. `scale="residual_df"` is an explicit alternative to ML; neither
-method propagates ARMA or innovation-scale estimation uncertainty.
+backend default. `scale="residual_df"` is an explicit alternative to ML for
+conditional errors. Optional ARMA propagation is described below; innovation-scale
+estimation uncertainty is not propagated.
 
 ## Estimation and prediction domains
 
@@ -94,3 +95,66 @@ in the matrix. Public backcast points and error scaling have separate reporting
 discrepancies, recorded by `verify-forecasts.R`. They are not accepted as accurate
 Gaussian targets or silently incorporated into native predictions. See
 `tools/reference/forecast-notes.md` for public observations and timing scope.
+
+## Optional profile-ML ARMA propagation (20d.2b)
+
+`native_arma_forecasts(context, coordinates, method="delta_profile_ml",
+control=list())` adds a first-order delta increment to the conditional ML
+covariance. The default remains `method="conditional"`; `residual_df` is
+supported only for conditional uncertainty. This new option is accurate and
+Java-free, not a public-reporting emulation.
+
+For the chronological past/future point vector `m(theta)`, with regression
+coefficients refitted at each perturbation, the selected transformed covariance
+is `Vconditional + G Vtheta G'`. Here `G=dm/dtheta` uses free physical ARMA
+coefficients and `Vtheta` is exclusively the qualified, accurate observed
+profile-ML covariance. Fixed ARMA and fixed regression effects stay fixed.
+Regression estimation uncertainty already occurs in `Vconditional`; the point
+sensitivity includes its response to theta, rather than adding another direct
+regression covariance block. Scale uncertainty and higher-order parameter or
+prediction corrections are not propagated.
+
+The information calculation uses only the original estimation window. Endpoint
+point samples retain the full supplied regressor context, refit free regression
+effects, and integrate original internal/endpoint gaps. They remove the final
+fitted regression effects, known mean and fixed homogeneous integrated levels
+before differences, then divide by conditional standard errors. Three-scale
+Richardson checks qualify the dimensionless derivatives before conversion back
+to physical response units. A shared budget covers information and point
+samples, excluding the already computed conditional diagnostic. These samples
+and LAPACK calls remain on the main thread; owned derivative/covariance assembly
+uses OpenMP where the work threshold is met.
+
+The result adds `conditional_status`, `conditional_available`,
+`conditional_covariance`, `conditional_standard_errors`, `arma_increment`,
+`sensitivity`, `sensitivity_error`, derivative status/steps/rejections/counts,
+`arma_information`, labelled `arma_parameter_covariance`, `arma_coefficients`,
+and the combined `evaluations`/`evaluation_budget`. Square matrices use the full
+point calendar, sensitivities use that calendar and free physical coefficient
+labels, and both selected/conditional error series honor the requested shorter
+error horizons. The conditional process/regression components and fitted center
+are retained unchanged. Empty horizons need no information samples. All-fixed
+ARMA copies the conditional covariance exactly, with a zero increment and an
+`m x 0` sensitivity.
+
+A failed stationarity/identification/curvature, derivative, budget or range gate
+leaves conditional covariance/errors and accurate points available. The selected
+covariance is absent and selected errors are missing; they are never replaced
+silently by the conditional errors. Gaussian/lognormal original moments consume
+the selected covariance. In particular, unavailable delta covariance leaves log
+means and original errors unavailable while keeping inverse-point medians.
+
+Independent qualification uses 64 endpoint cases with quarterly/monthly,
+fixed/free factors and regression, selected windows, leading/internal/trailing
+gaps and log/identity transformations. Dense covariance whitening and SVD projection with independent OLS/null-space
+centering supply point derivatives through fixed h/h2 stencils; a separate
+Schur calculation checks point levels and conditional covariance. The SVD path
+avoids precision-Schur cancellation when differentiating twice-integrated
+endpoints. An independent full Gaussian Hessian supplies the
+parameter covariance target. Prospective budgets remain `2e-7*(1+abs(G))` for
+sensitivities and `2e-5` relative error for covariance normalized by conditional
+standard errors. Closed AR(1) derivatives, refitted means, response/regressor
+units, homogeneous shifts, fixed/empty/exact-zero cases, rejected information,
+exact budgets, cancellation recovery and 260-point serial/OpenMP checks cover
+additional invariants. Public endpoint errors remain separate reporting evidence;
+they are not targets for parameter-uncertainty propagation.

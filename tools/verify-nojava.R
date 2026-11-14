@@ -136,6 +136,13 @@ if ("--native" %in% args) {
     abs(endpoint$points_transformed$backcast[3]-(1-2/15))<1e-12,
     abs(endpoint$points_transformed$forecast[1]-(3+2/15))<1e-12,
     all(endpoint$covariance[1:3,4:7]<0),!endpoint$propagates_ARMA_uncertainty)
+  endpoint_context <- objective_setup(missing_series,ar=NA_real_,backcast_horizon=2L,forecast_horizon=3L)
+  endpoint_delta <- getFromNamespace("native_arma_forecasts","persephone3")(
+    endpoint_context,missing_fit$coordinates,method="delta_profile_ml")
+  stopifnot("forecast_arma_information" %in% cap$primitives,endpoint_delta$available,
+    endpoint_delta$conditional_available,endpoint_delta$arma_information_status=="available",
+    all(diag(endpoint_delta$covariance)>=diag(endpoint_delta$conditional_covariance)),
+    endpoint_delta$propagates_ARMA_uncertainty,endpoint_delta$sensitivity_status=="available")
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

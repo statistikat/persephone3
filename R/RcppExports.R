@@ -41,8 +41,8 @@
     .Call(`_persephone3_native_arma_optimize`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control)
 }
 
-.native_forecast_information <- function(values, design, coefficients, backcasts, forecasts, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, scale = NULL) {
-    .Call(`_persephone3_native_forecast_information`, values, design, coefficients, backcasts, forecasts, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale)
+.native_forecast_information <- function(values, design, coefficients, backcasts, forecasts, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, scale = NULL, method = NULL, control = NULL) {
+    .Call(`_persephone3_native_forecast_information`, values, design, coefficients, backcasts, forecasts, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale, method, control)
 }
 
 .native_diffuse_likelihood <- function(values, transition, observation, noise_loading, initial_state, finite_loading, diffuse_loading, observation_variance = NULL, mean = NULL, variance = NULL) {

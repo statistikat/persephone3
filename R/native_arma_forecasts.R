@@ -4,7 +4,7 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
     forecast_horizon=objective$prepared$inputs$forecast_horizon,
     backcast_horizon=objective$prepared$inputs$backcast_horizon,
     forecast_error_horizon=forecast_horizon,backcast_error_horizon=backcast_horizon,
-    scale="ml") {
+    scale="ml",method="conditional",control=list()) {
   if(!inherits(objective,"persephone_native_arma_objective") ||
       !identical(objective$schema_version,1L))stop("Unsupported ARMA objective contract.",call.=FALSE)
   f <- native_horizon(forecast_horizon,"forecast_horizon")
@@ -14,6 +14,11 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
   if(fe>f || be>b)stop("Error horizons must not exceed their point horizons.",call.=FALSE)
   if(!is.character(scale) || length(scale)!=1L || is.na(scale) || !is.null(dim(scale)) ||
       !scale %in% c("ml","residual_df"))stop("Prediction scale must be 'ml' or 'residual_df'.",call.=FALSE)
+  if(!is.character(method) || length(method)!=1L || is.na(method) || !is.null(dim(method)) ||
+      !method %in% c("conditional","delta_profile_ml"))stop("Unsupported prediction uncertainty method.",call.=FALSE)
+  if(!is.list(control) || !is.null(dim(control)))stop("Prediction information control must be a list.",call.=FALSE)
+  if(method=="conditional" && length(control))stop("Derivative controls require delta_profile_ml.",call.=FALSE)
+  if(method=="delta_profile_ml" && scale!="ml")stop("ARMA propagation requires ML scale.",call.=FALSE)
   coordinates <- native_arma_coordinates(objective$parameters,coordinates)
   p <- objective$parameters;data <- objective$prepared;inputs <- data$inputs
   if(f>inputs$forecast_horizon || b>inputs$backcast_horizon)
@@ -23,15 +28,32 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
   design <- inputs$regressors[context_rows,,drop=FALSE]
   result <- .native_forecast_information(as.numeric(inputs$transformed),design,unname(data$fixed),
     b,f,p$specification,p$initial,coordinates,objective$period,objective$d,objective$seasonal_d,
-    objective$mean,objective$rank_tolerance,p$reflection_margin,objective$adjustment$log_jacobian,scale)
+    objective$mean,objective$rank_tolerance,p$reflection_margin,objective$adjustment$log_jacobian,scale,method,control)
   domain <- inputs$observed_domain
   starts <- c(backcast=domain$start_ordinal-b,forecast=domain$start_ordinal+n)
   ordinals <- c(starts['backcast']+seq_len(b)-1,starts['forecast']+seq_len(f)-1)
   result$covariance_ordinals <- unname(ordinals)
   result$source_positions <- data$window$source_rows[1L]-b+result$rows-1L
   labels <- as.character(ordinals)
-  for(field in c("covariance","known_regression_covariance","regression_covariance"))
+  for(field in c("covariance","known_regression_covariance","regression_covariance",
+      if(method=="delta_profile_ml")c("conditional_covariance","arma_increment")))
     if(!is.null(result[[field]]))dimnames(result[[field]]) <- list(labels,labels)
+  if(method=="delta_profile_ml") {
+    theta <- sub("[.]reflection",".coefficient",names(p$initial_coordinates))
+    for(field in c("sensitivity","sensitivity_error"))if(!is.null(result[[field]]))
+      dimnames(result[[field]]) <- list(labels,theta)
+    if(length(result$sensitivity_steps)==length(theta))names(result$sensitivity_steps) <- theta
+    if(!is.null(result$arma_information)) {
+      result$arma_information <- native_arma_information_labels(result$arma_information,objective)
+      result$arma_information_status <- result$arma_information$status
+      result$arma_parameter_covariance <- result$arma_information$covariance
+      result$arma_coefficients <- result$arma_information$coefficients
+    } else {
+      result$arma_information_status <- if(result$sensitivity_status=="not_required")"not_required"else"not_evaluated"
+      result$arma_parameter_covariance <- if(!length(theta))matrix(numeric(),0L,0L)else NULL
+      result$arma_coefficients <- setNames(rep(NA_real_,length(theta)),theta)
+    }
+  }
   locations <- result$points_transformed
   result$original_moments <- if(result$point_available)native_model_prediction_moments(
     locations,result$covariance,inputs$transformation)else NULL
@@ -56,9 +78,11 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
     if(inherits(value,"error"))value <- rep(NA_real_,length(point_rows[[direction]]))
     as_series(value,starts[[direction]])
   }) |> stats::setNames(names(point_rows))
-  result$standard_errors <- list(
-    backcast=as_series(result$standard_errors[error_rows$backcast],domain$start_ordinal-be),
-    forecast=as_series(result$standard_errors[error_rows$forecast],starts[['forecast']]))
+  error_series <- function(values)list(
+    backcast=as_series(values[error_rows$backcast],domain$start_ordinal-be),
+    forecast=as_series(values[error_rows$forecast],starts[['forecast']]))
+  result$standard_errors <- error_series(result$standard_errors)
+  if(method=="delta_profile_ml")result$conditional_standard_errors <- error_series(result$conditional_standard_errors)
   means <- if(inputs$transformation=="none")locations else
     if(!is.null(result$original_moments))unname(result$original_moments$means)else rep(NA_real_,length(locations))
   result$means_original <- lapply(names(point_rows),function(direction)
@@ -90,5 +114,6 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
   result$span <- list(source_domain=data$window$source_domain,estimation_domain=domain,source_rows=data$window$source_rows)
   if(!is.null(result$center$likelihood))names(result$center$likelihood$regression_coefficients) <- data$labels
   result$adjustment <- objective$adjustment;result$backend <- "native";result$comparison_only <- FALSE
+  result$uncertainty_method <- method
   structure(result,class="persephone_native_arma_forecasts")
 }

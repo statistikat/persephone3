@@ -236,3 +236,17 @@ show that reported log errors omit fixed regression effects; raw-location and
 fully restored-location comparisons are recorded separately. No upstream
 numerical source or bytecode was consulted or translated. See
 `tools/native-tests/prediction-moments-contract.md` and `forecast-notes.md`.
+
+### Endpoint ARMA uncertainty: item 20d.2b
+
+Optional forecast/backcast uncertainty propagates the independently authored
+accurate observed profile-ML ARMA covariance through refitted conditional
+Gaussian points. Its shared delta assembly was factored from the already
+qualified interpolation implementation without changing the arithmetic.
+Independent dense covariance/SVD point stencils with OLS/null-space centering
+and a full Gaussian Hessian qualify
+the result; closed AR(1) formulas check both known and refitted means. No upstream
+numerical source, bytecode or optimizer internals were used. Public X-13/TRAMO
+endpoint accessors supply separately labelled timing workloads only, never
+native runtime inputs or delta-covariance targets. The core remains Rcpp-free;
+its existing R BLAS/LAPACK ABI linkage is unchanged.
