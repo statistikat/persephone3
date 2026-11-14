@@ -347,3 +347,23 @@ selection controls use only public calls. All prior frozen artifacts remain
 unchanged. The native core stays Java/R/Rcpp/BLAS/LAPACK-free; owned OpenMP and
 caller-only interruption semantics are unchanged. Automatic selection and
 decomposition integration are separate qualification steps.
+
+### Fixed seasonal processing and short-series policy (22a.2b.3a)
+
+`x11_seasonal_processing.cpp` independently composes the qualified seasonal
+definitions with stable phase means and explicit length-based selection.
+Public enum/factory/processor execution established complete/partial-year gates,
+available endpoint rows and phase-mean middle rows. A separate dense R oracle
+using published weights/virtual constructions qualified all 756 prospective
+cases before native implementation. No numerical Java source or bytecode was
+consulted, copied or translated. Full native basis applications, public basis
+responses and full mixed-phase points provide independent/differential evidence.
+
+Mean calculations use normalized sums, with independent phase accumulators in
+bounded OpenMP chunks that preserve serial order. All worker outputs are owned;
+callbacks and the R adapter remain on the caller. This core/header links without
+R/Rcpp, BLAS or LAPACK and reads no runtime fixtures. Metadata states requested
+and selected filters, reasons and each row's operation. The low-level processor
+policy is not a qualification of top-level `sfshort`, automatic MSR or B/C/D
+integration; those remain separate. Existing strict explicit APIs and frozen
+corpora are unchanged. See `tools/native-tests/x11-seasonal-processing-contract.md`.

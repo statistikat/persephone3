@@ -162,6 +162,11 @@ if ("--native" %in% args) {
   seasonal15 <- x11_filter(ts(1:240,frequency=12),"s3x15",endpoints="seasonal")
   stopifnot(abs(seasonal15$values[1]-sum(seq(1,97,12)*c(rep(.16,5),.06667,.06667,.04444,.02222)))<1e-12,
     seasonal15$minimum_phase_length==20L,seasonal15$coefficient_convention=="x11_decimal_5")
+  seasonal_short <- getFromNamespace("native_x11_seasonal_process","persephone3")(
+    ts(1:20,frequency=4),c("s3x5","stable","s3x9","s3x1"))
+  stopifnot("x11_seasonal_processing" %in% cap$primitives,
+    seasonal_short$row_methods$method[9]=="short_phase_mean",abs(seasonal_short$values[9]-9)<1e-12,
+    identical(unname(seasonal_short$selected_filters),c("s3x5","stable","stable","s3x1")))
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

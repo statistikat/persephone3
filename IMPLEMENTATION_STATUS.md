@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **22a.2b.2b (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **22a.2b.3a (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
@@ -13,7 +13,8 @@ are delivered in **22a.1**, with explicit Musgrave Henderson endpoints in
 **22a.2a**. Explicit centered-trend mean-padding endpoints are delivered in
 **22a.2b.1**. Explicit seasonal 3×1/3×3/3×5/3×9 endpoints are delivered in
 **22a.2b.2a**, with the remaining 3×15 convention delivered in **22a.2b.2b**.
-Stable, mixed-phase and short-series seasonal policies are next in **22a.2b.3a**.
+Stable, mixed-phase and explicit short-series seasonal processing is delivered
+in **22a.2b.3a**. Automatic Henderson/I-C conventions follow in **22a.2b.3b**.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -33,8 +34,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **62,767 passing installed-package
-assertions** across **49 files**, including the native numerical additions. These
+current rjd3 path. The full check has **94,112 passing installed-package
+assertions** across **50 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -99,8 +100,11 @@ boundary support and short input down to a half-width, with preserved calendars
 and central arithmetic. Explicit seasonal 3×1/3×3/3×5/3×9 endpoints now preserve
 calendar phases and implement published fixed weights or exact virtual-value
 constructions. Explicit 3×15 endpoints now independently implement the public
-mean-extension/decimal-closure convention. Automatic selection and decomposition
-passes remain open.
+mean-extension/decimal-closure convention. A separate fixed-choice seasonal
+processor now supports stable/per-period choices, explicit short-series gates
+and phase-mean middle rows, with requested/selected filters and row methods.
+Independent phase means also use owned OpenMP with preserved summation order.
+Data-driven selection and decomposition passes remain open.
 Wider platform qualification remains open; native X-11/TRAMO/SEATS adjustment
 is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
@@ -112,8 +116,8 @@ Items **16–19** have delivered foundations, **14** has workflow improvements,
 foundations, and the rest of
 **20–27** remains numerical implementation and qualification work. Symmetric
 X-11 filter primitives, explicit Musgrave endpoints and centered-trend mean
-padding and all five explicit seasonal endpoint filters are delivered in
-**22a.1–2b.2b**. Passing
+padding, all five explicit seasonal endpoint filters and fixed-choice seasonal
+processing are delivered in **22a.1–2b.3a**. Passing
 package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
@@ -164,6 +168,7 @@ the native-backend plan below.
 | 22a.2b.1 — centered-trend mean endpoints | Explicit first/last half-width mean padding, overlapping short-series support, retained central arithmetic and named padding/row metadata | 1,484 new assertions against 22 public complete operators and point cases, independent dense extension/convolution, masks/ranges/dates and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 26 cancellation boundaries without R/BLAS/LAPACK linkage. Placement in decomposition passes remains a separate qualification. |
 | 22a.2b.2a — explicit seasonal 3×1/3×3/3×5/3×9 endpoints | Published fixed seasonal definitions and independently constructed rational virtual-value weights, original calendar-phase application and endpoint/phase metadata | 8,065 new assertions across 120 public cases, independent 3×3/3×5 extension/convolution, published identities, partial years, masks/ranges and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 68 cancellation boundaries without R/BLAS/LAPACK linkage. Four short S3X1 stable-selection controls remain separate from explicit endpoints; 3×15 and automatic policies follow. |
 | 22a.2b.2b — explicit seasonal 3×15 endpoints | Independently generated mean-extension weights with five-decimal constant-preserving closure, declared coefficient convention and conservative twenty-per-phase support | 6,389 new assertions across 30 public cases, dense extension/convolution/closure, 24 separate short-series controls, masks/calendars/units and serial/OpenMP checks. Standalone C++/ASan/UBSan adds 106 interruption boundaries and retains the prior 68. Automatic selection remains a separate policy. |
+| 22a.2b.3a — fixed seasonal processing | Stable or per-calendar-period filter choices, explicit short-series policy, available endpoint support and phase-mean middle rows; requested/selected choices, reasons and row methods; owned OpenMP phase means | 31,345 new assertions across 756 public cases and independent full operators; short/partial-year gates, rotations, missingness, range and serial/OpenMP checks. Standalone C++/ASan/UBSan covers 57 interruption boundaries without R/BLAS/LAPACK linkage. Data-driven choices and B/C/D placement remain separate. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -1361,6 +1366,74 @@ Next is **22a.2b.3a**, stable/per-period seasonal processing and explicit
 short-series policy, followed by automatic trend/seasonal choices and B/C/D
 intermediate tables. Native full-fit capability remains unavailable.
 
+### Fixed seasonal processing and short-series policy (22a.2b.3a)
+
+`native_x11_seasonal_process(series, filters, short_series="x11")` now accepts
+a stable or 3×N choice for every calendar period. Scalar choices expand to all
+periods; complete named vectors are explicitly reordered by calendar period.
+The default policy uses stable means below five complete years, and for 3×15
+before a partial twentieth year. At short phase support it combines available
+endpoint rows with phase-mean middle rows. `short_series="reject"` preserves
+the conservative support rules of the existing explicit-filter API, which is
+unchanged. These policies qualify the low-level public processor; top-level
+`sfshort` and B/C/D placement remain separate work.
+
+The serializable result reports requested/selected choices, per-phase lengths,
+selection reasons, coefficient conventions and each full-calendar row's
+operation. Missing phase members invalidate mean rows; other filters retain
+active-tap missingness. Mean sums use scale normalization to avoid overflow.
+Independent phase accumulators and output rows use owned OpenMP; bounded annual
+chunks preserve the exact serial summation order and caller-only interruption.
+Core/header code links without R/Rcpp, BLAS or LAPACK.
+
+**31,345 new mandatory assertions** cover 756 public cases (612 uniform and
+144 mixed), independent full operators and public basis probes, complete/partial
+five/twenty-year gates, rotations, names, gaps, serialization, extreme finite
+means and 100,003-row worker/unit/reversal checks. Adequately supported uniform
+outputs are bit-identical to the previous explicit-filter API. Strict serial
+and OpenMP ASan/UBSan harnesses pass **57 cancellation boundaries** (23 stable,
+34 mixed), worker equality and reuse checks.
+
+The full installed-package check passes **94,112 assertions / 50 files**, with
+zero errors and the existing R-header warning and DESCRIPTION note. The
+isolated Java-free suite passes **92,783 native assertions / 30 files + 34
+backend assertions**, with two actual workers. A separately compiled serial
+build passes **92,779 / 30**, without `libomp` linkage. Logs are under
+`/tmp/persephone-x11-selection-final/`; strict harnesses and initial independent
+public qualification are under `/tmp/persephone-x11-selection-next/`.
+
+The installed offline verifier passes **6,055 checks / 756 cases** without
+Java namespaces; the live/timing verifier passes **7,202 checks / 756 cases**.
+Maximum native/frozen coefficient error is **3.886e-16**, independent coefficient
+error **2.256e-16**, frozen scaled-point error **4.993e-15**, independent
+scaled-point error **5.566e-16**, and live scaled-point error **4.147e-16**.
+Budgets remain absolute `1e-14` for coefficients and `2e-12` for scaled points.
+
+The report records **134,021 timed calls**, including warm-up/calibration.
+Median summed processor times from three warmed alternating rounds are:
+
+| Input matrix | Native seconds | JDemetra seconds |
+| --- | ---: | ---: |
+| 48 short cases, 19–241 observations | 0.007213 | 0.009398 |
+| 8 long cases, 100,003 observations each | 0.038353 | 0.010297 |
+
+Native takes about 23% less time on the short matrix and 3.72× the time on the
+long matrix. The native calls include calendar/selection/row-method metadata;
+public calls include enum/factory/processor execution and vector serialization.
+These are fixed-choice processor workloads, not complete fits. Loading and
+explicit pre-batch GC are excluded; natural in-batch GC is included. Their
+matrix/input lengths differ from the previous filter reports, whose totals
+remain separate. Raw timings, errors, source hashes and worker metadata are in
+`tools/reference/information/2026-11-14-x11-seasonal-processing/`.
+
+Frozen evidence, contract and reference notes are in
+`inst/tinytest/fixtures/native/x11-seasonal-processing/`,
+`tools/native-tests/x11-seasonal-processing-contract.md` and
+`tools/reference/x11-seasonal-processing-notes.md`. Existing corpora/reports are
+unchanged. Next is **22a.2b.3b**, automatic Henderson/I-C conventions, followed
+by staged X11Default/MSR choices and B/C/D intermediate tables. Full native-fit
+capability remains unavailable.
+
 ### Previously completed validation, rechecked as evidence
 
 - The retained full `R CMD check` log ends in **Status: OK**: zero errors,
@@ -1688,10 +1761,10 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 22a.2b.3a — next | Add stable and per-calendar-period seasonal processing with an explicit public short-series policy, preserving the stricter explicit-filter API | Full public operator/point fixtures around five/twenty years and incomplete years, independent phase-mean/available-endpoint constructions, mixed-phase/start-period isolation, selected-filter/row-method metadata and serial/OpenMP/cancellation checks |
+| 22a.2b.3b — next | Qualify automatic Henderson selection, estimated I/C conventions and default endpoint ratios with explicit stage/input contracts | Public threshold-boundary and default-ratio fixtures, independent trend/irregular-change calculations, quarterly scaling, degenerate/missing/range behavior and caller-only interruption |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
-| 22a performance follow-up | Profile seasonal filter arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-filter gaps (7.62× for the first-four matrix and 6.41× for the separate 3×15 matrix); preserve full output semantics and rerun each unchanged warmed workload after optimization |
-| 22a.2b.3b–c / 22b / 22c | Qualify automatic Henderson/I-C and staged seasonal/MSR choices, then B/C/D passes and extreme-value treatment, then connect a restricted fixed-model native X-13 fit | Threshold-boundary and stage-context fixtures, public intermediate tables, decomposition identities, selected-filter metadata and final/forecast agreement for the advertised subset |
+| 22a performance follow-up | Profile seasonal filter arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-workload gaps (7.62× for the first-four matrix, 6.41× for the separate 3×15 matrix, and 3.72× for the different fixed-processing matrix); preserve full output semantics and rerun each unchanged warmed workload after optimization |
+| 22a.2b.3c / 22b / 22c | Qualify staged seasonal/MSR choices, then B/C/D passes and extreme-value treatment, then connect a restricted fixed-model native X-13 fit | Threshold-boundary and stage-context fixtures, public intermediate tables, decomposition identities, selected-filter metadata and final/forecast agreement for the advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
 | 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
 
@@ -1712,8 +1785,8 @@ propagation. Conditional forecasts/backcasts are now delivered with full
 estimated-regression covariance and explicit regressor/date coverage. Optional
 accurate profile-ML endpoint propagation and symmetric X-11 filters are delivered.
 Explicit Musgrave Henderson and centered-trend mean endpoints are now delivered.
-All five explicit seasonal endpoint filters are also delivered. Next implement
-stable/mixed-phase/short-series processing and automatic policies, followed by
+All five explicit seasonal endpoint filters and stable/mixed-phase/short-series
+processing are also delivered. Next implement automatic policies, followed by
 decomposition passes before a fixed-model X-13 slice.
 Original Gaussian/lognormal moments are delivered, with unchanged inverse points
 and explicit standard-error/quantile semantics.
@@ -2232,11 +2305,11 @@ Implement and commit these slices separately:
    the remaining 3×15 endpoints by independent virtual extension and the declared
    five-decimal closure convention. Published fixed filter weights are method
    definitions; do not replace them with a different minimum-revision formula
-   under an accuracy label. **22a.2b.3a** adds stable/per-period choices and
-   short-series policy: qualify full operator rows, available asymmetric support
-   and phase-mean middle rows, complete/partial-year gates and calendar rotation
-   independently of native output. Keep requested/selected filters and row
-   methods explicit. **22a.2b.3b** qualifies automatic Henderson order and I/C
+   under an accuracy label. Delivered **22a.2b.3a** adds stable/per-period choices
+   and explicit short-series policy, qualifying full operator rows, available
+   asymmetric support, phase-mean middle rows, complete/partial-year gates and
+   calendar rotation independently of native output. Requested/selected filters
+   and row methods remain explicit. **22a.2b.3b** qualifies automatic Henderson order and I/C
    conventions at every threshold; **22a.2b.3c** qualifies staged X11Default/MSR
    choices with explicit stage/input contracts and public intermediate fixtures.
    Keep forecast/backcast

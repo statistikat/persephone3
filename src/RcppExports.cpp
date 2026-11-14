@@ -562,6 +562,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_seasonal_process
+Rcpp::List native_x11_seasonal_process(SEXP values, SEXP frequency, SEXP start_period, SEXP filters, SEXP short_series);
+RcppExport SEXP _persephone3_native_x11_seasonal_process(SEXP valuesSEXP, SEXP frequencySEXP, SEXP start_periodSEXP, SEXP filtersSEXP, SEXP short_seriesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type start_period(start_periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type filters(filtersSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type short_series(short_seriesSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_seasonal_process(values, frequency, start_period, filters, short_series));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
@@ -597,6 +612,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_x11_musgrave_filter", (DL_FUNC) &_persephone3_native_x11_musgrave_filter, 4},
     {"_persephone3_native_x11_seasonal_spec", (DL_FUNC) &_persephone3_native_x11_seasonal_spec, 4},
     {"_persephone3_native_x11_seasonal_filter", (DL_FUNC) &_persephone3_native_x11_seasonal_filter, 3},
+    {"_persephone3_native_x11_seasonal_process", (DL_FUNC) &_persephone3_native_x11_seasonal_process, 5},
     {NULL, NULL, 0}
 };
 
