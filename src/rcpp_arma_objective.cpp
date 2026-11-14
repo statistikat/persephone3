@@ -3,6 +3,7 @@
 #include "core/arma_optimizer.hpp"
 #include "core/arma_identification.hpp"
 #include "core/arma_information.hpp"
+#include "core/arma_residuals.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -510,6 +511,54 @@ Rcpp::List native_joint_regression_information(SEXP values, SEXP design, SEXP co
     rejected.attr("names")=reasons;out["sensitivity_rejected"]=rejected;
     out["joint_correlation_eigenvalues"]=numeric(result.normalized_eigenvalues);
     out["joint_eigenvalue_ratio"]=result.normalized_eigenvalues.empty() ? NA_REAL : result.eigenvalue_ratio;
+    return out;
+}
+
+// [[Rcpp::export(name = ".native_arma_residuals")]]
+Rcpp::List native_arma_residuals(SEXP values, SEXP design, SEXP coefficients,
+    SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
+    SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
+    SEXP scale=R_NilValue) {
+    const auto selected=information_option(scale,"residual scale","ml");
+    if(selected!="ml" && selected!="residual_df") throw std::invalid_argument("residual scale must be ml or residual_df");
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    const auto result=persephone::arma_residuals(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        selected=="ml" ? persephone::ResidualScale::ML : persephone::ResidualScale::ResidualDF,
+        [] { Rcpp::checkUserInterrupt(); });
+    Rcpp::IntegerVector rows,basis_rows,missing;
+    for(const auto i:result.rows) rows.push_back(static_cast<int>(i+1));
+    for(const auto i:result.complete.rows) basis_rows.push_back(static_cast<int>(i+1));
+    for(const auto i:result.complete.missing_rows) missing.push_back(static_cast<int>(i+1));
+    const auto& fit=result.center->likelihood;
+    Rcpp::List out=Rcpp::List::create(Rcpp::_["schema_version"]=1,Rcpp::_["status"]=result.status,
+        Rcpp::_["available"]=result.status=="available",Rcpp::_["scale"]=selected,
+        Rcpp::_["scale_variance"]=optional(result.variance),
+        Rcpp::_["effective_count"]=fit ? static_cast<double>(result.effective_count) : NA_REAL,
+        Rcpp::_["residual_df"]=fit ? static_cast<double>(result.residual_df) : NA_REAL,
+        Rcpp::_["free_regression"]=static_cast<int>(result.free_regression),
+        Rcpp::_["free_ARMA"]=static_cast<int>(result.free_arma),
+        Rcpp::_["sum_squares"]=fit ? optional(fit->sum_squared_standardized) : NA_REAL,
+        Rcpp::_["point_scope"]="supplied_ARMA_with_profiled_GLS",
+        Rcpp::_["studentized"]=false,Rcpp::_["propagates_parameter_uncertainty"]=false,
+        Rcpp::_["center"]=objective_output(*result.center,result.free_arma));
+    out["observed"]=Rcpp::List::create(Rcpp::_["rows"]=rows,
+        Rcpp::_["unit_innovations"]=numeric(result.unit_innovations),
+        Rcpp::_["standardized_innovations"]=numeric(result.standardized_innovations));
+    out["complete"]=Rcpp::List::create(Rcpp::_["status"]=result.complete.status,
+        Rcpp::_["available"]=result.complete.status=="available",Rcpp::_["message"]=result.complete_message,
+        Rcpp::_["rows"]=basis_rows,Rcpp::_["missing_rows"]=missing,
+        Rcpp::_["unit_residuals"]=numeric(result.complete.residuals),
+        Rcpp::_["scaled_residuals"]=numeric(result.scaled_complete_residuals),
+        Rcpp::_["interpolated"]=numeric(result.complete.interpolated),
+        Rcpp::_["regression_coefficients"]=numeric(result.complete.regression_coefficients),
+        Rcpp::_["effective_count"]=result.complete.status=="available" ? static_cast<double>(result.complete.finite_count) : NA_REAL,
+        Rcpp::_["sum_squares"]=result.complete.status=="available" ? result.complete.sum_squares : NA_REAL,
+        Rcpp::_["basis"]="complete_span_missing_coordinate_projection");
     return out;
 }
 

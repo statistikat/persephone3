@@ -101,6 +101,11 @@ if ("--native" %in% args) {
   joint_uncertainty <- regression_information(joint_context,joint_fit$coordinates,method="joint_profile_ml")
   stopifnot("joint_regression_information" %in% cap$primitives,joint_uncertainty$available,
     joint_uncertainty$propagates_ARMA_uncertainty,identical(dim(joint_uncertainty$joint_covariance),c(2L,2L)))
+  fitted_residuals <- getFromNamespace("native_arma_residuals","persephone3")(
+    objective_setup(ts(c(1,NA_real_,3,4),frequency=4),ar=.5))
+  stopifnot("arma_residuals" %in% cap$primitives,fitted_residuals$available,fitted_residuals$complete$available,
+    is.na(fitted_residuals$observed$standardized_innovations[2]),
+    abs(fitted_residuals$interpolation$points_original-1.6)<1e-12)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",
