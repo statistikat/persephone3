@@ -441,3 +441,23 @@ finite raw differences and scaling only overflowing absolute differences.
 See `tools/native-tests/x11-msr-selection-contract.md` and
 `tools/reference/x11-msr-selection-notes.md`. B/C/D placement, normalization,
 extreme-value treatment and native seasonal-adjustment fits remain unqualified.
+
+## Additive seasonal normalization (22b.1)
+
+`src/x11_normalization.cpp` independently composes the centered annual mean,
+additive normalization and periodic restoration described in Ladiray and
+Quenneville (2000), §§4.1.4–4.1.5. Public validated JD+ 3.9.0 normalizer calls
+qualify the explicit stable/short/mixed endpoint rules, context offsets and
+five/twenty-year gates. The independent R oracle builds dense convolution,
+endpoint selection and calendar restoration operators. No numerical Java
+implementation, bytecode, decompilation or runtime fixture lookup is used.
+
+The 624-case corpus distinguishes fixed requests from seasonal-processing
+fallbacks and qualifies actual calendars with asymmetric mixed choices. Native
+supports additive working values with at least two annual cycles; smaller spans
+and other modes remain explicit capability limits. Immutable source maps make
+owned OpenMP normalization/restoration deterministic, with caller-only callbacks.
+The core/header link without R/Rcpp, BLAS or LAPACK. See
+`tools/native-tests/x11-normalization-contract.md` and
+`tools/reference/x11-normalization-notes.md`; complete B/C/D placement remains
+separate work.

@@ -89,6 +89,7 @@ jobs:
           Rscript tools/reference/verify-x11-seasonal-plan.R
           Rscript tools/reference/verify-x11-msr.R
           Rscript tools/reference/verify-x11-msr-selection.R
+          Rscript tools/reference/verify-x11-normalization.R
       - name: Sanitize independent C++ core
         if: runner.os == 'Linux' && matrix.openmp == 'default'
         shell: bash
@@ -159,6 +160,11 @@ jobs:
               -Isrc src/numerics.cpp src/x11_msr.cpp src/x11_msr_selection.cpp tools/native-tests/test_x11_msr_selection.cpp \
               -o "$RUNNER_TEMP/persephone-x11-msr-selection-$mode"
             OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-msr-selection-$mode"
+            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_normalization.cpp tools/native-tests/test_x11_normalization.cpp \
+              -o "$RUNNER_TEMP/persephone-x11-normalization-$mode"
+            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-normalization-$mode"
           done
           c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
             -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \

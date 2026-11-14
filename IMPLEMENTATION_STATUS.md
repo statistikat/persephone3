@@ -1,6 +1,6 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **22a.2b.3c.2b (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **22b.1 (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
@@ -19,6 +19,8 @@ in **22a.2b.3a**. Automatic Henderson/I-C conventions are delivered in
 and MSR component change tables in **22a.2b.3c.2a**. Pilot estimation, iterative
 selection and D-final resolution are delivered in **22a.2b.3c.2b**, with both
 Java-free policies and JDemetra behavior as the maintainer-selected default.
+Additive seasonal normalization and periodic domain restoration are delivered
+in **22b.1**, with fixed/stable/mixed endpoint policies.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -38,8 +40,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **205,563 passing installed-package
-assertions** across **54 files**, including the native numerical additions. These
+current rjd3 path. The full check has **221,157 passing installed-package
+assertions** across **55 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -118,8 +120,10 @@ Seven-term MSR pilot estimation, explicit extension/calendar trimming and both
 iterative policies now resolve an all-MSR D-final request. The default follows
 JDemetra; the published five-year-removal cap is explicit. Both retain complete
 attempt traces and distinguish method defaults from unavailable/resource-limited
-results. Failed selections keep the D-final plan pending. Decomposition passes
-remain open.
+results. Failed selections keep the D-final plan pending. Additive seasonal
+normalization now has explicit fixed/stable/mixed endpoint rules, source-row
+metadata and periodic restoration of a cropped seasonal domain. Initial
+B-step composition and later decomposition passes remain open.
 Wider platform qualification remains open; native X-11/TRAMO/SEATS adjustment
 is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
@@ -133,7 +137,8 @@ foundations, and the rest of
 X-11 filter primitives, explicit Musgrave endpoints and centered-trend mean
 padding, all five explicit seasonal endpoint filters and fixed-choice seasonal
 processing, automatic Henderson selection, staged seasonal policies and MSR
-component tables and iterative selection are delivered in **22a.1–2b.3c.2b**. Passing
+component tables and iterative selection are delivered in **22a.1–2b.3c.2b**,
+with additive normalization in **22b.1**. Passing
 package checks or primitive tests does not establish native statistical parity.
 
 The assessment below records the `dd38e10` baseline. Subsequent implementation
@@ -189,6 +194,7 @@ the native-backend plan below.
 | 22a.2b.3c.1 — staged seasonal request resolution | Explicit B/C/D initial/final policies for fixed/X11Default/MSR requests; full-calendar ordering, global MSR eligibility, mixed-request reasons and unresolved final selection | 24,380 new assertions across 336 public contexts and 2,016 stage cases; standalone strict C++/ASan/UBSan without R/BLAS/LAPACK. An all-MSR D-final plan returns `requires_msr` with missing resolved choices, never a provisional filter presented as final. Numerical MSR and B/C/D passes remain separate. |
 | 22a.2b.3c.2a — MSR component tables | Per-calendar-phase annual changes, published finite-length factors with explicit decimal/count conventions, change-weighted global ratio, mode/range/missingness statuses and owned OpenMP changes | 25,680 new assertions across 640 public tables and sixteen public-selector mode audits; independent formulas/operators and 316 standalone serial/OpenMP ASan/UBSan interruption boundaries without R/BLAS/LAPACK. Pilot/trimming/iteration remain separate; a reproducible twenty-year control motivates the pending default-policy decision. |
 | 22a.2b.3c.2b — MSR pilot and iterative selection | Seven-term phase pilot, explicit calendar/horizon trimming, both iterative policies with JDemetra default, attempt traces, separate resource gates and D-final resolution | 53,476 new assertions across 530 public cases under both policies, 592 prefix tables and four exact scalar cutoffs; independent full operators, 354 standalone serial/OpenMP interruption points and Java-free qualification. Undefined/resource-limited selections remain unresolved. B/C/D passes and full fits remain separate. |
+| 22b.1 — additive seasonal normalization | Centered annual normalization, explicit fixed/stable/mixed endpoint-copy rules, cropped-domain restoration and source-row metadata | 15,594 new assertions across 624 public cases, complete independent operators and missing-support audits; serial/OpenMP sanitizer checks and Java-free qualification. At least two annual cycles, additive mode only; no ARIMA extrapolation or complete B/C/D pass. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -1761,16 +1767,96 @@ See `tools/native-tests/x11-msr-selection-contract.md`,
 Previous corpora and numerical reports remain unchanged. Full native seasonal
 adjustment is still unavailable; no backend default has changed.
 
+### Additive seasonal normalization (22b.1)
+
+`native_x11_seasonal_normalize()` now normalizes supplied additive seasonal
+values with the centered annual mean and optionally restores equal row counts
+at both ends by repeating the nearest normalized annual cycle. Restoration
+preserves the supplied-span results and updates the returned calendar. It does
+not generate ARIMA forecasts or fill missing observations.
+
+For each boundary row, the normalizing mean is copied from one year inward
+for a requested stable filter, fewer than five complete years, or a requested
+3×15 with fewer than twenty years rounded upward. Other fixed requests use the
+nearest central mean. Mixed requests follow calendar-period labels. These are
+normalization's own requested-filter rules, distinct from the seasonal
+processor's length-adjusted choices; a five-year 3×9 processor can use stable
+means while its normalization still uses nearest central means. At least two
+annual cycles are required so all annual-copy sources are central. Smaller
+public overlapping-copy cases and other modes remain explicitly unsupported.
+
+Results retain the normalizing means, both calendars, original row bounds,
+requested filters, endpoint policies/reasons, masks and both source-row maps.
+Missingness follows exact nonzero support. Non-finite arithmetic fails atomically
+under the existing finite-filter range contract. Owned OpenMP computes central
+means, independent normalization rows and restored values from immutable sources;
+callbacks and R conversion stay on the caller. The core/header have no R/Rcpp,
+BLAS or LAPACK dependency.
+
+The separate **624-case** corpus covers fixed/stable/asymmetric mixed choices,
+calendar shifts, five/twenty-year boundaries, half-year and multi-year restoration,
+constants, trends, annual patterns, impulses and missing values. Public calls
+use a validated context and the explicit offset that keeps input phase labels
+unchanged when restoring rows. Independent dense convolution, endpoint-selection
+and calendar-restoration operators qualify all outputs. No numerical Java
+source, bytecode or decompilation was read; runtime never uses fixture values.
+
+Validation:
+
+- **15,594 new mandatory assertions**, including full basis operators, every
+  missing input's nonzero support, unit/level invariants, range and strict-input
+  gates, serialization, preserved original rows and 100,003-row worker equality.
+- Standalone strict C++17/ASan/UBSan serial and OpenMP harnesses pass all
+  **12 interruption boundaries**, reuse and actual workers, without R/BLAS/LAPACK.
+- Full installed-package check: **221,157 assertions / 55 files**, zero errors,
+  the existing R-header compiler warning and DESCRIPTION note. All 316 archived
+  runtime/test/target files match the working sources.
+- Serial native suite: **219,824 / 35 files**, with no OpenMP linkage.
+- Java-free suite: **219,828 / 35 files** plus **34 backend assertions**, with
+  two actual workers and Java-related packages absent.
+- Installed offline verifier: **2,505 checks**. Source-mode live replay passes
+  **3,128 checks**. Maximum scaled public error is **1.422e-14**, independent
+  **1.599e-14**, and live-target **2.369e-15**; the fixed `2e-12` budget remains.
+
+Evidence is in `inst/tinytest/fixtures/native/x11-normalization/`,
+`tools/native-tests/x11-normalization-contract.md` and
+`tools/reference/x11-normalization-notes.md`. Installed logs are in
+`/tmp/persephone-x11-normalization-final/`, with standalone/focused checks in
+`/tmp/persephone-x11-normalization-next/`. Full native adjustment remains
+unavailable and the backend default is unchanged.
+
+The retained `tools/reference/information/2026-11-14-x11-normalization/` report
+passes **3,353 live/timing checks**, recording **87,900 calls** including warm-up
+and calibration. Three warmed alternating rounds, installed optimized code
+and no competing heavy work give:
+
+| Workload (median summed time) | Native seconds | JDemetra seconds |
+| --- | ---: | ---: |
+| 24 short additive normalizations | 0.0009320000 | 0.0125350467 |
+| 8 normalizations with 100,003 rows | 0.0297505656 | 0.0144743111 |
+
+Native is about **13.45× faster** on the short matrix and takes **2.06× as long**
+on the long matrix. Both normalize supplied seasonal values and optionally
+restore half-year endpoints. Native additionally returns normalizing means,
+two source-row maps, domains, masks and policy metadata; public calls include
+validated context construction and one output vector. Profiling is needed to
+separate arithmetic from those metadata costs. These are not full X-11 timings.
+Startup/loading and explicit pre-batch GC are excluded; natural in-batch GC is
+included. Raw times, source/fixture hashes and worker metadata are retained.
+
+Next is **22b.2**, fixed additive B1/B2/B3 and provisional B4a/B4anorm/B4d tables.
+Read-only probes already qualify 240 public B-step controls against independent
+formulas, and a matching public-primitive chain agrees within 4.297e-14. This
+chain enables timing the same initial-table work on both sides. The initial
+C++ composition is a private prototype; it is not yet a delivered package API.
+
 #### Next decomposition sequence (22b)
 
-1. **22b.1 — additive seasonal normalization.** Implement centered annual
-   normalization with its explicitly qualified endpoint-copy policies and
-   periodic restoration of the shortened initial span. Qualify fixed/stable
-   and mixed requests, five/twenty-year boundaries, calendar offsets, complete
-   operators, missing/range handling and OpenMP. Keep restoration distinct from
-   ARIMA forecast/backcast generation. Public probes already show a separate
-   periodic normalization endpoint rule for stable/short phases; do not assume
-   the generic mean-padding endpoint primitive applies here.
+1. **22b.1 — delivered additive seasonal normalization.** Centered annual
+   normalization, endpoint-copy policies and periodic restoration are qualified
+   for fixed/stable/mixed requests, five/twenty-year boundaries, calendars,
+   complete operators, missing/range handling and OpenMP. Restoration remains
+   distinct from ARIMA forecasting. Other modes follow in 22b.5.
 2. **22b.2 — fixed additive initial tables.** Compose B1/B2/B3 and the provisional
    seasonal/normalized/irregular tables with explicit cropped calendars and
    fixed filters. Validate each public intermediate and independent identity
@@ -2118,9 +2204,9 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 22b.1 — next | Add additive seasonal normalization, fixed/stable/mixed endpoint-copy policies and periodic restoration of the shortened initial domain | Independent full operators and public normalizer fixtures; calendar/short-span/extension/range boundaries, worker equality and matched installed timings |
+| 22b.2 — next | Compose fixed additive B1/B2/B3 and provisional B4a/B4anorm/B4d tables with explicit cropped calendars and filter/normalization metadata | Public intermediate tables and independently composed operators, decomposition identities, missing/range controls, interruption/worker equality and matched initial-table timings |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
-| 22a performance follow-up | Profile seasonal filter/MSR arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-workload gaps (7.62× for the first-four matrix, 6.41× for the separate 3×15 matrix, 3.72× for fixed processing, and 1.29× for MSR tables); preserve full output semantics and rerun each unchanged warmed workload after optimization |
+| 22a / 22b performance follow-up | Profile seasonal filter/MSR/normalization arithmetic separately from R calendar/phase/boundary construction and serialization | Explain the measured long-workload gaps (7.62× for the first-four matrix, 6.41× for the separate 3×15 matrix, 3.72× for fixed processing, 1.29× for MSR tables and 2.06× for normalization); preserve full output semantics and rerun each unchanged warmed workload after optimization |
 | 22a.2b.3c / 22b / 22c | Qualify staged seasonal/MSR choices, then B/C/D passes and extreme-value treatment, then connect a restricted fixed-model native X-13 fit | Threshold-boundary and stage-context fixtures, public intermediate tables, decomposition identities, selected-filter metadata and final/forecast agreement for the advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
 | 14 / 26 / 27 / 15 | Complete compatibility lanes, qualify the whole product without Java, then switch defaults and review the release | Cross-platform evidence and mandatory feature parity; no silent fallback or premature dependency/default cutover |
@@ -2146,9 +2232,10 @@ All five explicit seasonal endpoint filters and stable/mixed-phase/short-series
 processing are also delivered. Automatic Henderson pilot ratios and final
 threshold/default policies, staged seasonal request resolution and MSR component
 tables, the seven-term MSR pilot and both iterative choices are delivered with
-the selected JDemetra default and explicit D-final resolution. Next implement
-additive normalization and the staged decomposition sequence before a fixed-model
-X-13 slice.
+the selected JDemetra default and explicit D-final resolution. Additive seasonal
+normalization and periodic restoration are also delivered. Next compose the
+initial B tables and complete the staged decomposition sequence before a
+fixed-model X-13 slice.
 Original Gaussian/lognormal moments are delivered, with unchanged inverse points
 and explicit standard-error/quantile semantics.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity

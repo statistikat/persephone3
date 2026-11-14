@@ -192,6 +192,11 @@ if ("--native" %in% args) {
     jd_choice$iterations==16L,jd_choice$selected_filter=="s3x9",!jd_choice$using_default,
     capped_choice$iterations==6L,capped_choice$reason=="five_year_cap",capped_choice$using_default,
     !resolved$requires_msr,all(resolved$resolved_filters=="s3x9"))
+  normalized <- getFromNamespace("native_x11_seasonal_normalize","persephone3")(
+    ts(1:24,frequency=4),"s3x3",2L)
+  stopifnot("x11_additive_normalization" %in% cap$primitives,
+    max(abs(as.numeric(normalized$values)-c(0,0,-2,-1,rep(0,20),1,2,0,0)))<1e-12,
+    all(normalized$endpoint_policies=="nearest_central_mean"),identical(normalized$original_rows,3:26))
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,
