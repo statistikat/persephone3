@@ -577,6 +577,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_trend_policy
+Rcpp::List native_x11_trend_policy(SEXP frequency, SEXP ic_ratio, SEXP length);
+RcppExport SEXP _persephone3_native_x11_trend_policy(SEXP frequencySEXP, SEXP ic_ratioSEXP, SEXP lengthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type ic_ratio(ic_ratioSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type length(lengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_trend_policy(frequency, ic_ratio, length));
+    return rcpp_result_gen;
+END_RCPP
+}
+// native_x11_trend_select
+Rcpp::List native_x11_trend_select(SEXP values, SEXP frequency, SEXP mode, SEXP backcasts, SEXP forecasts);
+RcppExport SEXP _persephone3_native_x11_trend_select(SEXP valuesSEXP, SEXP frequencySEXP, SEXP modeSEXP, SEXP backcastsSEXP, SEXP forecastsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mode(modeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type backcasts(backcastsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type forecasts(forecastsSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_trend_select(values, frequency, mode, backcasts, forecasts));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_parameter_map", (DL_FUNC) &_persephone3_native_arma_parameter_map, 3},
@@ -613,6 +641,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_x11_seasonal_spec", (DL_FUNC) &_persephone3_native_x11_seasonal_spec, 4},
     {"_persephone3_native_x11_seasonal_filter", (DL_FUNC) &_persephone3_native_x11_seasonal_filter, 3},
     {"_persephone3_native_x11_seasonal_process", (DL_FUNC) &_persephone3_native_x11_seasonal_process, 5},
+    {"_persephone3_native_x11_trend_policy", (DL_FUNC) &_persephone3_native_x11_trend_policy, 3},
+    {"_persephone3_native_x11_trend_select", (DL_FUNC) &_persephone3_native_x11_trend_select, 5},
     {NULL, NULL, 0}
 };
 

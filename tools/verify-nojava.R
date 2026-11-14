@@ -167,6 +167,11 @@ if ("--native" %in% args) {
   stopifnot("x11_seasonal_processing" %in% cap$primitives,
     seasonal_short$row_methods$method[9]=="short_phase_mean",abs(seasonal_short$values[9]-9)<1e-12,
     identical(unname(seasonal_short$selected_filters),c("s3x5","stable","stable","s3x1")))
+  trend_choice <- getFromNamespace("native_x11_trend_select","persephone3")(
+    ts(10+(-1)^seq_len(121L),frequency=4))
+  stopifnot("x11_trend_selection" %in% cap$primitives,trend_choice$status=="available",
+    abs(trend_choice$comparison_ic_ratio-504/25)<1e-10,
+    trend_choice$selected_length==7L,trend_choice$endpoint_ic_ratio==4.5)
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

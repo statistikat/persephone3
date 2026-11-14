@@ -367,3 +367,24 @@ and selected filters, reasons and each row's operation. The low-level processor
 policy is not a qualification of top-level `sfshort`, automatic MSR or B/C/D
 integration; those remain separate. Existing strict explicit APIs and frozen
 corpora are unchanged. See `tools/native-tests/x11-seasonal-processing-contract.md`.
+
+### Henderson selection and I/C conventions (22a.2b.3b)
+
+`x11_trend_selection.cpp` independently composes the previously qualified
+Henderson pilot with absolute/relative component changes, explicit extension
+trimming, quarterly scaling and threshold/default policies. Published Census
+definitions and public API execution establish the conventions; no numerical
+Java source, bytecode or implementation constants were read or translated.
+An independent minimum-roughness/convolution R oracle qualified 288 regular
+inputs before native implementation. The complete prospective corpus has 376
+ratio cases, 20 threshold cases and 102 endpoint-default cases with public
+coefficient probes. Native runtime reads no targets and requires no Java.
+
+Core/header code remains independent of R/Rcpp, BLAS and LAPACK. Owned OpenMP
+only covers independent rows; reductions and callbacks remain on the caller.
+Undefined/missing/unsupported relative-component ratios retain explicit statuses
+instead of selecting through NaN or signed-denominator behavior. Captures preserve
+those public differences as controls. B/C/D placement remains unqualified; the
+low-level final selector is not substituted for every intermediate stage.
+See `tools/native-tests/x11-trend-selection-contract.md` and
+`tools/reference/x11-trend-selection-notes.md` for the exact supported scope.

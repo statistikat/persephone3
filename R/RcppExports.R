@@ -137,3 +137,11 @@
     .Call(`_persephone3_native_x11_seasonal_process`, values, frequency, start_period, filters, short_series)
 }
 
+.native_x11_trend_policy <- function(frequency, ic_ratio, length) {
+    .Call(`_persephone3_native_x11_trend_policy`, frequency, ic_ratio, length)
+}
+
+.native_x11_trend_select <- function(values, frequency, mode, backcasts, forecasts) {
+    .Call(`_persephone3_native_x11_trend_select`, values, frequency, mode, backcasts, forecasts)
+}
+

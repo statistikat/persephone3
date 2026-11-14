@@ -85,6 +85,7 @@ jobs:
           Rscript tools/reference/verify-x11-seasonal.R
           Rscript tools/reference/verify-x11-seasonal15.R
           Rscript tools/reference/verify-x11-seasonal-processing.R
+          Rscript tools/reference/verify-x11-trend-selection.R
       - name: Sanitize independent C++ core
         if: runner.os == 'Linux' && matrix.openmp == 'default'
         shell: bash
@@ -135,6 +136,11 @@ jobs:
               -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_seasonal_endpoints.cpp src/x11_seasonal_processing.cpp tools/native-tests/test_x11_seasonal_processing.cpp \
               -o "$RUNNER_TEMP/persephone-x11-seasonal-processing-$mode"
             OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-seasonal-processing-$mode"
+            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_trend_selection.cpp tools/native-tests/test_x11_trend_selection.cpp \
+              -o "$RUNNER_TEMP/persephone-x11-trend-selection-$mode"
+            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-trend-selection-$mode"
           done
           c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
             -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
