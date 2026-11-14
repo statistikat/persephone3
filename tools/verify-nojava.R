@@ -152,6 +152,9 @@ if ("--native" %in% args) {
   musgrave <- x11_filter(ts(1:20,frequency=4),"henderson",5L,"musgrave",0)
   stopifnot("x11_musgrave_endpoints" %in% cap$primitives,
     max(abs(musgrave$values-(1:20)))<1e-12,musgrave$endpoint_policy=="musgrave")
+  mean_endpoints <- x11_filter(ts(1:5,frequency=4),"trend",endpoints="mean")
+  stopifnot("x11_mean_endpoints" %in% cap$primitives,
+    max(abs(mean_endpoints$values-c(27/16,35/16,3,61/16,69/16)))<1e-12)
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,

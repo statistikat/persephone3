@@ -113,6 +113,10 @@
     .Call(`_persephone3_native_x11_filter`, values, type, frequency, length)
 }
 
+.native_x11_mean_filter <- function(values, frequency) {
+    .Call(`_persephone3_native_x11_mean_filter`, values, frequency)
+}
+
 .native_x11_musgrave_spec <- function(frequency, length, available, ic_ratio, side) {
     .Call(`_persephone3_native_x11_musgrave_spec`, frequency, length, available, ic_ratio, side)
 }

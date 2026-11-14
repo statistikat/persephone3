@@ -13,9 +13,9 @@ native_x11_musgrave_spec <- function(frequency,length,available,ic_ratio,side="r
 
 native_x11_filter <- function(series,type,length=NULL,endpoints="none",ic_ratio=NULL) {
   if(!is.character(endpoints) || length(endpoints)!=1L || is.na(endpoints) ||
-      !is.null(dim(endpoints)) || !endpoints %in% c("none","musgrave"))
-    stop("endpoints must be 'none' or 'musgrave'.",call.=FALSE)
-  if(endpoints=="none" && !is.null(ic_ratio))
+      !is.null(dim(endpoints)) || !endpoints %in% c("none","musgrave","mean"))
+    stop("endpoints must be 'none', 'musgrave' or 'mean'.",call.=FALSE)
+  if(endpoints!="musgrave" && !is.null(ic_ratio))
     stop("ic_ratio requires Musgrave endpoints.",call.=FALSE)
   domain <- native_regular_domain(series)
   if(endpoints=="musgrave") {
@@ -28,6 +28,18 @@ native_x11_filter <- function(series,type,length=NULL,endpoints="none",ic_ratio=
     r <- result$radius;n <- domain$length
     result$endpoint_rows <- data.frame(row=c(seq_len(r),if(r)seq.int(n-r+1L,n)else integer()),
       side=rep(c("left","right"),each=r),available=c(seq_len(r)-1L,rev(seq_len(r)-1L)))
+  } else if(endpoints=="mean") {
+    result <- .native_x11_filter_spec(type,domain$frequency,length)
+    if(result$type!="trend")stop("Mean endpoints currently require the centered trend filter.",call.=FALSE)
+    applied <- .native_x11_mean_filter(as.numeric(series),domain$frequency)
+    result$values <- applied$values;result$missing <- applied$missing
+    result$endpoint_policy <- "mean";result$padding_means <- applied$padding_means
+    result$scope <- "centered_trend_with_endpoints"
+    r <- result$radius;n <- as.integer(domain$length)
+    rows <- seq_len(n);left <- pmax(0L,r+1L-rows);right <- pmax(0L,rows+r-n)
+    boundary <- left>0L | right>0L
+    result$endpoint_rows <- data.frame(row=rows[boundary],
+      left_padding=left[boundary],right_padding=right[boundary])
   } else result <- .native_x11_filter(as.numeric(series),type,domain$frequency,length)
   names(result$weights) <- as.character(result$offsets)
   result$values <- stats::ts(result$values,start=domain$start,frequency=domain$frequency)

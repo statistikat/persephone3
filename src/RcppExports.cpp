@@ -494,6 +494,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_x11_mean_filter
+Rcpp::List native_x11_mean_filter(SEXP values, SEXP frequency);
+RcppExport SEXP _persephone3_native_x11_mean_filter(SEXP valuesSEXP, SEXP frequencySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type frequency(frequencySEXP);
+    rcpp_result_gen = Rcpp::wrap(native_x11_mean_filter(values, frequency));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_x11_musgrave_spec
 Rcpp::List native_x11_musgrave_spec(SEXP frequency, SEXP length, SEXP available, SEXP ic_ratio, SEXP side);
 RcppExport SEXP _persephone3_native_x11_musgrave_spec(SEXP frequencySEXP, SEXP lengthSEXP, SEXP availableSEXP, SEXP ic_ratioSEXP, SEXP sideSEXP) {
@@ -553,6 +565,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_inverse_transform", (DL_FUNC) &_persephone3_native_inverse_transform, 2},
     {"_persephone3_native_x11_filter_spec", (DL_FUNC) &_persephone3_native_x11_filter_spec, 3},
     {"_persephone3_native_x11_filter", (DL_FUNC) &_persephone3_native_x11_filter, 4},
+    {"_persephone3_native_x11_mean_filter", (DL_FUNC) &_persephone3_native_x11_mean_filter, 2},
     {"_persephone3_native_x11_musgrave_spec", (DL_FUNC) &_persephone3_native_x11_musgrave_spec, 5},
     {"_persephone3_native_x11_musgrave_filter", (DL_FUNC) &_persephone3_native_x11_musgrave_filter, 4},
     {NULL, NULL, 0}

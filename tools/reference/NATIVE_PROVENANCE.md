@@ -289,3 +289,21 @@ least-squares oracle qualify the implementation. Public zero-ratio NaNs remain a
 recorded discrepancy, not an accurate-mode target. The old symmetric/reference
 corpora are immutable. Automatic ratio selection, short-series fallback and
 seasonal/initial-trend policies remain separate work.
+
+### Centered-trend mean endpoints (22a.2b.1)
+
+`src/core/x11_mean_endpoints.hpp` and `src/x11_mean_endpoints.cpp` independently
+compose arithmetic means of the first/last half-width observations, constant
+virtual padding and the existing centered trend convolution. Inputs require at
+least one half-width; overlapping boundary windows are explicit. The means use
+normalized summation to avoid an overflowing unscaled sum. Missingness remains
+mask-based and no original observation is replaced. The core links without
+R/Rcpp, BLAS or LAPACK; only the adapter handles R input and metadata.
+
+Public `FilteredMeanEndPoints` behavior was characterized by full-series and
+basis-vector API calls, with signature/class-inventory inspection only. No
+numerical source, bytecode or implementation constants were translated.
+An independent dense extension/convolution operator and rational quarterly
+control qualify 22 frozen public cases and their short-series behavior. Old
+corpora/reports are unchanged. This explicit processor does not yet establish
+its placement in B/C/D passes or any automatic policy.
