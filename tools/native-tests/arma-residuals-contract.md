@@ -56,9 +56,11 @@ points and full-window series are both returned. For log inputs, the original
 point is `exp(transformed_point)` with `mean_adjustment="none"`; it is not a
 lognormal conditional mean.
 
-Interpolation prediction errors are explicitly `NA` with
-`uncertainty_status="not_computed"`. They enter in 20c.2b.2, with fixed-ARMA,
-estimated-regression and optional ARMA uncertainty kept separate. Aliasing,
+This residual/point API leaves prediction errors as `NA` with
+`uncertainty_status="not_computed"`. The separate
+`native_interpolation_information()` API now supplies conditional-ARMA prediction
+errors with known/estimated-regression components in 20c.2b.2a; optional ARMA
+propagation remains 20c.2b.2b. See `interpolation-information-contract.md`. Aliasing,
 zero scale, invalid parameters, nonpositive df and numerical range failures
 withhold the affected output. Observed and complete calculations have separate
 availability statuses. Interruptions are always rethrown, including interruptions

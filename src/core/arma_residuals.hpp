@@ -22,7 +22,8 @@ struct ArmaResiduals {
 ArmaResiduals arma_residuals(const MaskedSeries& series, const RegressionDesign& design,
     const ArmaParameterMap& map, const std::vector<double>& coordinates,
     int period, int d, int seasonal_d, double mean=0, double rank_tolerance=1e-10,
-    double log_jacobian=0, ResidualScale scale=ResidualScale::ML, const Interrupt& interrupt={});
+    double log_jacobian=0, ResidualScale scale=ResidualScale::ML, const Interrupt& interrupt={},
+    const CompleteResidualOptions& complete_options={});
 
 struct LegacyArmaResiduals {
     std::string status="accurate_unavailable",message,basis;

@@ -90,12 +90,17 @@ struct CompleteResiduals {
     double log_determinant = 0, sum_squares = 0;
     // Retained only on explicit request; finite complete rows x missing rows.
     std::vector<double> missing_whitened_design;
+    std::string prediction_status="not_requested",prediction_message;
+    // Unit innovation variance, missing coordinates in chronological order.
+    // Conditional on ARMA; the second component accounts for estimated beta.
+    std::vector<double> prediction_known_unit,prediction_regression_unit,prediction_total_unit;
 };
 struct CompleteResidualOptions {
     bool retain_missing_design = false;
     // Reporting comparisons only: apply exact finite differencing before
     // stationary whitening, rather than the default integrated-state route.
     bool difference_first = false;
+    bool prediction_covariance = false;
 };
 CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     const RegressionDesign& design, const std::vector<double>& ar,

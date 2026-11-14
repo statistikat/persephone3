@@ -1,0 +1,23 @@
+#ifndef PERSEPHONE_INTERPOLATION_INFORMATION_HPP
+#define PERSEPHONE_INTERPOLATION_INFORMATION_HPP
+#include "arma_residuals.hpp"
+#include <optional>
+
+namespace persephone {
+struct InterpolationInformation {
+    std::string status="point_unavailable",message;
+    ArmaResiduals fit;
+    double variance=0;
+    std::optional<DenseMatrix> covariance,known_regression_covariance,regression_covariance;
+    std::vector<double> standard_errors;
+};
+// Conditional on the supplied ARMA coefficients, including GLS regression
+// estimation uncertainty. Scale uses the original observed likelihood count;
+// missing-coordinate integration is not counted as extra fitted parameters.
+InterpolationInformation interpolation_information(const MaskedSeries& series,
+    const RegressionDesign& design,const ArmaParameterMap& map,
+    const std::vector<double>& coordinates,int period,int d,int seasonal_d,
+    double mean=0,double rank_tolerance=1e-10,double log_jacobian=0,
+    ResidualScale scale=ResidualScale::ML,const Interrupt& interrupt={});
+} // namespace persephone
+#endif

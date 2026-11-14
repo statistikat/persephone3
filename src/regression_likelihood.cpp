@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -115,6 +116,72 @@ std::vector<double> regression_covariance(const DenseMatrix& design,
         }
     }
     return covariance;
+}
+
+void prediction_covariance(CompleteResiduals& out,const RegressionLikelihood& fit,
+    const DenseMatrix& missing_design,double rank_tolerance,const Interrupt& interrupt) {
+    std::exception_ptr interrupted;
+    const Interrupt checked_interrupt=[&] {
+        if(!interrupt)return;
+        try {interrupt();}catch(...) {interrupted=std::current_exception();throw;}
+    };
+    try {
+        const auto m=missing_design.columns(),n=missing_design.rows();
+        const auto q=fit.free_columns.size(),r=q-m;
+        out.prediction_known_unit=regression_covariance(missing_design,checked_interrupt);
+        out.prediction_regression_unit.assign(m*m,0);
+        out.prediction_total_unit=out.prediction_known_unit;
+        if(r) {
+            DenseMatrix x(n,r),beta_covariance(r,r);
+            for(std::size_t j=0;j<r;++j) {
+                checked_interrupt();
+                for(std::size_t i=0;i<n;++i)x(i,j)=fit.whitened_design[i+n*j];
+                for(std::size_t i=0;i<r;++i)beta_covariance(i,j)=fit.unscaled_covariance[i+q*j];
+            }
+            // S=(Mw'Mw)^-1 Mw'Xw is the point sensitivity to beta. The
+            // augmented GLS beta block already integrates the missing values.
+            // U + S Vbeta S' is the conditional prediction covariance. Build
+            // the increment as a Gram matrix instead of subtracting covariances.
+            const auto sensitivity=qr_least_squares(missing_design,x,rank_tolerance,checked_interrupt);
+            if(static_cast<std::size_t>(sensitivity.rank)!=m) {
+                out.prediction_status="missing_rank_deficient";return;
+            }
+            const auto factor=cholesky_factor(beta_covariance,checked_interrupt);
+            DenseMatrix loading(m,r);
+            parallel_for(m*r,r,checked_interrupt,[&](std::size_t at) {
+                const auto i=at%m,k=at/m;
+                long double value=0;
+                for(auto j=k;j<r;++j)value+=static_cast<long double>(sensitivity.coefficients(i,j))*factor.upper(k,j);
+                loading(i,k)=checked(value);
+            });
+            parallel_for(m,m*r,checked_interrupt,[&](std::size_t j) {
+                for(std::size_t i=0;i<=j;++i) {
+                    long double value=0;bool nonzero=false;
+                    for(std::size_t k=0;k<r;++k) {
+                        value+=static_cast<long double>(loading(i,k))*loading(j,k);
+                        nonzero=nonzero || loading(i,k)!=0;
+                    }
+                    const auto increment=checked(value);
+                    if(i==j && nonzero && increment==0)
+                        throw std::underflow_error("regression prediction variance underflows");
+                    const auto total=checked(static_cast<long double>(out.prediction_known_unit[i+m*j])+increment);
+                    out.prediction_regression_unit[i+m*j]=out.prediction_regression_unit[j+m*i]=increment;
+                    out.prediction_total_unit[i+m*j]=out.prediction_total_unit[j+m*i]=total;
+                }
+            });
+        }
+        out.prediction_status="available";
+    } catch(const std::runtime_error& error) {
+        if(interrupted)std::rethrow_exception(interrupted);
+        out.prediction_status="numerical_failure";out.prediction_message=error.what();
+        out.prediction_known_unit.clear();out.prediction_regression_unit.clear();out.prediction_total_unit.clear();
+    } catch(const std::invalid_argument& error) {
+        // The matrices above have already passed input/rank checks. A rejected
+        // positive-definiteness certificate withholds uncertainty, not points.
+        if(interrupted)std::rethrow_exception(interrupted);
+        out.prediction_status="covariance_not_positive_definite";out.prediction_message=error.what();
+        out.prediction_known_unit.clear();out.prediction_regression_unit.clear();out.prediction_total_unit.clear();
+    }
 }
 
 std::vector<double> regression_center(const RegressionLikelihood& result,
@@ -473,8 +540,9 @@ CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
         double volume=0;
         (void)regression_covariance(missing_design,interrupt,&volume);
         out.log_determinant=checked(static_cast<long double>(out.log_determinant)+volume);
+        if(options.prediction_covariance)prediction_covariance(out,fit,missing_design,rank_tolerance,interrupt);
         if(options.retain_missing_design) out.missing_whitened_design=std::move(missing_design.values());
-    }
+    } else if(options.prediction_covariance)out.prediction_status="no_internal_missing";
     out.residuals=fit.whitened_residuals; out.sum_squares=fit.sum_squared_standardized;
     out.regression_coefficients.assign(fit.coefficients.begin(),fit.coefficients.begin()+static_cast<std::ptrdiff_t>(design.columns));
     for(std::size_t j=0;j<missing;++j) out.interpolated.push_back(-fit.coefficients[design.columns+j]);

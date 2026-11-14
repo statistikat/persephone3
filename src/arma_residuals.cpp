@@ -111,7 +111,8 @@ std::vector<double> compressed_residuals(std::vector<double> residuals,
 ArmaResiduals arma_residuals(const MaskedSeries& series, const RegressionDesign& design,
     const ArmaParameterMap& map, const std::vector<double>& coordinates,
     int period, int d, int seasonal_d, double mean, double rank_tolerance,
-    double log_jacobian, ResidualScale scale, const Interrupt& interrupt) {
+    double log_jacobian, ResidualScale scale, const Interrupt& interrupt,
+    const CompleteResidualOptions& complete_options) {
     ArmaResiduals out;out.variance=std::numeric_limits<double>::quiet_NaN();
     out.free_arma=map.initial_coordinates().size();
     std::exception_ptr interrupted;
@@ -143,7 +144,7 @@ ArmaResiduals arma_residuals(const MaskedSeries& series, const RegressionDesign&
     const auto& p=out.center->parameters.coefficients;
     try {
         out.complete=sarima_complete_residuals(series,design,p[0],p[1],p[2],p[3],period,d,seasonal_d,
-            mean,rank_tolerance,checked_interrupt);
+            mean,rank_tolerance,checked_interrupt,complete_options);
         if(out.complete.status=="available") {
             out.scaled_complete_residuals=standardized(out.complete.residuals,sd,checked_interrupt);
         }

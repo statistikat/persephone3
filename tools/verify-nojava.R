@@ -113,6 +113,12 @@ if ("--native" %in% args) {
     abs(legacy_residuals$accurate_interpolation$points_original-24)<1e-12,
     abs(legacy_residuals$reported$unit_residuals[1]-3-sqrt(2))<1e-12,
     length(legacy_residuals$reported$source_rows)==0L)
+  interpolation <- getFromNamespace("native_interpolation_information","persephone3")(
+    objective_setup(ts(c(1,NA,3,NA,4,5),frequency=4),include_mean=TRUE))
+  stopifnot("interpolation_information" %in% cap$primitives,interpolation$available,
+    abs(interpolation$points_original[1]-3.25)<1e-12,
+    abs(interpolation$covariance[1,2]-8.75/16)<1e-12,
+    !interpolation$propagates_ARMA_uncertainty)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

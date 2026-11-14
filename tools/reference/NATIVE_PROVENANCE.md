@@ -196,3 +196,12 @@ also run without Java. Accurate calculations use independent dense Gaussian and
 intrinsic-conditioning oracles. See `residual-notes.md` and
 `tools/native-tests/arma-residuals-contract.md` for the distinction between
 accurate results and comparison-only reported outputs.
+
+Slice 20c.2b.2a derives missing-coordinate prediction covariance by Gaussian block
+conditioning: QR solves and a Gram matrix separate known-regression uncertainty
+from the fitted-regression increment. The native algorithm is independently
+authored. An independent intrinsic precision/Schur-complement oracle and closed
+AR(1), OLS and seasonal-bridge formulas check the full covariance. Only public
+missing-value standard-error accessors supply differential evidence. No legacy
+point, upstream numerical source or bytecode enters the calculation. See
+`interpolation-notes.md` and `tools/native-tests/interpolation-information-contract.md`.

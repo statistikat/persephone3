@@ -33,6 +33,10 @@
     .Call(`_persephone3_native_arma_residuals`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale, reporting, transformation)
 }
 
+.native_interpolation_information <- function(values, design, coefficients, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, scale = NULL) {
+    .Call(`_persephone3_native_interpolation_information`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale)
+}
+
 .native_arma_optimize <- function(values, design, coefficients, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, control = NULL) {
     .Call(`_persephone3_native_arma_optimize`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control)
 }

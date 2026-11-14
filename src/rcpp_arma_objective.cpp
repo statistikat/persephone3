@@ -4,6 +4,7 @@
 #include "core/arma_identification.hpp"
 #include "core/arma_information.hpp"
 #include "core/arma_residuals.hpp"
+#include "core/interpolation_information.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -581,6 +582,46 @@ Rcpp::List native_arma_residuals(SEXP values, SEXP design, SEXP coefficients,
             Rcpp::_["unit_residuals"]=numeric(legacy.residuals),Rcpp::_["scaled_residuals"]=numeric(legacy.scaled_residuals),
             Rcpp::_["sum_squares"]=legacy.status=="available" ? legacy.sum_squares : NA_REAL);
     }
+    return out;
+}
+
+// [[Rcpp::export(name = ".native_interpolation_information")]]
+Rcpp::List native_interpolation_information(SEXP values,SEXP design,SEXP coefficients,
+    SEXP specification,SEXP initial,SEXP coordinates,SEXP period,
+    SEXP d=R_NilValue,SEXP seasonal_d=R_NilValue,SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue,SEXP margin=R_NilValue,SEXP log_jacobian=R_NilValue,
+    SEXP scale=R_NilValue) {
+    const auto selected=information_option(scale,"prediction scale","ml");
+    if(selected!="ml" && selected!="residual_df")throw std::invalid_argument("prediction scale must be ml or residual_df");
+    const auto map=parameter_map(specification,initial,margin);
+    const auto data=objective_data(values,design,coefficients);
+    const auto result=persephone::interpolation_information(data.input,data.regression,map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        selected=="ml" ? persephone::ResidualScale::ML : persephone::ResidualScale::ResidualDF,
+        [] {Rcpp::checkUserInterrupt();});
+    const auto& fit=result.fit;
+    const bool points=fit.complete.status=="available";
+    Rcpp::IntegerVector rows;
+    if(points)for(const auto i:fit.complete.missing_rows)rows.push_back(static_cast<int>(i+1));
+    Rcpp::List out=Rcpp::List::create(Rcpp::_["schema_version"]=1,Rcpp::_["status"]=result.status,
+        Rcpp::_["available"]=result.status=="available" || result.status=="no_internal_missing",
+        Rcpp::_["message"]=result.message,Rcpp::_["point_status"]=fit.complete.status,
+        Rcpp::_["point_available"]=points,Rcpp::_["rows"]=rows,
+        Rcpp::_["points_transformed"]=points ? numeric(fit.complete.interpolated) : Rcpp::NumericVector(),
+        Rcpp::_["standard_errors"]=numeric(result.standard_errors),
+        Rcpp::_["scale"]=selected,Rcpp::_["scale_variance"]=optional(result.variance),
+        Rcpp::_["effective_count"]=static_cast<double>(fit.effective_count),
+        Rcpp::_["residual_df"]=static_cast<double>(fit.residual_df),
+        Rcpp::_["free_regression"]=static_cast<int>(fit.free_regression),Rcpp::_["free_ARMA"]=static_cast<int>(fit.free_arma),
+        Rcpp::_["covariance"]=matrix_or_null(result.covariance),
+        Rcpp::_["known_regression_covariance"]=matrix_or_null(result.known_regression_covariance),
+        Rcpp::_["regression_covariance"]=matrix_or_null(result.regression_covariance));
+    out["sum_squares"]=fit.center->likelihood ? optional(fit.center->likelihood->sum_squared_standardized) : NA_REAL;
+    out["center"]=objective_output(*fit.center,fit.free_arma);
+    out["method"]="conditional_ARMA_with_estimated_regression";
+    out["propagates_ARMA_uncertainty"]=false;
     return out;
 }
 
