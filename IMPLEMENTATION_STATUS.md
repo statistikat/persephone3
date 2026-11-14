@@ -38,6 +38,10 @@ three smoke tests. The rkalos archive passed 266,549 OpenMP assertions and
 266,545 serial assertions. Persephone passed 35 backend assertions in a library
 without Java-related packages.
 
+The Persephone source archive passed all **1,330 application assertions**,
+including the reference backend and dashboard tests. The two R CMD check
+warnings concern missing generated vignettes in the no-vignettes build.
+
 The preserved pre-split X-11 initial-table timing report records 0.00568 seconds
 for native versus 0.02913 for JDemetra+ across 24 short calls, and 0.12625 versus
 0.08464 seconds across eight calls with 100,003 rows. See the [Kalos reference
