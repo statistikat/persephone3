@@ -483,6 +483,7 @@ CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     while(first<last && series.missing[first]) ++first;
     while(last>first && series.missing[last-1]) --last;
     if(first==last) { out.status="no_observations"; return out; }
+    if(options.include_endpoint_missing) {first=0;last=size;}
     const auto rows=last-first;
     for(auto i=first;i<last;++i) if(series.missing[i]) out.missing_rows.push_back(i);
     const auto missing=out.missing_rows.size(),columns=design.columns+missing;

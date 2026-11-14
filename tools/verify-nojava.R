@@ -129,6 +129,13 @@ if ("--native" %in% args) {
     propagated$conditional_available,propagated$arma_information_status=="available",
     propagated$covariance[1,1]>=propagated$conditional_covariance[1,1],
     propagated$propagates_ARMA_uncertainty,propagated$sensitivity_status=="available")
+  endpoint <- getFromNamespace("native_arma_forecasts","persephone3")(
+    objective_setup(ts(c(1,3,2,4,5,2,3,5,4,2,3,6,2,4,5,3),frequency=4),
+      d=1L,include_drift=TRUE,backcast_horizon=3L,forecast_horizon=4L))
+  stopifnot("forecast_information" %in% cap$primitives,endpoint$available,
+    abs(endpoint$points_transformed$backcast[3]-(1-2/15))<1e-12,
+    abs(endpoint$points_transformed$forecast[1]-(3+2/15))<1e-12,
+    all(endpoint$covariance[1:3,4:7]<0),!endpoint$propagates_ARMA_uncertainty)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

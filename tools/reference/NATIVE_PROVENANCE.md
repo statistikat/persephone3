@@ -216,3 +216,13 @@ qualify the result. Public JDemetra calls provide fitting/timing comparisons,
 not propagated-covariance targets. No upstream numerical implementation or
 bytecode was inspected, copied or translated. See `interpolation-notes.md` and
 `tools/native-tests/interpolation-information-contract.md`.
+
+Slice 20d.1 independently derives conditional endpoint points and joint
+backcast/forecast covariance by extending Gaussian missing-coordinate projection
+to explicitly requested endpoint domains. Original-window GLS/scale remains
+separate. Independent dense intrinsic precision/Schur calculations and closed
+AR(1), white-noise mean and random-walk drift formulas qualify the result. Only
+public Forecasts signatures/accessors inform reporting comparisons; their
+backcast/scale discrepancies are retained separately. No upstream numerical
+source or bytecode was inspected, copied or translated. See `forecast-notes.md`
+and `tools/native-tests/forecast-information-contract.md`.

@@ -217,6 +217,32 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_forecast_information
+Rcpp::List native_forecast_information(SEXP values, SEXP design, SEXP coefficients, SEXP backcasts, SEXP forecasts, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian, SEXP scale);
+RcppExport SEXP _persephone3_native_forecast_information(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP backcastsSEXP, SEXP forecastsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP, SEXP scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type design(designSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coefficients(coefficientsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type backcasts(backcastsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type forecasts(forecastsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type specification(specificationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type initial(initialSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type coordinates(coordinatesSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type d(dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type seasonal_d(seasonal_dSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type rank_tolerance(rank_toleranceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type margin(marginSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type log_jacobian(log_jacobianSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type scale(scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_forecast_information(values, design, coefficients, backcasts, forecasts, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, scale));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_diffuse_likelihood
 Rcpp::List native_diffuse_likelihood(SEXP values, SEXP transition, SEXP observation, SEXP noise_loading, SEXP initial_state, SEXP finite_loading, SEXP diffuse_loading, SEXP observation_variance, SEXP mean, SEXP variance);
 RcppExport SEXP _persephone3_native_diffuse_likelihood(SEXP valuesSEXP, SEXP transitionSEXP, SEXP observationSEXP, SEXP noise_loadingSEXP, SEXP initial_stateSEXP, SEXP finite_loadingSEXP, SEXP diffuse_loadingSEXP, SEXP observation_varianceSEXP, SEXP meanSEXP, SEXP varianceSEXP) {
@@ -438,6 +464,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_residuals", (DL_FUNC) &_persephone3_native_arma_residuals, 16},
     {"_persephone3_native_interpolation_information", (DL_FUNC) &_persephone3_native_interpolation_information, 16},
     {"_persephone3_native_arma_optimize", (DL_FUNC) &_persephone3_native_arma_optimize, 14},
+    {"_persephone3_native_forecast_information", (DL_FUNC) &_persephone3_native_forecast_information, 16},
     {"_persephone3_native_diffuse_likelihood", (DL_FUNC) &_persephone3_native_diffuse_likelihood, 10},
     {"_persephone3_native_sarima_likelihood", (DL_FUNC) &_persephone3_native_sarima_likelihood, 10},
     {"_persephone3_native_time_domain", (DL_FUNC) &_persephone3_native_time_domain, 4},

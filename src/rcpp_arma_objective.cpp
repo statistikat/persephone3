@@ -5,6 +5,7 @@
 #include "core/arma_information.hpp"
 #include "core/arma_residuals.hpp"
 #include "core/interpolation_information.hpp"
+#include "core/forecast_information.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -713,5 +714,55 @@ Rcpp::List native_arma_optimize(SEXP values, SEXP design, SEXP coefficients,
     out["parameter_diagnostics"]=identification_output(persephone::arma_identification(map,
         last->coordinates, integer(period,"period",0,12), 1e-10, 1e-4,
         [] { Rcpp::checkUserInterrupt(); }));
+    return out;
+}
+
+// [[Rcpp::export(name = ".native_forecast_information")]]
+Rcpp::List native_forecast_information(SEXP values,SEXP design,SEXP coefficients,
+    SEXP backcasts,SEXP forecasts,SEXP specification,SEXP initial,SEXP coordinates,SEXP period,
+    SEXP d=R_NilValue,SEXP seasonal_d=R_NilValue,SEXP mean=R_NilValue,
+    SEXP rank_tolerance=R_NilValue,SEXP margin=R_NilValue,SEXP log_jacobian=R_NilValue,SEXP scale=R_NilValue) {
+    const auto selected=information_option(scale,"prediction scale","ml");
+    if(selected!="ml" && selected!="residual_df")throw std::invalid_argument("prediction scale must be ml or residual_df");
+    const auto b=integer(backcasts,"backcast horizon",0,std::numeric_limits<int>::max());
+    const auto f=integer(forecasts,"forecast horizon",0,std::numeric_limits<int>::max());
+    const auto response=vector(values,"response",std::numeric_limits<int>::max());
+    if(response.size()>std::numeric_limits<int>::max()-static_cast<R_xlen_t>(b)-f)
+        throw std::length_error("prediction domain exceeds the supported range");
+    Rcpp::NumericVector extended(response.size()+b+f,NA_REAL);
+    std::copy(response.begin(),response.end(),extended.begin()+b);
+    const auto data=objective_data(extended,design,coefficients);
+    persephone::MaskedSeries input{
+        std::vector<double>(data.input.values.begin()+b,data.input.values.end()-f),
+        std::vector<std::uint8_t>(data.input.missing.begin()+b,data.input.missing.end()-f)};
+    const auto map=parameter_map(specification,initial,margin);
+    const auto result=persephone::forecast_information(input,data.regression,static_cast<std::size_t>(b),static_cast<std::size_t>(f),map,
+        Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
+        integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+        scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
+        selected=="ml" ? persephone::ResidualScale::ML : persephone::ResidualScale::ResidualDF,
+        [] {Rcpp::checkUserInterrupt();});
+    Rcpp::IntegerVector rows;for(const auto row:result.rows)rows.push_back(static_cast<int>(row+1));
+    Rcpp::List out=Rcpp::List::create(Rcpp::_["schema_version"]=1,Rcpp::_["status"]=result.status,
+        Rcpp::_["available"]=result.status=="available" || result.status=="no_requested_predictions",
+        Rcpp::_["message"]=result.message,Rcpp::_["point_status"]=result.point_status,
+        Rcpp::_["point_available"]=result.point_status=="available",Rcpp::_["rows"]=rows,
+        Rcpp::_["points_transformed"]=numeric(result.points),Rcpp::_["standard_errors"]=numeric(result.standard_errors),
+        Rcpp::_["scale"]=selected,Rcpp::_["scale_variance"]=optional(result.variance),
+        Rcpp::_["effective_count"]=static_cast<double>(result.effective_count),
+        Rcpp::_["residual_df"]=static_cast<double>(result.residual_df),
+        Rcpp::_["free_regression"]=static_cast<int>(result.free_regression),Rcpp::_["free_ARMA"]=static_cast<int>(result.free_arma),
+        Rcpp::_["covariance"]=matrix_or_null(result.covariance),
+        Rcpp::_["known_regression_covariance"]=matrix_or_null(result.known_regression_covariance),
+        Rcpp::_["regression_covariance"]=matrix_or_null(result.regression_covariance));
+    if(result.status=="no_requested_predictions") {
+        out["covariance"]=Rcpp::NumericMatrix(0,0);
+        out["known_regression_covariance"]=Rcpp::NumericMatrix(0,0);
+        out["regression_covariance"]=Rcpp::NumericMatrix(0,0);
+    }
+    out["sum_squares"]=result.center->likelihood ? optional(result.center->likelihood->sum_squared_standardized) : NA_REAL;
+    out["center"]=objective_output(*result.center,result.free_arma);
+    out["method"]="conditional_ARMA_with_estimated_regression";
+    out["propagates_ARMA_uncertainty"]=false;
     return out;
 }

@@ -101,6 +101,8 @@ struct CompleteResidualOptions {
     // stationary whitening, rather than the default integrated-state route.
     bool difference_first = false;
     bool prediction_covariance = false;
+    // Explicit prediction domains only; residual/interpolation defaults trim endpoints.
+    bool include_endpoint_missing = false;
 };
 CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     const RegressionDesign& design, const std::vector<double>& ar,

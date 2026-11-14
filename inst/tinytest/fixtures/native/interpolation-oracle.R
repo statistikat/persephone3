@@ -1,9 +1,9 @@
 # Dense intrinsic-Gaussian precision and Schur-complement oracle. It does not
 # use production filtering, gains, missing dummy regression or QR covariance.
 # arma_fit_covariance() independently solves the stationary covariance equations.
-interpolation_oracle <- function(context,blocks) {
+interpolation_oracle <- function(context,blocks,include_endpoints=FALSE) {
   data <- context$prepared;y <- as.numeric(data$inputs$transformed)
-  rows <- seq.int(min(which(!is.na(y))),max(which(!is.na(y))))
+  rows <- if(include_endpoints)seq_along(y)else seq.int(min(which(!is.na(y))),max(which(!is.na(y))))
   y <- y[rows];X <- data$design[rows,,drop=FALSE];fixed <- !is.na(data$fixed)
   if(any(fixed))y <- y-drop(X[,fixed,drop=FALSE]%*%data$fixed[fixed])
   y <- y-context$mean;X <- X[,!fixed,drop=FALSE]
