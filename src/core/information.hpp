@@ -40,5 +40,31 @@ ObservedInformation observed_information(const ObjectiveFunction& objective,
     const std::vector<double>& coefficients, const InformationControl& control = {},
     const Interrupt& interrupt = {});
 
+// Shared signed spectrum and inverse qualification. The caller supplies an
+// accuracy-qualified matrix/error and stationarity; it also labels whether the
+// matrix is observed curvature or a residual-Jacobian approximation.
+void qualify_information(ObservedInformation& result, const InformationControl& control,
+    const Interrupt& interrupt = {});
+
+struct ResidualSample {
+    std::string status;
+    std::vector<double> residuals;
+    std::size_t effective_count = 0;
+    std::shared_ptr<const void> detail;
+};
+using ResidualFunction = std::function<ResidualSample(const std::vector<double>&)>;
+struct ResidualInformation {
+    ObservedInformation diagnostics;
+    ResidualSample center;
+    std::optional<DenseMatrix> jacobian, jacobian_error;
+};
+// Gauss-Newton information n J'J/(z'z) for determinant-normalized residuals.
+// Uses physical-coordinate three-scale central differences and never an
+// optimizer's working/damped matrix. Covariance here is the inverse information;
+// the caller supplies its declared residual-df multiplier.
+ResidualInformation residual_information(const ResidualFunction& residuals,
+    const std::vector<double>& coefficients, const InformationControl& control = {},
+    const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

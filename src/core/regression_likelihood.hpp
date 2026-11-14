@@ -79,5 +79,21 @@ RegressionLikelihood sarima_regression_likelihood(
     int period, int d, int seasonal_d, double mean = 0, double variance = 1,
     double rank_tolerance = 1e-10, const Interrupt& interrupt = {});
 
+// Complete-span residual basis for residual-Jacobian information. End gaps are
+// trimmed; internal missing coordinates are profiled as extra dummy columns.
+// These columns are integration variables, not estimated regression parameters.
+struct CompleteResiduals {
+    std::string status = "unavailable";
+    std::vector<double> residuals, regression_coefficients, interpolated;
+    std::vector<std::size_t> rows, missing_rows;
+    std::size_t finite_count = 0;
+    double log_determinant = 0, sum_squares = 0;
+};
+CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
+    const RegressionDesign& design, const std::vector<double>& ar,
+    const std::vector<double>& ma, const std::vector<double>& seasonal_ar,
+    const std::vector<double>& seasonal_ma, int period, int d, int seasonal_d,
+    double mean = 0, double rank_tolerance = 1e-10, const Interrupt& interrupt = {});
+
 } // namespace persephone
 #endif

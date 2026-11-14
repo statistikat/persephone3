@@ -82,6 +82,15 @@ if ("--native" %in% args) {
   uncertainty <- information(objective_setup(sin(x), ar = NA_real_), fitted$coordinates)
   stopifnot("arma_information" %in% cap$primitives, uncertainty$available,
             is.matrix(uncertainty$covariance), all(is.finite(uncertainty$standard_errors)))
+  residual <- information(objective_setup(sin(x), ar = NA_real_), fitted$coordinates, method="tramo_residual")
+  b <- residual$residual_center
+  state <- list(final_coefficients=unname(residual$coefficients),working_coefficients=unname(residual$coefficients),
+    difference_steps=-1e-6,damping=.01,normalized_sum_squares=b$sum_squares*exp(b$log_determinant/b$effective_count),
+    effective_count=b$effective_count)
+  legacy <- information(objective_setup(sin(x), ar = NA_real_), fitted$coordinates,
+    method="tramo_residual",covariance="legacy",legacy_state=state)
+  stopifnot("arma_residual_information" %in% cap$primitives,"arma_legacy_covariance" %in% cap$primitives,
+    residual$available,legacy$available,legacy$comparison_only,identical(legacy$accurate_covariance,residual$covariance))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

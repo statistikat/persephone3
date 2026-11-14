@@ -91,8 +91,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // native_arma_information
-Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian, SEXP control, SEXP method);
-RcppExport SEXP _persephone3_native_arma_information(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP, SEXP controlSEXP, SEXP methodSEXP) {
+Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients, SEXP specification, SEXP initial, SEXP coordinates, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP rank_tolerance, SEXP margin, SEXP log_jacobian, SEXP control, SEXP method, SEXP covariance, SEXP legacy_state);
+RcppExport SEXP _persephone3_native_arma_information(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP specificationSEXP, SEXP initialSEXP, SEXP coordinatesSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP rank_toleranceSEXP, SEXP marginSEXP, SEXP log_jacobianSEXP, SEXP controlSEXP, SEXP methodSEXP, SEXP covarianceSEXP, SEXP legacy_stateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -111,7 +111,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type log_jacobian(log_jacobianSEXP);
     Rcpp::traits::input_parameter< SEXP >::type control(controlSEXP);
     Rcpp::traits::input_parameter< SEXP >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(native_arma_information(values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control, method));
+    Rcpp::traits::input_parameter< SEXP >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type legacy_state(legacy_stateSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_arma_information(values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control, method, covariance, legacy_state));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -355,7 +357,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_arma_identification", (DL_FUNC) &_persephone3_native_arma_identification, 7},
     {"_persephone3_native_arma_admissibility", (DL_FUNC) &_persephone3_native_arma_admissibility, 3},
     {"_persephone3_native_arma_objective", (DL_FUNC) &_persephone3_native_arma_objective, 13},
-    {"_persephone3_native_arma_information", (DL_FUNC) &_persephone3_native_arma_information, 15},
+    {"_persephone3_native_arma_information", (DL_FUNC) &_persephone3_native_arma_information, 17},
     {"_persephone3_native_arma_optimize", (DL_FUNC) &_persephone3_native_arma_optimize, 14},
     {"_persephone3_native_diffuse_likelihood", (DL_FUNC) &_persephone3_native_diffuse_likelihood, 10},
     {"_persephone3_native_sarima_likelihood", (DL_FUNC) &_persephone3_native_sarima_likelihood, 10},

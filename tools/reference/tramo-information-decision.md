@@ -1,15 +1,17 @@
 # TRAMO uncertainty: compatibility decision (20c.1b.1)
 
-**Decision needed:** preserve the mathematical TRAMO covariance convention with
-accurate derivatives at the final fit, accepting three registered differences
-from pinned outputs, or require reproduction of the legacy numerical values
-before advancing the uncertainty path.
+**Decision accepted, 2026-11-14:** implement both modes. Accurate final-fit
+covariance is the default; legacy comparisons must also run without Java.
+The earlier evidence below is retained as the historical basis of that decision.
 
-The recommended choice is accurate final-fit covariance. This keeps the
-method-specific TRAMO residual-Jacobian convention; it does not replace it with
-X-13's observed information or the optional full-profile ML covariance. It
-would deliberately change some reported standard errors, so it needs a
-maintainer acceptance decision before entering the compatibility contract.
+The native implementation uses the complete residual-Jacobian convention in
+both modes. Accurate mode recomputes qualified derivatives at the final fit.
+Legacy mode replays a recorded optimizer working point, signed forward steps
+and retained LM damping from plain numeric state. Runtime public-API probes
+now explain the three discrepancies: the working matrix can include damping
+that an accurate final-fit covariance removes. A final coefficient vector
+alone does not determine the retained state. The comparison parameter therefore
+requires that state; it never calls Java or silently invents a damping value.
 
 ## Reproducible evidence
 
@@ -100,7 +102,7 @@ identity to complete AR(1). Standardized/interpolated residual domains must stil
 be qualified in 20c.2; this report does not authorize treating synthetic entries
 as observed innovations.
 
-## Consequences of the two choices
+## Historical alternatives (resolved by the decision above)
 
 | Choice | Implementation and acceptance |
 | --- | --- |
@@ -112,7 +114,7 @@ curvature/rank gates, excludes fixed directions, and preserves unavailable
 standard errors as `NA`. Neither authorizes changing the default backend or
 claiming full native seasonal adjustment.
 
-## Next implementation steps after the decision
+## Follow-up implementation steps
 
 1. **20c.1b.2:** implement the chosen TRAMO covariance path in the C++ core,
    retaining the dense oracle and all 64 cases; include missing-coordinate rank,

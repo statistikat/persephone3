@@ -5,7 +5,17 @@
 #include "information.hpp"
 
 namespace persephone {
-enum class ArmaInformationMode { ProfileML, ConditionalResidualDF };
+enum class ArmaInformationMode { ProfileML, ConditionalResidualDF, TramoResidual };
+enum class ArmaCovarianceMode { Accurate, Legacy };
+// Legacy covariance is a function of optimizer history, not final coefficients
+// alone. A plain numeric state permits Java-free replay of the retained matrix.
+// Coordinates and signed forward steps are free physical polynomial coefficients.
+// Damping uses unscaled determinant-normalized residual units, z=e*D^(1/(2n)).
+struct LegacyCovarianceState {
+    std::vector<double> final_coefficients, working_coefficients, difference_steps;
+    double damping = 0, normalized_sum_squares = 0;
+    std::size_t effective_count = 0;
+};
 struct ArmaInformation {
     ObservedInformation information;
     ArmaIdentification structural;
@@ -13,6 +23,12 @@ struct ArmaInformation {
     std::shared_ptr<const ArmaObjective> estimation_center;
     std::size_t free_regression = 0, residual_df = 0;
     double covariance_multiplier = 1;
+    std::optional<ResidualInformation> residual_information;
+    std::shared_ptr<const CompleteResiduals> residual_center;
+    ArmaCovarianceMode covariance_mode = ArmaCovarianceMode::Accurate;
+    std::optional<DenseMatrix> accurate_covariance, legacy_jacobian, legacy_information;
+    double normalized_legacy_damping = 0;
+    std::optional<LegacyCovarianceState> legacy_state;
 };
 
 // Independent, optional calculation at a supplied point; never changes solver
@@ -22,6 +38,8 @@ ArmaInformation arma_information(const MaskedSeries& series,
     const std::vector<double>& coordinates, int period, int d, int seasonal_d,
     double mean=0, double rank_tolerance=1e-10, double log_jacobian=0,
     const InformationControl& control={}, const Interrupt& interrupt={},
-    ArmaInformationMode mode=ArmaInformationMode::ProfileML);
+    ArmaInformationMode mode=ArmaInformationMode::ProfileML,
+    ArmaCovarianceMode covariance_mode=ArmaCovarianceMode::Accurate,
+    const std::optional<LegacyCovarianceState>& legacy_state=std::nullopt);
 } // namespace persephone
 #endif

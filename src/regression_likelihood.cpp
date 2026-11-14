@@ -38,8 +38,8 @@ double scaled_covariance(double value, long double scale) {
 }
 
 void validate_design(const RegressionDesign& design, std::size_t rows,
-                     const Interrupt& interrupt) {
-    if (design.columns > 32 || design.coefficients.size() != design.columns ||
+                     const Interrupt& interrupt, bool augmented = false) {
+    if ((!augmented && design.columns > 32) || design.coefficients.size() != design.columns ||
         design.fixed.size() != design.columns) {
         throw std::invalid_argument("regression coefficients must match at most 32 design columns");
     }
@@ -63,7 +63,7 @@ void validate_design(const RegressionDesign& design, std::size_t rows,
 // factorization avoids forming A'A (and squaring its condition number), or an
 // n-by-n identity for a pseudoinverse. DGELSY already certified full column rank.
 std::vector<double> regression_covariance(const DenseMatrix& design,
-                                          const Interrupt& interrupt) {
+                                          const Interrupt& interrupt, double* log_volume = nullptr) {
     const auto rows = design.rows(), columns = design.columns();
     auto qr = design.values();
     const int m = static_cast<int>(rows), n = static_cast<int>(columns), query_size = -1;
@@ -81,6 +81,16 @@ std::vector<double> regression_covariance(const DenseMatrix& design,
     F77_CALL(dgeqrf)(&m, &n, qr.data(), &m, tau.data(), work.data(), &work_size, &info);
     checkpoint(interrupt);
     if (info != 0) throw std::runtime_error("regression covariance QR factorization failed");
+    if (log_volume) {
+        long double value = 0;
+        for (std::size_t j = 0; j < columns; ++j) {
+            const auto diagonal = std::abs(qr[j + rows*j]);
+            if (!(diagonal > 0)) throw std::runtime_error("missing-coordinate projection is singular");
+            value += 2*std::log(diagonal);
+        }
+        *log_volume = checked(value);
+        return {};
+    }
     std::vector<double> inverse(columns * columns, 0), covariance(columns * columns, 0);
     for (std::size_t j = 0; j < columns; ++j) {
         for (std::size_t reverse = 0; reverse < columns; ++reverse) {
@@ -204,13 +214,12 @@ void validate_regression_inputs(const MaskedSeries& series, const RegressionDesi
     if (!std::isfinite(variance) || variance <= 0) throw std::invalid_argument("innovation scale variance must be finite and positive");
 }
 
-RegressionLikelihood sarima_regression_likelihood(
+static RegressionLikelihood regression_likelihood_impl(
     const MaskedSeries& series, const RegressionDesign& design,
     const std::vector<double>& ar, const std::vector<double>& ma,
     const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
     int period, int d, int seasonal_d, double mean, double variance,
     double rank_tolerance, const Interrupt& interrupt) {
-    validate_regression_inputs(series, design, mean, variance, rank_tolerance, interrupt);
     const auto rows = series.values.size();
     if ((d > 0 || seasonal_d > 0) && mean != 0) throw std::invalid_argument("integrated SARIMA requires mean zero; use an explicit drift regressor");
     const double unavailable = std::numeric_limits<double>::quiet_NaN();
@@ -383,6 +392,68 @@ RegressionLikelihood sarima_regression_likelihood(
     }
     checkpoint(interrupt);
     return result;
+}
+
+RegressionLikelihood sarima_regression_likelihood(const MaskedSeries& series,
+    const RegressionDesign& design, const std::vector<double>& ar, const std::vector<double>& ma,
+    const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
+    int period, int d, int seasonal_d, double mean, double variance,
+    double rank_tolerance, const Interrupt& interrupt) {
+    validate_regression_inputs(series,design,mean,variance,rank_tolerance,interrupt);
+    return regression_likelihood_impl(series,design,ar,ma,seasonal_ar,seasonal_ma,
+        period,d,seasonal_d,mean,variance,rank_tolerance,interrupt);
+}
+
+CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
+    const RegressionDesign& design, const std::vector<double>& ar, const std::vector<double>& ma,
+    const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
+    int period, int d, int seasonal_d, double mean, double rank_tolerance, const Interrupt& interrupt) {
+    validate_regression_inputs(series,design,mean,1,rank_tolerance,interrupt);
+    CompleteResiduals out;
+    const auto size=series.values.size();
+    std::size_t first=0,last=size;
+    while(first<last && series.missing[first]) ++first;
+    while(last>first && series.missing[last-1]) --last;
+    if(first==last) { out.status="no_observations"; return out; }
+    const auto rows=last-first;
+    for(auto i=first;i<last;++i) if(series.missing[i]) out.missing_rows.push_back(i);
+    const auto missing=out.missing_rows.size(),columns=design.columns+missing;
+    const auto limit=static_cast<std::size_t>(std::numeric_limits<int>::max());
+    if(columns && rows>limit/columns) throw std::length_error("complete residual projection exceeds the matrix range");
+    MaskedSeries complete{std::vector<double>(rows,0),std::vector<std::uint8_t>(rows,0)};
+    RegressionDesign augmented{columns,std::vector<double>(rows*columns,0),design.coefficients,design.fixed};
+    augmented.coefficients.resize(columns,0); augmented.fixed.resize(columns,0);
+    for(std::size_t i=0;i<rows;++i) {
+        if((i&255U)==0) checkpoint(interrupt);
+        complete.values[i]=series.missing[first+i] ? 0 : series.values[first+i];
+        for(std::size_t j=0;j<design.columns;++j) augmented.values[i+rows*j]=design.values[first+i+size*j];
+    }
+    for(std::size_t j=0;j<missing;++j) augmented.values[out.missing_rows[j]-first+rows*(design.columns+j)]=1;
+    // Original input has already passed the public 32-regressor bound. Only
+    // the internal missing-coordinate integration columns exceed that bound.
+    validate_design(augmented,rows,interrupt,true);
+    const auto fit=regression_likelihood_impl(complete,augmented,ar,ma,seasonal_ar,seasonal_ma,
+        period,d,seasonal_d,mean,1,rank_tolerance,interrupt);
+    out.status=fit.profile_status;
+    if(out.status!="available") return out;
+    if(fit.finite_count<=missing) { out.status="no_finite_innovations"; return out; }
+    out.finite_count=fit.finite_count-missing;
+    out.log_determinant=fit.sum_log_finite_variances+fit.sum_log_diffuse_variances;
+    if(missing) {
+        DenseMatrix missing_design(fit.finite_count,missing);
+        const auto original_free=fit.free_columns.size()-missing;
+        for(std::size_t j=0;j<missing;++j) for(std::size_t i=0;i<fit.finite_count;++i) {
+            missing_design(i,j)=fit.whitened_design[i+fit.finite_count*(original_free+j)];
+        }
+        double volume=0;
+        (void)regression_covariance(missing_design,interrupt,&volume);
+        out.log_determinant=checked(static_cast<long double>(out.log_determinant)+volume);
+    }
+    out.residuals=fit.whitened_residuals; out.sum_squares=fit.sum_squared_standardized;
+    out.regression_coefficients.assign(fit.coefficients.begin(),fit.coefficients.begin()+static_cast<std::ptrdiff_t>(design.columns));
+    for(std::size_t j=0;j<missing;++j) out.interpolated.push_back(-fit.coefficients[design.columns+j]);
+    for(const auto i:fit.finite_rows) out.rows.push_back(first+i);
+    return out;
 }
 
 } // namespace persephone

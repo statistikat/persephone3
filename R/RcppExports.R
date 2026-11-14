@@ -21,8 +21,8 @@
     .Call(`_persephone3_native_arma_objective`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian)
 }
 
-.native_arma_information <- function(values, design, coefficients, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, control = NULL, method = NULL) {
-    .Call(`_persephone3_native_arma_information`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control, method)
+.native_arma_information <- function(values, design, coefficients, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, control = NULL, method = NULL, covariance = NULL, legacy_state = NULL) {
+    .Call(`_persephone3_native_arma_information`, values, design, coefficients, specification, initial, coordinates, period, d, seasonal_d, mean, rank_tolerance, margin, log_jacobian, control, method, covariance, legacy_state)
 }
 
 .native_arma_optimize <- function(values, design, coefficients, specification, initial, coordinates, period, d = NULL, seasonal_d = NULL, mean = NULL, rank_tolerance = NULL, margin = NULL, log_jacobian = NULL, control = NULL) {

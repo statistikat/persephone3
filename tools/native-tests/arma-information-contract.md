@@ -126,3 +126,9 @@ rejection and every callback. Link the latter with the objective/optimizer
 sources plus `information.cpp`, `arma_information.cpp` and
 `arma_identification.cpp`. The generic information harness needs only
 `numerics.cpp`, `linear_algebra.cpp`, `information.cpp` and LAPACK/BLAS.
+
+Slice 20c.1b.2 adds a third estimator, `method="tramo_residual"`, with accurate
+final-fit covariance by default and explicit Java-free legacy state replay.
+See [the TRAMO contract](tramo-information-contract.md). All ARMA information
+harnesses now also link `residual_information.cpp`; the original two estimators
+retain their mathematical and output conventions.

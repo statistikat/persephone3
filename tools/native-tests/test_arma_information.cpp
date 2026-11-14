@@ -47,7 +47,7 @@ int main() {
     const auto common=arma_information(series,empty,redundant,redundant.initial_coordinates(),4,0,0);
     assert(common.information.status=="structural_redundancy" && !common.information.covariance);
     const auto thread=std::this_thread::get_id();int callbacks=0,total_callbacks=0;
-    for(const auto mode:{ArmaInformationMode::ProfileML,ArmaInformationMode::ConditionalResidualDF}) {
+    for(const auto mode:{ArmaInformationMode::ProfileML,ArmaInformationMode::ConditionalResidualDF,ArmaInformationMode::TramoResidual}) {
     callbacks=0;
     arma_information(series,empty,map,detail->coordinates,4,0,0,0,1e-10,0,{},[&] {
         assert(std::this_thread::get_id()==thread);++callbacks;
@@ -60,6 +60,24 @@ int main() {
         },mode); } catch(const std::runtime_error& e) { interrupted=std::string(e.what())=="cancel ARMA information"; }
         assert(interrupted);
     }
+    }
+    const auto gn=arma_information(series,empty,map,detail->coordinates,4,0,0,0,1e-10,0,{}, {},ArmaInformationMode::TramoResidual);
+    assert(gn.information.status=="available");
+    const auto& r=*gn.residual_center;
+    const LegacyCovarianceState state{gn.coefficients,gn.coefficients,{1e-6},.01,
+        r.sum_squares*std::exp(r.log_determinant/12),12};
+    callbacks=0;
+    arma_information(series,empty,map,detail->coordinates,4,0,0,0,1e-10,0,{},[&]{
+        assert(std::this_thread::get_id()==thread);++callbacks;
+    },ArmaInformationMode::TramoResidual,ArmaCovarianceMode::Legacy,state);
+    total_callbacks+=callbacks;
+    for(int stop=1;stop<=callbacks;++stop) {
+        int at=0;bool cancelled=false;
+        try {arma_information(series,empty,map,detail->coordinates,4,0,0,0,1e-10,0,{},[&]{
+            if(++at==stop)throw std::runtime_error("cancel legacy information");
+        },ArmaInformationMode::TramoResidual,ArmaCovarianceMode::Legacy,state);}
+        catch(const std::runtime_error& e){cancelled=std::string(e.what())=="cancel legacy information";}
+        assert(cancelled);
     }
     const auto again=arma_information(series,empty,map,detail->coordinates,4,0,0);
     assert(again.information.covariance->values()==result.information.covariance->values());

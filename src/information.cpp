@@ -18,6 +18,58 @@ void InformationControl::validate() const {
     }
 }
 
+void qualify_information(ObservedInformation& out, const InformationControl& c, const Interrupt& interrupt) {
+    const auto& H=*out.hessian; const auto& E=*out.hessian_error; const auto n=H.rows();
+    double hnorm=0;
+    for(std::size_t j=0;j<n;++j) {
+        double column=0; for(std::size_t i=0;i<n;++i) column+=std::abs(H(i,j));
+        hnorm=std::max(hnorm,column);
+    }
+    // Positive diagonal scaling exposes correlation-related weakness.
+    // Nonpositive diagonals use a common norm for signed diagnostics.
+    std::vector<double> scale(n);
+    bool positive=true;
+    for(std::size_t j=0;j<n;++j) positive=positive && H(j,j)>0;
+    for(std::size_t j=0;j<n;++j) scale[j]=std::sqrt(positive ? H(j,j) : std::max(hnorm,1.));
+    DenseMatrix normalized(n,n);
+    out.normalized_error=0;
+    for(std::size_t j=0;j<n;++j) {
+        double row=0;
+        for(std::size_t i=0;i<n;++i) {
+            normalized(i,j)=H(i,j)/scale[i]/scale[j];
+            row+=E(i,j)/scale[i]/scale[j];
+        }
+        out.normalized_error=std::max(out.normalized_error,row);
+    }
+    out.normalized_eigenvalues=symmetric_eigenvalues(normalized,interrupt);
+    const auto smallest=out.normalized_eigenvalues.front(),largest=out.normalized_eigenvalues.back();
+    const auto cutoff=c.rank_tolerance*std::max(std::abs(largest),std::abs(smallest));
+    out.rank=0;
+    for(const auto v:out.normalized_eigenvalues) if(v>cutoff) ++out.rank;
+    out.eigenvalue_ratio=largest>0 ? smallest/largest : 0;
+    if(smallest < -out.normalized_error) out.curvature_status="indefinite_information";
+    else if(out.rank<static_cast<int>(n)) out.curvature_status="rank_deficient_information";
+    else if(smallest<=out.normalized_error) out.curvature_status="unresolved_curvature";
+    else if(out.eigenvalue_ratio<=c.weak_tolerance) out.curvature_status="weak_information";
+    else out.curvature_status="positive_definite";
+    out.status=out.curvature_status;
+    if(out.curvature_status=="positive_definite") {
+        if(!out.stationary) out.status="not_stationary";
+        else {
+            // Invert the scaled information, then restore physical units.
+            DenseMatrix identity(n,n);
+            for(std::size_t j=0;j<n;++j) identity(j,j)=1;
+            auto covariance=cholesky_solve(cholesky_factor(normalized,interrupt),identity,interrupt);
+            for(std::size_t j=0;j<n;++j) for(std::size_t i=0;i<=j;++i) {
+                const auto value=(covariance(i,j)+covariance(j,i))*.5/scale[i]/scale[j];
+                covariance(i,j)=covariance(j,i)=value;
+            }
+            covariance.validate(interrupt);
+            out.covariance=std::move(covariance); out.status="available";
+        }
+    }
+}
+
 ObservedInformation observed_information(const ObjectiveFunction& objective,
     const std::vector<double>& x, const InformationControl& c, const Interrupt& interrupt) {
     c.validate();
@@ -104,49 +156,7 @@ ObservedInformation observed_information(const ObjectiveFunction& objective,
             if (finite && std::isfinite(hnorm) && std::isfinite(enorm) && std::isfinite(gnorm) &&
                 enorm <= c.absolute_tolerance+c.relative_tolerance*hnorm && gerror <= c.gradient_tolerance/8) {
                 out.derivative_status="available"; out.stationary=gnorm<=c.gradient_tolerance;
-                // Positive diagonal scaling exposes correlation-related weakness.
-                // Nonpositive diagonals use a common norm for signed diagnostics.
-                std::vector<double> scale(n);
-                bool positive=true;
-                for(std::size_t j=0;j<n;++j) positive=positive && H(j,j)>0;
-                for(std::size_t j=0;j<n;++j) scale[j]=std::sqrt(positive ? H(j,j) : std::max(hnorm,1.));
-                DenseMatrix normalized(n,n);
-                out.normalized_error=0;
-                for(std::size_t j=0;j<n;++j) {
-                    double row=0;
-                    for(std::size_t i=0;i<n;++i) {
-                        normalized(i,j)=H(i,j)/scale[i]/scale[j];
-                        row+=E(i,j)/scale[i]/scale[j];
-                    }
-                    out.normalized_error=std::max(out.normalized_error,row);
-                }
-                out.normalized_eigenvalues=symmetric_eigenvalues(normalized,interrupt);
-                const auto smallest=out.normalized_eigenvalues.front(),largest=out.normalized_eigenvalues.back();
-                const auto cutoff=c.rank_tolerance*std::max(std::abs(largest),std::abs(smallest));
-                out.rank=0;
-                for(const auto v:out.normalized_eigenvalues) if(v>cutoff) ++out.rank;
-                out.eigenvalue_ratio=largest>0 ? smallest/largest : 0;
-                if(smallest < -out.normalized_error) out.curvature_status="indefinite_information";
-                else if(out.rank<static_cast<int>(n)) out.curvature_status="rank_deficient_information";
-                else if(smallest<=out.normalized_error) out.curvature_status="unresolved_curvature";
-                else if(out.eigenvalue_ratio<=c.weak_tolerance) out.curvature_status="weak_information";
-                else out.curvature_status="positive_definite";
-                out.status=out.curvature_status;
-                if(out.curvature_status=="positive_definite") {
-                    if(!out.stationary) out.status="not_stationary";
-                    else {
-                        // Invert the scaled information, then restore physical units.
-                        DenseMatrix identity(n,n);
-                        for(std::size_t j=0;j<n;++j) identity(j,j)=1;
-                        auto covariance=cholesky_solve(cholesky_factor(normalized,interrupt),identity,interrupt);
-                        for(std::size_t j=0;j<n;++j) for(std::size_t i=0;i<=j;++i) {
-                            const auto value=(covariance(i,j)+covariance(j,i))*.5/scale[i]/scale[j];
-                            covariance(i,j)=covariance(j,i)=value;
-                        }
-                        covariance.validate(interrupt);
-                        out.covariance=std::move(covariance); out.status="available";
-                    }
-                }
+                qualify_information(out,c,interrupt);
                 return out;
             }
         }

@@ -225,3 +225,13 @@ Standalone `test_information.cpp` and `test_arma_information.cpp` cover analytic
 identities, signed/weak/rank-deficient information and exhaustive cancellation.
 The [pinned comparison](../reference/arma-information-notes.md) qualifies the
 X-13 convention; TRAMO is a separate, still-open covariance contract.
+
+### TRAMO residual information and legacy replay
+
+`test-native-tramo-information.R` and `test-native-tramo-legacy.R` exercise the
+accurate default and explicit numeric-state replay without Java. The independent
+dense oracle and additive recorded states are installed under `fixtures/native`.
+`test_residual_information.cpp` adds analytic residual-information, rank/domain,
+budget and interruption tests; `test_arma_information.cpp` also covers both TRAMO
+modes. Include `src/residual_information.cpp` in the existing ARMA harness link.
+See [the complete contract](tramo-information-contract.md).

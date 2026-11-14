@@ -150,3 +150,19 @@ The new `extended-v1` fixtures use the existing runtime oracle and synthetic
 formulas. Their own manifest records the parent artifact hashes and generation
 scripts. They neither update the original 12-case corpus nor qualify a native
 algorithm merely by adding reference examples.
+
+Slice 20c.1b.2 independently implements complete residual projection, QR missing
+coordinate volume, three-scale residual Jacobians and Gauss-Newton covariance.
+The existing dense Gaussian/closed AR(1) identities supply its mathematical
+validation. Java-free legacy covariance replay independently assembles
+`Qz/(n-r-k) * inverse(Jw'Jw + mu I)` from explicit numeric optimizer state.
+Public `RegSarimaComputer`, `SsqFunctionMinimizer` and derivative interfaces were
+inspected with `javap -public` and observed through a small delegating test
+class. The observer preserves the original residual-square summation, captures
+the retained matrix before downstream rescaling and reports the residual defect
+in its isotropic-damping reconstruction. No upstream numerical implementation
+was read, copied or translated for these modules. Exploratory runtime field
+inspection identified damping/scale constants; production code does not embed
+those constants or emulate the optimizer's control flow. Recorded state is not
+a covariance lookup. See [the TRAMO contract](../native-tests/tramo-information-contract.md)
+and [the comparison notes](tramo-information-notes.md).

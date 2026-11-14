@@ -306,6 +306,37 @@ Rcpp::RObject matrix_or_null(const std::optional<persephone::DenseMatrix>& a) {
     if(!a) return R_NilValue;
     return Rcpp::NumericMatrix(static_cast<int>(a->rows()),static_cast<int>(a->columns()),a->values().begin());
 }
+std::string information_option(SEXP value, const char* name, const std::string& fallback) {
+    if(Rf_isNull(value)) return fallback;
+    if(TYPEOF(value)!=STRSXP || Rf_xlength(value)!=1 || STRING_ELT(value,0)==NA_STRING ||
+        !Rf_isNull(Rf_getAttrib(value,R_DimSymbol))) throw std::invalid_argument(std::string(name)+" must be one nonmissing string");
+    return Rcpp::as<std::string>(value);
+}
+std::optional<persephone::LegacyCovarianceState> legacy_covariance_state(SEXP input) {
+    if(Rf_isNull(input)) return std::nullopt;
+    const std::vector<std::string> required{"final_coefficients","working_coefficients","difference_steps",
+        "damping","normalized_sum_squares","effective_count"};
+    if(TYPEOF(input)!=VECSXP || !Rf_isNull(Rf_getAttrib(input,R_DimSymbol))) throw std::invalid_argument("legacy state must be a named list");
+    const Rcpp::List list(input); const auto names=Rf_getAttrib(input,R_NamesSymbol);
+    if(TYPEOF(names)!=STRSXP || Rf_xlength(names)!=6 || list.size()!=6) throw std::invalid_argument("legacy state requires all six fields");
+    std::vector<std::string> seen;
+    for(R_xlen_t i=0;i<6;++i) {
+        if(STRING_ELT(names,i)==NA_STRING || Rf_isNull(list[i])) throw std::invalid_argument("legacy state fields cannot be missing or NULL");
+        const auto name=Rcpp::as<std::string>(STRING_ELT(names,i));
+        if(std::find(required.begin(),required.end(),name)==required.end() || std::find(seen.begin(),seen.end(),name)!=seen.end()) {
+            throw std::invalid_argument("legacy state requires unique known fields");
+        }
+        seen.push_back(name);
+    }
+    persephone::LegacyCovarianceState state;
+    state.final_coefficients=Rcpp::as<std::vector<double>>(vector(list["final_coefficients"],"legacy final coefficients",64));
+    state.working_coefficients=Rcpp::as<std::vector<double>>(vector(list["working_coefficients"],"legacy working coefficients",64));
+    state.difference_steps=Rcpp::as<std::vector<double>>(vector(list["difference_steps"],"legacy difference steps",64));
+    state.damping=scalar(list["damping"],"legacy damping",0);
+    state.normalized_sum_squares=scalar(list["normalized_sum_squares"],"legacy residual scale",0);
+    state.effective_count=static_cast<std::size_t>(integer(list["effective_count"],"legacy effective count",0,std::numeric_limits<int>::max()));
+    return state;
+}
 } // namespace
 
 // [[Rcpp::export(name = ".native_arma_information")]]
@@ -313,32 +344,35 @@ Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
     SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
     SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
     SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
-    SEXP control=R_NilValue, SEXP method=R_NilValue) {
+    SEXP control=R_NilValue, SEXP method=R_NilValue, SEXP covariance=R_NilValue, SEXP legacy_state=R_NilValue) {
     const auto c=information_control(control);
     const auto map=parameter_map(specification,initial,margin);
     const auto data=objective_data(values,design,coefficients);
-    std::string selected="profile_ml";
-    if(!Rf_isNull(method)) {
-        if(TYPEOF(method)!=STRSXP || Rf_xlength(method)!=1 || STRING_ELT(method,0)==NA_STRING ||
-            !Rf_isNull(Rf_getAttrib(method,R_DimSymbol))) throw std::invalid_argument("information method must be one nonmissing string");
-        selected=Rcpp::as<std::string>(method);
-    }
-    if(selected!="profile_ml" && selected!="conditional_residual_df") throw std::invalid_argument("unknown information method");
+    const auto selected=information_option(method,"information method","profile_ml");
+    const auto covariance_mode=information_option(covariance,"covariance mode","accurate");
+    if(covariance_mode!="accurate" && covariance_mode!="legacy") throw std::invalid_argument("unknown covariance mode");
+    if(selected!="profile_ml" && selected!="conditional_residual_df" && selected!="tramo_residual") throw std::invalid_argument("unknown information method");
     const bool conditional=selected=="conditional_residual_df";
+    const bool residual=selected=="tramo_residual";
     const auto result=persephone::arma_information(data.input,data.regression,map,
         Rcpp::as<std::vector<double>>(vector(coordinates,"ARMA coordinates",64)),
         integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
         scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),scalar(log_jacobian,"log Jacobian",0),
-        c,[] { Rcpp::checkUserInterrupt(); }, conditional ? persephone::ArmaInformationMode::ConditionalResidualDF :
-            persephone::ArmaInformationMode::ProfileML);
+        c,[] { Rcpp::checkUserInterrupt(); }, residual ? persephone::ArmaInformationMode::TramoResidual :
+            conditional ? persephone::ArmaInformationMode::ConditionalResidualDF :
+            persephone::ArmaInformationMode::ProfileML,
+        covariance_mode=="legacy" ? persephone::ArmaCovarianceMode::Legacy : persephone::ArmaCovarianceMode::Accurate,
+        legacy_covariance_state(legacy_state));
     const auto& info=result.information;
     Rcpp::List out;
     out["schema_version"]=1; out["status"]=info.status;
     out["available"]=info.status=="available" || info.status=="no_free_parameters";
     out["method"]=selected;
-    out["information_type"]="observed";
+    out["information_type"]=residual ? "Gauss_Newton_profiled_normalized_residuals" : "observed";
+    out["covariance_mode"]=covariance_mode;
+    out["comparison_only"]=covariance_mode=="legacy";
     out["coordinates"]="free_polynomial_coefficients";
-    out["scale_convention"]=conditional ? "residual_df_n_minus_free_regression_minus_free_ARMA" : "profiled_ML_Q_over_n_finite";
+    out["scale_convention"]=conditional || residual ? "residual_df_n_minus_free_regression_minus_free_ARMA" : "profiled_ML_Q_over_n_finite";
     out["regression_convention"]=conditional ? "held_at_fitted_GLS_coefficients" : "profiled_at_each_candidate";
     out["inference"]="local_asymptotic_normal_approximation";
     out["reference_parity"]="not_qualified";
@@ -347,9 +381,36 @@ Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
     out["covariance_multiplier"]=optional(result.covariance_multiplier);
     out["coefficients"]=numeric(result.coefficients);
     out["gradient"]=numeric(info.gradient); out["gradient_error"]=numeric(info.gradient_error);
-    out["hessian"]=matrix_or_null(info.hessian); out["hessian_error"]=matrix_or_null(info.hessian_error);
+    if(residual) {
+        out["normal_information"]=matrix_or_null(info.hessian); out["normal_information_error"]=matrix_or_null(info.hessian_error);
+        out["hessian"]=R_NilValue; out["hessian_error"]=R_NilValue;
+        out["residual_jacobian"]=result.residual_information ? matrix_or_null(result.residual_information->jacobian) : Rcpp::RObject(R_NilValue);
+        out["residual_jacobian_error"]=result.residual_information ? matrix_or_null(result.residual_information->jacobian_error) : Rcpp::RObject(R_NilValue);
+        out["residual_basis"]="complete_span_missing_coordinate_projection";
+        out["residual_normalization"]="determinant_normalized_relative_to_center_divided_by_sqrt_center_Q";
+        if(result.residual_center) {
+            const auto& basis=*result.residual_center;
+            Rcpp::IntegerVector rows,missing;
+            for(const auto i:basis.rows) rows.push_back(static_cast<int>(i+1));
+            for(const auto i:basis.missing_rows) missing.push_back(static_cast<int>(i+1));
+            out["residual_center"]=Rcpp::List::create(Rcpp::_["status"]=basis.status,
+                Rcpp::_["residuals"]=numeric(basis.residuals),Rcpp::_["rows"]=rows,Rcpp::_["missing_rows"]=missing,
+                Rcpp::_["interpolated"]=numeric(basis.interpolated),Rcpp::_["regression_coefficients"]=numeric(basis.regression_coefficients),
+                Rcpp::_["effective_count"]=static_cast<double>(basis.finite_count),Rcpp::_["sum_squares"]=basis.sum_squares,
+                Rcpp::_["log_determinant"]=basis.log_determinant);
+        } else out["residual_center"]=R_NilValue;
+    } else { out["hessian"]=matrix_or_null(info.hessian); out["hessian_error"]=matrix_or_null(info.hessian_error); }
     out["covariance"]=matrix_or_null(info.covariance);
     if(info.status=="no_free_parameters") out["covariance"]=Rcpp::NumericMatrix(0,0);
+    if(covariance_mode=="legacy") {
+        out["accurate_covariance"]=matrix_or_null(result.accurate_covariance);
+        if(info.status=="no_free_parameters") out["accurate_covariance"]=Rcpp::NumericMatrix(0,0);
+        out["legacy_state"]=legacy_state;
+        out["legacy_jacobian"]=matrix_or_null(result.legacy_jacobian);
+        out["legacy_information"]=matrix_or_null(result.legacy_information);
+        out["normalized_legacy_damping"]=result.normalized_legacy_damping;
+        out["legacy_derivative_convention"]="recorded_working_point_signed_forward_differences";
+    }
     out["derivative_status"]=info.derivative_status; out["curvature_status"]=info.curvature_status;
     out["stationary"]=info.stationary; out["difference_steps"]=numeric(info.steps);
     out["evaluations"]=info.evaluations; out["refinements"]=info.refinements;
