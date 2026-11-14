@@ -91,6 +91,11 @@ if ("--native" %in% args) {
     method="tramo_residual",covariance="legacy",legacy_state=state)
   stopifnot("arma_residual_information" %in% cap$primitives,"arma_legacy_covariance" %in% cap$primitives,
     residual$available,legacy$available,legacy$comparison_only,identical(legacy$accurate_covariance,residual$covariance))
+  regression_information <- getFromNamespace("native_regression_information","persephone3")
+  regression_uncertainty <- regression_information(objective_setup(sin(x),include_mean=TRUE))
+  stopifnot("regression_information" %in% cap$primitives,regression_uncertainty$available,
+    regression_uncertainty$free_regression==1L,!regression_uncertainty$propagates_ARMA_uncertainty,
+    all(is.finite(regression_uncertainty$standard_errors)))
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

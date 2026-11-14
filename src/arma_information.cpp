@@ -5,6 +5,44 @@
 #include <stdexcept>
 
 namespace persephone {
+ConditionalRegressionInformation conditional_regression_information(
+    const ArmaInformation& result, const Interrupt& interrupt) {
+    ConditionalRegressionInformation out;
+    out.free_arma=result.coefficients.size();
+    out.residual_variance=std::numeric_limits<double>::quiet_NaN();
+    if(!result.estimation_center || !result.estimation_center->likelihood) return out;
+    const auto& fit=*result.estimation_center->likelihood;
+    out.free_columns=fit.free_columns; out.effective_count=fit.finite_count;
+    for(const auto j:out.free_columns) out.coefficients.push_back(fit.coefficients.at(j));
+    const auto r=out.free_columns.size(),estimated=r+out.free_arma;
+    out.residual_df=out.effective_count>estimated ? out.effective_count-estimated : 0;
+    if(result.information.status!="available" && result.information.status!="no_free_parameters") return out;
+    if(!out.residual_df) { out.status="nonpositive_residual_df"; return out; }
+    out.residual_variance=fit.sum_squared_standardized/static_cast<double>(out.residual_df);
+    if(!(out.residual_variance>0) || !std::isfinite(out.residual_variance)) {
+        out.status="regression_covariance_range"; return out;
+    }
+    if(!r) { out.status="no_free_coefficients"; return out; }
+    if(fit.rank!=r || fit.unscaled_covariance.size()!=r*r) {
+        out.status="regression_rank_unavailable"; return out;
+    }
+    DenseMatrix covariance(r,r);
+    const auto scale=static_cast<long double>(fit.sum_squared_standardized)/static_cast<long double>(out.residual_df);
+    for(std::size_t j=0;j<r;++j) {
+        if(interrupt) interrupt();
+        for(std::size_t i=0;i<r;++i) {
+            const auto unit=fit.unscaled_covariance[i+r*j];
+            const auto value=static_cast<double>(static_cast<long double>(unit)*scale);
+            if(!std::isfinite(value) || (unit!=0 && value==0) || (i==j && value<=0)) {
+                out.status="regression_covariance_range"; return out;
+            }
+            covariance(i,j)=value;
+        }
+    }
+    out.covariance=std::move(covariance);out.status="available";
+    return out;
+}
+
 ArmaInformation arma_information(const MaskedSeries& series,
     const RegressionDesign& design, const ArmaParameterMap& map,
     const std::vector<double>& coordinates, int period, int d, int seasonal_d,

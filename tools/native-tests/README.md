@@ -224,7 +224,7 @@ Gaussian tests exercise all 64 fitted cases and nuisance Schur complements.
 Standalone `test_information.cpp` and `test_arma_information.cpp` cover analytic
 identities, signed/weak/rank-deficient information and exhaustive cancellation.
 The [pinned comparison](../reference/arma-information-notes.md) qualifies the
-X-13 convention; TRAMO is a separate, still-open covariance contract.
+X-13 convention; the separate TRAMO covariance contract is described below.
 
 ### TRAMO residual information and legacy replay
 
@@ -235,3 +235,13 @@ dense oracle and additive recorded states are installed under `fixtures/native`.
 budget and interruption tests; `test_arma_information.cpp` also covers both TRAMO
 modes. Include `src/residual_information.cpp` in the existing ARMA harness link.
 See [the complete contract](tramo-information-contract.md).
+
+### Estimated-ARMA regression uncertainty
+
+`test-native-regression-information.R` checks conditional GLS inference against
+independent dense covariance blocks across the 64 fitted cases and boundary/unit
+changes. `test_regression_information.cpp` independently checks closed OLS
+covariance, residual df, range handling and cancellation. Link the same source
+set as `test_arma_information.cpp`. The
+[contract](regression-information-contract.md) distinguishes this conditional
+covariance from the planned joint profile-ML estimator.

@@ -31,6 +31,20 @@ struct ArmaInformation {
     std::optional<LegacyCovarianceState> legacy_state;
 };
 
+struct ConditionalRegressionInformation {
+    std::string status = "arma_information_unavailable";
+    std::vector<std::size_t> free_columns;
+    std::vector<double> coefficients;
+    std::optional<DenseMatrix> covariance;
+    std::size_t effective_count = 0, residual_df = 0, free_arma = 0;
+    double residual_variance = 0;
+};
+// Conditional GLS uncertainty at a qualified fit, scaled by Q/(n-r-k).
+// Free ARMA parameters reduce the denominator but their uncertainty is not
+// propagated. Fixed coefficients are omitted, not assigned zero uncertainty.
+ConditionalRegressionInformation conditional_regression_information(
+    const ArmaInformation& fit, const Interrupt& interrupt = {});
+
 // Independent, optional calculation at a supplied point; never changes solver
 // convergence. Profiles regression and ML scale at every physical perturbation.
 ArmaInformation arma_information(const MaskedSeries& series,

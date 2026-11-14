@@ -166,3 +166,12 @@ inspection identified damping/scale constants; production code does not embed
 those constants or emulate the optimizer's control flow. Recorded state is not
 a covariance lookup. See [the TRAMO contract](../native-tests/tramo-information-contract.md)
 and [the comparison notes](tramo-information-notes.md).
+
+Slice 20c.2a.1 independently assembles conditional GLS coefficient covariance
+from the existing QR unit covariance and `Q/(n-r-k)` in `arma_information.cpp`.
+It reuses the qualified final-fit record and explicitly does not propagate ARMA
+parameter uncertainty. Independent dense Gaussian joint projection and closed
+OLS formulas validate the algebra; 64 direct fits per public preprocessing
+engine qualify the denominator and free/fixed directions. No new upstream
+implementation was inspected or copied. See the
+[regression information contract](../native-tests/regression-information-contract.md).

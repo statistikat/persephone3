@@ -31,7 +31,9 @@ arma_residual_basis <- function(case, blocks) {
   }
   effective <- length(residuals)-length(missing)
   squares <- sum(residuals^2)
+  covariance <- chol2inv(chol(crossprod(X)))[1:2,1:2,drop=FALSE]
   list(residuals=residuals,normalized=residuals*exp(determinant/(2*effective)),
+    regression_covariance_unit=unname(covariance),
     coefficients=unname(beta[1:2]),interpolated=-tail(beta,length(missing)),
     finite=effective,missing=missing,rows=rows,log_determinant=determinant,
     profile=-.5*(effective*(log(2*pi)+1+log(squares/effective))+determinant))

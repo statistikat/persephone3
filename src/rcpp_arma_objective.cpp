@@ -424,6 +424,24 @@ Rcpp::List native_arma_information(SEXP values, SEXP design, SEXP coefficients,
     out["parameter_diagnostics"]=identification_output(result.structural);
     const auto center=result.estimation_center;
     out["center"]=center ? static_cast<SEXP>(objective_output(*center,result.coefficients.size())) : R_NilValue;
+    const auto regression=persephone::conditional_regression_information(result,[] { Rcpp::checkUserInterrupt(); });
+    Rcpp::IntegerVector free_columns;
+    for(const auto j:regression.free_columns) free_columns.push_back(static_cast<int>(j+1));
+    Rcpp::List regression_output=Rcpp::List::create(Rcpp::_["schema_version"]=1,
+        Rcpp::_["status"]=regression.status,
+        Rcpp::_["available"]=regression.status=="available" || regression.status=="no_free_coefficients",
+        Rcpp::_["method"]="conditional_residual_df",Rcpp::_["conditioned_on"]="supplied_ARMA_coefficients",
+        Rcpp::_["propagates_ARMA_uncertainty"]=false,
+        Rcpp::_["scale_convention"]="Q_over_n_minus_free_regression_minus_free_ARMA",
+        Rcpp::_["free_columns"]=free_columns,Rcpp::_["coefficients"]=numeric(regression.coefficients),
+        Rcpp::_["covariance"]=matrix_or_null(regression.covariance),
+        Rcpp::_["effective_count"]=center && center->likelihood ? static_cast<double>(regression.effective_count) : NA_REAL,
+        Rcpp::_["residual_df"]=center && center->likelihood ? static_cast<double>(regression.residual_df) : NA_REAL,
+        Rcpp::_["residual_variance"]=optional(regression.residual_variance),
+        Rcpp::_["free_ARMA"]=static_cast<int>(regression.free_arma),
+        Rcpp::_["arma_information_status"]=info.status);
+    if(regression.status=="no_free_coefficients") regression_output["covariance"]=Rcpp::NumericMatrix(0,0);
+    out["regression_information"]=regression_output;
     out["control"]=Rcpp::List::create(Rcpp::_["difference_step"]=c.difference_step,
         Rcpp::_["difference_refinements"]=c.difference_refinements,Rcpp::_["max_evaluations"]=c.max_evaluations,
         Rcpp::_["relative_tolerance"]=c.relative_tolerance,Rcpp::_["absolute_tolerance"]=c.absolute_tolerance,

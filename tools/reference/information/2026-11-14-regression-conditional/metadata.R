@@ -1,0 +1,15 @@
+list(schema_version = 1L, captured_utc = "2026-11-14 07:01:20 UTC",
+    parent_source_commit = "edd7c6cc1c0d8bf76976bcda3e060a82e6c238db",
+    source_sha256 = c(`verify-regression-information.R` = "dc894b69d4bf2d2f75d0c215533c52a7b4dedccf0d1785cb71eba305b41fd067",
+    `arma-fit-reference.R` = "b64d07895eb5e6cc1a9fba95749e79241b45840e7498f5440f79f8f09b9d2358",
+    arma_information.cpp = "cd3efa2c093ea8ec343033189df93260213a8d6eb41966193f9ca725be73d70c",
+    arma_information.hpp = "fc009f82d9239bb2da9e07c2be097032e166cd62ba3c2b859dd14b63d64c7262",
+    rcpp_arma_objective.cpp = "9843df5f6da08f67868262d5854a1394634492b3f8b7a4ff134934f94c9c1b87",
+    native_arma_information.R = "b9b4679cd012799cd1c2c5afc1e105fd67025d599e956940098facffa273d9e0",
+    `arma-residual-oracle.R` = "9bc33d7d3da4fc09dce498ca208e7f3a440e6792edafcda78f6f0f84dec26d21"
+    ), oracle_manifest_sha256 = "a2394411ca585589c5308ae423c1299050774f7d50a79fcbac566878f85be23c",
+    R = "R version 4.5.2 (2025-10-31)", java = list(version = "27.0.1.0.2",
+        vendor = "Eclipse Adoptium", runtime_version = "27.0.1.0.2+1",
+        vm_name = "OpenJDK 64-Bit Server VM", architecture = "aarch64"),
+    checks = 1409L, direct_fits = 128L, covariance_budget = 2e-05,
+    independent_covariance_budget = 1e-07, method = "conditional_GLS_Q_over_n_minus_r_minus_k; no ARMA uncertainty propagation")
