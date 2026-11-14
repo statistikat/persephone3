@@ -1,210 +1,32 @@
-name: Native foundations
-
-on:
-  pull_request:
-  push:
-    branches: [main, master]
-
+name: Required native backend integration
+on: [push, pull_request]
 permissions:
   contents: read
-
 jobs:
-  native:
+  integration:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            openmp: default
-          - os: macos-latest
-            openmp: default
-          - os: windows-latest
-            openmp: default
-          - os: ubuntu-latest
-            openmp: disabled
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       JAVA_HOME: __PERSEPHONE_NO_JAVA__
-      R_MAKEVARS_USER: ${{ runner.temp }}/persephone-Makevars
-      PERSEPHONE_DISABLE_OPENMP: ${{ matrix.openmp == 'disabled' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: release
           use-public-rspm: true
-      - name: Configure the serial fallback lane
-        shell: Rscript {0}
-        run: |
-          flags <- if (Sys.getenv("PERSEPHONE_DISABLE_OPENMP") == "1") "SHLIB_OPENMP_CXXFLAGS =" else character()
-          writeLines(flags, Sys.getenv("R_MAKEVARS_USER"))
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          cache: false
           packages: |
             local::.
             any::tinytest
-            any::digest
           dependencies: '"hard"'
-      - name: Verify package loading without Java R dependencies
+      - name: Required dependency and Java-free loading
         run: Rscript tools/verify-nojava.R --native
-      - name: Test installed native routines
+      - name: Application backend contract
         shell: Rscript {0}
         run: |
           library(persephone3)
-          files <- list.files("inst/tinytest", "^test-native-.*[.]R$", full.names = TRUE)
-          stopifnot(length(files) > 0L)
-          for (file in files) {
-            results <- tinytest::run_test_file(file)
-            stopifnot(length(results) > 0L, all(as.logical(results)))
-          }
-      - name: Require actual OpenMP workers on Linux
-        if: runner.os == 'Linux' && matrix.openmp == 'default'
-        env:
-          PERSEPHONE_REQUIRE_OPENMP: '1'
-          OMP_NUM_THREADS: '4'
-          OMP_DYNAMIC: 'FALSE'
-        shell: Rscript {0}
-        run: |
-          results <- tinytest::run_test_file("inst/tinytest/test-native-parallel.R")
-          stopifnot(all(as.logical(results)))
-      - name: Require a genuine serial package build
-        if: matrix.openmp == 'disabled'
-        shell: Rscript {0}
-        run: |
-          info <- persephone3:::.native_parallel_info()
-          stopifnot(!info$compiled, info$probe_threads == 1L)
-      - name: Verify frozen reference artifacts without Java
-        run: |
-          Rscript tools/reference/verify.R
-          Rscript tools/reference/verify-extended.R
-          Rscript tools/reference/verify-x11-symmetric.R
-          Rscript tools/reference/verify-x11-musgrave.R
-          Rscript tools/reference/verify-x11-mean.R
-          Rscript tools/reference/verify-x11-seasonal.R
-          Rscript tools/reference/verify-x11-seasonal15.R
-          Rscript tools/reference/verify-x11-seasonal-processing.R
-          Rscript tools/reference/verify-x11-trend-selection.R
-          Rscript tools/reference/verify-x11-seasonal-plan.R
-          Rscript tools/reference/verify-x11-msr.R
-          Rscript tools/reference/verify-x11-msr-selection.R
-          Rscript tools/reference/verify-x11-normalization.R
-          Rscript tools/reference/verify-x11-initial.R
-      - name: Sanitize independent C++ core
-        if: runner.os == 'Linux' && matrix.openmp == 'default'
-        shell: bash
-        run: |
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-            -fsanitize=address,undefined -fno-omit-frame-pointer \
-            -Isrc src/numerics.cpp tools/native-tests/test_numerics.cpp \
-            -o "$RUNNER_TEMP/persephone-numerics"
-          "$RUNNER_TEMP/persephone-numerics"
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-            -fsanitize=address,undefined -fno-omit-frame-pointer \
-            -Isrc src/x11_seasonal_plan.cpp tools/native-tests/test_x11_seasonal_plan.cpp \
-            -o "$RUNNER_TEMP/persephone-x11-seasonal-plan"
-          "$RUNNER_TEMP/persephone-x11-seasonal-plan"
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-            -fsanitize=address,undefined -fno-omit-frame-pointer \
-            -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_transforms.cpp \
-            -o "$RUNNER_TEMP/persephone-transforms"
-          "$RUNNER_TEMP/persephone-transforms"
-          for mode in serial openmp; do
-            flags=""
-            if [ "$mode" = openmp ]; then flags="-fopenmp"; fi
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/transforms.cpp tools/native-tests/test_parallel.cpp \
-              -o "$RUNNER_TEMP/persephone-parallel-$mode"
-            if [ "$mode" = openmp ]; then
-              PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE \
-                "$RUNNER_TEMP/persephone-parallel-$mode"
-            else "$RUNNER_TEMP/persephone-parallel-$mode"; fi
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp tools/native-tests/test_x11_filters.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-filters-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-filters-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_musgrave.cpp tools/native-tests/test_x11_musgrave.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-musgrave-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-musgrave-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_mean_endpoints.cpp tools/native-tests/test_x11_mean_endpoints.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-mean-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-mean-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_seasonal_endpoints.cpp tools/native-tests/test_x11_seasonal_endpoints.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-seasonal-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-seasonal-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_seasonal_endpoints.cpp src/x11_seasonal_processing.cpp tools/native-tests/test_x11_seasonal_processing.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-seasonal-processing-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-seasonal-processing-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_trend_selection.cpp tools/native-tests/test_x11_trend_selection.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-trend-selection-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-trend-selection-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_msr.cpp tools/native-tests/test_x11_msr.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-msr-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-msr-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_msr.cpp src/x11_msr_selection.cpp tools/native-tests/test_x11_msr_selection.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-msr-selection-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-msr-selection-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_normalization.cpp tools/native-tests/test_x11_normalization.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-normalization-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-normalization-$mode"
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
-              -fsanitize=address,undefined -fno-omit-frame-pointer \
-              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_seasonal_endpoints.cpp \
-              src/x11_seasonal_processing.cpp src/x11_normalization.cpp src/x11_initial.cpp tools/native-tests/test_x11_initial.cpp \
-              -o "$RUNNER_TEMP/persephone-x11-initial-$mode"
-            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-initial-$mode"
-          done
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-            -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
-            src/arma_parameters.cpp tools/native-tests/test_arma_parameters.cpp \
-            -o "$RUNNER_TEMP/persephone-arma-parameters"
-          "$RUNNER_TEMP/persephone-arma-parameters"
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-            -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
-            src/optimizer.cpp tools/native-tests/test_optimizer.cpp \
-            -o "$RUNNER_TEMP/persephone-optimizer"
-          "$RUNNER_TEMP/persephone-optimizer"
-          for harness in linear_algebra state_space diffuse_state_space regression_likelihood arma_objective arma_optimizer arma_identification information residual_information arma_information regression_information vector_jacobian joint_regression_information arma_residuals legacy_arma_residuals interpolation_information interpolation_arma_information forecast_information forecast_arma_information prediction_moments; do
-            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
-              -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
-              $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
-              src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
-              src/diffuse_state_space.cpp src/regression_likelihood.cpp \
-              src/arma_parameters.cpp src/arma_objective.cpp src/optimizer.cpp src/arma_optimizer.cpp src/arma_identification.cpp \
-              src/information.cpp src/residual_information.cpp src/vector_jacobian.cpp src/arma_information.cpp src/joint_regression_information.cpp src/arma_residuals.cpp src/interpolation_information.cpp src/interpolation_arma_information.cpp src/forecast_information.cpp src/forecast_arma_information.cpp src/prediction_arma_information.cpp src/prediction_moments.cpp \
-              "tools/native-tests/test_${harness}.cpp" \
-              $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
-              $(R CMD config FLIBS) $(R CMD config --ldflags) \
-              -o "$RUNNER_TEMP/persephone-${harness}"
-            "$RUNNER_TEMP/persephone-${harness}"
-          done
-          c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic -fopenmp \
-            -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
-            $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \
-            src/state_space.cpp src/sparse_history.cpp src/finite_state_factor.cpp \
-            src/diffuse_state_space.cpp src/regression_likelihood.cpp \
-            tools/native-tests/test_regression_likelihood.cpp \
-            $(R CMD config LAPACK_LIBS) $(R CMD config BLAS_LIBS) \
-            $(R CMD config FLIBS) $(R CMD config --ldflags) \
-            -o "$RUNNER_TEMP/persephone-regression-openmp"
-          PERSEPHONE_REQUIRE_OPENMP=1 OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE \
-            "$RUNNER_TEMP/persephone-regression-openmp"
+          result <- tinytest::run_test_file("inst/tinytest/test-backend.R")
+          stopifnot(all(as.logical(result)))

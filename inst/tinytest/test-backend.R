@@ -15,6 +15,7 @@ local({
 
   before <- loadedNamespaces()
   capability <- backend_capabilities("native", "x13")
+  expect_identical(capability, rkalos::capabilities())
   expect_identical(capability$fit, FALSE)
   expect_identical(capability$status, "unimplemented")
   expect_identical(capability$runtime_checked, FALSE)

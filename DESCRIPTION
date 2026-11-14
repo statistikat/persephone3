@@ -18,7 +18,7 @@ LazyData: true
 Depends: R (>= 4.1.0)
 Imports:
     R6,
-    Rcpp,
+    rkalos (>= 0.1.0),
     highcharter,
     dygraphs,
     plotly,
@@ -40,8 +40,6 @@ Imports:
     htmltools,
     jsonlite,
     htmlwidgets
-LinkingTo: Rcpp
-SystemRequirements: C++17, OpenMP (optional)
 Suggests:
     RProtoBuf,
     rjd3toolkit (>= 3.5.0),
@@ -53,6 +51,7 @@ Suggests:
     tinytest,
     bookdown
 Remotes:
+     github::statistikat/rkalos@83016bdae2def03c675f0fd1baed59ce6b33d851,
      github::rjdverse/rjd3toolkit,
      github::rjdverse/rjd3tramoseats,
      github::rjdverse/rjd3x13

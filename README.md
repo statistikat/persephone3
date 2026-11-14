@@ -32,6 +32,7 @@ remotes::install_github("rjdverse/rjd3x13@*release")
 remotes::install_github("rjdverse/rjd3tramoseats@*release")
 
 # install the package from GitHub
+remotes::install_github("statistikat/rkalos")
 remotes::install_github("statistikat/persephone3")
 ```
 
@@ -41,8 +42,12 @@ Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
 its optional packages and Java runtime. The package itself can now load without
 them. `backend_capabilities("native")` reports the native implementation status;
 native model fitting is not implemented yet and never falls back silently.
-The C++17/Rcpp foundations currently provide internal time-domain, differencing,
-convolution and finite-filter kernels; source installation requires a C++17 compiler.
+Persephone now requires [rkalos](https://github.com/statistikat/rkalos), which
+bundles a pinned [Kalos](https://github.com/statistikat/kalos) C++ engine and uses
+Rcpp only at its R boundary. Persephone contains no embedded numerical C++ code.
+Kalos is independent of R/Rcpp; standalone and minimal Python bindings use OpenBLAS.
+The full native numerical roadmap and contracts live in Kalos, with R interface
+status in rkalos. Full native seasonal-adjustment fitting remains unavailable.
 
 Each object records its backend at construction. An explicit `backend` argument
 overrides `options(persephone.backend = "rjd3")`; changing the option does not
@@ -51,7 +56,7 @@ change existing objects. `$params` and `$output` retain the legacy representatio
 indicates whether settings changed after fitting. Rerun the model after updates.
 
 See [the implementation plan](IMPLEMENTATION_STATUS.md) for the C++/Rcpp migration
-and [the reference corpus](tools/reference/SCOPE.md) for pinned backend evidence.
+and [the reference corpus](https://github.com/statistikat/kalos/blob/main/validation/reference/SCOPE.md) for pinned backend evidence.
 
 ## Usage
 

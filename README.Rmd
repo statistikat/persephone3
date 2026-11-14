@@ -154,3 +154,12 @@ includes the following guides:
 
 The same guides are available through `vignette(package = "persephone3")` when
 the package is installed with vignettes built.
+
+## Native engine repositories
+
+Persephone requires [rkalos](https://github.com/statistikat/rkalos), which bundles
+a pinned [Kalos](https://github.com/statistikat/kalos) C++ core. Rcpp stays in
+rkalos; Persephone owns application objects and workflows. The core and its
+minimal [Python binding](https://github.com/statistikat/pykalos) are independent
+of R. Native seasonal-adjustment fitting remains unavailable, and rjd3 stays the
+explicit default. See IMPLEMENTATION_STATUS.md for application integration status.

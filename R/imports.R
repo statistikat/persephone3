@@ -1,7 +1,5 @@
 #' Package imports
 #'
-#' @useDynLib persephone3, .registration = TRUE
-#' @importFrom Rcpp evalCpp
 #' @importFrom jsonlite toJSON
 #' @import htmlwidgets
 #'
