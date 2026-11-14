@@ -106,6 +106,13 @@ if ("--native" %in% args) {
   stopifnot("arma_residuals" %in% cap$primitives,fitted_residuals$available,fitted_residuals$complete$available,
     is.na(fitted_residuals$observed$standardized_innovations[2]),
     abs(fitted_residuals$interpolation$points_original-1.6)<1e-12)
+  legacy_residuals <- getFromNamespace("native_arma_residuals","persephone3")(
+    objective_setup(ts(c(7,21,3,13,9,NA,8,16,11,27,6,18,14,31,12,19),frequency=4),seasonal_d=1L),reporting="legacy")
+  stopifnot("arma_legacy_residuals" %in% cap$primitives,legacy_residuals$available,legacy_residuals$comparison_only,
+    abs(legacy_residuals$interpolation$points_original+7)<1e-12,
+    abs(legacy_residuals$accurate_interpolation$points_original-24)<1e-12,
+    abs(legacy_residuals$reported$unit_residuals[1]-3-sqrt(2))<1e-12,
+    length(legacy_residuals$reported$source_rows)==0L)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

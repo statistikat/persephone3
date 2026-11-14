@@ -26,3 +26,29 @@ reference_residual_executor <- function(engine) {
      dfc=rJava::.jcall(residuals,'I','getDfc'),ssq=rJava::.jcall(residuals,'D','getSsq'))
  }
 }
+
+# Focused reporting controls use explicitly supplied fixed/free parameters.
+prepare_legacy_residual_reference <- function(case,engine) {
+ a <- case$arguments
+ spec <- if(engine=='x13')rjd3x13::regarima_spec('rg0')else rjd3tramoseats::tramo_spec('tr0')
+ blocks <- lapply(c('ar','seasonal_ar','ma','seasonal_ma'),function(k)if(is.null(a[[k]]))numeric()else a[[k]])
+ coefficient <- unlist(blocks,use.names=FALSE);free <- is.na(coefficient)
+ coefficient[free] <- .35
+ signs <- rep(c(-1,-1,1,1),lengths(blocks))
+ estimate_mean <- isTRUE(a$include_mean) || isTRUE(a$include_drift)
+ known_mean <- if(is.null(a$mean))0 else a$mean
+ spec <- rjd3toolkit::set_arima(spec,mean=if(estimate_mean)0 else if(known_mean!=0)known_mean else NULL,
+   mean.type=if(estimate_mean)'Undefined'else'Fixed',
+   p=length(blocks[[1L]]),d=case$d,q=length(blocks[[3L]]),bp=length(blocks[[2L]]),bd=case$D,bq=length(blocks[[4L]]),
+   coef=if(length(coefficient))coefficient*signs else NULL,coef.type=if(length(coefficient))ifelse(free,'Initial','Fixed')else'Undefined')
+ spec <- rjd3toolkit::set_automodel(spec,enabled=FALSE)
+ spec <- rjd3toolkit::set_transform(spec,fun=if(a$transformation=='log')'Log'else'None')
+ spec <- rjd3toolkit::set_estimate(spec,tol=1e-12,exact.ml=TRUE)
+ context <- NULL
+ if(length(a$regressors)) {
+   for(name in names(a$regressors)) spec <- rjd3toolkit::add_usrdefvar(spec,name=name,regeffect='Trend',
+     coef=if(name %in% names(a$coefficients))unname(a$coefficients[name])else NULL)
+   context <- rjd3toolkit::modelling_context(variables=list(r=a$regressors))
+ }
+ list(series=a$series,spec=spec,context=context)
+}

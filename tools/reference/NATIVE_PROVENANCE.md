@@ -184,3 +184,15 @@ and dimensionless Richardson derivatives produce the sensitivity block. An
 independent full Gaussian Hessian and closed AR(1) formulas check the joint
 matrix. Public X-13/TRAMO calls supply timing comparisons, not joint-covariance
 targets; their conditional covariance is qualified separately in 20c.2a.1.
+
+Slices 20c.2b.1a–b independently derive accurate chronological innovations,
+complete-span Gaussian interpolation, and optional legacy reporting conventions.
+Only public model/filter APIs and public signatures informed the reporting
+comparisons; no upstream numerical source or bytecode was copied, translated or
+decompiled. Legacy filling, differencing parity, unpivoted Householder projection
+and scalar AR(1) fast-innovation rounding are independently authored. The
+reference generator records 404 public fits; its 30 AR(1) numeric-output fixtures
+also run without Java. Accurate calculations use independent dense Gaussian and
+intrinsic-conditioning oracles. See `residual-notes.md` and
+`tools/native-tests/arma-residuals-contract.md` for the distinction between
+accurate results and comparison-only reported outputs.

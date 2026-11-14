@@ -88,12 +88,21 @@ struct CompleteResiduals {
     std::vector<std::size_t> rows, missing_rows;
     std::size_t finite_count = 0;
     double log_determinant = 0, sum_squares = 0;
+    // Retained only on explicit request; finite complete rows x missing rows.
+    std::vector<double> missing_whitened_design;
+};
+struct CompleteResidualOptions {
+    bool retain_missing_design = false;
+    // Reporting comparisons only: apply exact finite differencing before
+    // stationary whitening, rather than the default integrated-state route.
+    bool difference_first = false;
 };
 CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     const RegressionDesign& design, const std::vector<double>& ar,
     const std::vector<double>& ma, const std::vector<double>& seasonal_ar,
     const std::vector<double>& seasonal_ma, int period, int d, int seasonal_d,
-    double mean = 0, double rank_tolerance = 1e-10, const Interrupt& interrupt = {});
+    double mean = 0, double rank_tolerance = 1e-10, const Interrupt& interrupt = {},
+    const CompleteResidualOptions& options = {});
 
 } // namespace persephone
 #endif

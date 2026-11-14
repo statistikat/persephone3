@@ -519,9 +519,13 @@ Rcpp::List native_arma_residuals(SEXP values, SEXP design, SEXP coefficients,
     SEXP specification, SEXP initial, SEXP coordinates, SEXP period,
     SEXP d=R_NilValue, SEXP seasonal_d=R_NilValue, SEXP mean=R_NilValue,
     SEXP rank_tolerance=R_NilValue, SEXP margin=R_NilValue, SEXP log_jacobian=R_NilValue,
-    SEXP scale=R_NilValue) {
+    SEXP scale=R_NilValue, SEXP reporting=R_NilValue, SEXP transformation=R_NilValue) {
     const auto selected=information_option(scale,"residual scale","ml");
     if(selected!="ml" && selected!="residual_df") throw std::invalid_argument("residual scale must be ml or residual_df");
+    const auto mode=information_option(reporting,"residual reporting","accurate");
+    if(mode!="accurate" && mode!="legacy")throw std::invalid_argument("residual reporting must be accurate or legacy");
+    const auto transform=information_option(transformation,"transformation","none");
+    if(transform!="none" && transform!="log")throw std::invalid_argument("transformation must be none or log");
     const auto map=parameter_map(specification,initial,margin);
     const auto data=objective_data(values,design,coefficients);
     const auto result=persephone::arma_residuals(data.input,data.regression,map,
@@ -559,6 +563,24 @@ Rcpp::List native_arma_residuals(SEXP values, SEXP design, SEXP coefficients,
         Rcpp::_["effective_count"]=result.complete.status=="available" ? static_cast<double>(result.complete.finite_count) : NA_REAL,
         Rcpp::_["sum_squares"]=result.complete.status=="available" ? result.complete.sum_squares : NA_REAL,
         Rcpp::_["basis"]="complete_span_missing_coordinate_projection");
+    out["reporting"]=mode;
+    if(mode=="legacy") {
+        const auto legacy=persephone::legacy_arma_residuals(data.input,data.regression,result,
+            integer(period,"period",0,12),integer(d,"d",0,2),integer(seasonal_d,"seasonal_d",0,2),
+            scalar(mean,"mean",0),scalar(rank_tolerance,"rank tolerance",1e-10),
+            transform=="log" ? persephone::Transform::logarithm : persephone::Transform::none,
+            [] {Rcpp::checkUserInterrupt();});
+        Rcpp::IntegerVector calendar;
+        for(const auto i:legacy.calendar_rows)calendar.push_back(static_cast<int>(i+1));
+        out["legacy"]=Rcpp::List::create(Rcpp::_["status"]=legacy.status,
+            Rcpp::_["available"]=legacy.status=="available",Rcpp::_["message"]=legacy.message,
+            Rcpp::_["basis"]=legacy.basis,Rcpp::_["compressed"]=legacy.compressed,
+            Rcpp::_["calendar_rows"]=calendar,Rcpp::_["preliminary_transformed"]=numeric(legacy.preliminary),
+            Rcpp::_["interpolated_transformed"]=numeric(legacy.interpolated),
+            Rcpp::_["correction_sign"]=legacy.correction_sign,
+            Rcpp::_["unit_residuals"]=numeric(legacy.residuals),Rcpp::_["scaled_residuals"]=numeric(legacy.scaled_residuals),
+            Rcpp::_["sum_squares"]=legacy.status=="available" ? legacy.sum_squares : NA_REAL);
+    }
     return out;
 }
 

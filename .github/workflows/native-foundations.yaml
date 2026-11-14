@@ -115,7 +115,7 @@ jobs:
             src/optimizer.cpp tools/native-tests/test_optimizer.cpp \
             -o "$RUNNER_TEMP/persephone-optimizer"
           "$RUNNER_TEMP/persephone-optimizer"
-          for harness in linear_algebra state_space diffuse_state_space regression_likelihood arma_objective arma_optimizer arma_identification information residual_information arma_information regression_information vector_jacobian joint_regression_information arma_residuals; do
+          for harness in linear_algebra state_space diffuse_state_space regression_likelihood arma_objective arma_optimizer arma_identification information residual_information arma_information regression_information vector_jacobian joint_regression_information arma_residuals legacy_arma_residuals; do
             c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
               -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \
               $(R CMD config --cppflags) src/numerics.cpp src/linear_algebra.cpp \

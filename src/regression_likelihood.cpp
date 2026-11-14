@@ -407,7 +407,8 @@ RegressionLikelihood sarima_regression_likelihood(const MaskedSeries& series,
 CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     const RegressionDesign& design, const std::vector<double>& ar, const std::vector<double>& ma,
     const std::vector<double>& seasonal_ar, const std::vector<double>& seasonal_ma,
-    int period, int d, int seasonal_d, double mean, double rank_tolerance, const Interrupt& interrupt) {
+    int period, int d, int seasonal_d, double mean, double rank_tolerance, const Interrupt& interrupt,
+    const CompleteResidualOptions& options) {
     validate_regression_inputs(series,design,mean,1,rank_tolerance,interrupt);
     CompleteResiduals out;
     const auto size=series.values.size();
@@ -432,8 +433,32 @@ CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
     // Original input has already passed the public 32-regressor bound. Only
     // the internal missing-coordinate integration columns exceed that bound.
     validate_design(augmented,rows,interrupt,true);
+    std::size_t differenced=0;
+    if(options.difference_first) {
+        const auto polynomial=difference_polynomial(d,seasonal_d,period,interrupt);
+        differenced=polynomial.size()-1;
+        if(rows<=differenced) { out.status="no_finite_innovations";return out; }
+        if((d || seasonal_d) && mean!=0) throw std::invalid_argument("integrated SARIMA requires mean zero");
+        const auto count=rows-differenced;
+        MaskedSeries response{std::vector<double>(count),std::vector<std::uint8_t>(count,0)};
+        std::vector<double> filtered(count*columns);
+        for(std::size_t i=0;i<count;++i) {
+            if((i&255U)==0) checkpoint(interrupt);
+            long double value=0;
+            for(std::size_t lag=0;lag<polynomial.size();++lag) value+=static_cast<long double>(polynomial[lag])*complete.values[i+differenced-lag];
+            response.values[i]=checked(value);
+            for(std::size_t j=0;j<columns;++j) {
+                if((j&31U)==0) checkpoint(interrupt);
+                value=0;
+                for(std::size_t lag=0;lag<polynomial.size();++lag) value+=static_cast<long double>(polynomial[lag])*augmented.values[i+differenced-lag+rows*j];
+                filtered[i+count*j]=checked(value);
+            }
+        }
+        complete=std::move(response);augmented.values=std::move(filtered);
+    }
     const auto fit=regression_likelihood_impl(complete,augmented,ar,ma,seasonal_ar,seasonal_ma,
-        period,d,seasonal_d,mean,1,rank_tolerance,interrupt);
+        period,options.difference_first ? 0 : d,options.difference_first ? 0 : seasonal_d,
+        mean,1,rank_tolerance,interrupt);
     out.status=fit.profile_status;
     if(out.status!="available") return out;
     if(fit.finite_count<=missing) { out.status="no_finite_innovations"; return out; }
@@ -448,11 +473,12 @@ CompleteResiduals sarima_complete_residuals(const MaskedSeries& series,
         double volume=0;
         (void)regression_covariance(missing_design,interrupt,&volume);
         out.log_determinant=checked(static_cast<long double>(out.log_determinant)+volume);
+        if(options.retain_missing_design) out.missing_whitened_design=std::move(missing_design.values());
     }
     out.residuals=fit.whitened_residuals; out.sum_squares=fit.sum_squared_standardized;
     out.regression_coefficients.assign(fit.coefficients.begin(),fit.coefficients.begin()+static_cast<std::ptrdiff_t>(design.columns));
     for(std::size_t j=0;j<missing;++j) out.interpolated.push_back(-fit.coefficients[design.columns+j]);
-    for(const auto i:fit.finite_rows) out.rows.push_back(first+i);
+    for(const auto i:fit.finite_rows) out.rows.push_back(first+differenced+i);
     return out;
 }
 

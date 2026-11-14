@@ -1,10 +1,11 @@
-# Residual and interpolation points (20c.2b.1a)
+# Residual and interpolation points (20c.2b.1a–b)
 
 The internal, Java-free API is:
 
 ```r
 native_arma_residuals(context, fitted_coordinates, scale = "ml")
 native_arma_residuals(context, fitted_coordinates, scale = "residual_df")
+native_arma_residuals(context, fitted_coordinates, reporting = "legacy")
 ```
 
 This evaluates a supplied admissible ARMA point and profiles the regression
@@ -86,7 +87,44 @@ not accepted as accurate targets. A fixed seasonal random walk additionally
 exposes a compressed public residual basis with no valid per-observation
 interpretation. See `tools/reference/residual-notes.md` and the versioned matrix.
 
-The user requested a separate Java-free legacy comparison mode on 2026-11-14.
-That is the next commit, 20c.2b.1b. Accurate outputs remain the default; legacy
-reporting must not change the likelihood, fitted coefficients, accurate residuals
-or future uncertainty calculations.
+## Explicit legacy reporting
+
+`reporting="accurate"` remains the default. The optional `"legacy"` mode takes
+the same numeric objective and parameters, without Java, target residuals or
+optimizer history. It preserves `observed`, `complete`, the likelihood and
+coefficients, and retains accurate points as `accurate_interpolation`. Selected
+legacy points and the compact `reported` residual series carry `comparison_only`.
+
+For each consecutive internal gap, its preliminary value is the arithmetic
+mean of the adjacent observed original-scale endpoints, transformed afterward.
+If `m` is the accurate transformed point and `a` this preliminary fill, the
+legacy point is `a + (-1)^(d+D)*(m-a)`. Odd total differencing therefore reflects
+the Gaussian point. Endpoint gaps remain unfilled. Stable log arithmetic avoids
+overflow in preliminary filling; an unrepresentable original-scale legacy point
+is explicitly unavailable without losing the accurate outputs.
+
+With free regression coefficients, the public residual series whitens those
+legacy-filled points at the accurately fitted coefficients. Its norm can differ
+from likelihood `Q`. Without free regression coefficients, including known means
+and fixed user effects, it instead uses a compressed chronological-missing-column
+Householder projection. Its norm is `Q`; its calendar labels are end-aligned
+reporting dates, **not observation dates**. Accordingly its `source_rows` is empty
+and `row_alignment="reported_end_aligned_not_observation_mapping"`. Missing
+columns have the differencing parity sign, and elimination is unpivoted.
+
+At mathematically zero QR pivots, tiny AR(1) predictor tails can choose a different
+residual basis. Independently derived scalar fast-innovation updates preserve
+binary64 multiplication and startup-normalization order for this reporting path.
+Neither this arithmetic convention nor the legacy points enter accurate fitting
+or covariance. Scaled legacy residuals always use the selected accurate likelihood
+variance, rather than their possibly different reported squared norm.
+
+Qualification covers 404 public X-13/TRAMO fits: the original 64 fitted models,
+96 focused reporting models, 30 AR(1) rounding cases and 12 fixed-effect/known-mean/
+estimated-AR controls per engine. It includes quarterly/monthly data, logs,
+consecutive and diffuse-period gaps, differencing up to second order, and AR(1)
+coefficients from −0.99 to +0.99. Thirty frozen public-output fixtures run in the
+mandatory Java-free suite. This is bounded 3.9.0 reporting evidence, not a promise
+of compatibility with arbitrary upstream models or versions. See
+`tools/reference/information/2026-11-14-residuals-legacy/` for the matrix and timing
+evidence. Prediction errors remain based on the accurate conditional distribution.
