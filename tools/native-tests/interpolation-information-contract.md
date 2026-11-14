@@ -64,11 +64,11 @@ calendar window with `NA` outside the imputed rows. No internal missing values
 is a valid empty result with zero-dimensional covariance matrices.
 
 Covariance and `standard_errors` are on the **transformed scale**. For an identity
-transform, `standard_errors_original` is identical. For logs it is deliberately
-`NA`, with `original_uncertainty_status="lognormal_moments_not_computed"`.
-Original-scale points are `exp(m)` without mean adjustment; a transformed
-standard error is not reused as an original-scale error. Lognormal mean/variance
-outputs belong to the forecast/back-transformation step. If `exp(m)` is out of
+transform, `standard_errors_original` is identical. Step 20d.2a adds separately
+labelled original Gaussian/lognormal means, covariance and errors, each with
+explicit range status. Original-scale points remain `exp(m)` without mean
+adjustment; a transformed standard error is never reused as an original-scale
+error. See `prediction-moments-contract.md` for the moment and interval semantics. If `exp(m)` is out of
 range, the transformed point/covariance remain available and the original point
 has a separate `original_scale_range` status.
 

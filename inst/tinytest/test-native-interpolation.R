@@ -43,8 +43,14 @@ local({
       expect_equal(dimnames(actual$covariance),rep(list(as.character(actual$source_rows)),2))
     } else expect_identical(actual$status,"no_internal_missing")
     if(actual$transformation=="log") {
-      expect_true(all(is.na(actual$standard_errors_original)))
-      expect_identical(actual$original_uncertainty_status,"lognormal_moments_not_computed")
+      expect_equal(actual$standard_errors_original,exp(actual$points_transformed+diag(actual$covariance)/2)*sqrt(expm1(diag(actual$covariance))),check.attributes=FALSE,tolerance=2e-10)
+      expect_identical(actual$original_uncertainty_status,"available")
+      means <- exp(actual$points_transformed+diag(actual$covariance)/2)
+      expect_equal(actual$means_original,means,check.attributes=FALSE,tolerance=2e-10)
+      target <- sign(actual$covariance)*exp(outer(log(means),log(means),'+')+log(abs(expm1(actual$covariance))))
+      if(all(is.finite(target)) && !any(actual$covariance!=0 & target==0))
+        expect_equal(actual$covariance_original,target,check.attributes=FALSE,tolerance=2e-10)
+      else expect_identical(actual$original_covariance_status,'original_covariance_range')
     } else expect_identical(actual$standard_errors_original,actual$standard_errors)
   }
   # More than one internal gap, all differencing parities/orders, pure AR/MA,
@@ -78,7 +84,7 @@ local({
   logged <- information(setup(exp(y),ar=.5,transformation="log"))
   expect_equal(logged$points_original,exp(1.6),tolerance=1e-12)
   expect_equal(logged$covariance,ar$covariance,tolerance=1e-12)
-  expect_true(all(is.na(logged$standard_errors_original)))
+  expect_true(all(is.finite(logged$standard_errors_original)))
   # A finite transformed prediction can have an unrepresentable inverse point.
   # Preserve its covariance and the observed original values in that case.
   extreme_y <- ts(exp(c(1,NA,2,3,4,2)),frequency=4)

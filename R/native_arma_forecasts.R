@@ -32,6 +32,9 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
   labels <- as.character(ordinals)
   for(field in c("covariance","known_regression_covariance","regression_covariance"))
     if(!is.null(result[[field]]))dimnames(result[[field]]) <- list(labels,labels)
+  locations <- result$points_transformed
+  result$original_moments <- if(result$point_available)native_model_prediction_moments(
+    locations,result$covariance,inputs$transformation)else NULL
   as_series <- function(values,start) {
     if(!length(values))return(NULL)
     year <- floor(start/domain$frequency)
@@ -56,16 +59,30 @@ native_arma_forecasts <- function(objective,coordinates=objective$parameters$ini
   result$standard_errors <- list(
     backcast=as_series(result$standard_errors[error_rows$backcast],domain$start_ordinal-be),
     forecast=as_series(result$standard_errors[error_rows$forecast],starts[['forecast']]))
-  result$standard_errors_original <- if(inputs$transformation=="none")result$standard_errors else
-    lapply(result$standard_errors,function(x)if(is.null(x))NULL else x*NA_real_)
+  means <- if(inputs$transformation=="none")locations else
+    if(!is.null(result$original_moments))unname(result$original_moments$means)else rep(NA_real_,length(locations))
+  result$means_original <- lapply(names(point_rows),function(direction)
+    as_series(means[point_rows[[direction]]],starts[[direction]])) |> stats::setNames(names(point_rows))
+  result$original_mean_status <- if(inputs$transformation=="none")result$point_status else
+    if(!is.null(result$original_moments))result$original_moments$mean_status else "uncertainty_unavailable"
+  result$covariance_original <- if(inputs$transformation=="none")result$covariance else result$original_moments$covariance
+  result$original_covariance_status <- if(!is.null(result$original_moments))result$original_moments$covariance_status else "uncertainty_unavailable"
+  original_errors <- if(!is.null(result$original_moments))unname(result$original_moments$standard_errors)else rep(NA_real_,length(locations))
+  result$standard_errors_original <- if(inputs$transformation=="none")result$standard_errors else list(
+    backcast=as_series(original_errors[error_rows$backcast],domain$start_ordinal-be),
+    forecast=as_series(original_errors[error_rows$forecast],starts[['forecast']]))
   result$standard_errors_scale <- "transformed"
-  result$original_uncertainty_status <- if(inputs$transformation=="none")result$status else "lognormal_moments_not_computed"
+  result$original_uncertainty_status <- if(inputs$transformation=="none")result$status else
+    if(!is.null(result$original_moments))result$original_moments$standard_error_status else "uncertainty_unavailable"
   result$point_domains <- lapply(result$points_transformed,backend_domain)
   result$error_domains <- lapply(result$standard_errors,backend_domain)
   result$point_horizons <- c(backcast=b,forecast=f);result$error_horizons <- c(backcast=be,forecast=fe)
   result$forecasts <- new_forecast_contract(list(y=result$points_original$forecast),
-    if(inputs$transformation=="none")list(y=result$standard_errors_original$forecast)else list(),observed=inputs$original,
-    error_reasons=if(inputs$transformation=="log")list(y="Original-scale lognormal errors are not computed.")else list())
+    list(y=result$standard_errors_original$forecast),observed=inputs$original)
+  if(!is.null(result$forecasts)) {
+    result$forecasts$uncertainty_distribution <- if(inputs$transformation=="log")"lognormal"else"Gaussian"
+    result$forecasts$interval_convention <- if(inputs$transformation=="log")"exponentiate_Gaussian_quantiles"else"Gaussian_quantiles"
+  }
   result$point_convention <- if(inputs$transformation=="log")"exponentiated_transformed_point"else"Gaussian_conditional_point"
   result$mean_adjustment <- "none";result$transformation <- inputs$transformation
   result$scale_convention <- if(scale=="ml")"Q_over_original_n_finite"else"Q_over_original_n_minus_free_regression_minus_free_ARMA"

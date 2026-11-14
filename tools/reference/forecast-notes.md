@@ -62,3 +62,26 @@ mkdir /tmp/persephone-forecast-report
 PERSEPHONE_NUM_THREADS=2 OMP_NUM_THREADS=2 Rscript tools/reference/verify-forecasts.R \
   --timing --output=/tmp/persephone-forecast-report
 ```
+
+## Original moments (20d.2a)
+
+The current qualifier additionally checks native original Gaussian/lognormal
+means and covariance against independent moment formulas, retaining explicit
+range status when the full covariance cannot be represented. Original standard
+errors are evaluated independently and can remain finite in those cases. The
+transformed point/covariance budgets remain unchanged.
+
+A separate public-input check distinguishes the inverse-transform convention
+from the already recorded process scaling. Public original log errors match the
+lognormal formula evaluated at `RawForecasts`, which excludes fixed regression
+effects. The public original points instead restore those effects. Applying the
+formula to their fully restored locations therefore differs. Both comparisons
+remain explicit in the report. Native moments use the full accurate Gaussian
+location consistently; this reporting difference is not incorporated into the
+accurate default. Only public accessor execution informed this observation.
+
+The report in `information/2026-11-14-prediction-moments/` also times prepared
+fitting plus both transformed and original moments. Its native workload includes
+full original joint covariance when representable; public outputs remain marginal
+errors and inverse points. Earlier 20d.1 matrices/timings are preserved as
+historical evidence.

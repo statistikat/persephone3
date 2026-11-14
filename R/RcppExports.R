@@ -81,6 +81,10 @@
     .Call(`_persephone3_native_parallel_info`)
 }
 
+.native_prediction_moments <- function(location, covariance, transformation) {
+    .Call(`_persephone3_native_prediction_moments`, location, covariance, transformation)
+}
+
 .native_regression_likelihood <- function(values, design, coefficients, ar, ma, seasonal_ar, seasonal_ma, period, d = NULL, seasonal_d = NULL, mean = NULL, variance = NULL, rank_tolerance = NULL) {
     .Call(`_persephone3_native_regression_likelihood`, values, design, coefficients, ar, ma, seasonal_ar, seasonal_ma, period, d, seasonal_d, mean, variance, rank_tolerance)
 }

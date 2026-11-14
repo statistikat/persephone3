@@ -1,13 +1,14 @@
 # Implementation status and next-work plan
 
-Updated: **2026-11-14**. Numerical implementation: **20d.1 (this update)**;
+Updated: **2026-11-14**. Numerical implementation: **20d.2a (this update)**;
 the maintainer selected both covariance modes, accurate final-fit by default and
 Java-free legacy emulation for explicit comparisons. The same accurate-default,
 Java-free legacy-comparison policy is now implemented for residual/interpolation
 reporting. Conditional interpolation prediction errors and optional accurate
 profile-ML ARMA propagation are implemented. Conditional forecast/backcast
-points and covariance are delivered in **20d.1**; lognormal moments and optional
-ARMA forecast propagation are next in **20d.2a–b**.
+points and covariance are delivered in **20d.1**. Original Gaussian/lognormal
+moments are delivered in **20d.2a**; optional ARMA forecast/backcast propagation
+is next in **20d.2b**.
 Matched fit timings remain recorded for `9cd42b3`. Package **0.1.0**,
 branch `codex/implementation-items-1-3`, based on `master` at `463aca8`.
 The original reassessment below refers to **`dd38e10`**.
@@ -27,8 +28,8 @@ The original reassessment below refers to **`dd38e10`**.
 
 The shared backend adapter, reference corpus and first compiled C++/Rcpp
 primitives are implemented. Correctness items **6–13** are delivered for the
-current rjd3 path. The full check has **30,773 passing installed-package
-assertions** across **42 files**, including the native numerical additions. These
+current rjd3 path. The full check has **30,980 passing installed-package
+assertions** across **43 files**, including the native numerical additions. These
 cover fitted values, updates, outliers, calendars, hierarchy decisions,
 forecasts, reports and dashboard behavior. Each item was committed separately.
 
@@ -80,8 +81,10 @@ labelled profile-ML delta increment, retaining conditional results on failure.
 Conditional endpoint predictions now cover complete supplied past/future
 regressors, separate point/error horizons and full cross-domain covariance.
 Their future points match 128 public fits; public backcast/scale differences
-remain separate from independent Gaussian qualification. Lognormal moments,
-optional ARMA forecast propagation and wider platform qualification remain open;
+remain separate from independent Gaussian qualification. Original lognormal
+means, signed covariance and standard errors now have separate range statuses;
+inverse-point medians remain unchanged. Optional ARMA forecast propagation and
+wider platform qualification remain open;
 native X-11/TRAMO/SEATS adjustment is not implemented. rjd3 remains the
 explicit transitional default; selecting an unsupported native fit fails with
 a capability error and never falls back silently. rjd3 packages are optional
@@ -134,6 +137,7 @@ the native-backend plan below.
 | 20c.2b.2a — conditional interpolation prediction errors | Java-free `native_interpolation_information()`, full missing-value covariance, separate known/estimated-regression components, explicit `Q/n` or `Q/(n-r-k)`, transformed errors and distinct point/error availability | 2,310 new mandatory assertions include intrinsic Gaussian precision/Schur comparisons for 64 fitted and 96 focused cases. All 404 public transformed-error comparisons pass unchanged `2e-8`; maximum error `5.181e-15`. Strict C++/ASan/UBSan covers 177 cancellation boundaries, range guards and serial/OpenMP covariance equality. ARMA and scale uncertainty are not propagated; original-scale lognormal moments remain a later transform/forecast step. |
 | 20c.2b.2b — optional ARMA interpolation uncertainty | Explicit `method="delta_profile_ml"`, centered refitted point sensitivities and accurate observed profile-ML `G V_ARMA G'`; shared budgets and retained conditional results on failure | 1,635 new mandatory assertions, independent dense Gaussian Hessians for 32 nonempty fitted cases and 32 empty controls, closed AR(1) derivatives, units/range/budget gates and a 260-point OpenMP comparison. Strict C++/ASan/UBSan covers 1,147 cancellation boundaries. Public conditional errors are not delta targets. |
 | 20d.1 — conditional forecasts/backcasts | Explicit endpoint domains, supplied future/past regressors, original-window Q/count/df, full process/regression/joint covariance, separate point/error horizons and original forecast-contract adaptation | 2,007 new mandatory assertions; 64-model dense Gaussian checks, closed AR(1), white-noise mean and random-walk drift covariance, near-unit roots, higher integration, context/windows/range and 260-point serial/OpenMP equality. Strict C++/ASan/UBSan covers 876 cancellation boundaries. Future points match 128 public fits; backcast points and public error scaling are separately recorded discrepancies. |
+| 20d.2a — original prediction moments | Java-free Gaussian/lognormal mean, signed covariance and standard-error back-transform; unchanged inverse-point medians, independent range statuses and explicit interval convention on the forecast contract | 207 additional assertions (79 new moment assertions plus 128 model-integration checks); full package 30,980 / 43, isolated Java-free 29,651 / 23 + 34 backend, serial 29,647 / 23. Strict C++/ASan/UBSan covers 22 cancellation boundaries and 260-point serial/OpenMP equality. Original errors remain usable when full variance overflows. Public log errors omit fixed regression effects; raw/restored comparisons stay separate. |
 
 | 11 — calendar regressors | Weighted Easter centering, strict holiday parser/named aliases, deterministic maximum-weight collision handling, locale-independent weekday counts and explicit output/input contracts | 91 calendar assertions pass, including zero/fractional weights, hand-calculated dates, leap years, collisions and quarterly sums. The default 140-year calendar and year boundaries were checked. F6 is resolved; no Java dependency is used. |
 | 7 — fixing detected outliers | Current backend setters, preserved manual/fixed effects, frequency-aware protected tails, idempotent and atomic aggregate/recursive/batch updates | 188 focused assertions and four existing fixing checks pass for both methods and frequencies. AO/LS/TC are supported; fitted SO effects fail explicitly. F1 is resolved. |
@@ -802,6 +806,81 @@ Versioned hashes, matrix rows, closed reporting controls and raw timing samples
 are in `tools/reference/information/2026-11-14-forecasts/`. Earlier reports are
 unchanged. The next separate step is original-scale lognormal moments.
 
+### Original prediction moments (20d.2a)
+
+The Java-free `native_prediction_moments()` now evaluates Gaussian/lognormal
+medians, means, full signed covariance and standard errors. Interpolation and
+forecast/backcast results expose `means_original`, `covariance_original`,
+`standard_errors_original` and individual status fields. Original point outputs
+remain inverse-point medians, so existing `mean_adjustment="none"` semantics
+are preserved. For a Gaussian location `m` and covariance `V`, original means
+are `exp(m+diag(V)/2)` and covariance is `mean_i*mean_j*expm1(Vij)`.
+
+The core evaluates signed covariance in logarithmic units, preserving small
+cross covariance and cancellation without forming overflowing intermediate
+exponentials or products. Mean, median, standard error and covariance ranges
+are qualified separately. A standard error may be finite when its variance is
+out of range; it remains available. For `m=-1000,V=1000`, the median is below the
+positive representable range, the mean is `exp(-500)` and the variance is about
+one. A failed original moment retains the transformed distribution and other
+usable original quantities. Model identity outputs retain the kernel's existing
+covariance without redundant factorization. No transformed standard error is
+mislabelled as an original error.
+
+The forecast contract now exposes original errors with distribution/interval
+metadata. These errors retain their requested shorter horizons; full covariance
+retains its complete joint point domain. Lognormal central intervals require
+exponentiated Gaussian quantiles, rather than median ± a multiple of original
+standard error. Full native seasonal adjustment and its interval rendering are
+still unavailable. The back-transform uses the selected conditional or optional
+interpolation delta covariance; it never substitutes conditional covariance when
+requested propagation fails. Innovation-scale uncertainty is not added.
+
+The **207 additional assertions** comprise **79 moment checks** and **128 checks**
+added to the existing fitted interpolation/forecast suites. They cover signed
+cross covariance, tiny values, extreme cancellation, separately representable
+moments, invalid certificates, empty inputs, serialization, domains, range
+retention and actual 260-point serial/OpenMP equality. Strict C++/ASan/UBSan
+passes **22 interruption boundaries** and reuse. The final full build/check
+passes **30,980 assertions / 43 files**, zero errors and the existing R-header
+compiler warning and DESCRIPTION note. The isolated Java-free suite passes
+**29,651 native assertions / 23 files + 34 backend assertions** with two actual
+workers. The separate serial build passes **29,647 / 23**, with no `libomp`
+linkage. Final logs are under `/tmp/persephone-prediction-moments-final/`;
+standalone harness logs are under `/tmp/persephone-prediction-moments/`.
+
+The reference report passes **3,369 independent/domain/timing checks** across
+**136 public fits**, including 128 raw-location lognormal error comparisons.
+Maximum scaled original-mean error is **6.036e-9** and original-covariance error
+**5.107e-10**, below the unchanged `2e-8` budget. Explicit covariance-range cases
+retain finite means/errors. Public reporting still has the previously documented
+backcast/process-scale differences. Original log errors use `RawForecasts`,
+omitting fixed regression effects, while original points restore those effects.
+At raw locations the native moment formula matches public errors to **2.821e-14**;
+at fully restored locations it differs (maximum scaled difference **0.1823**).
+Native model moments consistently use the full accurate location. Both comparisons
+are recorded; this is not a complete legacy endpoint-emulation contract.
+See `tools/native-tests/prediction-moments-contract.md` and
+`tools/reference/forecast-notes.md`.
+
+The benchmark records **7,341 calls**, including warm-up/calibration, in three
+warmed alternating rounds with calibrated batches of at least 50 ms where
+possible. Median summed prepared fit/output time over the 64 matrix cases:
+
+| Workload | Seconds |
+| --- | ---: |
+| Native fit, transformed distribution and original moments | 9.444131 |
+| JDemetra X-13 fit plus public forecast/backcast points/errors | 0.286957 |
+| JDemetra TRAMO fit plus public forecast/backcast points/errors | 0.269079 |
+
+Native returns full transformed/original joint covariance when representable
+and separate original means; public accessors return marginal errors and inverse
+points. These workloads differ, and native remains slower. Setup/loading/startup
+and explicit pre-batch GC are excluded; natural in-batch GC is included. Versioned
+hashes, matrices, closed controls and timing rows are in
+`tools/reference/information/2026-11-14-prediction-moments/`. Earlier reports are
+unchanged. Optional accurate profile-ML ARMA endpoint propagation is next.
+
 ### Previously completed validation, rechecked as evidence
 
 - The retained full `R CMD check` log ends in **Status: OK**: zero errors,
@@ -1129,8 +1208,7 @@ The next commits should be:
 | Next slice | Concrete work | Required evidence before advancing |
 | --- | --- | --- |
 | 16c / 18d.2 | Complete distribution/source-build review; qualify per-field tolerances and expand difficult-model, leading/trailing-gap and selection-boundary fixtures | Reviewed acceptance rules (including the new third-regressor path), platform evidence and independent invariants; never rebaseline away discrepancies |
-| 20d.2a — next | Original-scale Gaussian/lognormal prediction moments | Retain inverse-point medians and expose means, original covariance and standard errors separately. Qualify signed cross covariance, extreme exponent cancellation/range, empty domains and explicit transformed-result retention; document the distinction between standard errors and lognormal quantile intervals |
-| 20d.2b | Optional ARMA forecast/backcast propagation | Reuse qualified accurate profile-ML information with centered/refitted endpoint sensitivities and shared budgets. Retain conditional results on failure and qualify independent Gaussian sensitivities, fixed/free constraints, units and near-boundary fits |
+| 20d.2b — next | Optional ARMA forecast/backcast propagation | Reuse qualified accurate profile-ML information with centered/refitted endpoint sensitivities and shared budgets. Retain conditional results on failure and qualify independent Gaussian sensitivities, fixed/free constraints, units and near-boundary fits |
 | 19 / 20b performance follow-up | Profile the monthly airline/mixed-factor workloads identified by the timing matrix; separate objective evaluation count, initialization, state propagation, regression solves and boundary overhead | Explain the measured 32–35× setup-plus-fit gap before optimizing; retain numerical tolerances, cancellation and serial/OpenMP equality, and rerun the same timing protocol after changes |
 | 22a–c | Implement X-11 filters, endpoint treatment and passes; connect a deliberately restricted fixed-model native X-13 fit | Full intermediate/final decomposition and forecast agreement for its advertised subset |
 | 21 / 23 / 24 / 25 | Add automatic X-13 preprocessing, TRAMO policies, SEATS decomposition, diagnostics and benchmarking | Method-specific selection and numerical acceptance; default `rsa3` remains unsupported until its full pipeline exists |
@@ -1151,8 +1229,9 @@ requested Java-free legacy reporting option are delivered. Conditional interpola
 errors include estimated-regression uncertainty and optional first-order ARMA
 propagation. Conditional forecasts/backcasts are now delivered with full
 estimated-regression covariance and explicit regressor/date coverage. Next add
-lognormal moments and optional ARMA endpoint propagation before an end-to-end
-fixed-model X-13 slice.
+optional ARMA endpoint propagation before an end-to-end fixed-model X-13 slice.
+Original Gaussian/lognormal moments are delivered, with unchanged inverse points
+and explicit standard-error/quantile semantics.
 Agreement on the qualified likelihood fixtures is not full JD+ feature parity
 and does not justify a default switch. The detailed acceptance criteria below
 remain in force.
@@ -1589,11 +1668,14 @@ contract and are not universally the covariance residual vector.
    boundaries even when endpoint observations are missing. Preserve item 10's
    separate point/error horizons and qualify both directions against independent
    Gaussian conditioning, closed AR(1)/random-walk formulas and public accessors.
-   **20d.2a — next** exposes transformed moments, inverse-point medians `exp(m)`,
+   **20d.2a — delivered** exposes transformed moments, inverse-point medians `exp(m)`,
    lognormal means `exp(m+Vii/2)` and original covariance separately, with explicit
-   overflow/underflow handling and signed cross covariance. Keep standard errors
-   distinct from lognormal quantile intervals, obtained by exponentiating Gaussian
-   bounds. **20d.2b** adds optional accurate profile-ML delta propagation and
+   separate overflow/underflow statuses for medians, means, standard errors and
+   full covariance, preserving finite errors when variances are unrepresentable.
+   Standard errors stay distinct from lognormal quantile intervals, obtained by
+   exponentiating Gaussian bounds; native forecast consumers must honor this
+   convention before full-fit/interval integration. **20d.2b — next** adds optional
+   accurate profile-ML delta propagation and
    must refit regression effects at perturbed ARMA coefficients and retain the
    conditional result on failure. Document any public reporting discrepancy
    separately; do not replace accurate predictions with legacy targets. Only

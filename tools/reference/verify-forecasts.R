@@ -21,6 +21,7 @@ for(file in c('arma-fit-cases.R','interpolation-oracle.R','forecast-oracle.R'))
   source(file.path(root,'inst/tinytest/fixtures/native',file))
 setup <- getFromNamespace('native_arma_objective_setup','persephone3')
 forecast <- getFromNamespace('native_arma_forecasts','persephone3')
+moments <- getFromNamespace('native_prediction_moments','persephone3')
 optimize_native <- getFromNamespace('native_arma_optimize','persephone3')
 checks <- fits <- timed_calls <- 0L;rows <- timings <- list()
 assert <- function(value,label){checks<<-checks+1L;if(!isTRUE(value))stop('Qualification failed: ',label)}
@@ -53,6 +54,14 @@ for(ca in forecast_cases()) {
     close(ml$covariance,independent$covariance*independent$Q/independent$n,paste(label,'independent covariance'))
     close(ml$known_regression_covariance,independent$known*independent$Q/independent$n,paste(label,'independent process component'))
     close(ml$regression_covariance,independent$regression*independent$Q/independent$n,paste(label,'independent regression component'))
+    original_mean <- if(ca$arguments$transformation=='log')exp(independent$points+diag(ml$covariance)/2)else independent$points
+    original_covariance <- if(ca$arguments$transformation=='log')sign(ml$covariance)*
+      exp(outer(log(original_mean),log(original_mean),'+')+log(abs(expm1(ml$covariance))))else ml$covariance
+    assert(ml$original_mean_status=='available' && ml$original_uncertainty_status=='available',paste(label,'original moments available'))
+    close(values(ml$means_original),original_mean,paste(label,'independent original means'))
+    original_covariance_finite <- all(is.finite(original_covariance)) && !any(ml$covariance!=0 & original_covariance==0)
+    if(original_covariance_finite)close(ml$covariance_original,original_covariance,paste(label,'independent original covariance'))else
+      assert(is.null(ml$covariance_original) && ml$original_covariance_status=='original_covariance_range',paste(label,'explicit original covariance range'))
     for(direction in c('backcast','forecast')) {
       points <- ml$points_transformed[[direction]];errors <- df$standard_errors[[direction]]
       reported <- reference$outputs[[direction]]
@@ -61,10 +70,32 @@ for(ca in forecast_cases()) {
       reported_point <- if(ca$arguments$transformation=='log')log(reported$original)else reported$original
       point_error <- error(as.numeric(points),align(reported_point,points,ca$period))
       standard_error <- error(as.numeric(errors),align(reported$errors,errors,ca$period))
+      # Isolate the public inverse transform from the already recorded process
+      # scale/backcast discrepancies. These numerical inputs are test data only.
+      public_moment_error <- public_raw_moment_error <- NA_real_
+      if(ca$arguments$transformation=='log') {
+        back_transformed <- moments(log(as.numeric(reported$original)),diag(as.numeric(reported$errors)^2),'log')
+        assert(back_transformed$standard_error_status=='available',paste(label,direction,'public-input lognormal standard errors'))
+        public_moment_error <- error(back_transformed$standard_errors,as.numeric(reported$original_errors))
+        raw_moments <- moments(as.numeric(reported$points),diag(as.numeric(reported$errors)^2),'log')
+        assert(raw_moments$standard_error_status=='available',paste(label,direction,'public raw-point moments'))
+        public_raw_moment_error <- error(raw_moments$standard_errors,as.numeric(reported$original_errors))
+        assert(public_raw_moment_error<=2e-8,paste(label,direction,'public errors omit fixed log regression effects'))
+        # Public backcast/error reporting is a separate parity result, not
+        # the mathematical target for the independently derived moments.
+      }
+
       rows[[length(rows)+1L]] <- data.frame(case=ca$id,engine=engine,direction=direction,
         point_public_status=if(point_error<=2e-8)'within_budget'else'public_reporting_discrepancy',
         error_public_status=if(standard_error<=2e-8)'within_budget'else'public_reporting_discrepancy',
         public_point_scaled_error=point_error,public_standard_error_scaled_error=standard_error,
+        public_log_moment_scaled_error=public_moment_error,
+        public_raw_log_moment_scaled_error=public_raw_moment_error,
+        public_log_moment_status=if(is.na(public_moment_error))'not_applicable'else
+          if(public_moment_error<=2e-8)'within_budget'else'public_reporting_discrepancy',
+        independent_original_mean_scaled_error=error(values(ml$means_original),original_mean),
+        original_covariance_status=ml$original_covariance_status,
+        independent_original_covariance_scaled_error=if(original_covariance_finite)error(ml$covariance_original,original_covariance)else NA_real_,
         independent_point_scaled_error=error(values(ml$points_transformed),independent$points),
         independent_covariance_scaled_error=error(ml$covariance,independent$covariance*independent$Q/independent$n),
         effective_count=ml$effective_count,residual_df=ml$residual_df)
@@ -135,14 +166,16 @@ report <- do.call(rbind,rows)
 files <- c(file.path(tooling,c('verify-forecasts.R','forecast-reference.R','arma-fit-reference.R','fit-timing.R')),
   file.path(root,c('src/forecast_information.cpp','src/core/forecast_information.hpp','src/regression_likelihood.cpp',
     'src/core/regression_likelihood.hpp','src/rcpp_arma_objective.cpp','R/native_arma_forecasts.R',
+    'src/prediction_moments.cpp','src/core/prediction_moments.hpp','src/rcpp_prediction_moments.cpp','R/native_prediction_moments.R',
     'inst/tinytest/fixtures/native/interpolation-oracle.R','inst/tinytest/fixtures/native/forecast-oracle.R')))
 metadata <- list(schema_version=1L,captured_utc=format(Sys.time(),tz='UTC',usetz=TRUE),
   parent_source_commit=system2('git',c('-C',shQuote(root),'rev-parse','HEAD'),stdout=TRUE),source_sha256=setNames(reference_sha256(files),basename(files)),
   oracle_manifest_sha256=reference_sha256(file.path(base_dir,'oracle-manifest.R')),R=R.version.string,java=pin$java,
-  checks=checks,direct_reference_fits=fits,primary_cases=64L,closed_reporting_controls=8L,scaled_covariance_point_error_budget=2e-8,
-  method='Accurate conditional Gaussian endpoint distribution; process and estimated-regression covariance, original-window Q/n or Q/(n-r-k)',
+  checks=checks,direct_reference_fits=fits,primary_cases=64L,closed_reporting_controls=8L,
+  public_log_transform_comparisons=sum(!is.na(report$public_raw_log_moment_scaled_error)),scaled_covariance_point_error_budget=2e-8,
+  method='Accurate conditional Gaussian endpoint distribution and original Gaussian/lognormal moments; process and estimated-regression covariance, original-window Q/n or Q/(n-r-k)',
   public_scope='Public Forecasts restores fixed effects; log of its original point compares the transformed median. Public standard errors are compared separately; discrepancies are retained',
-  timing_scope='Prepared fit plus native full joint past/future covariance versus public processing, serialization and forecast/backcast points and marginal errors',
+  timing_scope='Prepared fit plus native transformed/original joint past/future covariance and lognormal means versus public processing, serialization and forecast/backcast points and marginal errors',
   timing_conventions='3 warmed rounds, alternating engines, batches >=50ms when possible; setup/loading/startup and explicit pre-batch GC excluded',
   timing_calls_including_warmup_and_calibration_retries=timed_calls,native_threads=Sys.getenv('PERSEPHONE_NUM_THREADS'),
   parallel=getFromNamespace('.native_parallel_info','persephone3')())
@@ -154,7 +187,8 @@ if(!is.null(output)) {
 }
 cat('PASS:',checks,'independent/domain/timing checks /',fits,'public fits; public parity reported separately\n')
 print(with(report,table(direction,point_public_status)));print(with(report,table(direction,error_public_status)))
-print(aggregate(cbind(public_point_scaled_error,public_standard_error_scaled_error,independent_point_scaled_error,independent_covariance_scaled_error)~engine+direction,report,max),row.names=FALSE)
+print(with(report,table(direction,public_log_moment_status)))
+print(aggregate(cbind(public_point_scaled_error,public_standard_error_scaled_error,independent_point_scaled_error,independent_covariance_scaled_error,public_log_moment_scaled_error,public_raw_log_moment_scaled_error,independent_original_mean_scaled_error,independent_original_covariance_scaled_error)~engine+direction,report,max,na.action=na.pass,na.rm=TRUE),row.names=FALSE)
 if(length(timings)) {
   totals <- aggregate(seconds_per_fit~engine+round,do.call(rbind,timings),sum)
   cat('Prepared fit plus endpoint distributions, median sum over 64 cases (seconds):\n')

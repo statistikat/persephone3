@@ -53,7 +53,7 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
                                "arma_parameter_map", "arma_objective", "arma_optimization", "arma_identification",
                                "arma_information", "arma_residual_information", "arma_legacy_covariance",
                                "regression_information", "joint_regression_information", "arma_residuals", "arma_legacy_residuals",
-                               "interpolation_information", "interpolation_arma_information", "forecast_information"),
+                               "interpolation_information", "interpolation_arma_information", "forecast_information", "prediction_moments"),
                 methods = character(), specification_blocks = character(),
                 packages_available = NA, runtime_checked = FALSE,
                 reason = "Native seasonal-adjustment fitting is not implemented."))

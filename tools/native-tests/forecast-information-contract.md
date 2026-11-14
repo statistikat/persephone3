@@ -71,11 +71,13 @@ algebra still links through R's declared BLAS/LAPACK ABI.
 ## Transforms and reference scope
 
 Points and covariance are on the transformed scale. For logs, original points
-are `exp(m)` (inverse-point medians), without mean adjustment. Original-scale
-log errors remain unavailable until separately implemented lognormal moments;
-transformed errors are never reused as original errors. An inverse-point range
-failure retains transformed points and covariance. The identity transform uses
-the same original/transformed errors.
+remain `exp(m)` (inverse-point medians), without mean adjustment. Step 20d.2a
+adds separately labelled original Gaussian/lognormal means, covariance and
+errors, with individual range statuses. A full variance can be unrepresentable
+while the standard error remains available. An inverse-point or original-moment
+range failure retains the transformed distribution. The identity transform uses
+the same original/transformed errors. See `prediction-moments-contract.md` for
+moment semantics and the distinction between standard errors and quantile intervals.
 
 Independent dense intrinsic-Gaussian Schur calculations qualify both directions
 with the prospective `2e-8*(1+abs(target))` budget. Closed AR(1), fitted white-noise

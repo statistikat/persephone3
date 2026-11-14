@@ -136,6 +136,11 @@ if ("--native" %in% args) {
     abs(endpoint$points_transformed$backcast[3]-(1-2/15))<1e-12,
     abs(endpoint$points_transformed$forecast[1]-(3+2/15))<1e-12,
     all(endpoint$covariance[1:3,4:7]<0),!endpoint$propagates_ARMA_uncertainty)
+  original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
+    c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
+  stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,
+    original_moments$median_status=="original_median_range",
+    max(abs(diag(original_moments$covariance)-1))<1e-12)
 }
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cat("PASS: installed package loads, capabilities are honest and no Java fallback is attempted",

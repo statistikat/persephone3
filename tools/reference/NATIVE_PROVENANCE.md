@@ -226,3 +226,13 @@ public Forecasts signatures/accessors inform reporting comparisons; their
 backcast/scale discrepancies are retained separately. No upstream numerical
 source or bytecode was inspected, copied or translated. See `forecast-notes.md`
 and `tools/native-tests/forecast-information-contract.md`.
+
+Slice 20d.2a independently implements the elementary Gaussian/lognormal moment
+identities in logarithmic form, with signed cross covariance, expm1, separate
+range statuses and independently evaluated standard deviations. Closed formulas
+and extreme cancellation cases qualify the arithmetic; native model matrices
+qualify domains and retained transformed outputs. Public Forecasts accessors
+show that reported log errors omit fixed regression effects; raw-location and
+fully restored-location comparisons are recorded separately. No upstream
+numerical source or bytecode was consulted or translated. See
+`tools/native-tests/prediction-moments-contract.md` and `forecast-notes.md`.

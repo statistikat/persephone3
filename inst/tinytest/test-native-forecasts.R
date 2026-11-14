@@ -48,8 +48,14 @@ local({
     expect_equal(points(short),points(actual)[ix],tolerance=2e-8)
     expect_equal(unname(short$covariance),unname(actual$covariance[ix,ix]),tolerance=2e-8)
     if(actual$transformation=='log') {
-      expect_true(all(is.na(unlist(actual$standard_errors_original))))
-      expect_identical(actual$original_uncertainty_status,'lognormal_moments_not_computed')
+      expect_equal(unname(unlist(lapply(actual$standard_errors_original,as.numeric))),exp(points(actual)+diag(actual$covariance)/2)*sqrt(expm1(diag(actual$covariance))),check.attributes=FALSE,tolerance=2e-10)
+      expect_identical(actual$original_uncertainty_status,'available')
+      means <- exp(points(actual)+diag(actual$covariance)/2)
+      expect_equal(unname(unlist(lapply(actual$means_original,as.numeric))),means,check.attributes=FALSE,tolerance=2e-10)
+      target <- sign(actual$covariance)*exp(outer(log(means),log(means),'+')+log(abs(expm1(actual$covariance))))
+      if(all(is.finite(target)) && !any(actual$covariance!=0 & target==0))
+        expect_equal(actual$covariance_original,target,check.attributes=FALSE,tolerance=2e-10)
+      else expect_identical(actual$original_covariance_status,'original_covariance_range')
       expect_equal(unname(unlist(lapply(actual$points_original,as.numeric))),exp(points(actual)),tolerance=1e-12)
     } else expect_identical(actual$standard_errors_original,actual$standard_errors)
     # Estimation-endpoint gaps remain unfilled by the interpolation API.

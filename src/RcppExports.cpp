@@ -370,6 +370,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// native_prediction_moments
+Rcpp::List native_prediction_moments(SEXP location, SEXP covariance, SEXP transformation);
+RcppExport SEXP _persephone3_native_prediction_moments(SEXP locationSEXP, SEXP covarianceSEXP, SEXP transformationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type location(locationSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type covariance(covarianceSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type transformation(transformationSEXP);
+    rcpp_result_gen = Rcpp::wrap(native_prediction_moments(location, covariance, transformation));
+    return rcpp_result_gen;
+END_RCPP
+}
 // native_regression_likelihood
 Rcpp::List native_regression_likelihood(SEXP values, SEXP design, SEXP coefficients, SEXP ar, SEXP ma, SEXP seasonal_ar, SEXP seasonal_ma, SEXP period, SEXP d, SEXP seasonal_d, SEXP mean, SEXP variance, SEXP rank_tolerance);
 RcppExport SEXP _persephone3_native_regression_likelihood(SEXP valuesSEXP, SEXP designSEXP, SEXP coefficientsSEXP, SEXP arSEXP, SEXP maSEXP, SEXP seasonal_arSEXP, SEXP seasonal_maSEXP, SEXP periodSEXP, SEXP dSEXP, SEXP seasonal_dSEXP, SEXP meanSEXP, SEXP varianceSEXP, SEXP rank_toleranceSEXP) {
@@ -474,6 +487,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_persephone3_native_cholesky_solve", (DL_FUNC) &_persephone3_native_cholesky_solve, 2},
     {"_persephone3_native_qr_solve", (DL_FUNC) &_persephone3_native_qr_solve, 3},
     {"_persephone3_native_parallel_info", (DL_FUNC) &_persephone3_native_parallel_info, 0},
+    {"_persephone3_native_prediction_moments", (DL_FUNC) &_persephone3_native_prediction_moments, 3},
     {"_persephone3_native_regression_likelihood", (DL_FUNC) &_persephone3_native_regression_likelihood, 13},
     {"_persephone3_native_stationary_likelihood", (DL_FUNC) &_persephone3_native_stationary_likelihood, 7},
     {"_persephone3_native_arma_likelihood", (DL_FUNC) &_persephone3_native_arma_likelihood, 8},

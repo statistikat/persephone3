@@ -62,6 +62,19 @@ native_interpolation_information <- function(objective,
       result$arma_coefficients <- setNames(rep(NA_real_,length(theta)),theta)
     }
   }
+  result$original_moments <- if(result$point_available)native_model_prediction_moments(
+    result$points_transformed,result$covariance,data$inputs$transformation)else NULL
+  result$means_original <- if(data$inputs$transformation=="none")result$points_original else
+    if(!is.null(result$original_moments))unname(result$original_moments$means)else rep(NA_real_,length(result$rows))
+  result$original_mean_status <- if(data$inputs$transformation=="none")result$original_point_status else
+    if(!is.null(result$original_moments))result$original_moments$mean_status else "uncertainty_unavailable"
+  result$covariance_original <- if(data$inputs$transformation=="none")result$covariance else result$original_moments$covariance
+  result$original_covariance_status <- if(!is.null(result$original_moments))result$original_moments$covariance_status else "uncertainty_unavailable"
+  if(data$inputs$transformation=="log") {
+    result$standard_errors_original <- if(!is.null(result$original_moments))unname(result$original_moments$standard_errors)else
+      rep(NA_real_,length(result$rows))
+    result$original_uncertainty_status <- if(!is.null(result$original_moments))result$original_moments$standard_error_status else "uncertainty_unavailable"
+  }
   result$unfilled_rows <- which(is.na(result$transformed))
   result$unfilled_source_rows <- source[result$unfilled_rows]
   result$original_missing <- data$inputs$missing
