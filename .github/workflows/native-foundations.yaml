@@ -80,6 +80,7 @@ jobs:
           Rscript tools/reference/verify.R
           Rscript tools/reference/verify-extended.R
           Rscript tools/reference/verify-x11-symmetric.R
+          Rscript tools/reference/verify-x11-musgrave.R
       - name: Sanitize independent C++ core
         if: runner.os == 'Linux' && matrix.openmp == 'default'
         shell: bash
@@ -110,6 +111,11 @@ jobs:
               -Isrc src/numerics.cpp src/x11_filters.cpp tools/native-tests/test_x11_filters.cpp \
               -o "$RUNNER_TEMP/persephone-x11-filters-$mode"
             OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-filters-$mode"
+            c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic $flags \
+              -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Isrc src/numerics.cpp src/x11_filters.cpp src/x11_musgrave.cpp tools/native-tests/test_x11_musgrave.cpp \
+              -o "$RUNNER_TEMP/persephone-x11-musgrave-$mode"
+            OMP_NUM_THREADS=4 OMP_DYNAMIC=FALSE "$RUNNER_TEMP/persephone-x11-musgrave-$mode"
           done
           c++ -std=c++17 -Wall -Wextra -Wconversion -pedantic \
             -fsanitize=address,undefined -fno-omit-frame-pointer -g -Isrc \

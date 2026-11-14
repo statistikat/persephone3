@@ -267,3 +267,25 @@ Its raw inputs are deterministic formulas independent of backend output.
 Both filter core files and their standalone harness compile and link without
 R/Rcpp, BLAS or LAPACK. The package boundary still uses Rcpp. Asymmetric endpoints,
 automatic selection, decomposition passes and full native SA remain separate.
+
+### Explicit Musgrave Henderson endpoints (22a.2a)
+
+`src/core/x11_musgrave.hpp` and `src/x11_musgrave.cpp` independently implement
+constant-constrained minimum squared revision under a linear mean plus independent
+irregular noise, using the mathematical formula in Findley et al. (1998), Appendix
+A.2 (linked in `tools/native-tests/x11-musgrave-contract.md`). The I/C ratio is
+explicit; reciprocal scaling protects large finite values, and the zero-ratio
+limit has independent slope/least-distance qualification. Mirrored endpoint
+application preserves central Henderson arithmetic, masks and the input calendar.
+The algorithms require no R/Rcpp, BLAS or LAPACK linkage; the Rcpp binding owns
+copies and performs R-specific validation. Existing backend linear algebra
+linkage is unaffected.
+
+Reference inspection was limited to public signatures, class inventory, factory
+execution, coefficient/bound accessors, DataBlock filtering and the public bulk
+`AsymmetricEndPoints` processor. No numerical source or bytecode was translated.
+628 additive frozen endpoint definitions and an independent orthonormal-basis
+least-squares oracle qualify the implementation. Public zero-ratio NaNs remain a
+recorded discrepancy, not an accurate-mode target. The old symmetric/reference
+corpora are immutable. Automatic ratio selection, short-series fallback and
+seasonal/initial-trend policies remain separate work.

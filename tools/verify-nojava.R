@@ -149,6 +149,9 @@ if ("--native" %in% args) {
   stopifnot("x11_symmetric_filters" %in% cap$primitives,
     max(abs(filtered$values[3:18]-(3:18)))<1e-12,
     identical(as.numeric(identity$values),as.numeric(1:20)),!cap$fit)
+  musgrave <- x11_filter(ts(1:20,frequency=4),"henderson",5L,"musgrave",0)
+  stopifnot("x11_musgrave_endpoints" %in% cap$primitives,
+    max(abs(musgrave$values-(1:20)))<1e-12,musgrave$endpoint_policy=="musgrave")
   original_moments <- getFromNamespace("native_prediction_moments","persephone3")(
     c(-1000,-1000),matrix(c(1000,500,500,1000),2),"log")
   stopifnot("prediction_moments" %in% cap$primitives,original_moments$available,
