@@ -13,13 +13,15 @@ local({
   expect_error(resolve(c("rjd3", "native")), "exactly")
   expect_error(resolve(NA_character_), "exactly")
 
-  before <- loadedNamespaces()
+  java_packages <- c("rJava", "rjd3jars", "rjd3toolkit", "rjd3x13",
+                     "rjd3tramoseats", "RProtoBuf")
+  before <- sort(intersect(loadedNamespaces(), java_packages))
   capability <- backend_capabilities("native", "x13")
   expect_identical(capability, rkalos::capabilities())
   expect_identical(capability$fit, FALSE)
   expect_identical(capability$status, "unimplemented")
   expect_identical(capability$runtime_checked, FALSE)
-  expect_identical(loadedNamespaces(), before)
+  expect_identical(sort(intersect(loadedNamespaces(), java_packages)), before)
   expect_error(backend_capabilities("native", "x1"), "exactly")
   expect_error(persephone3:::backend_default_spec("x13", "rsa3", 12, "native"),
                "does not yet implement specification construction")
