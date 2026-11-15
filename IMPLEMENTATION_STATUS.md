@@ -1,6 +1,6 @@
 # Persephone implementation status and next-work plan
 
-Updated: **2026-11-14**. The repository split is integrated on
+Updated: **2026-11-15**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
 ## Repository ownership
@@ -47,6 +47,68 @@ for native versus 0.02913 for JDemetra+ across 24 short calls, and 0.12625 versu
 0.08464 seconds across eight calls with 100,003 rows. See the [Kalos reference
 report](../kalos/validation/reference/information/2026-11-14-x11-initial/)
 for the workloads and measurement protocol.
+
+## Linux (x86_64) baseline qualification — 2026-11-15 (M0)
+
+First qualification run of this branch on a new Linux machine. Everything below
+was executed on this machine on 2026-11-15; nothing is carried over from the
+macOS record above.
+
+**Machine and toolchain.** Ubuntu 24.04.4 LTS, x86_64. R 4.5.3 (2026-03-11) at
+`/opt/R/4.5.3/bin/R`. g++ 13.3.0. OpenJDK 21.0.11 and OpenJDK 17 are installed.
+
+**Java and rjd3.** `rjd3x13`/`rjd3tramoseats` 3.9.0, `rjd3toolkit` 3.9.1,
+`rjd3jars` 0.0.6, `rJava` 1.0-18 and `RProtoBuf` 0.4.28 were already present in
+the shared user library. The rjd3 3.9.0 jars are class-file version 65 (Java
+21), but this machine's R site profile (`/opt/R/4.5.3/lib/R/etc/ldpaths`) pins
+`JAVA_HOME` to Java 17, so rJava starts JVM 17.0.19 and every jar-backed call
+fails with `UnsupportedClassVersionError`. Exporting
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` (with its `lib/server` prepended
+to `LD_LIBRARY_PATH`) selects JVM 21.0.11, after which spec construction and
+fitting work. A supported-Java decision is still open (item 14 / F10).
+
+**Install notes.** The site `Rprofile.site` hard-codes `.libPaths()` and
+overrides `R_LIBS_USER`; a user profile (`R_PROFILE_USER=/tmp/opencode/rprofile-d.R`)
+that prepends the private library was used instead. `rkalos` 0.1.0 was installed
+read-only from a `git archive` snapshot of `rkalos@18630ee` (a sibling agent was
+editing the live checkout); it compiled without warnings against R's
+`-llapack -lblas` and loads `capabilities()` without attaching rjd3 or rJava.
+`persephone3` 0.1.0 (branch `rkalos_backend`, `06a9a31`) was built with
+`R CMD build --no-build-vignettes` and `R CMD INSTALL`ed with no warnings or
+notes. One hard Import was missing machine-wide: `shinycssloaders` 1.1.0 was
+installed from CRAN into the private library. The same build skipped rendered
+vignettes, consistent with the two pre-existing R CMD check vignette warnings.
+
+**Runtime verification (installed package, JVM 21.0.11).**
+`backend_capabilities("rjd3")` reports status `reference` with all three rjd3
+packages available. `perX13(AirPassengers)$run()` completed in 2.24 s (final
+`d11final` last six: 483.5, 480.1, 483.3, 496.8, 487.6, 488.9);
+`perTramo(AirPassengers)$run()` completed in 0.50 s (final `sa` last six:
+484.1, 476.7, 481.5, 495.4, 487.8, 490.6). Library attachment keeps rjd3/rJava
+lazy. `backend_capabilities("native")` delegates to rkalos (status
+`unimplemented`, `fit = FALSE`); constructing `perX13`/`perTramo` with
+`backend = "native"`, calling the internal `backend_fit`/`backend_default_spec`
+with `backend = "native"`, and selecting `options(persephone.backend = "native")`
+each raise "The native backend does not yet implement … No Java fallback was
+used." After all native attempts, zero rjd3 or rJava namespaces were loaded.
+
+**Application test suite.** `tinytest::test_package("persephone3")` under JVM
+21: 20 test files, **1,329 assertions, 0 failures, 0 errors, 0 skips**.
+No suggested dependency was absent, so nothing was skipped; the
+guarded rjd3 reference sections in `test-backend.R`,
+`test-backend-integration.R` (32), `test-backend-reinitialization.R` (14) and
+the fitted-value fixtures in `test-extraction.R`, `test-fix-outliers.R`,
+`test-forecasts.R`, `test-diagnostic-values.R` and `test-hierarchy-values.R`
+all ran against real Java fits. Dashboard tests started and stopped local
+httpuv servers successfully. This run reports one assertion fewer than the
+1,330 recorded in the split-validation macOS run; no skip was recorded and the
+difference is unexplained — all executed assertions passed.
+
+**Still macOS-qualified only.** The 1,330-assertion split-validation run and
+the R CMD check results above it, the X-11 initial-table timing report, and all
+Kalos/rkalos numerical fixture evidence predate this machine and were not
+re-run here. M1 on Linux must additionally re-run the numerical comparison
+evidence, pin the Java policy into CI, and resolve the 1-assertion discrepancy.
 
 ## Next application work
 
