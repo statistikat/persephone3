@@ -110,6 +110,85 @@ Kalos/rkalos numerical fixture evidence predate this machine and were not
 re-run here. M1 on Linux must additionally re-run the numerical comparison
 evidence, pin the Java policy into CI, and resolve the 1-assertion discrepancy.
 
+## Linux application groundwork — 2026-11-15 (M1)
+
+Application-track groundwork on this machine (item 14 plus interim-release
+preparation). Engine-side M1 work is tracked separately.
+
+**Dependency declaration.** The M0 note about a missing `shinycssloaders`
+import referred to the machine-wide installation; the declaration itself was
+already correct since `f9cb071`: `Imports:` lists `shinycssloaders`,
+`R/imports.R` carries `@importFrom shinycssloaders withSpinner`, NAMESPACE
+contains the matching `importFrom`, and the only usage is
+`inst/app/modules/mod_table.R`. A full `pkg::` usage scan of `R/` and
+`inst/` found no other undeclared dependency (`grid` is base-priority).
+`R CMD check --no-manual --no-vignettes --no-build-vignettes` on the
+unmodified branch head (`d966039`) gave 2 WARNINGs, both the pre-existing
+missing-vignettes pair, and no dependency NOTE. After the M1 edits below the
+same check still shows no dependency NOTE/WARNING; the only new finding is
+one deliberate NOTE, "File LICENSE is not mentioned in the DESCRIPTION file",
+caused by the license change below while `LICENSE`/`LICENSE.md` intentionally
+keep the old MIT notice.
+
+**Supported Java policy.** rjd3 3.9.0 jars are class-file version 65, so
+reference-backend fits require a JVM 21 or newer. The codebase has no Java
+runtime capability probe (`backend_capabilities()` deliberately reports
+`runtime_checked = FALSE`, asserted by `test-backend.R`), so no probe
+machinery was added; the version check would require initializing Java.
+The policy is instead documented (README install section, NEWS) and stated in
+the existing rjd3 first-use error raised by `backend_rjd3_function()`, which
+still names the missing optional package first.
+
+**CI (configured, not executed).** All Java-using workflows already set up
+Temurin Java 21 (check-full, test-coverage since `ba049c3`, pkgdown);
+native-foundations remains intentionally Java-free. The check and coverage
+workflows fetched rjd3 through the floating `@*release` ref selector; those
+six lines now pin the qualified tags (`rjdverse/rjd3toolkit@v3.9.1`,
+`rjdverse/rjd3x13@v3.9.0`, `rjdverse/rjd3tramoseats@v3.9.0`, verified to
+exist upstream and matching the locally qualified versions). No separate
+pinned-deps job was added because that would restructure CI. These are
+declared-configuration changes: **no workflow was run from this branch as
+part of M1.** Open F10 remnants: minimum-R (4.1) lane, an upstream-drift
+lane beside the pinned lane, measured coverage, silent-skip guard.
+
+**1-assertion discrepancy — localized and fixed.** The per-file Linux
+distribution (installed package, JVM 21.0.11, locale `en_US.UTF-8`) is the
+new local baseline; the pre-fix total was 1,329 with zero failures, errors
+or skips:
+
+| Test file | Assertions | Test file | Assertions |
+| --- | --- | --- | --- |
+| test_fix.R | 4 | test-extraction.R | 177 → **178** |
+| test-backend-integration.R | 32 | test-fix-outliers.R | 188 |
+| test-backend-reinitialization.R | 14 | test-forecasts.R | 180 |
+| test-backend.R | 88 | test-genTd.R | 90 |
+| test-batch.R | 10 | test-hierarchical-plot.R | 36 |
+| test-dashboard-identities.R | 101 | test-hierarchical.R | 10 |
+| test-dashboard-probe.R | 12 | test-hierarchy-values.R | 79 |
+| test-dashboard.R | 43 | test-misc.R | 12 |
+| test-diagnostic-values.R | 180 | test-plot.R | 11 |
+| | | test-single.R | 10 |
+| | | test-specification-updates.R | 52 |
+
+The difference localized to `test-extraction.R`, whose
+`if (nrow(out) > 3L) expect_true(all(out$autoout[-seq_len(3)]))` gate runs
+once per (method × frequency) fit. Measured here, the quarterly TramoSeats
+`rsa3` fixture detects only the three manual outliers, so the gate fired 3/4
+times on Linux versus apparently 4/4 on the macOS split-validation machine
+(the backend's automatic outlier detection decides the count — not a locale
+or option issue). Since `all()` over an empty remainder is `TRUE`, the gate
+was replaced by the equivalent unconditional assertion, making the count
+deterministic: **1,330 assertions, 0 failures, 0 errors, 0 skips** on Linux,
+matching the macOS split-validation total.
+
+**License metadata.** Per the user's relicensing decision, `DESCRIPTION` now
+reads `License: GPL (>= 3)`; `LICENSE`, `LICENSE.md` and NEWS are
+intentionally untouched, which produces the single documented top-level-file
+NOTE above.
+
+**Interim release checklist.** First pass of item 15 recorded in
+`RELEASE_CHECKLIST.md` with per-gate green/amber/red states.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,

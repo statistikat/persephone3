@@ -9,6 +9,10 @@
   aggregate panels, and refresh selected series without stale cached output.
   Plot cards adapt to the available width.
 * Direct dependency declarations, README examples, and user guides are updated.
+* Supported Java policy: reference-backend fits require a JVM 21 or newer
+  because the rjd3 3.9.0 jars are compiled for Java 21; loading the package
+  and reporting backend capabilities still work without Java. CI now installs
+  Java 21 consistently and pinned rjd3 release tags.
 * Regression coverage includes dashboard exports and lifecycle behavior. Manual
   notation is portable to PDF generation.
 

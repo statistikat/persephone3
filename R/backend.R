@@ -37,6 +37,8 @@ backend_block_registry <- function() {
 #' @return A list describing implementation status, methods, specification
 #'   blocks and package availability. Package presence does not prove that a
 #'   working Java runtime is available; `runtime_checked` is always `FALSE`.
+#'   Supported Java policy: rjd3 3.9.0 requires a JVM 21 or newer; the version
+#'   is deliberately not probed here because probing would initialize Java.
 #' @export
 backend_capabilities <- function(backend = NULL, method = NULL) {
   backend <- resolve_backend(backend)
@@ -69,7 +71,8 @@ backend_rjd3_function <- function(package, name) {
   for (required in unique(c("rjd3toolkit", package))) {
     if (!requireNamespace(required, quietly = TRUE)) {
       stop(sprintf(paste0("The rjd3 backend requires the optional package '%s' ",
-                          "and its compatible Java runtime. Install it before ",
+                          "and its compatible Java runtime; the rjd3 3.9.0 jars ",
+                          "require a JVM 21 or newer. Install them before ",
                           "using backend = \"rjd3\"."), required), call. = FALSE)
     }
   }

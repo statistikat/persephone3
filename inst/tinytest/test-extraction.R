@@ -37,7 +37,9 @@ if (!all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
       labels <- if (frq == 12) c("AO1953.7", "LS1956.1", "TC1960.10") else c("AO1953.3", "LS1956.1", "TC1960.4")
       expect_identical(out$name[seq_len(3)], labels)
       expect_identical(out$recentout[seq_len(3)], c(FALSE, FALSE, TRUE))
-      if (nrow(out) > 3L) expect_true(all(out$autoout[-seq_len(3)]))
+      # Unconditional: all() is TRUE for the empty remainder, so the count is
+      # stable even when the backend detects no automatic outlier (item 14).
+      expect_true(all(out$autoout[-seq_len(3)]))
 
       if (frq == 4) {
         fixed_quarter <- construct(series, "rsa3", backend = "rjd3", td.option = "TradingDays",

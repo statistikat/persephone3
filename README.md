@@ -36,6 +36,14 @@ remotes::install_github("statistikat/rkalos")
 remotes::install_github("statistikat/persephone3")
 ```
 
+Supported Java policy: the rjd3 reference backend needs a JVM 21 or
+newer because the rjd3 3.9.0 jars are compiled for Java 21 (class-file
+version 65). On Linux, make sure `JAVA_HOME` points at a Java 21 JDK
+before starting R if the default JVM is older (`java -version` reports
+the JVM that rJava will start). `persephone3` itself loads without
+Java; the requirement applies only when running `backend = "rjd3"`
+models.
+
 ## Backend migration
 
 Seasonal-adjustment fits currently use `backend = "rjd3"` and still require

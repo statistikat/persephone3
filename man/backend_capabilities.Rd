@@ -16,6 +16,8 @@ backend_capabilities(backend = NULL, method = NULL)
 A list describing implementation status, methods, specification
 blocks and package availability. Package presence does not prove that a
 working Java runtime is available; \code{runtime_checked} is always \code{FALSE}.
+Supported Java policy: rjd3 3.9.0 requires a JVM 21 or newer; the version
+is deliberately not probed here because probing would initialize Java.
 }
 \description{
 Reports the explicitly selected backend's implementation status without
