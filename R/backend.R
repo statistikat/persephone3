@@ -28,8 +28,13 @@ backend_block_registry <- function() {
 #' Inspect seasonal-adjustment backend capabilities
 #'
 #' Reports the explicitly selected backend's implementation status without
-#' initializing Java. Native seasonal-adjustment fitting is not implemented
-#' yet; requesting it raises an error and never falls back to rjd3.
+#' initializing Java. Since rkalos schema_version 2, the native backend
+#' qualifies exactly one fit: the restricted fixed-coefficient X-13 fit,
+#' gated by `capabilities()$native_x13_fit_restricted` and described by
+#' `capabilities()$restricted_fit` — never by `capabilities()$fit`, which
+#' keeps its meaning that UNRESTRICTED native fitting is unimplemented.
+#' Requests outside the restricted domain raise an explicit error naming the
+#' violated scope field(s) and never fall back to rjd3.
 #'
 #' @param backend Either `"rjd3"` or `"native"`. If `NULL`, use the deliberate
 #'   `persephone.backend` option, defaulting to `"rjd3"` when unset.
@@ -121,8 +126,10 @@ backend_default_spec <- function(method, template, freq, backend = NULL) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
   backend_frequency(freq)
+  if (backend == "native") {
+    return(backend_native_default_spec(method, template, freq))
+  }
   check_template(template, method)
-  if (backend == "native") backend_unimplemented(method, "specification construction")
   fun <- backend_rjd3_function(paste0("rjd3", method),
                               if (method == "x13") "x13_spec" else "tramoseats_spec")
   fun(name = template)
@@ -149,7 +156,12 @@ backend_update_spec <- function(spec, method, freq, spec_list, backend = NULL) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
   backend_frequency(freq)
-  if (backend == "native") backend_unimplemented(method, "specification updates")
+  if (backend == "native" && !inherits(spec, "persephone_native_spec")) {
+    backend_unimplemented(method, "specification updates")
+  }
+  if (backend == "native") {
+    return(backend_native_update_spec(spec, spec_list, method))
+  }
   if (inherits(spec, "persephone_spec") && !identical(as.numeric(spec$frequency), as.numeric(freq))) {
     stop("Specification frequency does not match the series frequency.", call. = FALSE)
   }
@@ -162,7 +174,12 @@ backend_fit <- function(ts, spec, context = NULL, userdefined = NULL,
                         method, backend = NULL) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
-  if (backend == "native") backend_unimplemented(method, "seasonal-adjustment fitting")
+  if (backend == "native" && method != "x13") {
+    backend_native_refusal("seasonal-adjustment fitting", method,
+                           "native_x13_fit_restricted",
+                           sprintf("the qualified native surface provides only the restricted X-13 fit (entry points: %s); ",
+                                   native_backend_entry))
+  }
   if (!stats::is.ts(ts) || !is.numeric(ts) || !is.null(dim(ts)) || !length(ts)) {
     stop("'ts' must be a nonempty univariate numeric time series.", call. = FALSE)
   }
@@ -176,6 +193,9 @@ backend_fit <- function(ts, spec, context = NULL, userdefined = NULL,
     stop("'userdefined' must be NULL or a character vector without missing values.", call. = FALSE)
   }
   spec <- backend_spec_parameters(spec, method, backend)
+  if (backend == "native") {
+    return(backend_native_fit(ts, spec, context, userdefined))
+  }
   fun <- backend_rjd3_function(paste0("rjd3", method),
                               if (method == "x13") "x13_fast" else "tramoseats_fast")
   fun(ts = ts, spec = spec, context = context, userdefined = userdefined)

@@ -160,7 +160,11 @@ x13Single <- R6::R6Class(
 #' see the rjd3x13 documentation:
 #' \url{https://rjdverse.github.io/rjd3x13/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
-#'   Native fitting is not yet implemented; unsupported requests fail explicitly.
+#'   The native backend provides only the restricted fixed-coefficient X-13 fit
+#'   through `template = "restricted"` (rkalos gating contract
+#'   `capabilities()$native_x13_fit_restricted`, never `capabilities()$fit`);
+#'   every other native request fails explicitly with the violated scope
+#'   field(s) named. See the examples in the README for a restricted run.
 #' @export
 perX13 <- function(ts,
                    template = c( "rsa3", "rsa0", "rsa1", "rsa2c", "rsa4","rsa5c"),
@@ -168,5 +172,13 @@ perX13 <- function(ts,
                    userdefined = NULL,
                    speclist = NULL,
                    ..., backend = NULL) {
-  x13Single$new(ts, match.arg(template), context, userdefined, speclist, ..., backend = backend)
+  backend <- resolve_backend(backend)
+  if (identical(backend, "native")) {
+    # The native restricted constructor owns the template contract; the
+    # default and all automatic templates are refused naming the scope field.
+    backend_native_check_template(template)
+  } else {
+    template <- match.arg(template)
+  }
+  x13Single$new(ts, template, context, userdefined, speclist, ..., backend = backend)
 }

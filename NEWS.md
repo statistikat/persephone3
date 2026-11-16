@@ -1,5 +1,12 @@
 # persephone3 (development version)
 
+* The native backend (`backend = "rjd3"` remains the default) now provides the
+  restricted fixed-coefficient X-13 fit without Java through
+  `perX13(ts, template = "restricted", speclist = list(sigma_policy = ...),
+  backend = "native")`: fixed coefficients, fixed seasonal/Henderson requests,
+  explicit sigma policy, zero horizons, monthly series; every other native
+  request fails explicitly and never falls back silently.
+
 * Hierarchical plots show forecasts with prediction intervals and aggregate
   outlier markers, with independent display switches and consistent colors.
 * Dashboard startup works from any working directory for installed and

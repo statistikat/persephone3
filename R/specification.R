@@ -5,7 +5,13 @@ new_backend_spec <- function(method, template = NULL, frequency, parameters,
   method <- backend_method(method)
   backend <- resolve_backend(backend)
   frequency <- backend_frequency(frequency)
-  if (!is.null(template)) check_template(template, method)
+  if (!is.null(template)) {
+    if (backend == "native") {
+      backend_native_check_template(template, method)
+    } else {
+      check_template(template, method)
+    }
+  }
   if (!is.list(parameters)) {
     stop("Specification parameters must be a list.", call. = FALSE)
   }

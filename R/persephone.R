@@ -251,7 +251,9 @@ persephone <- R6::R6Class(
     },
     #' @field adjustedDirect see [perHts]
     adjustedDirect = function() {
-      self$output$user_defined$sa
+      out <- self$output
+      if (inherits(out, "persephone_native_x13_fit")) return(out$finalSA)
+      out$user_defined$sa
     },
     # # ' @field spec specifications passed to [rjd3x13::x13_fast()] and [rjd3tramoseats::tramoseats_fast()] when the
     # # '   `$run()` method is invoked

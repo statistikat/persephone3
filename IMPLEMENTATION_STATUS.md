@@ -467,6 +467,112 @@ signature is an R interpreter string and would otherwise false-fail.
 **Suite state:** 21 files, **1,427 assertions (1,330 baseline + 97 new),
 0 failures/errors/skips**.
 
+## Linux M3 finale — restricted native X-13 fit in `run()` — 2026-11-16 (Agent D)
+
+The restricted fixed-coefficient X-13 fit (rkalos 10afd3e, core 2b93ab0,
+schema_version 2) is wired into the Persephone product path:
+`perX13(ts, template = "restricted", speclist = ..., backend = "native")$run()`
+performs a real Java-free seasonal adjustment. The headline measurement —
+the first native-vs-rjd3 numeric agreement in the family — is **bit-exact:
+all final-series max diffs 0.000e+00** against the pinned rjd3 reference,
+inside the pinned 1e-8 policy by construction.
+
+**Gating contract (verbatim).** Gate on
+`identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)` plus the
+`capabilities()$restricted_fit` scope block. `capabilities()$fit` (unrestricted
+fitting) is *never* consulted and stays FALSE. The refusal text and the honest
+capability reporting of earlier milestones are preserved verbatim for all
+out-of-domain requests, so `tools/verify-nojava.R` and the pinned wording in
+`test-backend.R` keep matching.
+
+**Scope mapping (Persephone specification → `native_x13_fit()` request).**
+
+- Template: the native backend constructs exactly one specification, sentinel
+  `template = "restricted"` (class `persephone_native_spec`, deliberately not
+  a JD3 spec and not classed `persephone_spec`). All automatic templates
+  (rsa0–rsa5c) are refused naming `fixed_coefficients_only`; `perTramo` with
+  native additionally names the entry points, since the qualified fit is
+  x13-only.
+- Seasonal filter: `seasonal` must state one pinned fixed filter per calendar
+  period (stable/s3x1/s3x3/s3x5/s3x9/s3x15); `x11default`/`msr` and missing
+  requests are refused naming `fixed_seasonal_requests_only`.
+- Trend: `trend_length` must be a stated odd integer ≥ 5; the automatic 0 is
+  refused naming `fixed_trend_length_only`.
+- Sigma policy: `sigma_policy = "legacy" | "accurate"` is a REQUIRED new spec
+  field with no default (mirrors the core contract; NULL refused naming
+  `sigma_policy_required`). `lower_sigma`/`upper_sigma` default 1.5/2.5.
+- Regression variables: fixed coefficients only — every variable must carry
+  `class`/`effect` from the pinned vocabulary plus one finite coefficient per
+  numeric column of series length; anything estimated is refused naming
+  `fixed_coefficients_only`.
+- Horizons: none exist in the native specification (zero_horizon_only);
+  requests carrying forecast fields are refused as not part of the restricted
+  specification. `forecasts`/`forecastsDirect` return NULL and the
+  availability table marks all forecast fields `not_provided`.
+- Frequency: monthly only (`monthly_only`, frequency 12); other frequencies
+  are refused at construction. Mode: additive (default), multiplicative,
+  log_additive, pseudo_additive, per `restricted_fit$modes`; log flag must be
+  TRUE/FALSE. Contexts and rjd3 user-defined output descriptors are rjd3-only
+  and refused naming the field.
+- Refusal wording (example, verbatim shape): `The native backend does not yet
+  implement seasonal-adjustment fitting for 'x13': <core detail>. Violated
+  scope field(s): sigma_policy_required. No Java fallback was used. Select
+  backend = "rjd3" to use the reference implementation.` Multiple violated
+  fields are named together; the rjd3 path and objects are unchanged.
+- Access seam: `native_x13_fit` exists in the rkalos namespace but is not
+  yet exported; the backend reaches it with an explicit
+  `get0(..., asNamespace("rkalos"))` (documented in the code).
+
+**Native result envelope (`persephone_native_restricted_fit`).** Honest class
+in the versioned `$result` — NOT an rjd3-shaped `$output` and not classed
+`persephone_result`: versioned fields (schema_version, method, backend,
+specification, status, domain, components, availability, provenance) plus
+`components$t/sa/i` as ts objects (D12final/D11final/D13final), the raw
+rkalos result (`$raw`, `$results`, `$preadjustment`, `$selection`), and
+provenance echoes of the fit (mode_requested/mode_effective, sigma policy,
+trend length, mode forcing, scope string, core commit) plus a deterministic
+request fingerprint (two rolling prime-modulus hashes, `xxxxxxxx-xxxxxxxx`,
+attached as `persephone_request_fingerprint`). `$is_stale` follows the
+existing signature machinery (spec updates flip it; reverting unflips).
+`$adjusted`/`adjustedDirect` expose the final SA ts on the native path.
+A print method summarizes status/mode/policy/fingerprint/last-3-SA.
+
+**Parity harness flipped (headline).** `test-parity.R` was restructured so
+the native lane (gate contract, refusal matrix, product-path restricted fit
+with pinned session-stability metrics, fingerprint determinism) runs
+**without Java or rjd3** — only the rjd3 reference sections are gated.
+`parity_native_fit()` returned to its intended role: it returns the native
+candidate summary for the pinned fixed specification (s3x15 everywhere,
+Henderson 13, additive, legacy sigma, 1.5/2.5, zero horizons, no variables)
+and NULL for everything outside the restricted domain (asserted for all
+eight automatic-template matrix specs). The dual-lane case builds the rjd3
+reference from raw `x13_fast` (rsa0 + transform none + tradingdays None +
+`set_x11(S3X15, henderson = 13, Additive, fcasts = 0, bcasts = 0)` —
+the product-level rjd3 lane itself cannot carry zero-horizon outputs because
+the pre-existing forecast contract rejects rjd3's residual `cal_f`/`y_ef`
+series against zero point forecasts; untouched here, pre-existing limitation)
+and compares via `parity_compare` at the pinned 1e-8: **violations: none;
+full-series max diffs for sa, t and i all exactly 0.000e+00**; lengths, NA
+masks and the integer time domain exact. A violation prints per-component
+max diffs before failing (STOP-with-diagnostics; widening is prohibited).
+
+**Java-free proof.** `test-parity.R` runs green in a JVM-free Rscript against
+a symlink-farm library without rJava/rjd3*/RProtoBuf and JAVA_HOME unset:
+53/53 native-lane assertions pass and the file asserts that no Java namespace
+was loaded. `tools/verify-nojava.R` now additionally runs the restricted fit
+through the product path and asserts the out-of-domain refusal (both PASS).
+
+**Suite state:** 21 files, **1,459 assertions (1,330 baseline + 129 in the
+flipped parity harness), 0 failures/errors/skips** on the qualified JVM 21
+stack; parity file 97 → 129 assertions (net +32).
+
+**Follow-ups recorded (not defects):** (1) the rjd3 lane cannot `$run()`
+zero-horizon outputs (forecast-contract rejection of `cal_f`/`y_ef`) —
+asymmetric with the native lane where zero horizons are the domain;
+(2) `native_x13_fit()` is not exported from rkalos (namespace seam in use);
+(3) a user-facing `speclist` validation for `seasonal` lengths could move
+some refusals from fit time to construction time.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,

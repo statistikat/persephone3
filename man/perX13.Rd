@@ -67,7 +67,11 @@ The package offers convenient options for setting certain parameters to improve 
 Documentation pending.}
 
 \item{backend}{Backend name, or NULL to use option persephone.backend (default rjd3).
-Native fitting is not yet implemented; unsupported requests fail explicitly.}
+The native backend provides only the restricted fixed-coefficient X-13 fit
+through \code{template = "restricted"} (rkalos gating contract
+\code{capabilities()$native_x13_fit_restricted}, never \code{capabilities()$fit});
+every other native request fails explicitly with the violated scope
+field(s) named. See the examples in the README for a restricted run.}
 }
 \value{
 An object of class \code{\link{x13Single}} representing an x13 seasonal

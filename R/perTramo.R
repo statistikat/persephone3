@@ -160,7 +160,9 @@ tramoseatsSingle <- R6::R6Class(
 #' see the rjd3tramoseats documentation:
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
-#'   Native fitting is not yet implemented; unsupported requests fail explicitly.
+#'   The native backend qualifies only the restricted X-13 fit, so every native
+#'   tramoseats request fails explicitly naming the violated scope field(s)
+#'   (entry points: native_x13_fit(), native_x13_preadjust(), native_x13_restore()).
 #' @export
 perTramo <- function(ts,
                    template = c("rsa3","rsafull", "rsa0", "rsa1", "rsa2",  "rsa4", "rsa5"),
@@ -168,5 +170,13 @@ perTramo <- function(ts,
                    userdefined = NULL,
                    speclist = NULL,
                    ..., backend = NULL) {
-  tramoseatsSingle$new(ts, match.arg(template), context, userdefined, speclist, ..., backend = backend)
+  backend <- resolve_backend(backend)
+  if (identical(backend, "native")) {
+    # The native restricted constructor owns the template contract; the
+    # default and all automatic templates are refused naming the scope field.
+    backend_native_check_template(template, "tramoseats")
+  } else {
+    template <- match.arg(template)
+  }
+  tramoseatsSingle$new(ts, template, context, userdefined, speclist, ..., backend = backend)
 }

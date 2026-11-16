@@ -2,16 +2,28 @@
 # the rjd3 reference backend once each, derives canonical result summaries
 # (component names, time spans, key values with explicit numeric tolerances,
 # structural invariants) and defines the comparison contract that the native
-# backend must satisfy once rkalos exports fitting. It deliberately stores no
-# whole-object snapshots: only metric-level values, so Java-side structure
-# changes cannot create brittle failures, while numerical drift is caught.
+# backend must satisfy. It deliberately stores no whole-object snapshots: only
+# metric-level values, so Java-side structure changes cannot create brittle
+# failures, while numerical drift is caught.
 #
-# Native status (honest, asserted, not assumed): rkalos 0.1.0 reports
-# capabilities()$fit = FALSE and no fitting export exists, so the native lane
-# is recorded as unavailable and every native construction route must raise the
-# explicit "no Java fallback" error. parity_native_fit() below is the single
-# TODO hook where the native comparison plugs in; today it always returns NULL
-# and the harness asserts that fact instead of silently skipping.
+# Native status (honest, asserted, not assumed): since rkalos schema_version 2
+# the native backend qualifies exactly one fit, the restricted fixed-
+# coefficient X-13 fit. The gate is capabilities()$native_x13_fit_restricted
+# (never capabilities()$fit, which keeps its meaning that UNRESTRICTED native
+# fitting is unimplemented). For the pinned fixed specification below the
+# native lane runs through the real product path (perX13 + $run()) and is
+# compared against the rjd3 reference — first native-vs-rjd3 numeric agreement
+# measurement in the family, recorded 2026-11-16 as bit-exact (all final-series
+# max diffs 0.000e+00, far inside the 1e-8 policy). Everything outside the
+# restricted domain (automatic templates that estimate coefficients, other
+# methods or frequencies) must still raise the explicit "no Java fallback"
+# error, asserted below.
+#
+# Structure: the native lane (gate contract, refusals, restricted fit through
+# the product path with pinned baseline metrics) must pass WITHOUT Java or
+# rjd3 installed — verified by running this file in a JVM-free Rscript. Only
+# the rjd3 reference sections (specification matrix, dual-lane comparison,
+# hierarchy, known issue) are gated on the reference packages.
 #
 # Numeric tolerances come from the 2026-11-16 Linux stability study
 # (IMPLEMENTATION_STATUS.md, M3 section): 98 metrics across 9 reference fits
@@ -23,7 +35,9 @@
 #   hierarchy aggregates (direct/indirect):       1e-8 absolute
 #   names, time spans, lengths, counts, NA masks: exact (integer/character)
 # Any rjd3 stack upgrade that changes digits at 1e-8 must re-baseline this
-# file with a recorded reason; silent tolerance widening is not allowed.
+# file with a recorded reason; silent tolerance widening is not allowed. If a
+# native-vs-rjd3 metric violates 1e-8 the harness must STOP with full
+# diagnostics (it prints max diffs before the expectation), never widen.
 #
 # Known issue (difficult-model lane, backend-side, NOT a persephone3 defect):
 # a deliberately degenerate 48-month series (linear trend plus a strict
@@ -39,15 +53,189 @@
 #     header must be revisited;
 #   - non-English LC_MESSAGES -> skip, because the pinned signature is an R
 #     interpreter string and would be falsely localized.
-if (!all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"), requireNamespace,
-                logical(1), quietly = TRUE))) {
-  skip("Reference backend packages unavailable; parity harness needs rjd3 fits")
-}
+has_rjd3 <- all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
+                       requireNamespace, logical(1), quietly = TRUE))
 
 series_m <- AirPassengers
 series_q <- stats::aggregate(AirPassengers, nfrequency = 4)
 TOL_KEY <- 1e-8
 TOL_HTS <- 1e-8
+
+# The pinned restricted fixed specification both lanes must reproduce:
+# fixed s3x15 seasonal filter in every period, fixed Henderson length 13,
+# explicit legacy sigma policy, additive mode, no regression variables, zero
+# horizons, monthly frequency.
+native_fixed_speclist <- list(sigma_policy = "legacy",
+                              seasonal = rep("s3x15", 12L),
+                              trend_length = 13L)
+
+# Time domain as exact integers (year, period, frequency): the backend stores
+# the decimal end, whose floating-point representation is not canonical, so
+# spans are pinned through (start year, start period, frequency) + length.
+time_domain <- function(t) c(floor(t[1]),
+                             round((t[1] - floor(t[1])) * t[3]) + 1, t[3])
+
+# ---- Native lane: runs with Java absent (asserted at the end) --------------
+
+local({
+  cap <- backend_capabilities("native")
+  # The gating contract itself (schema_version 2, verbatim rkalos passthrough).
+  expect_identical(cap, rkalos::capabilities())
+  expect_identical(cap$schema_version, 2L)
+  expect_identical(cap$native_x13_fit_restricted, TRUE)
+  expect_false(cap$fit)
+  expect_identical(cap$status, "unimplemented")
+  rf <- cap$restricted_fit
+  expect_true(all(c("fixed_coefficients_only", "fixed_seasonal_requests_only",
+                    "fixed_trend_length_only", "sigma_policy_required",
+                    "zero_horizon_only", "monthly_only") %in% names(rf)))
+  expect_identical(rf$frequency, 12L)
+  expect_true(all(c("additive", "multiplicative", "log_additive",
+                    "pseudo_additive") %in% rf$modes))
+})
+
+# Out-of-domain native requests: explicit refusal naming the violated scope
+# field(s), no Java fallback. First the per-specification template contract
+# (automatic templates estimate coefficients), mirroring the matrix grid.
+spec_matrix <- expand.grid(method = c("x13", "tramoseats"),
+                           template = c("rsa0", "rsa3"),
+                           freq = c(12L, 4L),
+                           stringsAsFactors = FALSE)
+for (i in seq_len(nrow(spec_matrix))) {
+  spec <- spec_matrix[i, ]
+  native_series <- if (spec$freq == 12) series_m else series_q
+  err <- tryCatch({
+    if (spec$method == "x13") perX13(native_series, backend = "native")
+    else perTramo(native_series, backend = "native")
+    "no error"
+  }, error = function(e) conditionMessage(e))
+  expect_match(err, "native backend does not yet implement|No Java fallback",
+               fixed = FALSE)
+}
+
+# Per-scope-field refusals inside the fit path (constructed, then refused at
+# the gate in backend_native_request()).
+local({
+  mod <- function(base, ...) {
+    out <- base
+    vals <- list(...)
+    for (name in names(vals)) out[[name]] <- vals[[name]]  # NULL removes
+    out
+  }
+  refuse <- function(speclist, series = series_m, method = "x13") {
+    tryCatch({
+      obj <- if (method == "x13") {
+        perX13(series, template = "restricted", speclist = speclist,
+               backend = "native")
+      } else {
+        perTramo(series, template = "restricted", speclist = speclist,
+                 backend = "native")
+      }
+      obj$run()
+      "no error"
+    }, error = function(e) conditionMessage(e))
+  }
+  fixed <- native_fixed_speclist
+  e <- refuse(mod(fixed, sigma_policy = NULL))
+  expect_match(e, "sigma_policy_required")
+  expect_match(e, "No Java fallback")
+  expect_match(refuse(mod(fixed, trend_length = 0L)), "fixed_trend_length_only")
+  expect_match(refuse(mod(fixed, seasonal = rep("msr", 12L))),
+               "fixed_seasonal_requests_only")
+  expect_match(refuse(fixed, series = series_q), "monthly_only")
+  expect_match(refuse(mod(fixed, forecast = 6)),
+               "not part of the restricted native specification")
+  badvar <- list(list(class = "user", effect = "series", coefficient = NA_real_,
+                      columns = list(as.numeric(series_m))))
+  expect_match(refuse(mod(fixed, variables = badvar)),
+               "fixed_coefficients_only")
+  # The qualified fit is x13-only; native tramoseats names the entry points.
+  expect_match(refuse(fixed, method = "tramoseats"),
+               "does not yet implement specification construction")
+})
+
+# The restricted fit through the product path: honest envelope, provenance
+# echoes, is_stale semantics, and the pinned Java-free baseline metrics
+# (measured 2026-11-16 on rkalos 10afd3e / core 2b93ab0, bit-exact against the
+# rjd3 reference in the dual-lane section below; the pin proves cross-session
+# determinism of the native lane in JVM-free environments).
+native_fit <- local({
+  obj <- perX13(series_m, template = "restricted",
+                speclist = native_fixed_speclist, backend = "native")
+  obj$run()
+  obj
+})
+local({
+  res <- native_fit$result
+  expect_true(inherits(res, "persephone_native_restricted_fit"))
+  expect_false(inherits(res, "persephone_result"))
+  expect_identical(res$status$code, "success")
+  # Honest envelope: raw rkalos result kept as-is, no faked rjd3 shape.
+  expect_true(inherits(native_fit$output, "persephone_native_x13_fit"))
+  expect_null(native_fit$output$user_defined)
+  expect_null(native_fit$forecasts)   # zero_horizon_only
+  sa <- res$components$sa
+  present <- names(res$components)[vapply(res$components, function(x) !is.null(x),
+                                          logical(1))]
+  expect_true(all(c("t", "sa", "i") %in% present))
+  expect_identical(as.integer(stats::frequency(sa)), 12L)
+  expect_identical(time_domain(stats::tsp(sa)), time_domain(stats::tsp(series_m)))
+  expect_identical(as.numeric(native_fit$adjusted), as.numeric(native_fit$output$finalSA))
+  expect_identical(res$provenance$scope, "restricted_fixed_model_x13_fit_only")
+  expect_identical(res$provenance$trend_length, 13L)
+  expect_identical(res$provenance$sigma, "legacy")
+  expect_identical(res$provenance$mode_requested, "additive")
+  expect_identical(res$provenance$mode_effective, "additive")
+  expect_match(res$provenance$request_fingerprint, "^[0-9a-f]{8}-[0-9a-f]{8}$")
+  expect_false(anyNA(res$components$sa))
+  expect_false(native_fit$is_stale)
+  native_fit$updateParams(speclist = list(sigma_policy = "accurate"))
+  expect_true(native_fit$is_stale)
+  native_fit$updateParams(speclist = list(sigma_policy = "legacy"))
+  expect_false(native_fit$is_stale)
+  # Availability table: finals available, zero-horizon outputs not provided.
+  avail <- stats::setNames(res$availability$state, res$availability$field)
+  expect_true(all(avail[c("t", "sa", "i")] == "available"))
+  expect_true(all(avail[c("y_f", "sa_f", "y_ef")] == "not_provided"))
+})
+
+# Determinism of the request fingerprint: identical request -> identical
+# fingerprint; a scope-visible change -> different fingerprint.
+local({
+  refit <- perX13(series_m, template = "restricted",
+                  speclist = native_fixed_speclist, backend = "native")
+  refit$run()
+  expect_identical(refit$result$provenance$request_fingerprint,
+                   native_fit$result$provenance$request_fingerprint)
+  other_speclist <- native_fixed_speclist
+  other_speclist$sigma_policy <- "accurate"
+  other <- perX13(series_m, template = "restricted",
+                  speclist = other_speclist, backend = "native")
+  other$run()
+  expect_false(identical(other$result$provenance$request_fingerprint,
+                         native_fit$result$provenance$request_fingerprint))
+})
+
+# Pinned native baseline (see above): 1e-8 session-stability metrics.
+local({
+  sa <- as.numeric(native_fit$result$components$sa)
+  expect_true(all(abs(rev(utils::tail(sa, 6)) -
+    c(462.280289945309, 445.550991459852, 482.81782395023,
+      491.988183136371, 550.711751295872, 544.871905828635)) <= TOL_KEY))
+  expect_true(abs(mean(sa) - 280.298611111111) <= TOL_KEY)
+  expect_true(abs(stats::sd(sa) - 113.79689072143) <= TOL_KEY)
+  expect_true(abs(sum(sa) - 40363) <= TOL_KEY)
+})
+
+# Java-free proof for this section: if the reference packages are absent the
+# restricted fit above must have run without ever loading a Java package.
+if (!has_rjd3) {
+  expect_false(any(c("rJava", "rjd3jars", "rjd3toolkit", "rjd3x13",
+                     "rjd3tramoseats", "RProtoBuf") %in% loadedNamespaces()))
+}
+
+# ---- rjd3 reference lane (needs the reference stack) ------------------------
+if (has_rjd3) {
 
 # One cached reference fit per specification, reused by every check below.
 spec_cache <- new.env(parent = emptyenv())
@@ -65,23 +253,28 @@ reference_fit <- function(method, template, freq) {
   spec_cache[[key]]
 }
 
-# Canonical summary: metric-level only (see header). Candidate (future native)
-# results must expose the same shape.
+# Canonical summary builder: metric-level only (see header). Both lanes are
+# reduced through the same builder so the comparison is shape-identical.
+parity_build <- function(components, forecast_n) {
+  keys <- names(components)
+  numeric_components <- lapply(components, as.numeric)
+  list(keys = keys,
+       present = keys[vapply(keys, function(k) !is.null(components[[k]]), logical(1))],
+       lengths = vapply(numeric_components, length, integer(1)),
+       tsp = stats::tsp(components[[keys[1L]]]),
+       last6 = lapply(numeric_components, function(v) rev(utils::tail(v, 6))),
+       mean = vapply(numeric_components, mean, numeric(1)),
+       sd = vapply(numeric_components, stats::sd, numeric(1)),
+       sum = vapply(numeric_components, sum, numeric(1)),
+       na = lapply(numeric_components, is.na),
+       forecast_n = forecast_n)
+}
+
 parity_summary <- function(fit) {
   ud <- fit$output$user_defined
   keys <- c("y", "t", "sa")
-  component <- lapply(keys, function(k) as.numeric(ud[[k]]))
-  names(component) <- keys
-  list(keys = keys,
-       present = keys[vapply(keys, function(k) !is.null(ud[[k]]), logical(1))],
-       lengths = vapply(component, length, integer(1)),
-       tsp = stats::tsp(ud$sa),
-       last6 = lapply(component, function(v) rev(utils::tail(v, 6))),
-       mean = vapply(component, mean, numeric(1)),
-       sd = vapply(component, stats::sd, numeric(1)),
-       sum = vapply(component, sum, numeric(1)),
-       na = lapply(component, is.na),
-       forecast_n = length(ud$y_f))
+  parity_build(stats::setNames(lapply(keys, function(k) ud[[k]]), keys),
+               length(ud$y_f))
 }
 
 # Parity comparison contract. Exact for structural fields, absolute tolerance
@@ -107,23 +300,21 @@ parity_compare <- function(reference, candidate, tol = c(key = TOL_KEY)) {
   problems
 }
 
-# TODO(item 22b/27 - native fit hook): when rkalos exports a native seasonal-
-# adjustment fitting entry point (rkalos::capabilities()$fit becomes TRUE),
-# build the candidate summary here from the native result of the same
-# specification and return it; parity_compare() below then becomes the real
-# cross-backend check. Until then this must return NULL.
-parity_native_fit <- function(method, template, freq) NULL
-
-spec_matrix <- expand.grid(method = c("x13", "tramoseats"),
-                           template = c("rsa0", "rsa3"),
-                           freq = c(12L, 4L),
-                           stringsAsFactors = FALSE)
-
-# Time domain as exact integers (year, period, frequency): the backend stores
-# the decimal end, whose floating-point representation is not canonical, so
-# spans are pinned through (start year, start period, frequency) + length.
-time_domain <- function(t) c(floor(t[1]),
-                             round((t[1] - floor(t[1])) * t[3]) + 1, t[3])
+# Native fit hook (flipped 2026-11-16 from the always-NULL TODO placeholder):
+# when the gate and the scope accept the request, run the native fit through
+# the product path and return its candidate summary; requests outside the
+# restricted domain (automatic templates that estimate coefficients, other
+# methods, other frequencies) honestly have no candidate and return NULL.
+parity_native_fit <- function(method, template, freq) {
+  if (!identical(method, "x13") || !identical(template, "restricted") ||
+      !identical(as.integer(freq), 12L)) return(NULL)
+  cap <- rkalos::capabilities()
+  if (!identical(cap$native_x13_fit_restricted, TRUE)) return(NULL)
+  fit_obj <- perX13(series_m, template = "restricted",
+                    speclist = native_fixed_speclist, backend = "native")
+  fit_obj$run()
+  parity_build(fit_obj$result$components[c("sa", "t", "i")], forecast_n = 0L)
+}
 
 for (i in seq_len(nrow(spec_matrix))) {
   spec <- spec_matrix[i, ]
@@ -140,33 +331,63 @@ for (i in seq_len(nrow(spec_matrix))) {
   expect_true(all(vapply(ref$last6, function(v) all(is.finite(unlist(v))), logical(1))))
   expect_true(ref$forecast_n >= 1L)
 
-  # Self-parity proves the summary extraction is deterministic (the same
-  # contract a future native candidate must satisfy without violation).
+  # Self-parity proves the summary extraction is deterministic.
   expect_identical(parity_compare(ref, parity_summary(fit)), character(0))
 
-  # Honest native status: unavailable capability plus explicit no-fallback.
-  cap <- backend_capabilities("native", spec$method)
-  expect_false(cap$fit)
-  expect_identical(cap$status, "unimplemented")
-  native_series <- if (spec$freq == 12) series_m else series_q
-  err <- tryCatch({
-    if (spec$method == "x13") perX13(native_series, backend = "native")
-    else perTramo(native_series, backend = "native")
-    "no error"
-  }, error = function(e) conditionMessage(e))
-  expect_match(err, "native backend does not yet implement|No Java fallback",
-               fixed = FALSE)
-
-  # Native lane: no fitting exists, so the hook must be empty and comparing
-  # against the reference must report the absence rather than fake parity.
+  # Automatic templates estimate coefficients: outside the restricted native
+  # domain, so the hook must report absence rather than fake parity.
   expect_null(parity_native_fit(spec$method, spec$template, spec$freq))
 }
 
-# One native capability query per backend method records the stack state.
-cap_native <- backend_capabilities("native")
-expect_false(cap_native$fit)
-expect_identical(cap_native$status, "unimplemented")
-expect_identical(cap_native, rkalos::capabilities())
+# Dual-lane fixed specification: the milestone headline. The rjd3 reference is
+# the raw x13_fast output for the pinned fixed specification (the same data
+# the reference lane feeds its normalizer; the product-level rjd3 path cannot
+# itself carry zero-horizon outputs because the pre-existing forecast contract
+# rejects rjd3's residual cal_f/y_ef series against zero point forecasts — a
+# pre-existing rjd3-lane limitation, untouched here). The native candidate
+# runs through perX13(backend = "native")$run().
+dual_lane <- local({
+  spec <- rjd3x13::x13_spec("rsa0")
+  spec <- rjd3toolkit::set_transform(spec, fun = "none")
+  spec <- rjd3toolkit::set_tradingdays(spec, option = "None")
+  spec <- rjd3x13::set_x11(spec, seasonal.filter = "S3X15", henderson.filter = 13,
+                           mode = "Additive", fcasts = 0, bcasts = 0,
+                           lsigma = 1.5, usigma = 2.5)
+  ud <- rjd3x13::x13_fast(series_m, spec = spec,
+                          userdefined = c("sa", "t", "i"))$user_defined
+  keys <- c("sa", "t", "i")
+  reference <- parity_build(stats::setNames(lapply(keys, function(k) ud[[k]]), keys),
+                            forecast_n = length(ud$y_f))
+  candidate <- parity_native_fit("x13", "restricted", 12L)
+  list(reference = reference, candidate = candidate, ud = ud)
+})
+local({
+  ref <- dual_lane$reference
+  cand <- dual_lane$candidate
+  expect_false(is.null(cand))
+  violations <- parity_compare(ref, cand)
+  if (length(violations)) {
+    # STOP-with-diagnostics policy: show the offending magnitudes before the
+    # failing expectation so a red run is immediately interpretable.
+    for (key in ref$present) {
+      message("parity violation ", key, ": max abs diff ",
+              format(max(abs(as.numeric(dual_lane$ud[[key]]) -
+                             as.numeric(native_fit$result$components[[key]]))),
+                     digits = 6))
+    }
+  }
+  expect_identical(violations, character(0))
+  # Time domain exact (integer tuples) on both lanes, matching the series.
+  expect_identical(time_domain(cand$tsp), time_domain(ref$tsp))
+  expect_identical(time_domain(ref$tsp), time_domain(stats::tsp(series_m)))
+  # Full-series agreement, stronger than the pinned metrics (diagnostic value:
+  # 2026-11-16 measured all max diffs at exactly 0.000e+00, bit-exact).
+  for (key in c("sa", "t", "i")) {
+    maxdiff <- max(abs(as.numeric(dual_lane$ud[[key]]) -
+                         as.numeric(native_fit$result$components[[key]])))
+    expect_true(maxdiff <= TOL_KEY)
+  }
+})
 
 # Hierarchical case: aggregates over fitted single-series components.
 hts_fit <- local({
@@ -206,4 +427,6 @@ if (is.persephone(outcome)) {
   skip("Known-issue signature is locale-sensitive; LC_MESSAGES is not English")
 } else {
   expect_match(outcome, "missing value where TRUE/FALSE needed")
+}
+
 }

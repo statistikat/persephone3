@@ -48,14 +48,33 @@ models.
 
 Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
 its optional packages and Java runtime. The package itself can now load without
-them. `backend_capabilities("native")` reports the native implementation status;
-native model fitting is not implemented yet and never falls back silently.
+them. `backend_capabilities("native")` reports the native implementation status.
+The native backend qualifies one fit without Java: the restricted
+fixed-coefficient X-13 fit, gated by rkalos'
+`capabilities()$native_x13_fit_restricted` contract.
+
+```r
+obj <- perX13(AirPassengers, template = "restricted",
+              speclist = list(sigma_policy = "legacy",
+                              seasonal = rep("s3x15", 12L),
+                              trend_length = 13L),
+              backend = "native")
+obj$run()
+obj$adjusted
+```
+
+Its scope is explicit: fixed coefficients only (no automatic templates), fixed
+seasonal and Henderson trend requests, a required sigma policy ("legacy" or
+"accurate"), zero horizons, monthly series. Anything outside this scope raises
+an explicit error naming the violated scope field(s) and never falls back
+silently to Java. Full native seasonal-adjustment fitting beyond this restricted
+scope remains unavailable.
 Persephone now requires [rkalos](https://github.com/statistikat/rkalos), which
 bundles a pinned [Kalos](https://github.com/statistikat/kalos) C++ engine and uses
 Rcpp only at its R boundary. Persephone contains no embedded numerical C++ code.
 Kalos is independent of R/Rcpp; standalone and minimal Python bindings use OpenBLAS.
 The full native numerical roadmap and contracts live in Kalos, with R interface
-status in rkalos. Full native seasonal-adjustment fitting remains unavailable.
+status in rkalos.
 
 Each object records its backend at construction. An explicit `backend` argument
 overrides `options(persephone.backend = "rjd3")`; changing the option does not
