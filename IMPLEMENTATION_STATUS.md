@@ -370,6 +370,48 @@ env -u LD_LIBRARY_PATH JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
   R CMD check --as-cran --output=check-as_cran persephone3_0.1.0.tar.gz
 ```
 
+## Linux P1 re-verification F1–F9 — 2026-11-16 (M2)
+
+All original minimal reproductions from the reassessment baseline (`dd38e10`)
+were executed against the installed package at HEAD `1ceb6f0` on this Linux
+host (R 4.5.3, JVM 21.0.11, rjd3 stack as in the M1 matrix, locale
+`en_US.UTF-8`). Reproduction scripts and outputs: `/tmp/opencode/m2d/`
+(`repro.R`, `repro2.R`, `repro3.R`, `repro4.R`). The interim-release
+ambiguity ("findings table red but items 6–13 delivered") is resolved: the
+table records the historical baseline; empirically every finding now behaves
+per its delivered contract.
+
+| Finding | Verdict on Linux at `1ceb6f0` | Evidence |
+| --- | --- | --- |
+| F1 fixOutlier after fit | **fixed** | `perX13(AirPassengers)` run → `$fixOutlier()` → rerun, and TRAMO/SEATS likewise, complete without the `argument is of length zero` error; repeated fixing adds no duplicate specifications. |
+| F2 public forecast API | **fixed** | `$forecasts` returns a `persephone_forecasts` contract for both methods; hierarchy `$forecastsDirect`/`$forecastsIndirect` evaluate without the array error. |
+| F3 outlier classification/counts | **fixed** | Manual AO at 1953-07-01 reports `autoout = FALSE`, correct type/date, no coercion warnings; zero-outlier diagnostics counts are `0/0/0`, not `NA`. |
+| F4 hierarchy decisions | **fixed** | With `root$run()` then flags (`inner$indirect <- FALSE`, ancestors indirect): `root$adjusted` equals the selected-child sum exactly (maxdiff 0) while the selected-vs-fully-indirect gap on the AirPassengers-based fixture is **36.8904** — the same magnitude as the recorded 36.89045 defect — so the child decision is genuinely honored. Flipping the inner choice switches `adjusted` accordingly; `adjustedIndirect` equals the fully-indirect leaf sum. |
+| F5 short weight alignment | **fixed** | Original fixture: first weighted aggregate is 51 (defect value 8.692308); a late-start weight series now fails with "Weights for 'a' are missing the beginning of the component history." |
+| F6 calendar regressors | **fixed** | `genTd(2020, 2021, hd = list("easter+1"), weight = 0)` gives zero effect (maxdiff 0 vs the old 1.593642); `freq = 1` now fails with "freq must be 4 or 12."; output shape 7/6/7 matches the rewritten documentation. |
+| F7 diagnostics/dashboard agreement | **fixed** | With controlled `p = 0.01`: table and single dashboard both show TD-regression **Good** and residual-TD **Bad** (reversed rule gone); categorical seasonality **Present** survives in the table. The suite additionally walks real dashboard cards for both engines and both boundary sets. |
+| F8 template replacement | **fixed** | `updateParams(template = "rsa0")` on an `rsa3` object changes the spec and matches a fresh `rsa0`; hierarchy `updateParams(template = )` no longer throws `'what' must be a function or character string`. |
+| F9 dashboard identities | **fixed** | `dashboard_registry` on a tree with a child literally named `Aggregate`, duplicate labels, and a hostile label (quotes, markup, `&`, `/`) assigns unique `node_*` ids, routes `node_1` to the child (not the root), and is deterministic. 101 assertions in `test-dashboard-identities.R` cover escaping and selection. |
+| F10 CI matrix | **configured only** | Java 21 + pinned rjd3 tags are declared; still no workflow execution from this branch (push is not authorized). |
+
+Method notes: the F4 probe must use the supported sequence — run the root
+first, then set `indirect` flags; constructing with flags pre-set and never
+running the child hierarchy separately leaves the child's aggregate outputs
+NULL (expected, reconstruction is the supported mutation contract). One new
+observation, **outside this package**: a deliberately degenerate 48-month
+synthetic series (linear trend plus a strict 3-period pattern) makes
+`rjd3toolkit`'s protobuf-to-R conversion fail with
+`missing value where TRUE/FALSE needed` at `if (pval < 0)` inside
+`.jd2r_test -> statisticaltest` (NA test statistic), surfacing during
+`perX13()$run()`. This is a backend-side robustness gap for difficult models
+(item 14 "difficult-model compatibility" lane), not a regression of F1–F8;
+reproducer: `/tmp/opencode/m2d/f4debug2.R`.
+
+**Suite state unchanged:** 20 files, **1,330 assertions, 0 failures/errors/
+skips** at `1ceb6f0` (same per-file distribution as the M1 baseline). No
+package code was changed by this re-verification; no new tests were needed
+because every existing and probe check already passes.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,
@@ -395,6 +437,10 @@ current numerical qualification belongs to Kalos/rkalos.
 Priority **P1** means a correctness issue to resolve before release sign-off.
 **P2** means compatibility, input handling, or delivery hardening. Source
 locations refer to `dd38e10` and may move as fixes are implemented.
+On 2026-11-16 every finding below was re-executed on Linux at HEAD `1ceb6f0`:
+all P1 reproductions (F1–F8) and F9 no longer reproduce — see "Linux P1
+re-verification F1–F9 — 2026-11-16 (M2)"; the rows retain the historical
+baseline state.
 
 | ID | Priority | Finding and evidence | Relevant source |
 | --- | --- | --- | --- |
