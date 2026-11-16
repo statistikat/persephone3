@@ -573,6 +573,64 @@ asymmetric with the native lane where zero horizons are the domain;
 (3) a user-facing `speclist` validation for `seasonal` lengths could move
 some refusals from fit time to construction time.
 
+## Maintainer sigma-rule default cascaded into the native spec — 2026-11-17 (Agent D)
+
+Kalos maintainer decision (2026-11-17), cascaded from rkalos 20af662
+(restricted_fit block schema_version 2): the X-11 sigma-rule product
+default is **legacy** — bit-exact against the pinned
+`DefaultExtremeValuesCorrector` / JDemetra behavior — and **"accurate"**
+stays selectable. The layering follows the agreed split: the core keeps
+the policy explicit (raw `.native_*` entries unchanged, still refusing a
+missing policy), rkalos applies the default at its interface, and Persephone
+mirrors the split at its spec layer.
+
+**Field migration.** `restricted_fit$sigma_policy_required = TRUE` no longer
+exists; the gate and scope checks read `restricted_fit$sigma_policy_default`,
+verified in `identical(., "legacy")` form by `backend_native_gate()` (a build
+stating a different default is refused naming `sigma_policy_default` — the
+Persephone native spec never guesses a sigma default). `sigma_policy = NULL`
+on `persephone_native_spec` now means NOT STATED and receives the qualified
+default when the request is built; an explicitly stated `"legacy"`/`"accurate"`
+always wins; any other stated value is refused naming `sigma_policy_default`
+(the former `sigma_policy_required` violation path is gone; the preserved
+"does not yet implement … No Java fallback" framing is unchanged for all
+remaining violations).
+
+**Provenance design.** The envelope keeps the core echoes verbatim
+(`sigma`, `sigma_set`) and adds one compound string,
+`provenance$sigma_policy`: `"legacy (default)"` when the policy was omitted,
+`"legacy (explicit)"` / `"accurate (explicit)"` when stated. The
+default/explicit distinction is Persephone-side knowledge (the interface has
+already applied the default before the core sees it), so the compound string —
+not the core echo — is the honest record; the print method shows it.
+
+**Request fingerprint.** The fingerprint hashes the EFFECTIVE policy, so an
+omitted and an explicit-"legacy" request produce bit-identical results and
+identical fingerprints (asserted), while `"accurate"` changes the fingerprint
+(scope-visible change).
+
+**Parity (default path end-to-end).** The dual-lane fixed specification now
+OMITS the sigma policy. Measured 2026-11-17 on rkalos 20af662 (core pin
+unchanged, 2b93ab0): rjd3-vs-native final SA/trend/irregular max diffs all
+exactly **0.000e+00** — the default maps to the same pinned rule, so the
+M3-finale bit-exactness persisted through the migration; the pinned native
+session-stability baseline metrics (last-6/mean/sd/sum) are unchanged.
+An explicit `"accurate"` smoke check was added: it runs through the product
+path, the policy is echoed (`sigma = "accurate"`, sigma-stage records carry
+`policy = "accurate"`, honestly distinct from the legacy run's echoes), the
+provenance records `"accurate (explicit)"`, and the finals coincide with
+legacy on this series (no pinned values; the rkalos fixtures' documented
+legacy/accurate divergence is at the sigma-stage weight/state level, and
+none of the pinned fit fixtures diverges in the finals). The former M3
+missing-sigma refusal test became this default-applied proof;
+`tools/verify-nojava.R` now runs the restricted fit with an omitted policy
+(asserting `"legacy (default)"`) and refuses a stated-invalid policy.
+
+**Suite state:** 21 files, **1,476 assertions (1,330 baseline + 146 in the
+parity harness), 0 failures/errors/skips** on the qualified JVM 21 stack
+(parity file 129 → 146, net +17). JVM-free lane: parity file 70/70 with no
+Java namespace loaded; `tools/verify-nojava.R` PASS without Java.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,

@@ -32,23 +32,29 @@ stopifnot(identical(cap, rkalos::capabilities()),
 # Restricted native fit (rkalos schema_version 2): the qualified fixed-
 # coefficient X-13 fit must run through the product path WITHOUT Java, and
 # out-of-domain requests must refuse naming the violated scope field.
+# The sigma policy is omitted: the maintainer decision of 2026-11-17 makes
+# "legacy" (pinned JDemetra behavior) the product default, recorded honestly
+# in the provenance; a stated policy outside "legacy"/"accurate" is refused.
 if (identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)) {
+  stopifnot(identical(rkalos::capabilities()$restricted_fit$sigma_policy_default,
+                      "legacy"))
   obj <- perX13(AirPassengers, template = "restricted",
-                speclist = list(sigma_policy = "legacy",
-                                seasonal = rep("s3x15", 12L), trend_length = 13L))
+                speclist = list(seasonal = rep("s3x15", 12L), trend_length = 13L))
   obj$run()
   stopifnot(identical(obj$result$status$code, "success"),
             identical(obj$result$backend, "native"),
             !inherits(obj$result, "persephone_result"),
+            identical(obj$result$provenance$sigma_policy, "legacy (default)"),
             stats::frequency(obj$adjusted) == 12L,
             is.null(obj$forecasts))
   refused <- tryCatch({
     bad <- perX13(AirPassengers, template = "restricted",
-                  speclist = list(seasonal = rep("s3x15", 12L), trend_length = 13L))
+                  speclist = list(sigma_policy = "jdemetra",
+                                  seasonal = rep("s3x15", 12L), trend_length = 13L))
     bad$run()
     "no error"
   }, error = function(e) conditionMessage(e))
-  stopifnot(grepl("sigma_policy_required", refused),
+  stopifnot(grepl("sigma_policy_default", refused),
             grepl("No Java fallback", refused))
   cat("PASS: restricted native X-13 fit through the product path without Java\n")
 }

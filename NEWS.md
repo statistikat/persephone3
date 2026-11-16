@@ -2,9 +2,11 @@
 
 * The native backend (`backend = "rjd3"` remains the default) now provides the
   restricted fixed-coefficient X-13 fit without Java through
-  `perX13(ts, template = "restricted", speclist = list(sigma_policy = ...),
-  backend = "native")`: fixed coefficients, fixed seasonal/Henderson requests,
-  explicit sigma policy, zero horizons, monthly series; every other native
+  `perX13(ts, template = "restricted", speclist = ..., backend = "native")`:
+  fixed coefficients, fixed seasonal/Henderson requests, zero horizons,
+  monthly series; the sigma policy defaults to "legacy" (the pinned
+  JDemetra behavior, maintainer decision 2026-11-17) and "accurate" stays
+  selectable; every other native
   request fails explicitly and never falls back silently.
 
 * Hierarchical plots show forecasts with prediction intervals and aggregate

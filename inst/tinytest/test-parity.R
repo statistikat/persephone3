@@ -17,7 +17,11 @@
 # max diffs 0.000e+00, far inside the 1e-8 policy). Everything outside the
 # restricted domain (automatic templates that estimate coefficients, other
 # methods or frequencies) must still raise the explicit "no Java fallback"
-# error, asserted below.
+# error, asserted below. Since the maintainer decision of 2026-11-17 the
+# sigma policy defaults to "legacy" (= pinned JDemetra behavior; "accurate"
+# stays selectable): the dual-lane specification states no sigma policy, so
+# the default path is exercised end-to-end, and bit-exactness must persist
+# because the default maps to the same pinned rule the explicit policy used.
 #
 # Structure: the native lane (gate contract, refusals, restricted fit through
 # the product path with pinned baseline metrics) must pass WITHOUT Java or
@@ -63,10 +67,13 @@ TOL_HTS <- 1e-8
 
 # The pinned restricted fixed specification both lanes must reproduce:
 # fixed s3x15 seasonal filter in every period, fixed Henderson length 13,
-# explicit legacy sigma policy, additive mode, no regression variables, zero
-# horizons, monthly frequency.
-native_fixed_speclist <- list(sigma_policy = "legacy",
-                              seasonal = rep("s3x15", 12L),
+# additive mode, no regression variables, zero horizons, monthly frequency.
+# The sigma policy is deliberately OMITTED: the maintainer decision of
+# 2026-11-17 makes "legacy" the product default (restricted_fit schema v2,
+# sigma_policy_default), so this exercises the default path end-to-end; the
+# default maps to the same pinned rule the explicit "legacy" used, so the
+# dual-lane diffs must stay exactly zero.
+native_fixed_speclist <- list(seasonal = rep("s3x15", 12L),
                               trend_length = 13L)
 
 # Time domain as exact integers (year, period, frequency): the backend stores
@@ -87,8 +94,14 @@ local({
   expect_identical(cap$status, "unimplemented")
   rf <- cap$restricted_fit
   expect_true(all(c("fixed_coefficients_only", "fixed_seasonal_requests_only",
-                    "fixed_trend_length_only", "sigma_policy_required",
+                    "fixed_trend_length_only", "sigma_policy_default",
                     "zero_horizon_only", "monthly_only") %in% names(rf)))
+  # restricted_fit schema v2 (2026-11-17): sigma_policy_required replaced by
+  # the maintainer's legacy sigma default; the Persephone gate is exactly this
+  # identity.
+  expect_identical(rf$schema_version, 2L)
+  expect_false("sigma_policy_required" %in% names(rf))
+  expect_identical(rf$sigma_policy_default, "legacy")
   expect_identical(rf$frequency, 12L)
   expect_true(all(c("additive", "multiplicative", "log_additive",
                     "pseudo_additive") %in% rf$modes))
@@ -136,8 +149,11 @@ local({
     }, error = function(e) conditionMessage(e))
   }
   fixed <- native_fixed_speclist
-  e <- refuse(mod(fixed, sigma_policy = NULL))
-  expect_match(e, "sigma_policy_required")
+  # Sigma: an omitted policy is NO LONGER a refusal (2026-11-17 decision) —
+  # see the default-applied proof below. A STATED policy outside the pinned
+  # pair is refused naming the contract field.
+  e <- refuse(mod(fixed, sigma_policy = "jdemetra"))
+  expect_match(e, "sigma_policy_default")
   expect_match(e, "No Java fallback")
   expect_match(refuse(mod(fixed, trend_length = 0L)), "fixed_trend_length_only")
   expect_match(refuse(mod(fixed, seasonal = rep("msr", 12L))),
@@ -156,8 +172,10 @@ local({
 
 # The restricted fit through the product path: honest envelope, provenance
 # echoes, is_stale semantics, and the pinned Java-free baseline metrics
-# (measured 2026-11-16 on rkalos 10afd3e / core 2b93ab0, bit-exact against the
-# rjd3 reference in the dual-lane section below; the pin proves cross-session
+# (measured 2026-11-16 on rkalos 10afd3e / core 2b93ab0 and re-measured
+# 2026-11-17 on rkalos 20af662 through the default-sigma path — bit-identical,
+# the default applies the same pinned rule — and bit-exact against the rjd3
+# reference in the dual-lane section below; the pin proves cross-session
 # determinism of the native lane in JVM-free environments).
 native_fit <- local({
   obj <- perX13(series_m, template = "restricted",
@@ -183,15 +201,18 @@ local({
   expect_identical(as.numeric(native_fit$adjusted), as.numeric(native_fit$output$finalSA))
   expect_identical(res$provenance$scope, "restricted_fixed_model_x13_fit_only")
   expect_identical(res$provenance$trend_length, 13L)
+  # Sigma provenance: the spec states no policy, so the compound string must
+  # record the applied maintainer default while the core echo stays verbatim.
   expect_identical(res$provenance$sigma, "legacy")
+  expect_identical(res$provenance$sigma_policy, "legacy (default)")
   expect_identical(res$provenance$mode_requested, "additive")
   expect_identical(res$provenance$mode_effective, "additive")
   expect_match(res$provenance$request_fingerprint, "^[0-9a-f]{8}-[0-9a-f]{8}$")
   expect_false(anyNA(res$components$sa))
   expect_false(native_fit$is_stale)
-  native_fit$updateParams(speclist = list(sigma_policy = "accurate"))
+  native_fit$updateParams(speclist = list(trend_length = 15L))
   expect_true(native_fit$is_stale)
-  native_fit$updateParams(speclist = list(sigma_policy = "legacy"))
+  native_fit$updateParams(speclist = list(trend_length = 13L))
   expect_false(native_fit$is_stale)
   # Availability table: finals available, zero-horizon outputs not provided.
   avail <- stats::setNames(res$availability$state, res$availability$field)
@@ -200,7 +221,8 @@ local({
 })
 
 # Determinism of the request fingerprint: identical request -> identical
-# fingerprint; a scope-visible change -> different fingerprint.
+# fingerprint; a scope-visible change (the stated sigma policy is effective
+# in the request) -> different fingerprint.
 local({
   refit <- perX13(series_m, template = "restricted",
                   speclist = native_fixed_speclist, backend = "native")
@@ -214,6 +236,50 @@ local({
   other$run()
   expect_false(identical(other$result$provenance$request_fingerprint,
                          native_fit$result$provenance$request_fingerprint))
+})
+
+# Default-applied proof (maintainer decision 2026-11-17): an omitted sigma
+# policy must be bit-identical to the explicit "legacy" run — the default is
+# the same pinned rule, so also the request fingerprint matches — while the
+# provenance distinguishes default from explicit.
+local({
+  explicit_speclist <- native_fixed_speclist
+  explicit_speclist$sigma_policy <- "legacy"
+  explicit <- perX13(series_m, template = "restricted",
+                     speclist = explicit_speclist, backend = "native")
+  explicit$run()
+  expect_identical(explicit$result$status$code, "success")
+  expect_identical(explicit$result$components, native_fit$result$components)
+  expect_identical(explicit$result$provenance$request_fingerprint,
+                   native_fit$result$provenance$request_fingerprint)
+  expect_identical(explicit$result$provenance$sigma_policy, "legacy (explicit)")
+  expect_identical(explicit$output$sigma, "legacy")
+  expect_true(explicit$output$sigma_set)
+})
+
+# Explicit "accurate" smoke: selectable, honored end-to-end, honestly echoed.
+# On this pinned series (and on every rkalos fit fixture) legacy and accurate
+# produce the same finals — the fixtures' documented divergence is at the
+# sigma-stage level, where the stage records carry the policy echo and the
+# accurate policy never inherits the legacy cutoff state; the product lane
+# surfaces exactly those echoes. Values are not pinned here.
+local({
+  acc_speclist <- native_fixed_speclist
+  acc_speclist$sigma_policy <- "accurate"
+  acc <- perX13(series_m, template = "restricted",
+                speclist = acc_speclist, backend = "native")
+  acc$run()
+  expect_identical(acc$result$status$code, "success")
+  expect_identical(acc$result$provenance$sigma_policy, "accurate (explicit)")
+  expect_identical(acc$output$sigma, "accurate")
+  expect_identical(acc$result$selection$b$policy, "accurate")
+  expect_identical(acc$result$selection$c$policy, "accurate")
+  expect_false(identical(acc$result$selection$b$policy,
+                         native_fit$result$selection$b$policy))
+  # Finals coincide on this series (measured 0.000e+00 on the qualified
+  # stack); kept as a sanity bound, not as a pinned reference value.
+  expect_true(max(abs(as.numeric(acc$result$components$sa) -
+                        as.numeric(native_fit$result$components$sa))) <= TOL_KEY)
 })
 
 # Pinned native baseline (see above): 1e-8 session-stability metrics.

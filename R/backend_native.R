@@ -5,6 +5,15 @@
 # fitting stays unimplemented). Scope fields come from the pinned
 # capabilities()$restricted_fit block; refusals name the violated field and
 # echo the rkalos/core status verbatim. No Java fallback ever happens.
+#
+# Sigma policy (maintainer decision 2026-11-17): the X-11 sigma-rule product
+# default is "legacy" (bit-exact against the pinned DefaultExtremeValuesCorrector
+# / JDemetra behavior). Per the layering split the spec keeps sigma_policy =
+# NULL meaning NOT STATED; the qualified default (restricted_fit$sigma_policy_default,
+# verified as identical(.., "legacy") by the gate) is applied here when the
+# request is built, mirroring rkalos applying it at its interface while the
+# core keeps its explicitness contract. An explicitly stated "legacy"/"accurate"
+# always wins; any other stated value is refused.
 
 native_backend_entry <- "native_x13_fit(), native_x13_preadjust(), native_x13_restore()"
 
@@ -27,6 +36,16 @@ backend_native_gate <- function(context = "the restricted fit", method = "x13") 
     backend_native_refusal(context, method, "native_x13_fit_restricted",
       paste0("this rkalos build does not qualify the restricted X-13 fit ",
              "(capabilities()$native_x13_fit_restricted is not TRUE)."))
+  }
+  # The Persephone native spec relies on the maintainer's legacy sigma default
+  # (restricted_fit schema v2: sigma_policy_required was replaced by
+  # sigma_policy_default on 2026-11-17); a build stating a different default
+  # is outside the qualified contract this layer maps onto.
+  if (!identical(rf$sigma_policy_default, "legacy")) {
+    backend_native_refusal(context, method, "sigma_policy_default",
+      paste0("this rkalos build does not state the maintainer's sigma default ",
+             "(restricted_fit$sigma_policy_default is not \"legacy\"); the ",
+             "Persephone native spec does not guess a sigma default. "))
   }
   rf
 }
@@ -64,7 +83,8 @@ backend_native_default_spec <- function(method, template, freq) {
   }
   structure(list(method = "x13", template = "restricted", frequency = rf$frequency,
                  log = FALSE, mode = "additive", variables = list(),
-                 sigma_policy = NULL, seasonal = NULL, trend_length = NULL,
+                 sigma_policy = NULL,   # not stated -> rf$sigma_policy_default at request time
+                 seasonal = NULL, trend_length = NULL,
                  lower_sigma = 1.5, upper_sigma = 2.5),
             class = "persephone_native_spec")
 }
@@ -169,11 +189,18 @@ backend_native_request <- function(spec, ts) {
     violated <- c(violated, "fixed_trend_length_only")
     detail <- c(detail, "the Henderson trend filter length must be a stated odd integer >= 5 (the automatic 0 is refused);")
   }
-  if (is.null(spec$sigma_policy) || length(spec$sigma_policy) != 1L ||
-      !spec$sigma_policy %in% c("legacy", "accurate")) {
-    violated <- c(violated, "sigma_policy_required")
-    detail <- c(detail, "the sigma policy must be stated explicitly as \"legacy\" or \"accurate\"; no default exists;")
+  # NULL/omitted sigma_policy receives the qualified default ("legacy",
+  # verified by the gate); an explicitly stated policy must be one of the
+  # two pinned values -- the core validates it verbatim downstream.
+  sigma <- spec$sigma_policy
+  sigma_stated <- !is.null(sigma)
+  if (sigma_stated && (length(sigma) != 1L || is.na(sigma) ||
+      !sigma %in% c("legacy", "accurate"))) {
+    violated <- c(violated, "sigma_policy_default")
+    detail <- c(detail, sprintf("a stated sigma policy must be \"legacy\" or \"accurate\" (the qualified default is \"%s\");",
+                                rf$sigma_policy_default))
   }
+  if (!sigma_stated) sigma <- rf$sigma_policy_default
   if (is.null(spec$mode) || length(spec$mode) != 1L || !spec$mode %in% rf$modes) {
     violated <- c(violated, "modes")
     detail <- c(detail, sprintf("the decomposition mode must be one of %s;",
@@ -196,7 +223,7 @@ backend_native_request <- function(spec, ts) {
     as.integer(round((span[1L] - floor(span[1L])) * freq)) + 1L
   list(variables = spec$variables, log = spec$log,
        seasonal = as.character(unname(seasonal)), trend_length = as.integer(trend),
-       sigma = spec$sigma_policy, mode = spec$mode,
+       sigma = sigma, sigma_stated = sigma_stated, mode = spec$mode,
        lower_sigma = as.numeric(spec$lower_sigma),
        upper_sigma = as.numeric(spec$upper_sigma),
        method = "x13", frequency = as.integer(freq), start_period = start_period)
@@ -241,6 +268,12 @@ backend_native_fit <- function(ts, spec, context, userdefined) {
 # Versioned envelope for the native fit. Deliberately NOT an rjd3-shaped
 # result and not classed "persephone_result": it is a distinct honest type.
 normalize_native_result <- function(fit, spec, ts) {
+  # Called with either the versioned specification envelope or the raw native
+  # spec; unwrap so scope-aware provenance sees the real spec fields.
+  if (inherits(spec, "persephone_spec") &&
+      inherits(spec$parameters, "persephone_native_spec")) {
+    spec <- spec$parameters
+  }
   if (inherits(spec, "persephone_native_spec") &&
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts)))) {
     stop("Specification frequency does not match the result's observed series.", call. = FALSE)
@@ -263,10 +296,18 @@ normalize_native_result <- function(fit, spec, ts) {
     }, character(1)),
     stringsAsFactors = FALSE, row.names = NULL)
   code <- if (identical(fit$status, "available") && !is.null(fit$finalSA)) "success" else "incomplete"
+  # Honest sigma provenance: the compound sigma_policy string records whether
+  # the maintainer default ("legacy") was applied or the policy was stated by
+  # the user; the core echoes (sigma/sigma_set) stay verbatim alongside. The
+  # core always receives a policy (the interface applies the default), so for
+  # a raw fit without a native spec the source falls back to the core echo.
+  sigma_stated <- if (inherits(spec, "persephone_native_spec"))
+    !is.null(spec$sigma_policy) else isTRUE(fit$sigma_set)
   provenance <- c(
     list(backend = "native", restricted = TRUE,
          request_fingerprint = attr(fit, "persephone_request_fingerprint", exact = TRUE),
-         core_commit = tryCatch(rkalos::core_version()$commit, error = function(e) NA_character_)),
+         core_commit = tryCatch(rkalos::core_version()$commit, error = function(e) NA_character_),
+         sigma_policy = paste0(fit$sigma, if (sigma_stated) " (explicit)" else " (default)")),
     fit[c("type", "schema_version", "frequency", "start_period", "log", "seasonal",
           "trend_length", "sigma_set", "sigma", "lower_sigma", "upper_sigma",
           "msr_policy", "mode_requested", "mode_effective", "scope")])
@@ -286,7 +327,7 @@ print.persephone_native_restricted_fit <- function(x, ...) {
   cat("  status:", x$status$code, "| scope: restricted fixed-coefficient X-13\n")
   cat("  mode requested:", x$provenance$mode_requested,
       "| effective:", x$provenance$mode_effective, "\n")
-  cat("  sigma policy:", x$provenance$sigma,
+  cat("  sigma policy:", x$provenance$sigma_policy,
       "| Henderson:", x$provenance$trend_length,
       "| fingerprint:", x$provenance$request_fingerprint, "\n")
   if (!is.null(x$components$sa)) {

@@ -55,8 +55,7 @@ fixed-coefficient X-13 fit, gated by rkalos'
 
 ```r
 obj <- perX13(AirPassengers, template = "restricted",
-              speclist = list(sigma_policy = "legacy",
-                              seasonal = rep("s3x15", 12L),
+              speclist = list(seasonal = rep("s3x15", 12L),
                               trend_length = 13L),
               backend = "native")
 obj$run()
@@ -64,8 +63,10 @@ obj$adjusted
 ```
 
 Its scope is explicit: fixed coefficients only (no automatic templates), fixed
-seasonal and Henderson trend requests, a required sigma policy ("legacy" or
-"accurate"), zero horizons, monthly series. Anything outside this scope raises
+seasonal and Henderson trend requests, a sigma policy that defaults to
+"legacy" — the pinned JDemetra behavior (maintainer decision 2026-11-17;
+"accurate" is selectable) — zero horizons, monthly series. Anything outside
+this scope raises
 an explicit error naming the violated scope field(s) and never falls back
 silently to Java. Full native seasonal-adjustment fitting beyond this restricted
 scope remains unavailable.
