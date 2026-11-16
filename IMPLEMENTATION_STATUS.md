@@ -189,6 +189,187 @@ NOTE above.
 **Interim release checklist.** First pass of item 15 recorded in
 `RELEASE_CHECKLIST.md` with per-gate green/amber/red states.
 
+## Linux M1 regression matrix and release verification — 2026-11-16 (Agent D)
+
+Item 14 groundwork executed as actual runs: the tinytest suite under a documented
+Java-policy regression matrix, re-check of the 1,329-vs-1,330 baseline claim, and
+the item-15 first-pass verification including a full `R CMD check --as-cran`.
+Scripts, logs and the check tree live in `/tmp/opencode/m1d2/`.
+
+**What was tested.** Fresh `R CMD build` + `R CMD INSTALL` of branch head
+`ae37687` into a clean scratch library `/tmp/opencode/rlib-d1`; nothing in the
+user or site libraries was modified. `rkalos` was built from the read-only
+sibling checkout at its then-HEAD `a36a925` (core pin `cd004b08…` confirmed via
+`rkalos::core_version()`; Agent B's later `5342b89` postdates this matrix).
+Versions: R 4.5.3, rJava 1.0-18, rjd3toolkit 3.9.1, rjd3x13 3.9.0,
+rjd3tramoseats 3.9.0, rjd3jars 0.0.6, tinytest 1.4.3, shinycssloaders 1.1.0
+(machine-local, see below), JVM 21.0.11.
+
+**Java-policy regression matrix** (installed-package tinytest suite, 20 files;
+driver `run_matrix.R` in the scratch directory):
+
+| Config | Driver | Files | Assertions | Pass | Fail | Error | Skip |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A — JVM 21 (`JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`, rJava + rjd3 on path) | one `test_package()` | 20 | 1,330 | 1,330 | 0 | 0 | 0 |
+| B — Java disabled (`JAVA_HOME` unset; rJava/rjd3*/RProtoBuf absent from every search path) | per-file runs | 20 (11 complete, 9 file-abort) | 594 | 594 | 0 | 0 | 0 |
+| C — site-pinned JVM 17 probe | single fit | — | — | — | — | — | — |
+
+Config A was run twice; the per-file distribution matches the `ae37687`
+baseline exactly (test_fix 4, backend-integration 32, backend-reinitialization
+14, backend 88, batch 10, dashboard-identities 101, dashboard-probe 12,
+dashboard 43, diagnostic-values 180, **extraction 178**, fix-outliers 188,
+forecasts 180, genTd 90, hierarchical-plot 36, hierarchical 10,
+hierarchy-values 79, misc 12, plot 11, single 10, specification-updates 52).
+The 1,329-vs-1,330 discrepancy was re-checked and is **fully explained**: the
+M0 run recorded test-extraction.R = 177, both runs here give 178 — exactly the
+single backend-count-gated assertion that `ae37687` localized and made
+unconditional. No test was relaxed.
+
+Config B ran all 20 files individually (per-file `run_test_dir` + tryCatch,
+because one `test_package()` run stops at the first file-level error). The 11
+files whose Java-free sections exist passed every collected assertion
+(backend-reinitialization 0, backend 35, dashboard-identities 101,
+dashboard-probe 12, diagnostic-values 163, extraction 0, fix-outliers 0,
+forecasts 100, genTd 90, hierarchical-plot 36, hierarchy-values 57 — the
+`requireNamespace` gates print a message and contribute no assertions, hence
+0 skips). The 9 files with an unguarded top-level `$run()`
+(`test_fix.R`, `test-backend-integration.R`, `test-batch.R`,
+`test-dashboard.R`, `test-hierarchical.R`, `test-misc.R`, `test-plot.R`,
+`test-single.R`, `test-specification-updates.R`) abort at the first fit with
+the package's explicit error: "The rjd3 backend requires the optional package
+'rjd3toolkit' and its compatible Java runtime; the rjd3 3.9.0 jars require a
+JVM 21 or newer. Install them before using backend = \"rjd3\"." No silent
+fallback anywhere; no namespace matching `^rJava$|^rjd3` was ever loaded
+before or after. **Item-14 finding:** the rjd3-absent lane does not degrade
+gracefully suite-wide — gating today is per-section, not per-file — so a
+future Java-free CI lane needs file-level gates or a documented
+expected-abort list. Nothing was changed to make the matrix look better.
+
+Config C (policy evidence): with `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64`
+(the value `ldpaths` pins), `requireNamespace("rjd3x13")` and the pure-R spec
+builders still succeed, and the first jar-class call then fails with
+`java.lang.UnsupportedClassVersionError: jdplus/x13/base/api/x13/X13Spec has
+been compiled by a more recent version of the Java Runtime (class file version
+65.0), this version of the Java Runtime only recognizes class file versions up
+to 61.0`. JVM ≥ 21 is a hard requirement and the failure is first-fit-deferred
+— exactly the misleading behavior the documented policy warns about.
+
+**Native-unsupported honesty paths.** `tools/verify-nojava.R --native` was run
+against a fully isolated library (475-package symlink farm without rJava,
+rjd3toolkit/x13/tramoseats/jars, RProtoBuf and other rJava importers; no
+`JAVA_HOME`) → PASS. The M0 script `verify_native_unsupported.R` passes under
+both A and B: `backend_capabilities("native")` reports
+`status="unimplemented"`, `fit=FALSE`; all four native routes plus the
+option route raise the explicit "No Java fallback was used" error; afterwards
+the count of loaded rJava/rjd3 namespaces is 0.
+
+**Java environment findings.** Host `java -version` reports 21.0.11, but the
+R-HOME `etc/ldpaths` pins `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64`, and
+`R CMD javareconf -e` without `JAVA_HOME` resolves to Java 17.0.19 (JNI probe
+links with either JDK); with `JAVA_HOME=…java-21…` it resolves to 21.0.11.
+Inside config A, `rJava` reports `java.version 21.0.11`. Reference fits
+reproduce the M0 values: X-13 `d11final` last 6 = 483.5, 480.1, 483.3, 496.8,
+487.6, 488.9; TRAMO/SEATS `sa` last 6 = 484.1, 476.7, 481.5, 495.4, 487.8,
+490.6. M0 host notes verified with one correction: R is at
+`/opt/R/4.5.3/bin/R` (`/usr/local/bin/R` is a symlink via `/opt/R/R-default`),
+and the site `Rprofile.site` `.libPaths()` override **drops** `R_LIBS`
+entries in non-`--vanilla` R, so scratch-library builds need `R_LIBS=` (for
+`--vanilla` subprocesses such as vignette rendering) **and**
+`R_PROFILE_USER=` (for non-vanilla subprocesses) together.
+
+**shinycssloaders declaration re-check.** Confirmed already declared; no
+DESCRIPTION/NAMESPACE change made (none needed). `git log -S shinycssloaders
+-- DESCRIPTION` shows it entered `Imports:` in `7fda51c` (2026-07-15) — an
+ancestor of `f9cb071` cited last week — with the redundant `Suggests` entry
+removed in `0992a4b`; `R/imports.R` has `@importFrom shinycssloaders
+withSpinner` and NAMESPACE carries the matching import. The M0 note referred
+to the machine installation: 1.1.0 exists only in scratch libraries here; it
+was copied into `/tmp/opencode/rlib-d1` for these runs, nothing new was
+installed on the machine.
+
+**R CMD build + R CMD check --as-cran (JVM 21, suggests all present,
+`_R_CHECK_FORCE_SUGGESTS_` left enabled).** `R CMD build` with vignettes:
+**OK — all five vignettes render** (the earlier 2-WARNING missing-vignette
+state was an artifact of `--no-build-vignettes` builds).
+`R CMD check --as-cran --output=check-as_cran persephone3_0.1.0.tar.gz`:
+**Status: 1 WARNING, 3 NOTEs** (exit 0; run completed 2026-11-16):
+
+- WARNING, CRAN incoming feasibility: "New submission" + unknown DESCRIPTION
+  field 'Remotes' — inherent to this internal package using GitHub Remotes;
+  not applicable off-CRAN.
+- NOTE, top-level files: `LICENSE` not mentioned in DESCRIPTION (the
+  documented GPL-relicensing artifact: DESCRIPTION says GPL (>= 3) while
+  `LICENSE`/`LICENSE.md` still carry the MIT notice pending the license
+  decision) + non-standard `RELEASE_CHECKLIST.md`.
+- NOTE, examples: `createDashboard` CPU time 4.86 s > 5 s (user+system).
+- NOTE, HTML manual validation skipped: `tidy` not installed.
+
+Tests, vignettes (build + rebuild), PDF manual, Rd documentation and the
+dependency check are all OK; "checking package dependencies ... INFO" only
+flags the 23-package Imports breadth; **no missing-dependency finding**, so
+the shinycssloaders declaration is confirmed by the check itself.
+
+**Interim release checklist verification (item 15, first pass).** Updated
+`RELEASE_CHECKLIST.md` in place. Met now: source build + install; application
+suite under JVM 21 (1,330/0/0/0, twice); Java-free loading + native honesty
+(repo gate + isolated farm + config B); full `R CMD check --as-cran` with
+vignettes and PDF manual locally (1 not-applicable WARNING, 3 documented
+NOTEs); Java policy documented with local A/B/C evidence; workflows pinned
+(check-full/test-coverage/pkgdown set up Temurin 21; pinned rjd3 tags; still
+configured-only, never run from this branch). Unmet (unchanged): open P1
+findings F1–F8 and F9; macOS/Windows lanes; CI executions; browser checks;
+domain review; version bump decision; LICENSE-file text vs GPL decision.
+
+**Not run.** Any GitHub workflow; minimum-R(4.1) and upstream-drift lanes;
+coverage measurement; macOS/Windows; interactive browser checks; numerical
+fixture/timing re-runs (M1 numerical track); HTML-manual validation (no
+`tidy`); PDF manual was built but not spell-checked.
+
+**Reproduction (all from `/tmp/opencode/m1d2`).**
+
+```sh
+mkdir -p /tmp/opencode/rlib-d1 /tmp/opencode/rlib-empty /tmp/opencode/m1d2
+printf '.libPaths(c("/tmp/opencode/rlib-d1", .libPaths()))\n' > rprofile-d1.R
+cp -r /tmp/opencode/rlib-d/shinycssloaders /tmp/opencode/rlib-d1/   # 1.1.0, machine gap
+env -u LD_LIBRARY_PATH R CMD build --no-build-vignettes /data/home/kowa/seasonaladjustment/rkalos
+env -u LD_LIBRARY_PATH R CMD INSTALL --library=/tmp/opencode/rlib-d1 rkalos_0.1.0.tar.gz
+env -u LD_LIBRARY_PATH R CMD build --no-build-vignettes /data/home/kowa/seasonaladjustment/persephone3
+env -u LD_LIBRARY_PATH R_PROFILE_USER=$PWD/rprofile-d1.R R CMD INSTALL \
+  --library=/tmp/opencode/rlib-d1 persephone3_0.1.0.tar.gz
+
+# Config A — JVM 21 (full suite as in M0)
+env -u LD_LIBRARY_PATH JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+  R_LIBS=/tmp/opencode/rlib-d1:/data/home/kowa/R/x86_64-pc-linux-gnu-library/4.5:/opt/R/site-library/4.5 \
+  R_LIBS_USER=/data/home/kowa/R/x86_64-pc-linux-gnu-library/4.5 R_LIBS_SITE=$PWD/../rlib-empty \
+  Rscript --vanilla run_matrix.R "A-jvm21" full
+
+# Config B — Java disabled (rlib-nojava-d: symlink farm of user+site libraries
+# minus rJava and everything importing it, incl. rjd3* and RProtoBuf)
+env -u LD_LIBRARY_PATH -u JAVA_HOME \
+  R_LIBS=/tmp/opencode/rlib-d1:/tmp/opencode/rlib-nojava-d \
+  R_LIBS_USER=$PWD/../rlib-empty R_LIBS_SITE=$PWD/../rlib-empty \
+  Rscript --vanilla run_matrix.R "B-java-disabled" per-file
+
+# Honesty gates (B-style isolation; also ran under A)
+env -u LD_LIBRARY_PATH -u JAVA_HOME Rscript --vanilla verify_native_unsupported.R
+env -u LD_LIBRARY_PATH -u JAVA_HOME Rscript --vanilla \
+  /data/home/kowa/seasonaladjustment/persephone3/tools/verify-nojava.R \
+  --library=/tmp/opencode/rlib-iso-d --native
+# Config C — JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64, probe_c_jvm17.R
+
+# Full build + as-cran check (needs R_LIBS for --vanilla vignette renderers and
+# R_PROFILE_USER for non-vanilla subprocesses because of the site .libPaths())
+env -u LD_LIBRARY_PATH JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+  R_LIBS=/tmp/opencode/rlib-d1:/data/home/kowa/R/x86_64-pc-linux-gnu-library/4.5:/opt/R/site-library/4.5 \
+  R_LIBS_SITE=/tmp/opencode/rlib-empty R_PROFILE_USER=$PWD/rprofile-d1.R \
+  R CMD build /data/home/kowa/seasonaladjustment/persephone3
+mkdir -p check-as_cran
+env -u LD_LIBRARY_PATH JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+  R_LIBS=/tmp/opencode/rlib-d1:/data/home/kowa/R/x86_64-pc-linux-gnu-library/4.5:/opt/R/site-library/4.5 \
+  R_LIBS_SITE=/tmp/opencode/rlib-empty R_PROFILE_USER=$PWD/rprofile-d1.R \
+  R CMD check --as-cran --output=check-as_cran persephone3_0.1.0.tar.gz
+```
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,
