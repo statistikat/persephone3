@@ -412,6 +412,61 @@ skips** at `1ceb6f0` (same per-file distribution as the M1 baseline). No
 package code was changed by this re-verification; no new tests were needed
 because every existing and probe check already passes.
 
+## Linux item-14 parity harness — 2026-11-16 (M3)
+
+Backend-parity test harness delivered as `inst/tinytest/test-parity.R`
+(97 assertions, 3.6 s). No native fits exist, and the harness says so
+explicitly instead of faking a comparison.
+
+**Harness structure.** File-level capability gate (skips whole file without
+the rjd3 stack, unlike the nine legacy files that abort). One cached rjd3
+reference fit per specification, reused by every check. `parity_summary()`
+reduces a fit to metric-level canonical data (component names, time domain,
+lengths, NA masks, forecast count, last-6/mean/sd/sum of `y`/`t`/`sa`) —
+deliberately no whole-object snapshots. `parity_compare(reference, candidate)`
+encodes the parity contract (exact structural fields, absolute tolerances on
+numeric metrics, violations returned as a character vector). `parity_native_fit()`
+is the single documented TODO hook: it must return `NULL` while
+`rkalos::capabilities()$fit` is `FALSE` (verified against the installed
+rkalos 0.1.0, which exports primitives but no fitting entry point), and the
+harness asserts that `NULL` plus the honest native error path on every spec
+instead of silently skipping the lane.
+
+**Spec matrix.** {x13, tramoseats} × {rsa0, rsa3} × {monthly AirPassengers,
+quarterly aggregate} = 8 fits, plus one hierarchical case (two components,
+`adjustedDirect` vs `adjustedIndirect` distinctness re-asserted as a routing
+guard). Per spec: five structural invariants, one self-parity check (summary
+extraction determinism), two native-capability assertions (fit FALSE, status
+`unimplemented`), the explicit no-Java-fallback construction error, and the
+NULL native hook.
+
+**Tolerance evidence (cross-session stability study).** Driver
+`/tmp/opencode/m3d/stability.R`: all nine reference fits summarized in two
+separate R sessions (same qualified stack: rjd3 3.9.0/3.9.1, jars 0.0.6,
+JVM 21.0.11, R 4.5.3). **98 of 98 numeric metrics bit-identical** (max
+absolute and relative difference 0; `identical()` true for every vector).
+Consequently the pinned tolerances are pure safety margins for JVM
+minor-version/platform drift, ~1e7× below the 0.1 reporting precision:
+1e-8 absolute for all numeric metrics; names/lengths/counts/NA masks exact;
+the time domain is compared as exact integers (year, period, frequency,
+length) because the backend-stored decimal `tsp` end is not canonical in
+floating point (this exact float representation issue surfaced while
+authoring the harness). Any stack upgrade that moves a digit inside 1e-8
+requires a recorded re-baseline; widening tolerances silently is prohibited
+by the file header.
+
+**Known-issue encoding (difficult-model lane).** The M2 finding — rjd3toolkit
+`if (pval < 0)` crashing on an NA test statistic for the degenerate 48-month
+series — is regression-protected in the same file with a three-way contract
+(justified in the header): success ⇒ assert a sane fit and the pin retires
+itself; pinned message ⇒ green (documented current state); a *different*
+error on an English/C `LC_MESSAGES` ⇒ red on purpose because the failure
+contract changed. A non-English message locale skips, since the pinned
+signature is an R interpreter string and would otherwise false-fail.
+
+**Suite state:** 21 files, **1,427 assertions (1,330 baseline + 97 new),
+0 failures/errors/skips**.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,
