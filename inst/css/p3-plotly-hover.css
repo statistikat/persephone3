@@ -1,0 +1,7 @@
+/* the vertical line at the position of the mouse (p3_hover()) marks the
+   hovered position, so the markers plotly draws at the hovered point of every
+   series are not needed. Only the hover symbols of the hover layer are hidden,
+   the markers drawn at the observations (drawPoints) are in the main layer. */
+.hoverlayer .point {
+  display: none;
+}

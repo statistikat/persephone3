@@ -9,7 +9,7 @@ plotSpectrum(
   plotEngine = c("plotly", "ggplot"),
   tsType = "original",
   plotType = "arSpec",
-  layout = c("panels", "overlay"),
+  layout = c("overplot", "panels"),
   maxobs = NULL,
   main = NULL,
   n.freq = NULL,
@@ -27,32 +27,36 @@ plotly plots) or \code{"ggplot"} (static ggplot2 plots).}
 \item{tsType}{character vector with one or more of
 (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
 selecting the preferred type(s) of time series to plot. If more than one
-type is given, the spectra are shown in separate panels (one per series
-type; see \code{layout}), except for plotType \code{"arSpecBars"}, which only
-supports a single series type. A numeric
-value (\code{1:4}) corresponding to one of these characters is also accepted.}
+type is given, all spectra are overlaid in a single plot (with a legend);
+except for plotType \code{"arSpecBars"}, which only supports a single series
+type. A numeric value (\code{1:4}) corresponding to one of these characters is
+also accepted.}
 
 \item{plotType}{character vector with one or more of
 (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
 selecting the preferred type(s) of plot. If more than one type is given,
-the plot types are the rows and the series types the columns of the
-panel grid (e.g. \code{tsType = c("original", "sa", "irregular")} and
-\code{plotType = c("arSpec", "periodogram")} gives 6 panels: the
-autoregressive spectra above the periodograms). \code{"arSpecBars"} is only
-available for a single plotType and series type. A numeric value
-(\code{1:3}) corresponding to one of these characters is also accepted.}
+a named list with one plot per plot type is returned (each one overlaying
+the requested series types). \code{"arSpecBars"} is only available for a single
+plotType and series type. A numeric value (\code{1:3}) corresponding to one of
+these characters is also accepted.}
 
-\item{layout}{character (\code{"panels"}, \code{"overlay"}) how to show several
-spectra: \code{"panels"} (default) arranges one spectrum per panel in a
-single figure, \code{"overlay"} draws all spectra into the same panel
-(only for a single plotType; not available for plotType
-\code{"arSpecBars"}).}
+\item{layout}{character. \code{"overplot"} (default) overlays the spectra of all
+requested series types in a single plot (one plot per plot type).
+\code{"panels"} places every combination of plot type and series type in a
+panel of its own. The panels form a square-ish grid of
+\code{ceiling(sqrt(n))} equally wide columns (two spectra side by side,
+three in two rows, six in two rows of three), each panel with a frame
+and with the height:width ratio a plot of a single panel would have;
+a single plot object is returned (not a list). Panels need more than
+one plot: with a single series type and plot type there is only one
+panel, so \code{"panels"} only adds the frame.}
 
 \item{maxobs}{maximum number of observations of the time series. If \code{NULL},
 \code{maxobs} equals the length of the time series for plotTypes
 \code{"arSpec"} and \code{"periodogram"} and \code{maxobs=96} for plotType \code{"arSpecBars"}.}
 
-\item{main}{plot title}
+\item{main}{plot title (for several plot types, it is extended by the name
+of the plot type of each plot)}
 
 \item{n.freq}{the number of frequencies, i.e. the number of points at which
 to plot. If \code{NULL}, \code{n.freq=301} for plotTypes \code{"arSpec"} and \code{"periodogram"}
@@ -67,7 +71,9 @@ basic interactivity. Ignored for \code{plotEngine="plotly"}.}
 }
 \value{
 A plotly object (if \code{plotEngine="plotly"}) or a ggplot/plotly
-object (if \code{plotEngine="ggplot"}).
+object (if \code{plotEngine="ggplot"}), or a named list of such plots if
+several plot types are requested and \code{layout = "overplot"}.
+With \code{layout = "panels"} a single plot is always returned.
 }
 \description{
 Create spectral plots using plotly (interactive) or ggplot2 (static).
@@ -80,12 +86,15 @@ x$run()
 plotSpectrum(x, plotEngine = "plotly")
 plotSpectrum(x, plotEngine = "ggplot")
 plotSpectrum(x, plotEngine = "ggplot", interactive = TRUE)
-# the spectra of the original, s.a. and irregular series in one figure
+# the spectra of the original, s.a. and irregular series overlaid in one
+# plot
 plotSpectrum(x, tsType = c("original", "sa", "irregular"))
-# six panels: the AR spectra above the periodograms
-plotSpectrum(x, tsType = c("original", "sa", "irregular"),
+# one plot per plot type (a named list): AR spectrum and periodogram
+plotSpectrum(x, tsType = c("original", "sa"),
              plotType = c("arSpec", "periodogram"))
-# ... overlaid in a single panel
-plotSpectrum(x, tsType = c("sa", "irregular"), layout = "overlay")
+# the spectra of the original, the s.a. and the irregular series in
+# panels (three spectra give two rows of two panels)
+plotSpectrum(x, tsType = c("original", "sa", "irregular"),
+             layout = "panels")
 
 }

@@ -133,7 +133,7 @@ plotSiRatiosGgplot <- function(x, main = NULL, interactive = FALSE, ...) {
           "SI-Ratio" = "darkgreen",
           "Replaced SI-Ratio" = "red",
           "Seasonal Factor" = "black",
-          "SF Mean" = "blue"
+          "SF Mean" = p3_blue
         ),
         guide = guide_legend(override.aes = list(
           linetype = c("blank", "blank", "solid", "solid"),
@@ -205,7 +205,7 @@ plotSiRatiosGgplot <- function(x, main = NULL, interactive = FALSE, ...) {
       xlab("") +
       scale_colour_manual(
         breaks = c("SI-Ratio", "Mean"),
-        values = c("SI-Ratio" = "red", "Mean" = "blue"),
+        values = c("SI-Ratio" = "red", "Mean" = p3_blue),
         guide = guide_legend(override.aes = list(
           linetype = c("solid", "solid"),
           shape = c(16, NA)
@@ -239,6 +239,10 @@ plotSiRatiosGgplot <- function(x, main = NULL, interactive = FALSE, ...) {
       ), ")"
     )
     p <- eval(parse(text = evalThis))
+
+    # the vertical line at the position of the mouse, and a plot that fills
+    # the plot pane
+    p <- p %>% p3_hover() %>% p3_fluid_plotly()
   }
 
   p

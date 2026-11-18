@@ -9,7 +9,7 @@ plotSeasIrrCal(
   plotEngine = c("dygraph", "plotly"),
   main = NULL,
   forecasts = TRUE,
-  rangeSelector = TRUE,
+  rangeSelector = NULL,
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
@@ -28,7 +28,9 @@ plotSeasIrrCal(
 
 \item{rangeSelector}{if \code{plotEngine="dygraph"}: logical flag specifying if a range selector should be
 included in the plot; if \code{plotEngine="plotly"}: logical flag specifying if
-a range slider should be shown below the plot}
+a range slider should be shown below the plot. \code{NULL} (default) uses the
+default of the plot engine: the range selector is shown for dygraphs and
+hidden for plotly.}
 
 \item{smooth}{logical flag or \code{"spline"} specifying if the series should be
 drawn as smoothed lines (monotone piecewise cubic interpolation, or the

@@ -8,7 +8,7 @@ plotSpectrumGgplot(
   x,
   tsType = "original",
   plotType = "arSpec",
-  layout = c("panels", "overlay"),
+  layout = c("overplot", "panels"),
   maxobs = NULL,
   n.freq = NULL,
   order = 30,
@@ -23,23 +23,24 @@ plotSpectrumGgplot(
 \item{tsType}{character vector with one or more of
 (\code{"original"},\code{"sa"},\code{"irregular"},\code{"residuals"})
 selecting the preferred type(s) of time series to plot. If more than one
-type is given, the spectra are shown in separate panels, one per series
-type, unless \code{layout = "overlay"} overlays them in one plot (not available
-for plotType \code{"arSpecBars"}). A numeric
+type is given, all spectra are overlaid in a single plot (with a legend);
+except for plotType \code{"arSpecBars"}, which only supports a single series
+type. A numeric
 value (\code{1:4}) corresponding to one of these characters is also accepted.}
 
 \item{plotType}{character vector with one or more of
 (\code{"arSpec"},\code{"arSpecBars"},\code{"periodogram"})
 selecting the preferred type(s) of plot, see Details. If more than one
-type is given, the plot types are the rows and the series types the
-columns of the facet grid. \code{"arSpecBars"} is only available for a single
-plotType and series type. A numeric
+type is given, a named list with one plot per plot type is returned (each
+one overlaying the requested series types). \code{"arSpecBars"} is only
+available for a single plotType and series type. A numeric
 value (\code{1:3}) corresponding to one of these characters is also accepted.}
 
-\item{layout}{character (\code{"panels"}, \code{"overlay"}) how to show several
-spectra: \code{"panels"} (default) arranges one spectrum per facet,
-\code{"overlay"} draws all spectra into the same panel (only for a single
-plotType; not available for plotType \code{"arSpecBars"}).}
+\item{layout}{character. \code{"overplot"} (default) overlays the spectra of all
+requested series types in a single plot (one plot per plot type).
+\code{"panels"} places every combination of plot type and series type in a
+panel of its own (a single plot object with the panels in a square-ish
+grid of equally wide panels is returned, see \link{plotSpectrum}).}
 
 \item{maxobs}{maximum number of observations of the time series. If NULL,
 \code{maxobs} equals the length of the time series for plotTypes
@@ -51,7 +52,8 @@ and \code{n.freq=61} for plotType \code{"arSpecBars"}.}
 
 \item{order}{order of the AR model}
 
-\item{main}{plot title}
+\item{main}{plot title (for several plot types, it is extended by the name
+of the plot type of each plot)}
 
 \item{interactive}{If TRUE, wrap the \code{ggplot} object in \link[plotly:ggplotly]{plotly::ggplotly}
 to add basic interactivity (zoom, pan, hover tooltips). If FALSE (default),
@@ -60,7 +62,9 @@ returns a static ggplot object suitable for export.}
 \item{...}{other plotting parameters to affect the plot. Not currently used.}
 }
 \value{
-Returns an object of class \code{ggplot} or \code{plotly}. The seasonal and
+Returns an object of class \code{ggplot} or \code{plotly}, or a named list of
+such objects if several plot types are requested and
+  \code{layout = "overplot"}. The seasonal and
 trading day frequencies are indicated in blue and red. For monthly data,
 the seasonal frequencies are 1/12, 2/12, ..., 6/12 and the trading day
 frequencies are 0.348 and 0.432. For quarterly data, the seasonal
@@ -115,6 +119,15 @@ plotSpectrumGgplot(obj, plotType="arSpecBars")
 plotSpectrumGgplot(obj, plotType="periodogram")
 # same as
 plotSpectrumGgplot(obj, plotType=3)
+
+# the spectra of the original, s.a. and irregular series overlaid in one
+# plot
+plotSpectrumGgplot(obj, tsType = c("original", "sa", "irregular"))
+
+# the spectra of the original, the s.a. and the irregular series in
+# panels (three spectra give two rows of two panels)
+plotSpectrumGgplot(obj, tsType = c("original", "sa", "irregular"),
+                   layout = "panels")
 
 # Quarterly Data Example
 data(UKgas, package = "datasets")

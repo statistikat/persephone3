@@ -145,8 +145,10 @@ plot.persephoneSingle <- function(
       } else {
         seriesName <- paste0("otl[[1]].otl", otlType)
       }
-      # the outliers are marked with coloured dots only (the hover legend
-      # explains the colour of the outlier types); the tooltip shows the date
+      # the outliers are marked with coloured dots and a discreet dashed
+      # vertical line in a lighter shade of the same colour (the hover
+      # legend explains the colour of the outlier types); the tooltip
+      # shows the date
       graphObj <- graphObj %>%
         dySeries(
           seriesName,
@@ -156,6 +158,13 @@ plot.persephoneSingle <- function(
           pointShape = "dot",
           pointSize = 3,
           strokeWidth = 0
+        )
+      otlDates <- unlist(otl[[2]][grepl(otlType, names(otl[[2]]))])
+      graphObj <- graphObj %>%
+        dyEvent(
+          x = otlDates,
+          color = p3_outlier_line_colors[[otlType]],
+          strokePattern = "dashed"
         )
     }
     return(graphObj)

@@ -26,8 +26,9 @@
 #' * `acf2`: autocorrelations of the squared residuals (4)
 #' * `sreshist`: histogram of standardized residuals including normal curve (5)
 #' * `nqq`: normal q-q plot of standardized residuals (6)
-#' * `overview`: residuals over time with the acf, the pacf and the
-#'   histogram of the standardized residuals below, in one figure (7)
+#' * `overview`: residuals over time with the Q-Q plot of the standardized
+#'   residuals beside them, and the acf, the pacf and the histogram of the
+#'   standardized residuals in a second row, in one figure (7)
 #'
 #' @return Returns an object of class `dygraphs`, `ggplot` or `plotly`
 #'
@@ -41,7 +42,8 @@
 #' plotResiduals(obj)
 #' # Plot the autocorrelations of the residuals
 #' plotResiduals(obj, which="acf")
-#' # Residuals, acf, pacf and the normal density in one figure
+#' # Residual diagnostics (residuals, Q-Q plot, acf, pacf, density)
+#' # in one figure
 #' plotResiduals(obj, which = "overview")
 #'
 ## TO DO:
@@ -84,7 +86,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
         width = 0.85 * 365.25 / frequency(r),
         fill = p3_series_colors[["Original"]]
       ) +
-      xlab(NULL) + ylab("Residual value") +
+      xlab(NULL) + ylab("Residuals") +
       theme_bw() +
       theme(panel.grid.minor = element_blank())
   }
@@ -113,7 +115,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     d <- data.frame(lag = lags * frequency(x$ts), acf = acfs)
     ggplot(d, aes(x = lag, y = acf)) +
       geom_bar(stat = "identity", width = 0.1) +
-      geom_hline(yintercept = c(-ci, ci), colour = "blue",
+      geom_hline(yintercept = c(-ci, ci), colour = "red",
                  linetype = "dashed") +
       xlab("Lag") + ylab(ylab_) +
       theme_bw() +
@@ -138,11 +140,27 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       theme(panel.grid.minor = element_blank())
   }
 
+  # Q-Q plot of the standardized residuals against the normal distribution
+  qqPanel <- function() {
+    result <- x$output$user_defined$residuals.tsres /
+      x$output$user_defined$residuals.ser
+    result <- qqnorm(as.numeric(result), plot.it = FALSE)
+    result <- data.frame(x = result$x, y = result$y)
+    ggplot(result, aes(x = x, y = y)) +
+      geom_point(color = p3_series_colors[["Original"]]) +
+      geom_abline(slope = 1, intercept = 0, color = "red") +
+      xlab("Theoretical Quantiles") +
+      ylab("Standardized Residuals") +
+      theme_bw() +
+      theme(panel.grid.minor = element_blank())
+  }
+
   if (which == "overview") {
     if (is.null(main)) {
       main <- "Residual Diagnostics"
     }
     p_res <- suppressWarnings(plotly::ggplotly(resPanel()))
+    p_qq <- suppressWarnings(plotly::ggplotly(qqPanel()))
     p_acf <- suppressWarnings(plotly::ggplotly(
       acfPanel(partial = FALSE, ylab_ = "ACF")
     ))
@@ -150,13 +168,40 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       acfPanel(partial = TRUE, ylab_ = "PACF")
     ))
     p_hist <- suppressWarnings(plotly::ggplotly(histPanel()))
-    bottom <- plotly::subplot(p_acf, p_pacf, p_hist, nrows = 1)
-    p <- plotly::subplot(p_res, bottom, nrows = 2,
-                         heights = c(0.55, 0.45))
-    # subplot drops the individual titles: add the panel titles as
-    # annotations (top panel, bottom row from left to right)
-    p <- subplotTitles(p, c("Residuals", "ACF", "PACF", "Density"),
-                       main = main)
+    # the residuals twice as wide as the Q-Q plot, so that the Q-Q plot has
+    # the same width as the three panels of the second row (both rows use
+    # the same margins, which places the Q-Q plot over the density panel)
+    # the gap between the panels (subplot margin, together with the small
+    # font of the y-axis titles) is wide enough to hold the y-axis title and
+    # the tick labels of the right-hand panels without reaching into the
+    # panel on their left
+    top <- plotly::subplot(
+      p_res, p_qq, nrows = 1, widths = c(2 / 3, 1 / 3), margin = 0.03
+    )
+    bottom <- plotly::subplot(
+      p_acf, p_pacf, p_hist, nrows = 1, margin = 0.03
+    )
+    p <- plotly::subplot(top, bottom, nrows = 2, heights = c(0.5, 0.5))
+    # the panels have no titles: they are identified by their y-axis labels
+    # (subplot() drops the per-panel axis titles of the ggplots, so the
+    # labels are set on the composed figure, in a small font so that even
+    # the long ones fit into the gap)
+    p <- panelYlabs(
+      p,
+      c("Residuals", "Standardized Residuals", "ACF", "PACF", "Density"),
+      font = list(size = 11)
+    )
+    p <- p %>%
+      plotly::layout(
+        title = if (is.null(main)) NULL else list(text = main),
+        margin = list(t = 60)
+      ) %>%
+      # the vertical line at the position of the mouse in every panel, the
+      # highlighting of the hovered series, and a figure that fills the plot
+      # pane
+      p3_hover() %>%
+      p3_hover_highlight() %>%
+      p3_fluid_plotly()
     return(p)
   }
 
@@ -173,7 +218,8 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     }
     p <- dygraph(x$output$user_defined$residuals.tsres, main = main) %>%
       dySeries("V1", label = "Residual value") %>%
-      dyBarChart()
+      dyBarChart() %>%
+      p3_fluid()
 
     # if(rangeSelector){
     #   graphObj <- graphObj %>%
@@ -193,37 +239,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     if (is.null(main)) {
       main <- "Normal Q-Q Plot"
     }
-
-    # result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
-    # result <- data.frame(date = paste0(
-    #   c(floor(time(result) + .01)), "-",
-    #   stringfix(c(cycle(result)), 2, "0"), "-01"),
-    #   y = c(result))
-    #
-    # p <- ggplot(result, aes(sample = y)) +
-    #   stat_qq() +
-    #   stat_qq_line(color = "red") +
-    #   xlab("Theoretical Quantiles") +
-    #   ylab("Standardized Residuals") +
-    #   ggtitle(main) +
-    #   theme_bw()
-
-    result <- as.numeric(x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser)
-    result <- qqnorm(result, plot.it = FALSE)
-
-    result <- data.frame(
-      x = result$x,
-      y = result$y
-    )
-
-    p <- ggplot(result, aes(x = x, y = y)) +
-      geom_point() +
-      geom_abline(slope = 1, intercept = 0, color = "red") +
-      xlab("Theoretical Quantiles") +
-      ylab("Standardized Residuals") +
-      ggtitle(main) +
-      theme_bw()
-    #stat_qq_line(color="gray50", lty=3) +
+    p <- qqPanel() + ggtitle(main)
   }
 
   if (which == "acf") {
@@ -252,7 +268,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     p <- ggplot(result, aes(x = lag, y = acf)) +
       geom_bar(stat = "identity", width = 0.1) +
       geom_hline(
-        yintercept = c(-ci, ci), colour = "blue",
+        yintercept = c(-ci, ci), colour = "red",
         linetype = "dashed"
       ) +
       xlab("Lag") +
@@ -279,7 +295,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
 
     p <- ggplot(result, aes(x = lag, y = acf)) +
       geom_bar(stat = "identity", width = 0.1) +
-      geom_hline(yintercept = c(-ci, ci), colour = "blue",
+      geom_hline(yintercept = c(-ci, ci), colour = "red",
                  linetype = "dashed") +
       xlab("Lag") +
       ylab("ACF") +
@@ -305,7 +321,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
 
     p <- ggplot(result, aes(x = lag, y = acf)) +
       geom_bar(stat = "identity", width = 0.1) +
-      geom_hline(yintercept = c(-ci, ci), colour = "blue",
+      geom_hline(yintercept = c(-ci, ci), colour = "red",
                  linetype = "dashed") +
       xlab("Lag") +
       ylab("PACF") +
@@ -317,7 +333,12 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
 
     # p <- p + theme_bw()
 
-    p <- plotly::ggplotly(p)
+    p <- plotly::ggplotly(p) %>%
+      # the vertical line at the position of the mouse, the highlighting of
+      # the hovered series, and a plot that fills the plot pane
+      p3_hover() %>%
+      p3_hover_highlight() %>%
+      p3_fluid_plotly()
   }
 
   p

@@ -26,6 +26,12 @@ knitr::opts_chunk$set(
 
 **Note:** The appearance of plots depends on whether `run()` has been called. Before running, only the raw time series is available. After `run()`, additional components (seasonally adjusted, trend-cycle, forecasts) become accessible.
 
+## Plot size and mouse position
+
+The interactive plots fill the plot pane of RStudio and Positron: a plot shown on its own gets the whole pane and is redrawn whenever the pane is resized, so a small pane gives a small plot and nothing has to be scrolled. In a report or vignette (and in the dashboards) the plots keep their own size, `options(persephone3.plotFill = FALSE)` switches the filling off, and `options(persephone3.plotHeight = 300)` (together with `persephone3.plotWidth`) gives a plot a size of its own instead.
+
+Moving the mouse over a plot draws a vertical line at its position and shows the values of all plotted series at this date together; no dots are drawn at the hovered points of the individual series. The series the cursor is on is highlighted: it is drawn bold while the other series fade. In the plotly plots a click on a series fixes its highlighting; a click on another series moves it, and a click on empty space shows all series with equal strength again.
+
 ```{r setup-example, message = FALSE, warning = FALSE}
 library(persephone3)
 
@@ -78,8 +84,22 @@ For alternative styling, the plot functions with an interactive engine accept
 
 ```{r plotly-plot, eval = FALSE}
 plot(obj, plotEngine = "plotly")
+plotSeasIrrCal(obj, plotEngine = "plotly")  # no range slider below the plot
 plotSiRatios(obj)  # plotly is the default engine here
 plotSpectrum(obj)  # plotly is the default engine here
+```
+
+# Spectral Plots in Panels
+
+`plotSpectrum()` overlays the spectra of all requested series types in one
+plot (`layout = "overplot"`, the default) or places every combination of
+plot type and series type in a framed panel of its own (`layout =
+"panels"`). The panels form a square-ish grid of equally wide columns
+and every panel keeps the height:width ratio of a single plot:
+
+```{r plot-spectrum-panels}
+plotSpectrum(obj, tsType = c("original", "sa", "irregular"),
+             layout = "panels")
 ```
 
 # Plotly Integration

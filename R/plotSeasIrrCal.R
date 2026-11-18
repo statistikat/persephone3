@@ -11,7 +11,9 @@
 #' @param forecasts logical flag indicating if forecasts should be plotted
 #' @param rangeSelector if `plotEngine="dygraph"`: logical flag specifying if a range selector should be
 #'   included in the plot; if `plotEngine="plotly"`: logical flag specifying if
-#'   a range slider should be shown below the plot
+#'   a range slider should be shown below the plot. `NULL` (default) uses the
+#'   default of the plot engine: the range selector is shown for dygraphs and
+#'   hidden for plotly.
 #' @param smooth logical flag or `"spline"` specifying if the series should be
 #'   drawn as smoothed lines (monotone piecewise cubic interpolation, or the
 #'   overshooting not-a-knot cubic spline for `"spline"`)
@@ -38,7 +40,7 @@ plotSeasIrrCal <- function(
     plotEngine = c("dygraph", "plotly"),
     main = NULL,
     forecasts = TRUE,
-    rangeSelector=TRUE,
+    rangeSelector = NULL,
     smooth = TRUE,
     drawPoints=FALSE,
     annualComparison = NULL,
@@ -46,6 +48,11 @@ plotSeasIrrCal <- function(
 ) {
   stopifnot(inherits(x, "persephone"))
   plotEngine <- match.arg(plotEngine)
+  # NULL: the default of the engine: the dygraphs plot has always shown the
+  # range selector, the plotly plot hides the range slider below the plot
+  if (is.null(rangeSelector)) {
+    rangeSelector <- plotEngine == "dygraph"
+  }
 
   if (plotEngine == "plotly") {
     plotSeasIrrCalPlotly(

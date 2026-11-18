@@ -11,21 +11,22 @@
 #' @param tsType character vector with one or more of
 #' (`"original"`,`"sa"`,`"irregular"`,`"residuals"`)
 #' selecting the preferred type(s) of time series to plot. If more than one
-#' type is given, the spectra are shown in separate panels, one per series
-#' type, unless `layout = "overlay"` overlays them in one plot (not available
-#' for plotType `"arSpecBars"`). A numeric
+#' type is given, all spectra are overlaid in a single plot (with a legend);
+#' except for plotType `"arSpecBars"`, which only supports a single series
+#' type. A numeric
 #' value (`1:4`) corresponding to one of these characters is also accepted.
 #' @param plotType character vector with one or more of
 #' (`"arSpec"`,`"arSpecBars"`,`"periodogram"`)
 #' selecting the preferred type(s) of plot, see Details. If more than one
-#' type is given, the plot types are the rows and the series types the
-#' columns of the facet grid. `"arSpecBars"` is only available for a single
-#' plotType and series type. A numeric
+#' type is given, a named list with one plot per plot type is returned (each
+#' one overlaying the requested series types). `"arSpecBars"` is only
+#' available for a single plotType and series type. A numeric
 #' value (`1:3`) corresponding to one of these characters is also accepted.
-#' @param layout character (`"panels"`, `"overlay"`) how to show several
-#' spectra: `"panels"` (default) arranges one spectrum per facet,
-#' `"overlay"` draws all spectra into the same panel (only for a single
-#' plotType; not available for plotType `"arSpecBars"`).
+#' @param layout character. `"overplot"` (default) overlays the spectra of all
+#' requested series types in a single plot (one plot per plot type).
+#' `"panels"` places every combination of plot type and series type in a
+#' panel of its own (a single plot object with the panels in a square-ish
+#' grid of equally wide panels is returned, see [plotSpectrum]).
 #' @param maxobs maximum number of observations of the time series. If NULL,
 #' `maxobs` equals the length of the time series for plotTypes
 #' `"arSpec"` and `"periodogram"` and `maxobs=96` for plotType `"arSpecBars"`.
@@ -33,7 +34,8 @@
 #'   to plot. If NULL, `n.freq=301` for plotTypes `"arSpec"` and `"periodogram"`
 #'   and `n.freq=61` for plotType `"arSpecBars"`.
 #' @param order order of the AR model
-#' @param main plot title
+#' @param main plot title (for several plot types, it is extended by the name
+#'   of the plot type of each plot)
 #' @param interactive If TRUE, wrap the `ggplot` object in [plotly::ggplotly]
 #'   to add basic interactivity (zoom, pan, hover tooltips). If FALSE (default),
 #'   returns a static ggplot object suitable for export.
@@ -57,7 +59,9 @@
 #'   observations are n.freq = 301 and maxobs='length of the time series' in
 #'   this case.
 #'
-#' @return Returns an object of class `ggplot` or `plotly`. The seasonal and
+#' @return Returns an object of class `ggplot` or `plotly`, or a named list of
+#'   such objects if several plot types are requested and
+#'   `layout = "overplot"`. The seasonal and
 #'   trading day frequencies are indicated in blue and red. For monthly data,
 #'   the seasonal frequencies are 1/12, 2/12, ..., 6/12 and the trading day
 #'   frequencies are 0.348 and 0.432. For quarterly data, the seasonal
@@ -87,6 +91,15 @@
 #' # same as
 #' plotSpectrumGgplot(obj, plotType=3)
 #'
+#' # the spectra of the original, s.a. and irregular series overlaid in one
+#' # plot
+#' plotSpectrumGgplot(obj, tsType = c("original", "sa", "irregular"))
+#'
+#' # the spectra of the original, the s.a. and the irregular series in
+#' # panels (three spectra give two rows of two panels)
+#' plotSpectrumGgplot(obj, tsType = c("original", "sa", "irregular"),
+#'                    layout = "panels")
+#'
 #' # Quarterly Data Example
 #' data(UKgas, package = "datasets")
 #' # Generate a persephone object, in this case a tramoseats object
@@ -104,7 +117,7 @@ plotSpectrumGgplot <- function(
   x,
   tsType = "original",
   plotType = "arSpec",
-  layout = c("panels", "overlay"),
+  layout = c("overplot", "panels"),
   maxobs = NULL,
   n.freq = NULL,
   order = 30,
@@ -112,25 +125,19 @@ plotSpectrumGgplot <- function(
   interactive = FALSE,
   ...
 ) {
-  freq <- spec <- spec_new1 <- type <- NULL # nolint
+  freq <- spec <- spec_new1 <- type <- panel <- NULL # nolint
 
   if (is.null(x$output$user_defined)) {
     stop("No results from run available.\n")
   }
 
-  plotType <- spec_plotTypes(plotType)
   layout <- match.arg(layout)
+  plotType <- spec_plotTypes(plotType)
   tsType <- spec_tsTypes(tsType)
   if ("arSpecBars" %in% plotType &&
       (length(tsType) > 1 || length(plotType) > 1)) {
     stop(
       "plotType \"arSpecBars\" is only available for a single series type",
-      call. = FALSE
-    )
-  }
-  if (layout == "overlay" && length(plotType) > 1) {
-    stop(
-      "overlaid spectra are only available for a single plotType",
       call. = FALSE
     )
   }
@@ -217,126 +224,201 @@ plotSpectrumGgplot <- function(
 
   series_labels <- vapply(series_list, function(s) s$type, "")
 
-  ptypes <- setdiff(plotType, "arSpecBars")
-  if (length(ptypes) > 0) {
-    # one (or several overlaid) spectra of the requested plotTypes
-    spec_main <- function(ptype) {
-      if (ptype == "periodogram") {
-        paste0(
-          "Periodogram of the ",
-          paste(series_labels, collapse = ", "),
-          " series"
-        )
-      } else {
-        paste0(
-          "Autoregressive spectrum of the ",
-          paste(series_labels, collapse = ", "),
-          " series"
-        )
-      }
+  # theme and (optional) plotly conversion of a finished plot; grid is the
+  # c(rows, cols) panel grid of the figure (p3_fluid_plotly)
+  finish <- function(p, grid = c(1, 1)) {
+    p <- p + theme_bw()
+    if (interactive) {
+      p <- p %>%
+        plotly::ggplotly() %>%
+        p3_frame() %>%
+        # the vertical line at the position of the mouse, the highlighting of
+        # the hovered series, and a plot that fills the plot pane
+        p3_hover() %>%
+        p3_hover_highlight() %>%
+        p3_fluid_plotly(grid = grid)
     }
-    main <- main %||%
-      if (length(ptypes) == 1) {
-        spec_main(ptypes)
-      } else {
-        paste(vapply(ptypes, spec_main, ""), collapse = " / ")
-      }
-    dfs <- do.call(rbind, lapply(ptypes, function(ptype) {
-      dfr <- lapply(series_list, function(s) {
-        sp <- if (ptype == "periodogram") {
-          spec.pgram(s$d, plot = FALSE)
-        } else {
-          spec.ar(s$d, n.freq = n.freq, order = order, plot = FALSE)
-        }
-        dfspec <- data.frame(freq = sp$freq / frequency(s$d))
-        dfspec$spec <- if (ptype == "periodogram") {
-          sp$spec
-        } else {
-          10 * log10(2 * sp$spec)
-        }
-        dfspec
-      })
-      do.call(rbind, Map(function(df, lab) {
-        df$type <- lab
-        df$ptype <- specPlotTypeLabel(ptype)
-        df
-      }, dfr, series_labels))
-    }))
-    d1s <- dfs
-    d1s$type <- factor(d1s$type, levels = series_labels)
-    d1s$ptype <- factor(d1s$ptype,
-                        levels = specPlotTypeLabel(unique(ptypes)))
+    p
+  }
 
-    p <- ggplot(d1s, aes(x = freq, y = spec, col = type)) +
-      geom_line() +
-      geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
-      geom_vline(xintercept = seas_freq, col = "blue", alpha = 0.3) +
-      labs(title = main, col = NULL) +
-      theme_minimal() +
-      ylab("Spectrum") +
-      xlab("Frequency")
-    if (layout == "panels" && (length(series_labels) > 1 ||
-                               length(ptypes) > 1)) {
-      # one spectrum per panel: the plotTypes are the rows, the series
-      # types the columns (the spectra differ strongly in level, so every
-      # panel gets its own y-axis scale)
-      p <- p +
-        facet_grid(ptype ~ type, scales = "free_y") +
-        theme(legend.position = "none")
-    }
-  } else if ("arSpecBars" %in% plotType) {
-    # Autoregressive Spectrum X-13ARIMA-SEATS
-
-    if (is.null(main)) {
-      main <- paste0(
-        "Autoregressive spectrum of the ", series_labels[1], " series"
+  # the title of the plot of one plot type (overplots) and of the panels
+  # figure: for several plot types a given main is extended by the name of
+  # the plot type, the panels figure names the series types in its title
+  spec_main <- function(ptype) {
+    if (ptype == "periodogram") {
+      paste0(
+        "Periodogram of the ",
+        paste(series_labels, collapse = ", "),
+        " series"
+      )
+    } else {
+      paste0(
+        "Autoregressive spectrum of the ",
+        paste(series_labels, collapse = ", "),
+        " series"
       )
     }
-    d1 <- series_list[[1]]$d
+  }
+  plot_main <- function(ptype, nptypes) {
+    if (is.null(main)) {
+      spec_main(ptype)
+    } else if (nptypes == 1) {
+      main
+    } else {
+      paste0(main, " (", specPlotTypeLabel(ptype), ")")
+    }
+  }
 
-    # Default settings in X-13ARIMA-SEATS
-    # d3s <- spec.ar(d1, n.freq = 61, order = 30, plot = FALSE)
-    # Not 100% sure what X-13ARIMA-SEATS really does but
-    # 10 * log10(d3s$spec/sum(d3s$spec)
-    # comes closest to the scale they use
-    d3s <- spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
-    d3s <- data.frame(
-      freq = d3s$freq / frequency(d1),
-      spec = 10 * log10(d3s$spec / sum(d3s$spec))
-    )
+  ptypes <- setdiff(plotType, "arSpecBars")
 
-    ## Quick-Fix: use closest value of d3s$freq to td_freq
-    ## (spec.ar() only allows for a parameter "n.freq=The number of points at
-    ## which to plot."
-    ## but not for a vector of frequencies at which to plot)
-    td_freq_approx <- sapply(td_freq, function(f) {
-      d3s$freq[which(abs(d3s$freq - f) == min(abs(d3s$freq - f)))]
-    })
+  # spectrum data of one series type for one plot type
+  specFrame <- function(s, ptype) {
+    sp <- if (ptype == "periodogram") {
+      spec.pgram(s$d, plot = FALSE)
+    } else {
+      spec.ar(s$d, n.freq = n.freq, order = order, plot = FALSE)
+    }
+    dfspec <- data.frame(freq = sp$freq / frequency(s$d))
+    dfspec$spec <- if (ptype == "periodogram") {
+      sp$spec
+    } else {
+      10 * log10(2 * sp$spec)
+    }
+    dfspec
+  }
 
-    # Workaround to recreate X-13ARIMA-SEATS spectral plots (as far as possible)
-    # where the scale of the y-axis
-    # ranges from a low negative value (e.g. -40) to a higher negative value
-    # (e.g. -15)
-    d3s$spec_new1 <- scales::rescale(
-      d3s$spec,
-      from = range(d3s$spec),
-      to = c(1, max(d3s$spec - min(d3s$spec)))
-    )
-    #d3s$spec_new2 <- d3s$spec - min(d3s$spec)
-    #d3s$spec_rescaled <-  scales::rescale(d3s$spec_new1, to = c(min(d3s$spec),
-    #max(d3s$spec)))
-    #d3s[order(d3s$spec_new2),]
-    breaks_15 <- seq(1, max(d3s$spec_new1), length = 15)
-    labels_15 <- as.character(round(
-      scales::rescale(breaks_15, to = c(min(d3s$spec), max(d3s$spec))),
-      digits = 0
+  if (length(ptypes) > 0 && layout == "panels") {
+    # one panel per combination of plot type and series type, side by side in
+    # the order of the arguments; the facets distribute the panels equally
+    # wide, the theme_bw() panel borders frame every one of them
+    dfl <- list()
+    titles <- character(0)
+    for (ptype in ptypes) {
+      for (s in series_list) {
+        df <- specFrame(s, ptype)
+        title <- if (length(ptypes) == 1) {
+          s$type
+        } else {
+          paste(specPlotTypeLabel(ptype), s$type, sep = " / ")
+        }
+        df$type <- s$type
+        df$panel <- title
+        dfl[[length(dfl) + 1]] <- df
+        titles <- c(titles, title)
+      }
+    }
+    d1s <- do.call(rbind, dfl)
+    d1s$type <- factor(d1s$type, levels = series_labels)
+    d1s$panel <- factor(d1s$panel, levels = unique(titles))
+    # a square-ish grid of panels: ceil(sqrt(n)) columns, rows as needed,
+    # the last row may be partially empty (as in the plotly engine)
+    ncols <- ceiling(sqrt(length(titles)))
+    nrows <- ceiling(length(titles) / ncols)
+    panels_main <- if (is.null(main)) {
+      if (length(ptypes) == 1) {
+        spec_main(ptypes[1])
+      } else {
+        paste0("Spectra of the ", paste(series_labels, collapse = ", "),
+               " series")
+      }
+    } else {
+      main
+    }
+    return(finish(
+      ggplot(d1s, aes(x = freq, y = spec, col = type)) +
+        geom_line() +
+        geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
+        geom_vline(xintercept = seas_freq, col = p3_blue, alpha = 0.3) +
+        scale_colour_manual(values = stats::setNames(
+          rep_len(p3_spec_colors, length(series_labels)), series_labels
+        )) +
+        facet_wrap(vars(panel), ncol = ncols) +
+        labs(title = panels_main, col = NULL) +
+        ylab("Spectrum") +
+        xlab("Frequency"),
+      grid = c(nrows, ncols)
     ))
+  }
 
-    seas_td_col <- rep("grey", length(d3s$freq))
-    seas_td_col[which(d3s$freq %in% seas_freq)] <- "blue"
-    seas_td_col[which(d3s$freq %in% td_freq_approx)] <- "red"
+  if (length(ptypes) > 0) {
+    # one plot per plotType, the (several) spectra overlaid in it
+    plots <- lapply(ptypes, function(ptype) {
+      dfr <- lapply(series_list, function(s) specFrame(s, ptype))
+      d1s <- do.call(rbind, Map(function(df, lab) {
+        df$type <- lab
+        df
+      }, dfr, series_labels))
+      d1s$type <- factor(d1s$type, levels = series_labels)
 
-    p <- ggplot(d3s, aes(x = freq, y = abs(spec_new1))) +
+      finish(
+        ggplot(d1s, aes(x = freq, y = spec, col = type)) +
+          geom_line() +
+          geom_vline(xintercept = td_freq, col = "red", alpha = 0.3) +
+          geom_vline(xintercept = seas_freq, col = p3_blue, alpha = 0.3) +
+          labs(title = plot_main(ptype, length(ptypes)), col = NULL) +
+          scale_colour_manual(values = stats::setNames(
+            rep_len(p3_spec_colors, length(series_labels)), series_labels
+          )) +
+          theme_minimal() +
+          ylab("Spectrum") +
+          xlab("Frequency")
+      )
+    })
+    names(plots) <- specPlotTypeLabel(ptypes)
+    if (length(plots) == 1L) {
+      return(plots[[1L]])
+    }
+    return(plots)
+  }
+
+  # Autoregressive Spectrum X-13ARIMA-SEATS ("arSpecBars")
+  if (is.null(main)) {
+    main <- paste0(
+      "Autoregressive spectrum of the ", series_labels[1], " series"
+    )
+  }
+  d1 <- series_list[[1]]$d
+
+  # Default settings in X-13ARIMA-SEATS
+  # d3s <- spec.ar(d1, n.freq = 61, order = 30, plot = FALSE)
+  # Not 100% sure what X-13ARIMA-SEATS really does but
+  # 10 * log10(d3s$spec/sum(d3s$spec)
+  # comes closest to the scale they use
+  d3s <- spec.ar(d1, n.freq = n.freq, order = order, plot = FALSE)
+  d3s <- data.frame(
+    freq = d3s$freq / frequency(d1),
+    spec = 10 * log10(d3s$spec / sum(d3s$spec))
+  )
+
+  ## Quick-Fix: use closest value of d3s$freq to td_freq
+  ## (spec.ar() only allows for a parameter "n.freq=The number of points at
+  ## which to plot."
+  ## but not for a vector of frequencies at which to plot)
+  td_freq_approx <- sapply(td_freq, function(f) {
+    d3s$freq[which(abs(d3s$freq - f) == min(abs(d3s$freq - f)))]
+  })
+
+  # Workaround to recreate X-13ARIMA-SEATS spectral plots (as far as possible)
+  # where the scale of the y-axis
+  # ranges from a low negative value (e.g. -40) to a higher negative value
+  # (e.g. -15)
+  d3s$spec_new1 <- scales::rescale(
+    d3s$spec,
+    from = range(d3s$spec),
+    to = c(1, max(d3s$spec - min(d3s$spec)))
+  )
+  breaks_15 <- seq(1, max(d3s$spec_new1), length = 15)
+  labels_15 <- as.character(round(
+    scales::rescale(breaks_15, to = c(min(d3s$spec), max(d3s$spec))),
+    digits = 0
+  ))
+
+  seas_td_col <- rep("grey", length(d3s$freq))
+  seas_td_col[which(d3s$freq %in% seas_freq)] <- p3_blue
+  seas_td_col[which(d3s$freq %in% td_freq_approx)] <- "red"
+
+  finish(
+    ggplot(d3s, aes(x = freq, y = abs(spec_new1))) +
       geom_bar(
         stat = "identity",
         position = "dodge",
@@ -357,13 +439,5 @@ plotSpectrumGgplot <- function(
       ggtitle(main) +
       ylab("Spectrum") +
       xlab("Frequency")
-  }
-
-  p <- p + theme_bw()
-
-  if (interactive) {
-    p <- plotly::ggplotly(p)
-  }
-
-  p
+  )
 }

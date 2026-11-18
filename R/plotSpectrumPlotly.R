@@ -178,14 +178,15 @@ specPrepare <- function(x, tsType, plotType, maxobs, main, n.freq, order) {
   )
 }
 
-# vertical lines for the seasonal and trading day cycles (plotly shapes)
+# vertical lines for the seasonal (blue, as in the ggplot2 engine) and
+# trading day (red) cycles (plotly shapes)
 specPlotLinesPlotly <- function(p, freq) {
   shapes <- c(
     lapply(freq$seas, function(x) {
       list(
         type = "line", xref = "x", yref = "paper",
         x0 = x, x1 = x, y0 = 0, y1 = 1,
-        line = list(color = "grey", width = 1)
+        line = list(color = p3_blue, width = 1)
       )
     }),
     lapply(freq$td, function(x) {
@@ -199,13 +200,23 @@ specPlotLinesPlotly <- function(p, freq) {
   p %>% plotly::layout(shapes = shapes)
 }
 
+# the number of frequencies at which specValues() computes one spectrum
+specNfreq <- function(plotType, n.freq) {
+  if (plotType == "periodogram") NULL else n.freq %||% 301
+}
+
 #' Spectral Plots (plotly)
 #'
-#' Interactive spectral plots with plotly: one spectrum per panel (default,
-#' `layout = "panels"`) or overlaid spectra in a single panel
-#' (`layout = "overlay"`) for several series types, with vertical lines at
-#' the seasonal (grey) and trading day (red) frequencies. For static plots
-#' with ggplot2, see [plotSpectrumGgplot].
+#' Interactive spectral plots with plotly, with vertical lines at the
+#' seasonal (blue) and trading day (red) frequencies. With
+#' `layout = "overplot"` (the default) every plot type is a single plot with
+#' the spectra of several series types overlaid in it (with a legend), and
+#' several plot types give a named list with one plot per plot type. With
+#' `layout = "panels"` a single plot is returned in which every combination
+#' of plot type and series type gets a framed panel of its own in a
+#' square-ish grid of equally wide panels, each panel with the height:width
+#' ratio a plot of a single panel would have. For static plots with ggplot2, see
+#' [plotSpectrumGgplot].
 #'
 #' @inheritParams plotSpectrum
 #' @examples
@@ -214,16 +225,18 @@ specPlotLinesPlotly <- function(p, freq) {
 #' plotSpectrumPlotly(x)
 #' plotSpectrumPlotly(x, plotType = "periodogram")
 #' plotSpectrumPlotly(x, tsType = c("original", "sa", "irregular"))
-#' # six panels: the AR spectra above the periodograms
-#' plotSpectrumPlotly(x, tsType = c("original", "sa", "irregular"),
+#' # one plot per plot type (a named list)
+#' plotSpectrumPlotly(x, tsType = c("original", "sa"),
 #'                    plotType = c("arSpec", "periodogram"))
-#' plotSpectrumPlotly(x, tsType = c("sa", "irregular"), layout = "overlay")
+#' # the spectra in panels (three spectra give two rows of two panels)
+#' plotSpectrumPlotly(x, tsType = c("original", "sa", "irregular"),
+#'                    layout = "panels")
 #' @export
 plotSpectrumPlotly <- function(
   x,
   tsType = "original",
   plotType = "arSpec",
-  layout = c("panels", "overlay"),
+  layout = c("overplot", "panels"),
   maxobs = NULL,
   main = NULL,
   n.freq = NULL,
@@ -236,8 +249,9 @@ plotSpectrumPlotly <- function(
   series_labels <- vapply(args$series, function(s) s$type, "")
 
   if ("arSpecBars" %in% args$plotType) {
-    # the spectrum of the first series as bars, the bars at the trading day
-    # frequencies highlighted in red (as in the other engines)
+    # the spectrum of the first series as bars, the bars at the seasonal and
+    # trading day frequencies highlighted in blue and red (as in the other
+    # engines)
     d1 <- args$series[[1]]$d
     nf <- args$n.freq %||% 61
     d3s <- stats::spec.ar(d1, n.freq = nf, order = order, plot = FALSE)
@@ -253,8 +267,8 @@ plotSpectrumPlotly <- function(
     td_freq_approx <- vapply(args$freq$td, function(f) {
       d3s$freq[which.min(abs(d3s$freq - f))]
     }, 0)
-    col <- rep("#7cb5ec", nrow(d3s))
-    col[which(d3s$freq %in% args$freq$td)] <- "blue"
+    col <- rep("grey", nrow(d3s))
+    col[which(d3s$freq %in% args$freq$seas)] <- p3_blue
     col[which(d3s$freq %in% td_freq_approx)] <- "red"
     main <- args$main %||%
       paste0("Autoregressive spectrum of the ", args$series[[1]]$type, " series")
@@ -270,11 +284,17 @@ plotSpectrumPlotly <- function(
         plot_bgcolor = "white",
         xaxis = list(title = "Frequency", showgrid = FALSE),
         yaxis = list(title = "Spectrum", zeroline = FALSE)
-      )
+      ) %>%
+      p3_frame() %>%
+      # the vertical line at the position of the mouse, the highlighting of
+      # the hovered series, and a plot that fills the plot pane
+      p3_hover() %>%
+      p3_hover_highlight() %>%
+      p3_fluid_plotly()
     return(p)
   }
 
-  ptypes <- setdiff(args$plotType, "arSpecBars")
+  ptypes <- args$plotType
   spec_main <- function(ptype) {
     if (ptype == "periodogram") {
       paste0(
@@ -290,111 +310,156 @@ plotSpectrumPlotly <- function(
       )
     }
   }
-  if (length(ptypes) == 1) {
-    default_main <- spec_main(ptypes)
-  } else {
-    default_main <- paste(
-      vapply(ptypes, spec_main, ""),
-      collapse = " / "
-    )
-  }
-  if (layout == "overlay" && length(ptypes) > 1) {
-    stop(
-      "overlaid spectra are only available for a single plotType",
-      call. = FALSE
-    )
-  }
-
-  # the spectra as a named list: one element per panel, ordered row-wise
-  # (plotly::subplot() fills the panels row by row): the plotTypes are the
-  # rows, the series types the columns of the grid
-  panels <- list()
-  for (ptype in ptypes) {
-    nfreq <- if (ptype == "periodogram") NULL else args$n.freq %||% 301
-    vals <- lapply(
-      args$series,
-      specValues,
-      plotType = ptype,
-      n.freq = nfreq,
-      order = args$order
-    )
-    names(vals) <- series_labels
-    for (nm in series_labels) {
-      title <- if (length(ptypes) > 1) {
-        paste(nm, specPlotTypeLabel(ptype), sep = " \u2014 ")
-      } else {
-        nm
-      }
-      key <- paste(ptype, nm, sep = "/")
-      panels[[key]] <- list(vals = vals[[nm]], name = nm, title = title)
+  # the title of the plot of one plot type: for several plot types a given
+  # main is extended by the name of the plot type
+  plot_main <- function(ptype) {
+    if (is.null(args$main)) {
+      spec_main(ptype)
+    } else if (length(ptypes) == 1) {
+      args$main
+    } else {
+      paste0(args$main, " (", specPlotTypeLabel(ptype), ")")
     }
   }
 
-  if (layout == "panels" && length(panels) > 1) {
-    # one spectrum per panel: the plotTypes are the rows, the series types
-    # the columns; subplot() renumbers the axis references of the shapes, so
-    # the seasonal and trading day lines stay inside their own panel (fixed
-    # y-axis ranges so that the lines reach exactly over the panel height)
-    plots <- lapply(panels, function(pn) {
-      yr <- range(pn$vals$spec)
-      yr <- yr + c(-1, 1) * 0.05 * diff(yr)
-      shapes <- c(
-        lapply(args$freq$seas, function(f) {
-          list(type = "line", xref = "x", yref = "y", x0 = f, x1 = f,
-               y0 = yr[1], y1 = yr[2], line = list(color = "grey", width = 1))
-        }),
-        lapply(args$freq$td, function(f) {
-          list(type = "line", xref = "x", yref = "y", x0 = f, x1 = f,
-               y0 = yr[1], y1 = yr[2], line = list(color = "red", width = 1))
-        })
-      )
-      plotly::plot_ly(...) %>%
-        plotly::add_trace(
-          x = pn$vals$freq, y = pn$vals$spec,
-          type = "scatter", mode = "lines", name = pn$name,
-          line = list(width = 1.6, color = p3_series_colors[["Original"]])
-        ) %>%
-        plotly::layout(
-          showlegend = FALSE,
-          shapes = shapes,
-          margin = list(l = 50, r = 20, t = 45, b = 40),
-          hovermode = "x unified",
-          plot_bgcolor = "white",
-          xaxis = list(title = "Frequency", showgrid = FALSE),
-          yaxis = list(title = "Spectrum", zeroline = FALSE, range = yr)
-        )
-    })
-    nrows <- length(ptypes)
-    if (nrows == 1 && length(panels) > 3) {
-      nrows <- 2 # four series types: two rows of two panels
-    }
-    p <- plotly::subplot(
-      plots,
-      nrows = nrows,
-      margin = 0.06
-    )
-    titles <- vapply(panels, function(pn) pn$title, "")
-    return(subplotTitles(p, titles, main = args$main %||% default_main))
-  }
-
-  p <- plotly::plot_ly(...)
-  for (pn in panels) {
-    p <- p %>%
+  # one spectrum line (the trace style is the same in overplots and panels)
+  specLinePlotly <- function(p, vals, label, k, showlegend) {
+    p %>%
       plotly::add_trace(
-        x = pn$vals$freq, y = pn$vals$spec,
-        type = "scatter", mode = "lines", name = pn$name,
-        line = list(width = 1.6)
+        x = vals$freq, y = vals$spec,
+        type = "scatter", mode = "lines", name = label,
+        showlegend = showlegend,
+        line = list(
+          width = 1.6,
+          color = p3_spec_colors[[(k - 1) %% length(p3_spec_colors) + 1]]
+        ),
+        hovertemplate = paste0(label, ": %{y:.3f}<extra></extra>")
       )
   }
-  p <- specPlotLinesPlotly(p, args$freq)
-  p %>%
-    plotly::layout(
-      title = args$main %||% default_main,
-      legend = list(orientation = "h", x = 0, y = 1.1, traceorder = "normal"),
-      margin = list(l = 50, r = 20, t = 60, b = 40),
-      hovermode = "x unified",
-      plot_bgcolor = "white",
-      xaxis = list(title = "Frequency", showgrid = FALSE),
-      yaxis = list(title = "Spectrum", zeroline = FALSE)
-    )
+
+  if (layout == "panels") {
+    # one panel per combination of plot type and series type, side by side
+    # in the order of the arguments and equally wide (subplot widths)
+    figs <- list()
+    titles <- character(0)
+    for (ptype in ptypes) {
+      for (k in seq_along(args$series)) {
+        vals <- specValues(
+          args$series[[k]],
+          plotType = ptype,
+          n.freq = specNfreq(ptype, args$n.freq),
+          order = args$order
+        )
+        fig <- plotly::plot_ly(...) %>%
+          specLinePlotly(vals, series_labels[k], k, showlegend = FALSE) %>%
+          specPlotLinesPlotly(args$freq) %>%
+          plotly::layout(
+            showlegend = FALSE,
+            margin = list(l = 50, r = 20, t = 30, b = 40),
+            plot_bgcolor = "white",
+            xaxis = list(title = "", showgrid = FALSE),
+            yaxis = list(title = "", zeroline = FALSE)
+          )
+        figs[[length(figs) + 1]] <- fig
+        titles <- c(titles, if (length(ptypes) == 1) {
+          series_labels[k]
+        } else {
+          paste(specPlotTypeLabel(ptype), series_labels[k], sep = " / ")
+        })
+      }
+    }
+    panels_main <- args$main %||% {
+      if (length(ptypes) == 1) {
+        spec_main(ptypes[1])
+      } else {
+        paste0(
+          "Spectra of the ", paste(series_labels, collapse = ", "), " series"
+        )
+      }
+    }
+    # a square-ish grid of panels: ceil(sqrt(n)) columns, rows as needed,
+    # the last row may be partially empty (3 panels give 2 columns and
+    # 2 rows). The gap between the panels is wide enough for the titles of
+    # the lower rows when there is more than one row.
+    ncols <- ceiling(sqrt(length(figs)))
+    nrows <- ceiling(length(figs) / ncols)
+    p <- do.call(
+      plotly::subplot,
+      c(
+        figs,
+        list(nrows = nrows, margin = if (nrows > 1) 0.08 else 0.04)
+      )
+    ) %>%
+      panelTitles(titles) %>%
+      plotly::layout(
+        title = if (is.null(panels_main)) NULL else list(text = panels_main),
+        margin = list(
+          l = 55, r = 20, b = 45,
+          t = if (is.null(panels_main)) 50 else 75
+        ),
+        hovermode = "x unified",
+        plot_bgcolor = "white",
+        xaxis = list(title = if (nrows == 1) "Frequency" else ""),
+        yaxis = list(title = "Spectrum")
+      )
+    if (nrows > 1) {
+      # the axis titles belong to the edges of the grid: "Frequency" under
+      # the bottom row, "Spectrum" beside the left column (subplot numbers
+      # the panel axes in the order of the figures, row by row from top to
+      # bottom)
+      ups <- list()
+      for (i in seq_along(figs)) {
+        s <- if (i > 1L) as.character(i) else ""
+        if ((i - 1L) %/% ncols + 1L == nrows) {
+          ups[[paste0("xaxis", s)]] <- list(title = "Frequency")
+        }
+        if ((i - 1L) %% ncols == 0L) {
+          ups[[paste0("yaxis", s)]] <- list(title = "Spectrum")
+        }
+      }
+      p <- do.call(plotly::layout, c(list(p), ups))
+    }
+    p <- p %>%
+      p3_frame() %>%
+      p3_hover() %>%
+      p3_hover_highlight() %>%
+      p3_fluid_plotly(grid = c(nrows, ncols))
+    return(p)
+  }
+
+  # one plot per plot type, the spectra of the series types overlaid in it
+  plots <- lapply(ptypes, function(ptype) {
+    p <- plotly::plot_ly(...)
+    for (k in seq_along(args$series)) {
+      vals <- specValues(
+        args$series[[k]],
+        plotType = ptype,
+        n.freq = specNfreq(ptype, args$n.freq),
+        order = args$order
+      )
+      p <- p %>% specLinePlotly(vals, series_labels[k], k, showlegend = TRUE)
+    }
+    p <- specPlotLinesPlotly(p, args$freq)
+    p %>%
+      plotly::layout(
+        title = plot_main(ptype),
+        legend = list(
+          orientation = "h", x = 0, y = 1.1, traceorder = "normal"
+        ),
+        margin = list(l = 50, r = 20, t = 60, b = 40),
+        hovermode = "x unified",
+        plot_bgcolor = "white",
+        xaxis = list(title = "Frequency", showgrid = FALSE),
+        yaxis = list(title = "Spectrum", zeroline = FALSE)
+      ) %>%
+      p3_frame() %>%
+      p3_hover() %>%
+      p3_hover_highlight() %>%
+      p3_fluid_plotly()
+  })
+  names(plots) <- specPlotTypeLabel(ptypes)
+  if (length(plots) == 1L) {
+    return(plots[[1L]])
+  }
+  plots
 }

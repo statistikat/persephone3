@@ -82,6 +82,17 @@ as well as the directly and indirectly seasonally adjusted aggregate series.
 \details{
 If no run has been performed on the \link{persephone} object,
 only the original (aggregate) time series is plotted.
+
+The interactive plots fill the plot pane of RStudio and Positron: a plot
+shown on its own gets the whole pane and is redrawn when the pane is
+resized, so a small pane gives a small plot and nothing has to be scrolled.
+In a knitr document (reports, vignettes) and in the dashboards the plots
+keep their own size, \code{options(persephone3.plotFill = FALSE)} switches the
+filling off everywhere, and \code{options(persephone3.plotHeight = 300)} (with
+\code{persephone3.plotWidth}) gives a plot a size of its own. While the mouse
+moves over a plot, a vertical line marks its position and the values of all
+plotted series at this date are shown together; no dots are drawn at the
+hovered points.
 }
 \examples{
 # Plotting hierarchicalTimeSeries objects

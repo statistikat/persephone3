@@ -5,7 +5,13 @@
 # common layout of the plotly time series plots: legend above the plot,
 # optional range slider instead of the range selector of the dygraph plots,
 # no y axis title; the space above the plot is sized to the (horizontally
-# wrapped) legend so that it does not overlap the title
+# wrapped) legend so that it does not overlap the title. The vertical lines
+# collected with p3_add_shapes() are set here: plotly::layout() stores its
+# updates in layoutAttrs, and because the build merges those with
+# modifyList() (which keeps the old entries of unnamed lists like shapes),
+# all shapes must go into a single layout() call. At the end the vertical line
+# at the position of the mouse (p3_hover()) and the fluid size of the widget
+# (p3_fluid_plotly()) are added.
 plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
   nms <- vapply(p$x$data, function(s) {
     if (isFALSE(s$showlegend)) "" else paste0(s$name, "   ")
@@ -14,6 +20,7 @@ plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
   nRows <- max(1, ceiling(sum(nchar(nms)) / 110))
   p %>%
     plotly::layout(
+      shapes = attr(p, "p3_shapes") %||% list(),
       title = if (is.null(main)) {
         NULL
       } else {
@@ -35,23 +42,61 @@ plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
         showgrid = FALSE
       ),
       yaxis = list(title = "", zeroline = FALSE)
+    ) %>%
+    # the vertical line at the position of the mouse instead of a marker at the
+    # hovered point of every series, the highlighting of the series the cursor
+    # is on, and a plot that fills the plot pane
+    p3_hover() %>%
+    p3_hover_highlight() %>%
+    p3_fluid_plotly()
+}
+
+# the vertical lines of the plotly time series plots (annual comparison and
+# outliers): shapes collected on the widget and set by plotlyTsLayout()
+p3_add_shapes <- function(p, shapes) {
+  if (length(shapes) == 0) {
+    return(p)
+  }
+  attr(p, "p3_shapes") <- c(attr(p, "p3_shapes") %||% list(), shapes)
+  p
+}
+
+plotlyVLines <- function(dates, color, dash = NULL, width = 1) {
+  if (length(dates) == 0) {
+    return(list())
+  }
+  line <- list(color = color, width = width)
+  if (!is.null(dash)) {
+    line$dash <- dash
+  }
+  lapply(unname(dates), function(d) {
+    list(
+      type = "line", xref = "x", yref = "paper",
+      x0 = d, x1 = d, y0 = 0, y1 = 1, line = line
     )
+  })
 }
 
 # vertical lines at the annual comparison month/quarter (one per year),
 # like the dyEvent() marks of the dygraph plots
 plotlyAnnualLines <- function(p, dates) {
-  if (length(dates) == 0) {
-    return(p)
+  p3_add_shapes(p, plotlyVLines(dates, "lightgrey"))
+}
+
+# the discreet dashed vertical lines at the dates of the detected outliers,
+# in a lighter shade of the colour of their dots (as the dyEvent() lines of
+# the dygraph plots)
+plotlyOutlierLines <- function(p, otl) {
+  shapes <- list()
+  for (otlType in c("AO", "LS", "TC")) {
+    dates <- unlist(otl[[2]][grepl(otlType, names(otl[[2]]))])
+    if (length(dates) > 0) {
+      shapes <- c(shapes, plotlyVLines(
+        as.Date(dates), p3_outlier_line_colors[[otlType]], dash = "dash"
+      ))
+    }
   }
-  shapes <- lapply(dates, function(d) {
-    list(
-      type = "line", xref = "x", yref = "paper",
-      x0 = d, x1 = d, y0 = 0, y1 = 1,
-      line = list(color = "lightgrey", width = 1)
-    )
-  })
-  p %>% plotly::layout(shapes = shapes)
+  p3_add_shapes(p, shapes)
 }
 
 # dates of the annual comparison (one per year), for the plotly plots
@@ -106,12 +151,14 @@ plotlyLine <- function(p, d, col, name, color,
 #' Creates an interactive time series plot in the style of [plotSeasIrrCal()]
 #' and of the dygraphs plots of [plot()]: smoothed lines with the default
 #' Highcharts colours, the forecast as a dashed line with the confidence
-#' band, outliers marked with coloured dots.
+#' band, outliers marked with coloured dots and discreet dashed vertical
+#' lines.
 #'
 #' @param object a persephone object of class `persephoneSingle`
 #' @param main plot title (NULL: default title)
 #' @param forecasts logical, plot the forecasts with confidence band
-#' @param showOutliers logical, mark detected outliers with dots
+#' @param showOutliers logical, mark detected outliers with dots and dashed
+#'   vertical lines
 #' @param rangeSelector logical, show the range slider below the plot
 #' @param smooth logical or `"spline"`, smooth the lines (monotone piecewise
 #'   cubic interpolation; `"spline"`: the overshooting not-a-knot cubic spline)
@@ -207,6 +254,8 @@ plotSinglePlotly <- function(
             )
           )
       }
+      # the discreet dashed vertical lines at the dates of the outliers
+      p <- p %>% plotlyOutlierLines(otl)
     }
     if (withFc) {
       p <- p %>%
@@ -228,7 +277,10 @@ plotSinglePlotly <- function(
             data = band, x = ~Date, y = ~lowerci,
             type = "scatter", mode = "lines", showlegend = FALSE,
             hoverinfo = "skip", line = list(width = 0),
-            fill = "tonexty", fillcolor = "rgba(124,181,236,0.25)"
+            fill = "tonexty",
+            fillcolor = paste0(
+              "rgba(", gsub(" ", "", p3_blue_rgb, fixed = TRUE), ",0.25)"
+            )
           )
       }
     }
@@ -251,14 +303,21 @@ plotHierPlotly <- function(
   smooth = TRUE,
   drawPoints = FALSE,
   annualComparison = NULL,
+  series = NULL,
   ...
 ) {
   dp <- drawPoints && !isSmoothed(smooth)
-  if (is.null(x$output$user_defined)) {
+  focus <- hierFocus(x, series)
+  y <- if (is.null(focus$sa_dir) && is.null(focus$sa_indir)) {
+    if (is.null(focus$name)) x$ts else focus$y
+  } else {
+    focus$y
+  }
+  if (is.null(focus$sa_dir) && is.null(focus$sa_indir)) {
     if (is.null(main)) {
-      main <- "Original Aggregate Series"
+      main <- hierPlotTitle("Original Aggregate Series", focus$name)
     }
-    d <- dyData(x$ts, smooth = smooth, smooth_cols = "V1")
+    d <- dyData(y, smooth = smooth, smooth_cols = "V1")
     p <- plotly::plot_ly(...) %>%
       plotlyLine(d, "V1", "Original",
         color = p3_series_colors[["Original"]],
@@ -266,30 +325,42 @@ plotHierPlotly <- function(
       )
   } else {
     if (is.null(main)) {
-      main <- "Original, Directly and Indirectly Adjusted Aggregate Series"
-    }
-    ts <- cbind(x$ts, x$adjustedDirect, x$adjustedIndirect)
-    colnames(ts) <- c("y", "sa_dir", "sa_indir")
-    d <- dyData(
-      ts, smooth = smooth,
-      smooth_cols = c("y", "sa_dir", "sa_indir")
-    )
-    p <- plotly::plot_ly(...) %>%
-      plotlyLine(d, "y", "Original",
-        color = p3_series_colors[["Original"]],
-        drawPoints = dp
-      ) %>%
-      plotlyLine(d, "sa_dir", "Direct SA",
-        color = p3_series_colors[["Direct SA"]],
-        drawPoints = dp
-      ) %>%
-      plotlyLine(d, "sa_indir", "Indirect SA",
-        color = p3_series_colors[["Indirect SA"]],
-        drawPoints = dp
+      main <- hierPlotTitle(
+        "Original, Directly and Indirectly Adjusted Aggregate Series",
+        focus$name
       )
+    }
+    ts <- y
+    series_names <- "y"
+    labels <- c(y = "Original")
+    if (!is.null(focus$sa_dir)) {
+      ts <- cbind(ts, focus$sa_dir)
+      series_names <- c(series_names, "sa_dir")
+      labels <- c(labels, sa_dir = "Direct SA")
+    }
+    if (!is.null(focus$sa_indir)) {
+      ts <- cbind(ts, focus$sa_indir)
+      series_names <- c(series_names, "sa_indir")
+      labels <- c(labels, sa_indir = "Indirect SA")
+    }
+    colnames(ts) <- series_names
+    d <- dyData(ts, smooth = smooth, smooth_cols = series_names)
+    colors <- c(
+      y = p3_series_colors[["Original"]],
+      sa_dir = p3_series_colors[["Direct SA"]],
+      sa_indir = p3_series_colors[["Indirect SA"]]
+    )
+    p <- plotly::plot_ly(...)
+    for (sn in series_names) {
+      p <- p %>%
+        plotlyLine(d, sn, unname(labels[sn]),
+          color = unname(colors[sn]),
+          drawPoints = dp
+        )
+    }
   }
   if (!is.null(annualComparison)) {
-    p <- p %>% plotlyAnnualLines(p3_ann_dates(x$ts, annualComparison))
+    p <- p %>% plotlyAnnualLines(p3_ann_dates(y, annualComparison))
   }
   plotlyTsLayout(p, main = main, rangeSelector = rangeSelector)
 }
@@ -530,8 +601,8 @@ plotSiRatiosPlotly <- function(x, main = NULL, ...) {
     `SI-Ratio` = "#00643C",
     `Replaced SI-Ratio` = "red",
     `Seasonal Factor` = "#A59187",
-    `SF Mean` = "#5A8CBE",
-    `Mean` = "#5A8CBE"
+    `SF Mean` = p3_blue,
+    `Mean` = p3_blue
   )
 
   p <- plotly::plot_ly(...) %>%
@@ -544,5 +615,10 @@ plotSiRatiosPlotly <- function(x, main = NULL, ...) {
       hovermode = "closest",
       plot_bgcolor = "white",
       yaxis = list(title = "", zeroline = FALSE)
-    )
+    ) %>%
+    # the vertical line at the position of the mouse, the highlighting of the
+    # hovered series, and a plot that fills the plot pane
+    p3_hover() %>%
+    p3_hover_highlight() %>%
+    p3_fluid_plotly()
 }
