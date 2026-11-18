@@ -1,3 +1,50 @@
+# the aggregate series a plot of a hierarchicalTimeSeries object shows: in
+# 'groups' mode it is the series given by `series`, or the single aggregate of
+# the object if it has only one. The returned y, sa_dir and sa_indir are the
+# original, the directly and the indirectly adjusted series of that aggregate;
+# an adjustment that is not available (not run yet, or adjustment = "indirect",
+# where the aggregate series are not adjusted themselves) is NULL and is left
+# out of the plot.
+hierFocus <- function(x, series = NULL) {
+  if (is.null(x$groups)) {
+    return(list(
+      name = NULL,
+      y = x$ts,
+      sa_dir = x$adjustedDirect,
+      sa_indir = x$adjustedIndirect
+    ))
+  }
+  aggs <- x$getSeries(aggregates = TRUE)
+  agg <- series
+  if (is.null(agg)) {
+    if (length(aggs) != 1L) {
+      stop(
+        "this object has more than one aggregate (",
+        paste(aggs, collapse = ", "), "), so 'series' must be given",
+        call. = FALSE
+      )
+    }
+    agg <- aggs
+  } else if (!agg %in% aggs) {
+    stop(
+      "'", agg, "' is not an aggregate series of this object. Aggregates are: ",
+      paste(aggs, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  list(
+    name = agg,
+    y = x$getComponent(agg)$ts,
+    sa_dir = tryCatch(x$getAdjustedDirect(agg), error = function(e) NULL),
+    sa_indir = tryCatch(x$getAdjustedIndirect(agg), error = function(e) NULL)
+  )
+}
+
+# plot title for an aggregate series with the name of the aggregate in brackets
+hierPlotTitle <- function(title, name) {
+  if (is.null(name)) title else paste0(title, " (", name, ")")
+}
+
 #' Interactive time series plot for a persephone object
 #'
 #' Produces an interactive time series plot for objects of class [persephone]
@@ -14,6 +61,19 @@
 #'
 #' If no run has been performed on the [persephone] object,
 #' only the original (aggregate) time series is plotted.
+#'
+#' @details
+#'
+#' The interactive plots fill the plot pane of RStudio and Positron: a plot
+#' shown on its own gets the whole pane and is redrawn when the pane is
+#' resized, so a small pane gives a small plot and nothing has to be scrolled.
+#' In a knitr document (reports, vignettes) and in the dashboards the plots
+#' keep their own size, `options(persephone3.plotFill = FALSE)` switches the
+#' filling off everywhere, and `options(persephone3.plotHeight = 300)` (with
+#' `persephone3.plotWidth`) gives a plot a size of its own. While the mouse
+#' moves over a plot, a vertical line marks its position and the values of all
+#' plotted series at this date are shown together; no dots are drawn at the
+#' hovered points.
 #'
 #' @name plot
 #' @param x an object of class [persephone].
@@ -34,6 +94,9 @@
 #'   addition to a line going through the point.
 #' @param annualComparison integer corresponding to the month or quarter which
 #'   should be highlighted in the plot for every year.
+#' @param series for [perHts()] objects created with `groups`: the name of the
+#'   aggregate series that is plotted. It is needed when the object has more
+#'   than one aggregate; if it has only one, that one is plotted by default.
 #' @param plotEngine character. Either `"dygraph"` (default, interactive
 #'   dygraphs plots) or `"plotly"` (plotly plots); both in the style of
 #'   [plotSeasIrrCal()] with smoothed lines and Highcharts colours.
@@ -76,6 +139,7 @@
 plot.hierarchicalTimeSeries <- function(x, main=NULL,
                             rangeSelector=FALSE, smooth=TRUE, drawPoints=FALSE,
                             annualComparison=NULL,
+                            series=NULL,
                             plotEngine = c("dygraph", "plotly"), ...){
 
   plotEngine <- match.arg(plotEngine)
@@ -87,6 +151,7 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
       smooth = smooth,
       drawPoints = drawPoints,
       annualComparison = annualComparison,
+      series = series,
       ...
     ))
   }
@@ -112,7 +177,8 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
 
   }
 
-  preRunPlot <- function(ts, rangeSelector=rangeSelector, drawPoints=drawPoints,
+  preRunPlot <- function(ts, main = main, rangeSelector=rangeSelector,
+                         drawPoints=drawPoints,
                          annualComparison=annualComparison){
 
     if (is.null(main)) {
@@ -152,16 +218,20 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
   }
 
   postRunPlot <- function(
-    main = main, rangeSelector = rangeSelector, drawPoints = drawPoints,
-    annualComparison = annualComparison) {
+    focus, main = main, rangeSelector = rangeSelector,
+    drawPoints = drawPoints, annualComparison = annualComparison) {
 
+    focus <- hierFocus(x, series)
     if (is.null(main)) {
-      main <- "Original, Directly and Indirectly Adjusted Aggregate Series"
+      main <- hierPlotTitle(
+        "Original, Directly and Indirectly Adjusted Aggregate Series",
+        focus$name
+      )
     }
 
-    y <- x$ts
-    sa_dir <- x$adjustedDirect
-    sa_indir <- x$adjustedIndirect
+    y <- focus$y
+    sa_dir <- focus$sa_dir
+    sa_indir <- focus$sa_indir
 
     # Forecasts not implemented yet
 
@@ -184,30 +254,42 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     #     dyLegend(width = 400)
     #
     # }else{
-      ts <- cbind(y, sa_dir, sa_indir)
+      # only the adjustments that are available are plotted
+      series_names <- "y"
+      labels <- c(y = "Original")
+      ts <- y
+      if (!is.null(sa_dir)) {
+        ts <- cbind(ts, sa_dir)
+        series_names <- c(series_names, "sa_dir")
+        labels <- c(labels, sa_dir = "Direct SA")
+      }
+      if (!is.null(sa_indir)) {
+        ts <- cbind(ts, sa_indir)
+        series_names <- c(series_names, "sa_indir")
+        labels <- c(labels, sa_indir = "Indirect SA")
+      }
+      colnames(ts) <- series_names
 
       dp <- drawPoints && !isSmoothed(smooth)
+      colors <- c(
+        y = p3_series_colors[["Original"]],
+        sa_dir = p3_series_colors[["Direct SA"]],
+        sa_indir = p3_series_colors[["Indirect SA"]]
+      )
       graphObj <- dygraph(
-        dyData(ts, smooth = smooth, smooth_cols = c("y", "sa_dir", "sa_indir")),
+        dyData(ts, smooth = smooth, smooth_cols = series_names),
         main = main
-      ) %>%
-        dySeries(
-          "y",
-          label = "Original",
-          color = p3_series_colors[["Original"]],
-          drawPoints = dp
-        ) %>%
-        dySeries(
-          "sa_dir",
-          label = "Direct SA",
-          color = p3_series_colors[["Direct SA"]]
-        ) %>%
-        dySeries(
-          "sa_indir",
-          label = "Indirect SA",
-          color = p3_series_colors[["Indirect SA"]]
-        ) %>%
-        dyLegend(width = 290)
+      )
+      for (sn in series_names) {
+        graphObj <- graphObj %>%
+          dySeries(
+            sn,
+            label = unname(labels[sn]),
+            color = unname(colors[sn]),
+            drawPoints = dp && sn == "y"
+          )
+      }
+      graphObj <- graphObj %>% dyLegend(width = 290)
     # }
 
     # Outliers not implemented
@@ -233,18 +315,23 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     graphObj
   }
 
-  if (!is.null(x$output$user_defined)) {
+  # the plot shows the adjustments that are available; in 'groups' mode with
+  # adjustment = "indirect" the aggregates have no own output, but the indirect
+  # adjustment is available
+  focus <- hierFocus(x, series)
+  if (!is.null(focus$sa_dir) || !is.null(focus$sa_indir)) {
 
     graphObj <- postRunPlot(
-      main = main, rangeSelector = rangeSelector, drawPoints = drawPoints,
-      annualComparison = annualComparison
+      focus = focus, main = main, rangeSelector = rangeSelector,
+      drawPoints = drawPoints, annualComparison = annualComparison
     )
     p3_fluid(graphObj)
 
   }else{
-    ts <- x$ts
+    ts <- if (is.null(x$groups)) x$ts else focus$y
     p3_fluid(preRunPlot(
       ts = ts,
+      main = hierPlotTitle("Original Aggregate Time Series", focus$name),
       rangeSelector = rangeSelector,
       drawPoints = drawPoints,
       annualComparison = annualComparison

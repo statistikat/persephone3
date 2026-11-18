@@ -83,6 +83,95 @@ hts_nested
 
 As you can see, the structure of `hts` is available within this nested object.
 
+## Several Aggregates with `groups`
+
+If there are many aggregates and sub-aggregates, `perHts()` can also be used
+with a flat structure: all series (the sub-series *and* the aggregates) are
+supplied at one level and `groups` describes which series build which
+aggregate. Every series is adjusted exactly once, no matter how many
+aggregates it belongs to, and each aggregate has its own weights. Aggregates
+are always built from their leaf series, so a sub-aggregate listed as a
+sub-series of another aggregate is replaced by its own sub-series:
+
+```{r}
+groups <- list(
+  ab = c("a", "b"),
+  bc = c("b", "c"),
+  all = c("a", "b", "c")
+)
+```
+
+Here `a`, `b` and `c` are the leaves; `ab`, `bc` and `all` are the aggregates,
+each with its own weights. The aggregate series themselves have to be supplied
+as series as well, since they are needed for the direct adjustment and for
+their chain linking factors.
+
+## Indirect Adjustment of Chain Linked Series
+
+For chain linked series the indirect adjustment cannot be obtained by summing
+up the adjusted sub-series: the chain linking factors of the sub-series do not
+give the factor of the aggregate. Instead, the adjustment is performed in the
+unchained space:
+
+1. the sub-series are adjusted as usual,
+2. they are unchained by their chain linking factors,
+3. the unchained adjusted series are weighted together,
+4. the result is chain linked again with the factor of the aggregate,
+5. and finally re-referenced to a base year (`ref_year`).
+
+The following (simulated) example adjusts the chain linked series `a`, `b` and
+`c` and builds the indirectly adjusted aggregate `all` from them; the factors
+are the levels of the chain linking, i.e. the chain linked series is the
+unchained series multiplied by its factor:
+
+```{r}
+n <- 12 * 20
+tt <- seq_len(n)
+ul <- list(                       # the unchained levels
+  a = 100 + 0.5 * tt + 5 * sin(2 * pi * tt / 12),
+  b = 60 + 0.3 * tt + 3 * sin(2 * pi * tt / 12 + 1),
+  c = 40 + 0.2 * tt + 2 * sin(2 * pi * tt / 12 + 2)
+)
+lf <- list(                       # the chain linking factors
+  a = 0.5 + 0.002 * tt, b = 0.6 + 0.001 * tt, c = 0.55 + 0.0015 * tt
+)
+w <- c(0.5, 0.3, 0.2)
+ul_all <- Reduce("+", Map("*", ul, as.list(w)))
+lf_all <- Reduce("+", Map(function(u, l, wi) u * l * wi, ul, lf, as.list(w))) /
+  ul_all                          # factor of the aggregate
+
+series <- c(Map("*", ul, lf), list(all = ul_all * lf_all))
+mts <- ts(do.call("cbind", series), start = c(2000, 1), frequency = 12)
+lfm <- ts(cbind(do.call("cbind", lf), all = lf_all),
+          start = c(2000, 1), frequency = 12)
+
+hts_cl <- perHts(
+  list = mts, method = "x13", template = "rsa0",
+  groups = list(all = c("a", "b", "c")), weights = list(all = w),
+  cl_weights = lfm, ref_year = 2010,
+  adjustment = "indirect"         # the aggregate is not adjusted itself
+)
+hts_cl$run()
+
+# the indirectly adjusted aggregate (re-referenced to 2010 = 100)
+window(hts_cl$getAdjustedIndirect("all"), start = c(2010, 1), end = c(2010, 6))
+```
+
+With `adjustment = "both"` the aggregates are adjusted directly as well and
+both results are available (`$getAdjustedDirect()` and
+`$getAdjustedIndirect()`); with `adjustment = "direct"` only the direct
+adjustment is computed. `$getUnchainedIndirect()` returns the aggregate of
+step 3, before it is chain linked again. Trading day regressors for the
+individual series are given with `td`, either one regressor set for all
+series or a named list with one entry per series, e.g.
+`td = list(a = td_a, c = td_c)`. The further user-defined regressors of the
+regression model (no trading days, e.g. the centered leap year regressor
+`genTd()[[3]][, "lpYear", drop = FALSE]`) are given with `user` in the same
+way; without `groups` a single set of regressors is also used for the aggregate
+series itself, which is adjusted on its own there. The regressors of one series
+are shown by the `summary()` of that series, e.g.
+`summary(hts$components$a)`.
+
 ## Iterating Over the Hierarchy Tree
 
 To iterate over all components of a `perHts` object, the `iterate()` method can be used. It behaves similarly to `lapply()` and allows you to apply custom functions to each node in the hierarchy:

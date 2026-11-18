@@ -109,6 +109,9 @@ create a new hierarchical time series
   userdefined = NULL,
   spec = NULL,
   weights = NULL,
+  groups = NULL,
+  td = NULL,
+  user = NULL,
   iterate = TRUE,
   speclist = NULL
 )}\if{html}{\out{</div>}}
@@ -151,7 +154,31 @@ returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[r
 \item{\code{weights}}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies
 for different time points. They must have the same length as the
-number of components.}
+number of components. In \code{groups} mode a named list with one weight
+set (vector, \code{ts} or \code{mts}) per aggregate is expected.}
+
+\item{\code{groups}}{named list that defines the aggregation structure: one
+entry per aggregate series with the names of its sub-series, e.g.
+\code{list(C20_21 = c("C20", "C21"), C = c("C20", "C21", "C22"))}. All
+series (the sub-series and the aggregates) have to be supplied in
+\code{...}/\code{list}. Aggregates are always built from their leaf series.}
+
+\item{\code{td}}{trading day regressors, see \code{\link[=perTd]{perTd()}} and
+the \code{td} argument of \code{\link[=perX13]{perX13()}}. Either a single
+regressor set (a calendar, precomputed regressors, the output of
+\code{\link[=genTd]{genTd()}} or a \code{\link[=td_context]{td_context()}}
+list) that is used for all series, or a named list of them with one entry per
+series. Sub-series that are not named in the list are adjusted without
+user-defined trading day regressors.}
+
+\item{\code{user}}{further user-defined regressors of the regression model (no
+trading days), see the \code{user} argument of
+\code{\link[=perX13]{perX13()}}. Either a single set of regressors (a
+\code{ts}/\code{mts} object or a named list of them) used for the aggregate
+series and all sub-series, or a named list with one set per series. As in
+\code{td}, the names of the list are read as series names when one of them
+names a series. Without \code{groups} a single set is also used for the
+aggregate series itself.}
 
 \item{\code{iterate}}{logical, if TRUE apply the given ... spec/params also to all components.
 For plain ts/mts components, method and template are inherited only if iterate is TRUE.}
@@ -253,6 +280,8 @@ change parameters of components or aggregate
   component = "",
   iterate = TRUE,
   speclist = NULL,
+  td = NULL,
+  user = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -265,6 +294,12 @@ change parameters of components or aggregate
 \item{\code{iterate}}{logical: if TRUE, apply parameter changes to all components recursively}
 
 \item{\code{speclist}}{list with named arguments to be changed}
+
+\item{\code{td}}{trading day regressors, see the \code{td} argument of
+\code{\link[=perHts]{perHts()}}}
+
+\item{\code{user}}{further user-defined regressors, see the \code{user}
+argument of \code{\link[=perHts]{perHts()}}}
 
 \item{\code{...}}{named arguments to be changed (spec options forwarded to updateFun)}
 }

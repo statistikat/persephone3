@@ -14,6 +14,9 @@ perHts(
   speclist = NULL,
   spec = NULL,
   weights = NULL,
+  groups = NULL,
+  td = NULL,
+  user = NULL,
   iterate = TRUE
 )
 }
@@ -56,7 +59,33 @@ returned by \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[r
 \item{weights}{either a vector if the same weight is used for all time
 points or a list of ts objects or a mts object if the weight varies for
 different time points. They must have the same length as the number of
-components.}
+components. In \code{groups} mode a named list with one weight set
+(vector, \code{ts} or \code{mts}) per aggregate is expected.}
+
+\item{groups}{named list that defines the aggregation structure: one entry
+per aggregate series with the names of its sub-series, e.g.
+\code{list(C20_21 = c("C20", "C21"), C = c("C20", "C21", "C22"))}. All
+series (the sub-series and the aggregates) have to be supplied in
+\code{...}/\code{list}. Aggregates are always built from their leaf series,
+so an aggregate that is itself a sub-series of another aggregate is replaced
+by its own sub-series; pass only the series that should be aggregated
+directly to get another structure.}
+
+\item{td}{trading day regressors, see \code{\link[=perTd]{perTd()}} and the
+\code{td} argument of \code{\link[=perX13]{perX13()}}. Either a single
+regressor set (a calendar, precomputed regressors, the output of
+\code{\link[=genTd]{genTd()}} or a \code{\link[=td_context]{td_context()}}
+list) that is used for all series, or a named list of them with one entry per
+series. Sub-series that are not named in the list are adjusted without
+user-defined trading day regressors.}
+
+\item{user}{further user-defined regressors of the regression model (no
+trading days), see the \code{user} argument of
+\code{\link[=perX13]{perX13()}}. Either a single set of regressors (a
+\code{ts}/\code{mts} object with one regressor per column, or a named list of
+such objects) used for the aggregate series and all sub-series, or a named
+list with one set per series. Without \code{groups} a single set is also used
+for the aggregate series itself, which is estimated on its own there.}
 
 \item{iterate}{logical, if TRUE apply the given spec/params also to all components recursively
 (only takes effect when a spec/parameter is supplied). Plain ts/mts components inherit
