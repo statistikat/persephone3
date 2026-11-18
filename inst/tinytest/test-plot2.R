@@ -484,6 +484,12 @@ expect_true(any(grepl("minHeight = 60", hooks(pl), fixed = TRUE)))
 expect_true(any(grepl("__p3hl", hooks(pl), fixed = TRUE)))
 expect_true(any(grepl("plotly_click", hooks(pl), fixed = TRUE)))
 expect_true(any(grepl("line.width", hooks(pl), fixed = TRUE)))
+# the graph div is the widget container itself (plotly's factory renders
+# into it), so the lookup has to check the container, not only its
+# children (a descendant-only querySelector never finds it and silently
+# attaches nothing)
+expect_true(any(grepl("classList.contains('js-plotly-plot')",
+                      hooks(pl), fixed = TRUE)))
 # the dygraph plots get the fitting code as well
 expect_true(any(grepl("data-p3-height", hooks(plot(x)), fixed = TRUE)))
 # the stylesheets of the package are added to the widget as usual, and nothing
