@@ -214,9 +214,9 @@ specNfreq <- function(plotType, n.freq) {
 #' several plot types give a named list with one plot per plot type. With
 #' `layout = "panels"` a single plot is returned in which every combination
 #' of plot type and series type gets a framed panel of its own in a
-#' square-ish grid of equally wide panels, each panel with the height:width
-#' ratio a plot of a single panel would have. For static plots with ggplot2, see
-#' [plotSpectrumGgplot].
+#' grid of at most two equally wide columns, each panel with the
+#' height:width ratio a plot of a single panel would have. For static
+#' plots with ggplot2, see [plotSpectrumGgplot].
 #'
 #' @inheritParams plotSpectrum
 #' @examples
@@ -377,11 +377,12 @@ plotSpectrumPlotly <- function(
         )
       }
     }
-    # a square-ish grid of panels: ceil(sqrt(n)) columns, rows as needed,
-    # the last row may be partially empty (3 panels give 2 columns and
-    # 2 rows). The gap between the panels is wide enough for the titles of
-    # the lower rows when there is more than one row.
-    ncols <- ceiling(sqrt(length(figs)))
+    # the grid of panels has at most two columns and as many rows as
+    # needed (3 panels give 2 columns and 2 rows, 6 give 2 columns and
+    # 3 rows), the last row may be partially empty. The gap between the
+    # panels is wide enough for the titles of the lower rows when there is
+    # more than one row.
+    ncols <- min(2L, length(figs))
     nrows <- ceiling(length(figs) / ncols)
     p <- do.call(
       plotly::subplot,

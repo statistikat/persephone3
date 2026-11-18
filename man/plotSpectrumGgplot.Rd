@@ -39,8 +39,8 @@ value (\code{1:3}) corresponding to one of these characters is also accepted.}
 \item{layout}{character. \code{"overplot"} (default) overlays the spectra of all
 requested series types in a single plot (one plot per plot type).
 \code{"panels"} places every combination of plot type and series type in a
-panel of its own (a single plot object with the panels in a square-ish
-grid of equally wide panels is returned, see \link{plotSpectrum}).}
+panel of its own (a single plot object with the panels in a grid of at
+most two equally wide columns is returned, see \link{plotSpectrum}).}
 
 \item{maxobs}{maximum number of observations of the time series. If NULL,
 \code{maxobs} equals the length of the time series for plotTypes

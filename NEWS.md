@@ -204,10 +204,11 @@
 * `plotSpectrum()` gained a `layout` argument: `"overplot"` (the default)
   overlays all spectra in one plot as before, `"panels"` places every
   combination of `plotType` and `tsType` in a framed panel of its own
-  (a single plot object is returned). The panels form a square-ish grid of
-  `ceiling(sqrt(n))` equally wide columns - two spectra side by side,
-  three in two rows, six in two rows of three - and every panel keeps the
-  height:width ratio a plot of its own would have, whatever their number.
+  (a single plot object is returned). The panels form a grid of at most
+  two equally wide columns and as many rows as needed - two spectra side
+  by side, three in two rows, six in three rows - and every panel keeps
+  the height:width ratio a plot of its own would have, whatever their
+  number.
   The spectral lines are now coloured from a fixed palette (the first
   series in blue), and the plotly engines mark the seasonal frequencies in
   blue and the trading day frequencies in red as the ggplot2 engine does.

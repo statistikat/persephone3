@@ -38,10 +38,10 @@ these characters is also accepted.}
 \item{layout}{character. \code{"overplot"} (default) overlays the spectra of all
 requested series types in a single plot (one plot per plot type).
 \code{"panels"} places every combination of plot type and series type in a
-panel of its own. The panels form a square-ish grid of
-\code{ceiling(sqrt(n))} equally wide columns (two spectra side by side,
-three in two rows, six in two rows of three), each panel with a frame
-and with the height:width ratio a plot of a single panel would have;
+panel of its own. The panels form a grid of at most two equally wide
+columns and as many rows as needed (two spectra side by side, three
+in two rows, six in three rows), each panel with a frame and with the
+height:width ratio a plot of a single panel would have;
 a single plot object is returned (not a list). Panels need more than
 one plot: with a single series type and plot type there is only one
 panel, so \code{"panels"} only adds the frame.}
@@ -69,8 +69,8 @@ with the spectra of several series types overlaid in it (with a legend),
 and several plot types give a named list with one plot per plot type.
 With \code{layout = "panels"} a single plot is returned in which every
 combination of plot type and series type gets a framed panel of its own in
-a square-ish grid of equally wide panels, each panel with the height:width
-ratio a plot of a single panel would have. For static plots with ggplot2,
+a grid of at most two equally wide columns, each panel with the
+height:width ratio a plot of a single panel would have. For static plots with ggplot2,
 see \link{plotSpectrumGgplot}.
 }
 \examples{

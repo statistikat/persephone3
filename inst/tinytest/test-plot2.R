@@ -351,6 +351,32 @@ expect_true(any(grepl("var factor = 1;",
                       vapply(p3s$jsHooks$render, function(h) h$code, ""),
                       fixed = TRUE)))
 
+# more than four panels add rows, not columns: six panels (two plot types
+# over three series types) give two columns and three rows, the height
+# factor of the figure is rows/cols = 1.5
+p6s <- plotSpectrum(x, tsType = c("original", "sa", "irregular"),
+                    plotType = c("arSpec", "periodogram"), layout = "panels")
+lay6 <- plotly::plotly_build(p6s)$x$layout
+expect_equal(length(grep("^xaxis(\\d*)$", names(lay6))), 6)
+# the third row (panels 5 and 6) is below the second one
+expect_true(lay6$yaxis5$domain[2] < lay6$yaxis3$domain[1] - 0.1)
+# and the grid has exactly two columns (panels 1, 3 and 5 are left-aligned)
+expect_equal(lay6$xaxis5$domain, lay6$xaxis3$domain, tolerance = 1e-6)
+expect_equal(lay6$xaxis3$domain, lay6$xaxis$domain, tolerance = 1e-6)
+# "Frequency" under the bottom row, "Spectrum" beside the left column
+atitle <- function(ax) {
+  t <- ax$title
+  if (is.list(t)) t$text %||% "" else if (is.null(t)) "" else as.character(t)
+}
+expect_equal(atitle(lay6$xaxis5), "Frequency")
+expect_equal(atitle(lay6$xaxis6), "Frequency")
+expect_equal(atitle(lay6$xaxis3), "")
+expect_equal(atitle(lay6$yaxis5), "Spectrum")
+expect_equal(atitle(lay6$yaxis6), "")
+expect_true(any(grepl("var factor = 1.5;",
+                      vapply(p6s$jsHooks$render, function(h) h$code, ""),
+                      fixed = TRUE)))
+
 # panels over plot types and series types: one figure, one panel per
 # combination (the named list stays the overplot behaviour)
 ppl <- plotSpectrum(x, tsType = c("original", "sa"),

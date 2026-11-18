@@ -94,8 +94,9 @@ plotSpectrum(obj)  # plotly is the default engine here
 `plotSpectrum()` overlays the spectra of all requested series types in one
 plot (`layout = "overplot"`, the default) or places every combination of
 plot type and series type in a framed panel of its own (`layout =
-"panels"`). The panels form a square-ish grid of equally wide columns
-and every panel keeps the height:width ratio of a single plot:
+"panels"`). The panels form a grid of at most two equally wide columns
+and as many rows as needed, and every panel keeps the height:width ratio
+of a single plot:
 
 ```{r plot-spectrum-panels}
 plotSpectrum(obj, tsType = c("original", "sa", "irregular"),

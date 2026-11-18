@@ -25,8 +25,8 @@
 #' @param layout character. `"overplot"` (default) overlays the spectra of all
 #' requested series types in a single plot (one plot per plot type).
 #' `"panels"` places every combination of plot type and series type in a
-#' panel of its own (a single plot object with the panels in a square-ish
-#' grid of equally wide panels is returned, see [plotSpectrum]).
+#' panel of its own (a single plot object with the panels in a grid of at
+#' most two equally wide columns is returned, see [plotSpectrum]).
 #' @param maxobs maximum number of observations of the time series. If NULL,
 #' `maxobs` equals the length of the time series for plotTypes
 #' `"arSpec"` and `"periodogram"` and `maxobs=96` for plotType `"arSpecBars"`.
@@ -310,9 +310,10 @@ plotSpectrumGgplot <- function(
     d1s <- do.call(rbind, dfl)
     d1s$type <- factor(d1s$type, levels = series_labels)
     d1s$panel <- factor(d1s$panel, levels = unique(titles))
-    # a square-ish grid of panels: ceil(sqrt(n)) columns, rows as needed,
-    # the last row may be partially empty (as in the plotly engine)
-    ncols <- ceiling(sqrt(length(titles)))
+    # the grid of panels has at most two columns and as many rows as
+    # needed, the last row may be partially empty (as in the plotly
+    # engine)
+    ncols <- min(2L, length(titles))
     nrows <- ceiling(length(titles) / ncols)
     panels_main <- if (is.null(main)) {
       if (length(ptypes) == 1) {
