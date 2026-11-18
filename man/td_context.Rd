@@ -12,6 +12,7 @@ td_context(
   holiday = 7,
   contrasts = TRUE,
   name = "REGS_TD",
+  td_labels = NULL,
   method = c("x13", "tramoseats"),
   test = NULL
 )
@@ -49,6 +50,14 @@ seasonally adjusted series then do not overlay the original series).}
 \item{name}{name under which the regressors are registered in the
 modelling context; the individual regressors are then addressed as
 \code{name.column}.}
+
+\item{td_labels}{optional character vector with one name per trading day
+regressor (one per column of \code{td}) naming the regressors, e.g.
+\code{c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")}.
+The labels are used for the regressors registered in the modelling
+context and shown in the specification and in \link[=summary.persephone]{summary}.
+By default the regressors keep the column names of \code{td} (the day names of
+\code{\link[=genTd]{genTd()}}, the \verb{group_*} names of \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}).}
 
 \item{method}{the seasonal adjustment method the specification is built
 for, i.e. "x13" or "tramoseats". Only relevant for the default of \code{test}.}

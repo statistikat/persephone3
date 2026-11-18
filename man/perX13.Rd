@@ -11,6 +11,7 @@ perX13(
   userdefined = NULL,
   speclist = NULL,
   td = NULL,
+  user = NULL,
   ...
 )
 }
@@ -42,6 +43,20 @@ centered day regressors \verb{[[3]][, 1:6]} are then used), a precomputed
 registered in
 \code{context} and the trading days spec block is set to \code{option = "UserDefined"}, see \code{\link[=perTd]{perTd()}}. Arguments \verb{td.*} given in \code{...} or \code{speclist}
 override the automatically generated ones.}
+
+\item{user}{further user-defined regressors for the regression model, e.g.
+the leap year regressor \code{genTd()[[3]][, "lpYear", drop = FALSE]}. A
+\code{ts}/\code{mts} object with one regressor per column or a named list of
+such objects; the regressors are named by their column names (the name of a
+list element is used when a regressor has none) and must have the frequency
+of \code{ts} and cover its full span. Keep the column name by subsetting with
+\code{drop = FALSE} or by naming the list element: an unnamed regressor is
+called "user1", "user2", ... in the output and in \code{\link[=summary.persephone]{summary()}}. They are registered in \code{context} and added to the
+regression model with
+\code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar()}}, and
+their coefficients are shown by \link[=summary.persephone]{summary}. Can be
+combined with \code{td}, which then estimates the trading day regressors and
+these regressors in one model.}
 
 \item{...}{additional arguments for customizing the model specifications,
 passed to the rjd3 specification functions internally.
@@ -142,6 +157,13 @@ AT <- national_calendar(list(special_day("NEWYEAR"), fixed_day(1, 6),
 obj3 <- perX13(AirPassengers, "rsa3", td = AT)
 obj3$run()
 obj3$output$diagnostics$td.ftest
+
+# trading days and the leap year regressor of genTd() in one model
+tdAT <- genTd(freq = 12, firstYear = 1949, lastYear = 1961, hd = "01-01")
+obj4 <- perX13(AirPassengers, "rsa3", td = tdAT[[3]][, 1:6, drop = FALSE],
+               user = tdAT[[3]][, 7, drop = FALSE])
+obj4$run()
+summary(obj4)
 
 }
 \references{

@@ -83,6 +83,17 @@ tramoseatsSingle <- R6::R6Class(
 #' `context` and the trading days spec block is set to `option =
 #' "UserDefined"`, see [perTd()]. Arguments `td.*` given in `...` or `speclist`
 #' override the automatically generated ones.
+#' @param user further user-defined regressors for the regression model, e.g.
+#' the leap year regressor `genTd()[[3]][, "lpYear", drop = FALSE]`. A
+#' `ts`/`mts` object with one regressor per column or a named list of such
+#' objects; the regressors are named by their column names (the name of a
+#' list element is used when a regressor has none) and must have the frequency
+#' of `ts` and cover its full span. Keep the column name by subsetting with
+#' `drop = FALSE` or by naming the list element: an unnamed regressor is
+#' called "user1", "user2", ... in the output and in `summary()`. They are registered in `context` and added to the regression model
+#' with [rjd3toolkit::add_usrdefvar()], and their coefficients are shown by
+#' [summary][summary.persephone()]. Can be combined with `td`, which then
+#' estimates the trading day regressors and these regressors in one model.
 #' @param userdefined a character vector of user-defined variables to be included in the output,
 #' passed as the `userdefined` argument to [rjd3tramoseats::tramoseats_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
@@ -177,6 +188,9 @@ perTramo <- function(ts,
                    userdefined = NULL,
                    speclist = NULL,
                    td = NULL,
+                   user = NULL,
                    ...) {
-  tramoseatsSingle$new(ts, match.arg(template), context, userdefined, speclist, td, ...)
+  tramoseatsSingle$new(
+    ts, match.arg(template), context, userdefined, speclist, td, user, ...
+  )
 }

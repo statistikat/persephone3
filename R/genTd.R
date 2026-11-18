@@ -17,12 +17,13 @@
 #'        individual day, month and year. Holidays which are delivered through the
 #'        parameter hd are assigned to the number of sundays. 2. multiple time
 #'        series object with 6 non-centered trading day regressors plus 1
-#'        non-centered working day regressor (columns 1 to 6 refer to Mondays to
-#'        Saturdays, colunm 7 refers to the one-regressor case of 5 working days).
+#'        non-centered leap year regressor (columns 1 to 6 refer to Mondays to
+#'        Saturdays, column 7 to the leap year regressor "lpYear").
 #'        In case of trading day adjustment the first 6 columns have to be selected,
-#'        in case of wording day adjustment only column 7 has to be selected.
+#'        the leap year regressor is used on its own (see the `user` argument of
+#'        [perX13()]).
 #'        3. multiple time series object with 6 centered trading day regressors
-#'        plus 1 centered working day regressor
+#'        plus 1 centered leap year regressor
 #'
 #'
 #' @examples

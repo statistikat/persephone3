@@ -131,8 +131,9 @@ generate_Qr_List <- function(x){
       x$output$preprocessing$description$log, #TF
     `ARIMA Model` = bpbdbq,
     # Calendar effects
-    # Achtung, LeapYear und MovingHoliday noch testen
-    LeapYear = ifelse(is.null(x$output$user_defined$regression.lp),FALSE, TRUE), # muss ich hier noch auf Signifikanz checken oder werden die eh nur inkludiert wenn signifikant?
+    # a dedicated leap year regressor or a log transformation with leap year
+    # or length-of-month adjustment (see hasLeapYear())
+    LeapYear = hasLeapYear(x),
     MovingHoliday = ifelse(is.null(x$output$user_defined$regression.easter),FALSE,TRUE),# oder "regression.leaster"?
     NbTD = x$output$user_defined$regression.ntd ,# oder `regression.td(*)`?
     # including lpyear -> kontrollieren

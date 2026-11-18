@@ -54,6 +54,7 @@ create a new single object
   userdefined = NULL,
   speclist = NULL,
   td = NULL,
+  user = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -83,6 +84,16 @@ computed with \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}},
 \code{\link[=td_context]{td_context()}}. The regressors are added to \code{context} and the trading
 days spec block is set to \code{"UserDefined"} (see \code{\link[=perTd]{perTd()}}). \verb{td.*}
 arguments in \code{...} or \code{speclist} override the generated defaults.}
+
+\item{\code{user}}{user-defined regressors for the regression model that are
+not trading days, e.g. the leap year regressor
+(\code{genTd()[[3]][, "lpYear", drop = FALSE]}). A \code{ts}/\code{mts} object with
+one regressor per column, or a named list of such objects; the
+regressors must have the frequency of \code{ts} and cover its full span.
+They are added to \code{context} and to the regression model (with
+\code{\link[rjd3toolkit:add_usrdefvar]{rjd3toolkit::add_usrdefvar()}}) and shown in
+\link[=summary.persephone]{summary}. Together with \code{td} this estimates the
+trading days and further regressors in one model.}
 
 \item{\code{...}}{passed to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}} if no speclist parameter is set.}
 }

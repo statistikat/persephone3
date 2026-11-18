@@ -151,6 +151,7 @@ update parameters for the adjustment
   context = NULL,
   userdefined = NULL,
   td = NULL,
+  user = NULL,
   iterate = FALSE,
   component = "",
   ...
@@ -174,6 +175,11 @@ update parameters for the adjustment
 merged into the current context and the trading days spec block is set
 to \code{"UserDefined"}. \code{NULL} (the default) leaves the trading day
 specification unchanged.}
+\item{\code{user}}{further user-defined regressors for the regression model,
+see \code{\link[=perX13]{perX13()}}; they are merged into the current context
+and added to the regression model. \code{NULL} (the default) leaves that
+unchanged.}
+
 
 \item{\code{iterate}}{logical, whether to iterate (for hierarchical objects)}
 

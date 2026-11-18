@@ -22,32 +22,29 @@ persephoneSingle <- R6::R6Class(
     #'   [td_context()]. The regressors are added to `context` and the trading
     #'   days spec block is set to `"UserDefined"` (see [perTd()]). `td.*`
     #'   arguments in `...` or `speclist` override the generated defaults.
+    #' @param user user-defined regressors for the regression model that are
+    #'   not trading days, e.g. the leap year regressor
+    #'   (`genTd()[[3]][, "lpYear", drop = FALSE]`). A `ts`/`mts` object with
+    #'   one regressor per column, or a named list of such objects; the
+    #'   regressors must have the frequency of `ts` and cover its full span.
+    #'   They are added to `context` and to the regression model (with
+    #'   [rjd3toolkit::add_usrdefvar()]) and shown in
+    #'   [summary][summary.persephone()]. Together with `td` this estimates the
+    #'   trading days and further regressors in one model.
     #' @param userdefined passed as the `userdefined` argument of [x13_fast()] or
     #'   [tramoseats_fast()]
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #' passed to the rjd3 specification functions internally. As alternative input to `...`.
     #' @param ... passed to [x13_spec()] or [tramoseats_spec()] if no speclist parameter is set.
-    initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL, speclist = NULL, td = NULL, ...) {
+    initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL,
+                          speclist = NULL, td = NULL, user = NULL, ...) {
       private$ts_internal <- ts
       private$tsp_internal <- tsp(ts)
       dots <- list(...)
       if (!is.null(td)) {
         td_obj <- resolve_td_input(ts, td, private$.method)
         # merge the trading day regressors into an existing context, if any
-        if (!is.null(context)) {
-          if (!is.list(context) || !all(c("calendars", "variables") %in% names(context))) {
-            stop(
-              "'context' must be a modelling context created with ",
-              "rjd3toolkit::modelling_context()",
-              call. = FALSE
-            )
-          }
-          td_obj$context <- modifyList(
-            context,
-            list(variables = td_obj$context$variables)
-          )
-        }
-        context <- td_obj$context
+        context <- context_add(context, td_obj$context$variables)
         # user td.* arguments (speclist and dots) override the generated ones;
         # since updateFun ignores the dots once a speclist is given, all
         # arguments are merged into one list (speclist entries winning)
@@ -59,6 +56,14 @@ persephoneSingle <- R6::R6Class(
           dots <- list()
         }
       }
+      # further user-defined regressors (the leap year regressor and the
+      # like); the specification cannot hold several of them under the same
+      # usrdefvar.* arguments, so they are added to it one by one below
+      user_obj <- if (is.null(user)) NULL else user_context(ts, user)
+      if (!is.null(user_obj)) {
+        context <- context_add(context, user_obj$variables)
+      }
+      check_user_td_combination(private$.method, td, user)
       # td.test may also come from speclist or dots (it overrides the
       # automatically generated one), so it is validated here, where all
       # paths have been merged
@@ -79,6 +84,12 @@ persephoneSingle <- R6::R6Class(
         private$updateFun,
         c(update_args, dots)
       )
+      if (!is.null(user_obj)) {
+        private$params_internal <- spec_add_usrdefvars(
+          private$params_internal,
+          user_obj$vars
+        )
+      }
     },
     #' @description run the model
     #' @param verbose wether to display outputs after the run

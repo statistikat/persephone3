@@ -25,7 +25,9 @@ measurements
 \item \strong{End} denotes the end of the time series
 \item \strong{Log.Transformation}
 \item \strong{ARIMA.Model}
-\item \strong{LeapYear}
+\item \strong{LeapYear} \code{TRUE} if a dedicated leap year regressor is part of the
+regression or if the series is log transformed with a leap year or
+length-of-month adjustment (\code{transform.adjust = "leapyear"} or \code{"lom"})
 \item \strong{MovingHoliday}
 \item \strong{NbTF}
 \item \strong{Noutliers} Number of outliers

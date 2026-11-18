@@ -62,6 +62,9 @@ persephone <- R6::R6Class(
     #'   merged into the current context and the trading days spec block is set
     #'   to `"UserDefined"`. `NULL` (the default) leaves the trading day
     #'   specification unchanged.
+    #' @param user further user-defined regressors for the regression model,
+    #'   see [perX13()]; they are merged into the current context and added to
+    #'   the regression model. `NULL` (the default) leaves that unchanged.
     #' @param userdefined character vector of user-defined output variables
     #' @param iterate logical, whether to iterate (for hierarchical objects)
     #' @param component character, component id for hierarchical objects
@@ -73,6 +76,7 @@ persephone <- R6::R6Class(
       context = NULL,
       userdefined = NULL,
       td = NULL,
+      user = NULL,
       iterate = FALSE,
       component = "",
       ...
@@ -87,13 +91,10 @@ persephone <- R6::R6Class(
       dots <- list(...)
       if (!is.null(td)) {
         td_obj <- resolve_td_input(private$ts_internal, td, private$.method)
-        if (!is.null(private$context_internal)) {
-          td_obj$context <- modifyList(
-            private$context_internal,
-            list(variables = td_obj$context$variables)
-          )
-        }
-        private$context_internal <- td_obj$context
+        private$context_internal <- context_add(
+          private$context_internal,
+          td_obj$context$variables
+        )
         if (is.null(speclist)) {
           speclist <- modifyList(td_obj$speclist, dots)
           dots <- list()
@@ -102,6 +103,18 @@ persephone <- R6::R6Class(
           dots <- list()
         }
       }
+      user_obj <- if (is.null(user)) {
+        NULL
+      } else {
+        user_context(private$ts_internal, user)
+      }
+      if (!is.null(user_obj)) {
+        private$context_internal <- context_add(
+          private$context_internal,
+          user_obj$variables
+        )
+      }
+      check_user_td_combination(private$.method, td, user)
       # td.test may also come from dots or speclist (it overrides the
       # automatically generated one), so it is validated here, where all
       # paths have been merged
@@ -127,6 +140,12 @@ persephone <- R6::R6Class(
           dots
         )
       )
+      if (!is.null(user_obj)) {
+        private$params_internal <- spec_add_usrdefvars(
+          private$params_internal,
+          user_obj$vars
+        )
+      }
     },
     #' @description visualize the results of an adjustment
     #' @param ...  passed to [plot()]

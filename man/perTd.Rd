@@ -14,6 +14,7 @@ perTd(
   holiday = 7,
   contrasts = TRUE,
   name = "REGS_TD",
+  td_labels = NULL,
   test = NULL,
   context = NULL,
   userdefined = NULL,
@@ -57,6 +58,11 @@ given. See the remark on the log transformation under \code{\link[=td_context]{t
 \item{name}{name under which the regressors are registered in the
 modelling context; the individual regressors are addressed as
 \code{name.column}.}
+
+\item{td_labels}{optional character vector with one name per trading day
+regressor (e.g. \code{c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")}) naming the regressors; see \code{\link[=td_context]{td_context()}}. The
+labels are shown in \link[=summary.persephone]{summary} instead of the
+default \verb{group_*} names of \code{\link[rjd3toolkit:calendar_td]{rjd3toolkit::calendar_td()}}.}
 
 \item{test}{significance tests for the trading day regression coefficients
 (\code{td.test}). For x13, one of \code{"Add"}, \code{"Remove"} or \code{"None"}, optionally

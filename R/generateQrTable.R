@@ -15,7 +15,9 @@
 #' * __End__ denotes the end of the time series
 #' * __Log.Transformation__
 #' * __ARIMA.Model__
-#' * __LeapYear__
+#' * __LeapYear__ `TRUE` if a dedicated leap year regressor is part of the
+#'   regression or if the series is log transformed with a leap year or
+#'   length-of-month adjustment (`transform.adjust = "leapyear"` or `"lom"`)
 #' * __MovingHoliday__
 #' * __NbTF__
 #' * __Noutliers__ Number of outliers

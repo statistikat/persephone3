@@ -1,3 +1,232 @@
+# period of a time series as "2000.1-2019.12"
+spanLabel <- function(s) {
+  paste0(
+    paste(stats::start(s), collapse = "."), "-",
+    paste(stats::end(s), collapse = ".")
+  )
+}
+
+# does a regressor keep up with the series? Regressors that are too short are
+# answered by x13/tramoseats with an uninformative java error, so the frequency
+# and the span are checked here (`name` is the argument shown in the message,
+# `hint` says how to fix it).
+check_regressor_span <- function(ts, x, name, hint) {
+  if (stats::frequency(x) != stats::frequency(ts) ||
+      stats::start(x)[1] > stats::start(ts)[1] ||
+      stats::end(x)[1] < stats::end(ts)[1]) {
+    stop(
+      name, " must have the same frequency as 'ts' and cover its full span ",
+      "(series: ", spanLabel(ts), ", regressors: ", spanLabel(x), "); ",
+      hint,
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+# add variables to a modelling context (the `context` argument of x13_fast()),
+# keeping the calendars and variables that are already in it. NULL (no context
+# yet) and an empty list of variables do nothing.
+#
+# A regressor is either a time series or a regressor of a modelling context
+# already; only the time series are given to modelling_context(), which turns
+# them into the form the java side works with. The names that come out of it
+# are kept: a regressor is addressed later as "<name of the variable in the
+# context>.<name of its column>", so renaming what modelling_context() named
+# would break that addressing. Two variables of the same name (single column
+# regressors all end up in the variable "r") are therefore joined by their
+# columns instead of being put next to each other.
+context_add <- function(context, variables) {
+  if (length(variables) == 0) {
+    return(context)
+  }
+  raw <- vapply(variables, stats::is.ts, TRUE)
+  if (is.null(context)) {
+    if (all(raw)) {
+      return(rjd3toolkit::modelling_context(variables = variables))
+    }
+    context <- rjd3toolkit::modelling_context()
+  } else if (!is.list(context) ||
+             !all(c("calendars", "variables") %in% names(context))) {
+    stop(
+      "'context' must be a modelling context created with ",
+      "rjd3toolkit::modelling_context()",
+      call. = FALSE
+    )
+  }
+  new <- variables
+  if (any(raw)) {
+    new <- c(
+      rjd3toolkit::modelling_context(variables = variables[raw])$variables,
+      variables[!raw]
+    )
+  }
+  for (nm in names(new)) {
+    if (!nm %in% names(context$variables)) {
+      context$variables[[nm]] <- new[[nm]]
+      next
+    }
+    old <- context_pieces(context$variables[[nm]], nm)
+    add <- context_pieces(new[[nm]], nm)
+    both <- intersect(names(add), names(old))
+    # the same regressor again (as it happens when updateParams() merges the
+    # trading day regressors into the context of a run that already has them)
+    # is left alone; a different regressor of the same name is an error
+    same <- vapply(both, function(p) identical(old[[p]], add[[p]]), TRUE)
+    if (any(!same)) {
+      stop(
+        "the modelling context already has the regressor",
+        if (sum(!same) > 1) "s " else " ",
+        paste0("\"", both[!same], "\"", collapse = ", "),
+        "; pass it only once or give it another name",
+        call. = FALSE
+      )
+    }
+    context$variables[[nm]] <- c(old, add[!names(add) %in% both])
+  }
+  context
+}
+
+# the regressors of one variable of a modelling context as a named list: the
+# variable of a single regressor is that time series itself, the variable of
+# several regressors is a list of them named by their columns
+context_pieces <- function(v, nm) {
+  if (is.list(v)) {
+    return(v)
+  }
+  stats::setNames(list(v), colnames(v)[[1]] %||% nm)
+}
+
+# add the regressors of user_context() to a specification: one call of
+# add_usrdefvar() per regressor, because the specification arguments for such a
+# regressor (usrdefvar.name and the like) hold only one of them. A regressor
+# that the specification already has is left alone (updateParams() works on the
+# specification of the earlier call, which still holds them).
+spec_add_usrdefvars <- function(spec, vars) {
+  ids <- vapply(vars, function(var) paste0(var$group, ".", var$name), "")
+  seen <- spec_usrdefvar_ids(spec)
+  for (i in which(!ids %in% seen)) {
+    var <- vars[[i]]
+    spec <- rjd3toolkit::add_usrdefvar(
+      spec,
+      group = var$group,
+      name = var$name,
+      label = var$label
+    )
+  }
+  spec
+}
+
+# the ids ("group.name") of the user-defined regressors of a specification
+spec_usrdefvar_ids <- function(spec) {
+  regs <- lapply(c("regarima", "tramo"), function(block) {
+    tryCatch(unclass(spec)[[block]]$regression, error = function(e) NULL)
+  })
+  ids <- unlist(lapply(regs, function(reg) {
+    vapply(reg$users %||% list(), function(u) as.character(u$id), "")
+  }), use.names = FALSE)
+  unique(ids)
+}
+
+# tramoseats takes either the user-defined trading day regressors of `td` or
+# the further regressors of `user`, not both (the second list replaces the
+# first in the specification), while x13 estimates both together
+check_user_td_combination <- function(method, td, user) {
+  if (!is.null(td) && !is.null(user) && method == "tramoseats") {
+    warning(
+      "tramoseats does not estimate the user-defined trading day regressors ",
+      "of `td` together with the further regressors of `user`; it uses the ",
+      "regressors of `user` alone. x13 estimates both (see perX13()).",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+# name of a regressor that the java side accepts: only letters, digits and "_"
+# (other characters are replaced, which is done silently by rjd3, so it is done
+# here instead); a name must not start with a digit. The original name is kept
+# as the label of the regressor, which is what summary() shows.
+safe_var_name <- function(name) {
+  out <- gsub("[^A-Za-z0-9_]", "_", name)
+  out <- paste0(ifelse(grepl("^[0-9]", out), "V", ""), out)
+  out
+}
+
+# the `user` argument of perX13()/perTramo(): user-defined regressors for the
+# regression model that are not trading days, e.g. the leap year regressor
+# (column "lpYear" of genTd()[[3]]). One named regressor is made per column,
+# named by the column names; the name of a list element is used when that
+# regressor has no column names. The result is what belongs to such a
+# regressor: the variables for the modelling context and the arguments for
+# rjd3toolkit::add_usrdefvar(), which perX13()/perTramo() add to the
+# specification one by one (the spec cannot hold several regressors under the
+# same "usrdefvar.*" arguments).
+user_context <- function(ts, user, group = "r") {
+  if (!stats::is.ts(ts)) {
+    stop("'ts' must be a time series", call. = FALSE)
+  }
+  if (stats::is.ts(user)) {
+    user <- list(user)
+  }
+  if (!is.list(user) || length(user) == 0 ||
+      !all(vapply(user, stats::is.ts, TRUE))) {
+    stop(
+      "'user' must be a ts/mts object with one regressor per column or a ",
+      "non-empty named list of such objects",
+      call. = FALSE
+    )
+  }
+  listNames <- names(user)
+  if (is.null(listNames)) {
+    listNames <- rep("", length(user))
+  }
+  variables <- list()
+  vars <- list()
+  for (i in seq_along(user)) {
+    x <- as.matrix(user[[i]])
+    check_regressor_span(
+      ts, user[[i]], "'user'",
+      paste(
+        "build the regressor over the span of the series",
+        "(for genTd() pass matching values of firstYear and lastYear)"
+      )
+    )
+    base <- listNames[[i]]
+    cols <- colnames(x)
+    if (is.null(cols)) {
+      cols <- if (ncol(x) == 1 && nzchar(base)) {
+        base
+      } else {
+        paste0(if (nzchar(base)) base else "user", seq_len(ncol(x)))
+      }
+    }
+    name <- safe_var_name(cols)
+    dup <- intersect(name, names(variables))
+    if (length(dup) > 0) {
+      stop(
+        "'user' has the regressor",
+        if (length(dup) > 1) "s " else " ",
+        paste0("\"", dup, "\"", collapse = ", "),
+        " twice; name the columns of the regressors differently",
+        call. = FALSE
+      )
+    }
+    for (j in seq_along(name)) {
+      variables[[name[[j]]]] <- stats::ts(
+        x[, j, drop = FALSE],
+        start = stats::start(user[[i]]),
+        frequency = stats::frequency(user[[i]])
+      )
+      colnames(variables[[name[[j]]]]) <- name[[j]]
+      vars[[length(vars) + 1L]] <- list(
+        group = group, name = name[[j]], label = cols[[j]]
+      )
+    }
+  }
+  list(variables = variables, vars = vars)
+}
+
 #' Create trading day regressors and a modelling context
 #'
 #' Helper that constructs user-defined trading day regressors and registers
@@ -33,6 +262,14 @@
 #' @param name name under which the regressors are registered in the
 #'   modelling context; the individual regressors are then addressed as
 #'   `name.column`.
+#' @param td_labels optional character vector with one name per trading day
+#'   regressor (one per column of `td`) naming the regressors, e.g.
+#'   `c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")`.
+#'   The labels are used for the regressors registered in the modelling
+#'   context and shown in the specification and in
+#'   [summary][summary.persephone()].
+#'   By default the regressors keep the column names of `td` (the day names of
+#'   [genTd()], the `group_*` names of [rjd3toolkit::calendar_td()]).
 #' @param method the seasonal adjustment method the specification is built
 #'   for, i.e. "x13" or "tramoseats". Only relevant for the default of `test`.
 #' @param test significance tests for the trading day regression coefficients,
@@ -58,6 +295,7 @@ td_context <- function(ts,
                        holiday = 7,
                        contrasts = TRUE,
                        name = "REGS_TD",
+                       td_labels = NULL,
                        method = c("x13", "tramoseats"),
                        test = NULL) {
   method <- match.arg(method)
@@ -90,14 +328,6 @@ td_context <- function(ts,
     stop("'ts' must be a time series", call. = FALSE)
   }
 
-  # period of a time series as "2000.1-2019.12"
-  spanLabel <- function(s) {
-    paste0(
-      paste(stats::start(s), collapse = "."), "-",
-      paste(stats::end(s), collapse = ".")
-    )
-  }
-
   if (!is.null(calendar)) {
     td <- rjd3toolkit::calendar_td(
       calendar = calendar,
@@ -106,14 +336,10 @@ td_context <- function(ts,
       holiday = holiday,
       contrasts = contrasts
     )
-  } else if (stats::frequency(td) != stats::frequency(ts) ||
-             stats::start(td)[1] > stats::start(ts)[1] ||
-             stats::end(td)[1] < stats::end(ts)[1]) {
-    stop(
-      "'td' must have the same frequency as 'ts' and cover its full span ",
-      "(series: ", spanLabel(ts), ", regressors: ", spanLabel(td), "); ",
-      "pass matching years to genTd() or calendar_td()",
-      call. = FALSE
+  } else {
+    check_regressor_span(
+      ts, td, "'td'",
+      "pass matching years to genTd() or calendar_td()"
     )
   }
 
@@ -121,6 +347,20 @@ td_context <- function(ts,
     test <- if (method == "x13") c("Add", "Joint_F") else "Joint_F"
   }
   check_td_test(test, method)
+
+  # name the regressors (the labels flow into the context and the spec and
+  # are shown in summary())
+  if (!is.null(td_labels)) {
+    if (!is.character(td_labels) || length(td_labels) != ncol(td) ||
+        anyNA(td_labels) || any(!nzchar(td_labels))) {
+      stop(
+        "'td_labels' must be a character vector with one non-empty name per ",
+        "trading day regressor (", ncol(td), ")",
+        call. = FALSE
+      )
+    }
+    colnames(td) <- td_labels
+  }
 
   context <- rjd3toolkit::modelling_context(
     variables = stats::setNames(list(td), name)
@@ -228,6 +468,11 @@ resolve_td_input <- function(ts, td, method) {
 #' @param name name under which the regressors are registered in the
 #'   modelling context; the individual regressors are addressed as
 #'   `name.column`.
+#' @param td_labels optional character vector with one name per trading day
+#'   regressor (e.g. `c("Monday", "Tuesday", "Wednesday", "Thursday",
+#'   "Friday", "Saturday")`) naming the regressors; see [td_context()]. The
+#'   labels are shown in [summary][summary.persephone()] instead of the
+#'   default `group_*` names of [rjd3toolkit::calendar_td()].
 #' @param test significance tests for the trading day regression coefficients
 #'   (`td.test`). For x13, one of `"Add"`, `"Remove"` or `"None"`, optionally
 #'   combined with `"Joint_F"`; the default is `c("Add", "Joint_F")`. For
@@ -303,6 +548,7 @@ perTd <- function(ts,
                   holiday = 7,
                   contrasts = TRUE,
                   name = "REGS_TD",
+                  td_labels = NULL,
                   test = NULL,
                   context = NULL,
                   userdefined = NULL,
@@ -317,6 +563,7 @@ perTd <- function(ts,
     holiday = holiday,
     contrasts = contrasts,
     name = name,
+    td_labels = td_labels,
     method = method,
     test = test
   )
