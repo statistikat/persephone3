@@ -5,11 +5,15 @@
 # coefficient, with coef, stderr, t value and P(>|t|); the standard errors
 # come from the diagonal of the covariance matrix bvar of the estimated
 # coefficients (the same mapping as in getOutliers()), the p-values use
-# neffectiveobs - nparams degrees of freedom
-sumCoefTable <- function(x, types, labels = NULL) {
+# neffectiveobs - nparams degrees of freedom. `also` is an optional predicate
+# over the variables, used to keep additional variables (e.g. the user-defined
+# leap year regressors)
+sumCoefTable <- function(x, types, labels = NULL, also = NULL) {
   pp <- x$output$preprocessing
   variables <- pp$description$variables
-  keep <- which(vapply(variables, function(v) as.character(v$type) %in% types, TRUE))
+  keep <- which(vapply(variables, function(v) {
+    as.character(v$type) %in% types || (!is.null(also) && isTRUE(also(v)))
+  }, TRUE))
   if (length(keep) == 0) {
     return(NULL)
   }
@@ -68,8 +72,9 @@ sumCoefTable <- function(x, types, labels = NULL) {
 }
 
 # Wald test of H0: all coefficients of the variables of the given types are
-# zero: F = (b' V^-1 b)/q with q the number of coefficients, against F(q, df)
-sumWaldF <- function(x, types) {
+# zero: F = (b' V^-1 b)/q with q the number of coefficients, against F(q, df).
+# `also` is an optional predicate over the variables, as in sumCoefTable().
+sumWaldF <- function(x, types, also = NULL) {
   pp <- x$output$preprocessing
   variables <- pp$description$variables
   n_est <- vapply(variables, function(v) {
@@ -79,7 +84,8 @@ sumWaldF <- function(x, types) {
       sum(as.character(v$coef$type) == "ESTIMATED")
     }
   }, integer(1))
-  sel <- vapply(variables, function(v) as.character(v$type) %in% types, TRUE) &
+  sel <- (vapply(variables, function(v) as.character(v$type) %in% types, TRUE) |
+    vapply(variables, function(v) !is.null(also) && isTRUE(also(v)), TRUE)) &
     n_est > 0
   b <- pp$estimation$b
   bvar <- pp$estimation$bvar
@@ -105,10 +111,17 @@ sumWaldF <- function(x, types) {
        pvalue = stats::pf(fstat, q, df, lower.tail = FALSE))
 }
 
+# the day names used for the trading day regressors, in the order of the
+# trading day groups (Monday to Saturday, with Sunday as the reference day of
+# the contrasts or as the seventh regressor)
+sumTdDays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+               "Saturday", "Sunday")
+
 # labels of the trading day coefficients: the names of the user-defined
-# regressor columns (e.g. "Monday", "group_1") when the spec uses
-# uservariables, otherwise the day abbreviations of the built-in
-# trading day variables
+# regressor columns (e.g. "Monday") when the spec uses uservariables,
+# otherwise the day names of the built-in trading day variables; the generic
+# names of the calendar groups ("group_0" to "group_6") are replaced by the
+# day names of the default grouping (see perTd())
 sumTdLabels <- function(x, n) {
   users <- NULL
   if (inherits(x, "x13Single")) {
@@ -120,13 +133,33 @@ sumTdLabels <- function(x, n) {
   }
   if (length(users) > 0 && !anyNA(users)) {
     nm <- sub("^[^.]*\\.", "", as.character(users))
+    if (all(grepl("^group_[0-6]$", nm[seq_len(min(n, length(nm)))]))) {
+      # the generic group names of rjd3toolkit::calendar_td() with the
+      # default grouping: the regressors are the days Monday to Saturday
+      # (the holiday/Sunday group is the reference of the contrasts)
+      nm[seq_len(min(n, length(nm)))] <- sumTdDays[seq_len(min(n, length(nm)))]
+    }
     if (length(nm) >= n) {
       return(nm[seq_len(n)])
     }
   }
-  days <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-            "Saturday", "Sunday")
-  if (n <= 7) days[seq_len(n)] else paste0("td", seq_len(n))
+  if (n <= 7) sumTdDays[seq_len(n)] else paste0("td", seq_len(n))
+}
+
+# is v a user-defined leap year regressor (e.g. the "lpYear"/"leapYear" column
+# of genTd() or a dedicated "leapYear" variable)? A regressor that is registered
+# as a user-defined variable of the regression model (the `user` argument of
+# perX13()/perTramo()) comes with the type "UNSPECIFIED", a leap year variable
+# of the specification itself with the type "LP" or "USER".
+isUserLeapVar <- function(v) {
+  as.character(v$type) %in% c("USER", "UNSPECIFIED") &&
+    grepl("leap|lpyear|lp\\.year|^lpy", v$name, ignore.case = TRUE)
+}
+
+# is v a user-defined regressor of the regression model that is shown in its own
+# table (the leap year regressors belong to the "Mean / Leap year" table)?
+isUserVar <- function(v) {
+  as.character(v$type) %in% c("USER", "UNSPECIFIED") && !isUserLeapVar(v)
 }
 
 # one row per coefficient of a variable: for the TD variable, the label
@@ -139,6 +172,9 @@ sumVarLabels <- function(x, v) {
   if (as.character(v$type) %in% c("AO", "LS", "TC")) {
     return(sumOutlierName(x, v))
   }
+  if (isUserLeapVar(v)) {
+    return("leap year")
+  }
   switch(
     as.character(v$type),
     MEAN = "const",
@@ -146,6 +182,81 @@ sumVarLabels <- function(x, v) {
     EASTER = "easter",
     v$name
   )
+}
+
+# does the model account for leap years? True if a dedicated leap year
+# regressor is part of the regression (the LP variable or a user-defined
+# regressor named like a leap year) or if the series is log transformed with
+# a leap year or length-of-month adjustment (transform.adjust = "leapyear" or
+# "lom"), which includes the leap day effect implicitly. An automatic
+# adjustment ("Auto") cannot be resolved from the specification and does not
+# count.
+hasLeapYear <- function(x) {
+  pp <- x$output$preprocessing
+  variables <- pp$description$variables
+  if (any(vapply(variables, function(v) {
+    as.character(v$type) == "LP" || isUserLeapVar(v)
+  }, TRUE))) {
+    return(TRUE)
+  }
+  if (isTRUE(pp$description$log)) {
+    adj <- NULL
+    if (inherits(x, "x13Single")) {
+      adj <- tryCatch(unclass(x$params)$regarima$transform$adjust,
+                      error = function(e) NULL)
+    } else if (inherits(x, "tramoseatsSingle")) {
+      adj <- tryCatch(unclass(x$params)$tramo$transform$adjust,
+                      error = function(e) NULL)
+    }
+    if (is.character(adj) && length(adj) > 0 &&
+        tolower(adj[1]) %in% c("leapyear", "lom")) {
+      return(TRUE)
+    }
+  }
+  FALSE
+}
+
+# the derived Sunday regressor of the trading day regression: when the six
+# regressors are the days Monday to Saturday against the (reference) Sunday,
+# the Sunday effect is minus the sum of the six effects; its standard error
+# follows from the full covariance of the six coefficients (square root of
+# 1' V 1). NULL when the regression does not have the six day regressors.
+sumTdSunday <- function(x) {
+  pp <- x$output$preprocessing
+  variables <- pp$description$variables
+  n_est <- vapply(variables, function(v) {
+    if (is.null(v$coef$type)) {
+      0L
+    } else {
+      sum(as.character(v$coef$type) == "ESTIMATED")
+    }
+  }, integer(1))
+  sel <- vapply(variables, function(v) as.character(v$type) == "TD", TRUE) &
+    n_est > 0
+  if (sum(n_est[sel]) != 6L) {
+    return(NULL)
+  }
+  b <- pp$estimation$b
+  bvar <- pp$estimation$bvar
+  if (length(b) == 0 || nrow(bvar) != sum(n_est)) {
+    return(NULL)
+  }
+  first <- cumsum(c(0L, head(n_est, -1))) + 1L
+  idx <- unlist(lapply(which(sel), function(i) {
+    first[i] + seq_len(n_est[i]) - 1L
+  }))
+  ones <- rep(1, length(idx))
+  coef <- -sum(b[idx])
+  stde <- sqrt(drop(crossprod(ones, bvar[idx, idx, drop = FALSE] %*% ones)))
+  df <- pp$estimation$likelihood$neffectiveobs -
+    pp$estimation$likelihood$nparams
+  out <- data.frame(
+    coef = coef, stderr = stde, t = coef / stde,
+    p = 2 * stats::pt(abs(coef / stde), df, lower.tail = FALSE),
+    row.names = "Sunday (derived)",
+    stringsAsFactors = FALSE
+  )
+  out[, c("coef", "stderr", "t", "p"), drop = FALSE]
 }
 
 # "LS1985.03" / "AO2008.01" from the variable name "LS (1985-03-01)"
@@ -288,6 +399,25 @@ sumNum <- function(v) format(signif(v, 6), scientific = FALSE)
 #' decomposition filters and, at the end, the M-statistics (Q and Q-M2) and
 #' the overall quality indicator.
 #'
+#' @details
+#'
+#' In the trading day table the regressors are labelled with their names (the
+#' column names of the user-defined regressors, see [perTd()] and its
+#' `td_labels` argument; the generic group names of the calendar regressors
+#' are shown as the days Monday to Saturday). When the trading day regression
+#' consists of the six day regressors, the effect of the reference day Sunday
+#' is derived as minus the sum of the six effects and shown as an additional
+#' row "Sunday (derived)".
+#'
+#' The leap year effect counts as included ("Leap year: Yes") if a dedicated
+#' leap year regressor is part of the regression or if the series is log
+#' transformed with a leap year or length-of-month adjustment
+#' (`transform.adjust = "leapyear"` or `"lom"`). A user-defined regressor
+#' given to the `user` argument of [perX13()] or [perTramo()] and named like
+#' a leap year is such a regressor; the further user-defined regressors are
+#' shown in a table "User-defined regressors" and tested together by a joint
+#' F test.
+#'
 #' @param x a `persephone` object of a single series (created with
 #'   [perX13()] or [perTramo()]) for which [run][persephone] has been called.
 #' @param ... currently ignored.
@@ -327,14 +457,23 @@ summary.persephone <- function(x, ...) {
   # number of trading day regressors = number of TD coefficients (0 to 6/7)
   n_td <- sum(n_coef[var_types == "TD"])
   n_otl <- sum(var_types %in% c("AO", "LS", "TC"))
+  # user-defined regressors of the regression model (the `user` argument of
+  # perX13()/perTramo()); a leap year regressor among them is counted as leap
+  # year, not here
+  is_user <- vapply(pp$description$variables, isUserVar, TRUE)
+  n_user <- sum(n_coef[is_user])
   cat("-- Model definition ", strrep("-", 42), "\n", sep = "")
   cat("ARIMA model:     ", sumArimaSpec(x), "\n")
   cat("Transformation:  ", if (isTRUE(pp$description$log)) "Log" else "None", "\n")
-  cat("Leap year:       ", if ("LP" %in% var_types) "Yes" else "None", "\n")
+  cat("Leap year:       ", if (hasLeapYear(x)) "Yes" else "None", "\n")
   cat("Trading day:     ",
       paste0(n_td, if (n_td == 1) " regressor" else " regressors"), "\n")
   cat("Easter effect:   ", if ("EASTER" %in% var_types) "Yes" else "None", "\n")
-  cat("Outliers:        ", n_otl, "\n\n")
+  cat("Outliers:        ", n_otl, "\n")
+  if (n_user > 0) {
+    cat("User regressors: ", n_user, "\n")
+  }
+  cat("\n")
 
   # ---- coefficient tables ----
   labelFun <- function(x, v) sumVarLabels(x, v)
@@ -346,28 +485,54 @@ summary.persephone <- function(x, ...) {
     sumCoefTable(x, c("AO", "LS", "TC"), labelFun),
     "Outliers"
   )
-  sumPrintCoef(sumCoefTable(x, "TD", labelFun), "Trading day regressors")
+  tdTab <- sumCoefTable(x, "TD", labelFun)
+  if (!is.null(tdTab) && nrow(tdTab) == 6 &&
+      !any(grepl("^sun", tolower(rownames(tdTab))))) {
+    # six day regressors (Monday to Saturday): the effect of the reference
+    # day Sunday is derived from them and added as a further row
+    sunday <- sumTdSunday(x)
+    if (!is.null(sunday)) {
+      tdTab <- rbind(tdTab, sunday)
+    }
+  }
+  sumPrintCoef(tdTab, "Trading day regressors")
   sumPrintCoef(
-    sumCoefTable(x, c("MEAN", "LP"), labelFun),
+    sumCoefTable(x, c("MEAN", "LP"), labelFun, also = isUserLeapVar),
     "Mean / Leap year"
+  )
+  sumPrintCoef(
+    sumCoefTable(x, character(0), labelFun, also = isUserVar),
+    "User-defined regressors"
   )
 
   # ---- joint F tests ----
-  if (n_td > 0) {
+  f_user <- if (n_user > 0) {
+    sumWaldF(x, character(0), also = isUserVar)
+  } else {
+    NULL
+  }
+  if (n_td > 0 || !is.null(f_user)) {
     cat("-- Joint F tests ", strrep("-", 44), "\n", sep = "")
-    f_td <- sumWaldF(x, "TD")
-    if (!is.null(f_td)) {
-      cat("Trading days:            ",
-          sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
-          "  P =", format.pval(f_td$pvalue, digits = 3, eps = 1e-10), "\n")
-    }
-    if (n_otl > 0) {
-      f_both <- sumWaldF(x, c("TD", "AO", "LS", "TC"))
-      if (!is.null(f_both)) {
-        cat("Trading days + outliers: ",
-            sprintf("F(%d, %d) = %.3f", f_both$df1, f_both$df2, f_both$value),
-            "  P =", format.pval(f_both$pvalue, digits = 3, eps = 1e-10), "\n")
+    if (n_td > 0) {
+      f_td <- sumWaldF(x, "TD")
+      if (!is.null(f_td)) {
+        cat("Trading days:            ",
+            sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
+            "  P =", format.pval(f_td$pvalue, digits = 3, eps = 1e-10), "\n")
       }
+      if (n_otl > 0) {
+        f_both <- sumWaldF(x, c("TD", "AO", "LS", "TC"))
+        if (!is.null(f_both)) {
+          cat("Trading days + outliers: ",
+              sprintf("F(%d, %d) = %.3f", f_both$df1, f_both$df2, f_both$value),
+              "  P =", format.pval(f_both$pvalue, digits = 3, eps = 1e-10), "\n")
+        }
+      }
+    }
+    if (!is.null(f_user)) {
+      cat("User regressors:         ",
+          sprintf("F(%d, %d) = %.3f", f_user$df1, f_user$df2, f_user$value),
+          "  P =", format.pval(f_user$pvalue, digits = 3, eps = 1e-10), "\n")
     }
     cat("\n")
   }

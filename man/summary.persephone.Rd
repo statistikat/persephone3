@@ -27,6 +27,24 @@ regressors and of the trading day regressors and outliers together, the
 decomposition filters and, at the end, the M-statistics (Q and Q-M2) and
 the overall quality indicator.
 }
+\details{
+In the trading day table the regressors are labelled with their names (the
+column names of the user-defined regressors, see \code{\link[=perTd]{perTd()}} and its
+\code{td_labels} argument; the generic group names of the calendar regressors
+are shown as the days Monday to Saturday). When the trading day regression
+consists of the six day regressors, the effect of the reference day Sunday
+is derived as minus the sum of the six effects and shown as an additional
+row "Sunday (derived)".
+
+The leap year effect counts as included ("Leap year: Yes") if a dedicated
+leap year regressor is part of the regression or if the series is log
+transformed with a leap year or length-of-month adjustment
+(\code{transform.adjust = "leapyear"} or \code{"lom"}). A user-defined regressor
+given to the \code{user} argument of \code{\link[=perX13]{perX13()}} or \code{\link[=perTramo]{perTramo()}} and named like
+a leap year is such a regressor; the further user-defined regressors are
+shown in a table "User-defined regressors" and tested together by a joint
+F test.
+}
 \examples{
 data(AirPassengers, package = "datasets")
 obj <- perX13(AirPassengers, "rsa3")

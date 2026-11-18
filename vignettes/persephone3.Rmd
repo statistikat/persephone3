@@ -228,6 +228,54 @@ obj_x13$run()
 
 This combines the outlier type and date into a single, more intuitive format.
 
+## Trading Days and Further Regressors
+
+The `td` argument of `perX13()` and `perTramo()` takes trading day regressors
+without any further work: a `rjd3toolkit` national calendar, precomputed
+regressors or the output of `genTd()` (its centered day regressors are used
+then). They are registered in the modelling context and the trading days
+spec-block is set to `"UserDefined"` (see `perTd()`).
+
+The `user` argument takes the regressors of the regression model that are no
+trading days, one regressor per column of a `ts`/`mts` object or one per entry
+of a named list. Both arguments work together, so the trading days and the
+leap year regressor of `genTd()` are estimated in one model:
+
+```{r user-regressors, eval = FALSE}
+tdAT <- genTd(freq = 12, firstYear = 1949, lastYear = 1961, hd = "01-01")
+lpY <- tdAT[[3]][, 7, drop = FALSE]   # the centered leap year regressor
+
+obj <- perX13(window(AirPassengers, start = 1949, end = c(1960, 12)), "rsa5c",
+              td = tdAT[[3]][, 1:6, drop = FALSE], user = lpY)
+obj$run()
+summary(obj)
+```
+
+`summary()` reports the regressor with its coefficient, standard error and
+p-value; a regressor named like a leap year is counted as the leap year effect
+of the model ("Leap year: Yes"), the further ones are shown in a table of their
+own and tested by a joint F test. Tramoseats does not estimate trading day
+regressors and further regressors at once, it uses the regressors of `user`
+alone and says so by a warning.
+
+`perHts()` takes the same two arguments for the series of a hierarchical object,
+either one regressor set for all of them or a named list with one set per
+series. Without `groups` (the classic mode) a single set is also used for the
+aggregate series, which is adjusted on its own there; the regressors of a series
+are shown by the `summary()` of that series:
+
+```{r hts-user-regressors, eval = FALSE}
+ap <- window(AirPassengers, start = 1949, end = c(1960, 12))
+ht <- perHts(
+  list = list(C20 = ap, C21 = ap * 1.1, C20_21 = ap * 2.1),
+  method = "x13", template = "rsa5c",
+  groups = list(C20_21 = c("C20", "C21")),
+  td = tdAT[[3]][, 1:6, drop = FALSE], user = lpY
+)
+ht$run()
+summary(ht$components$C20)
+```
+
 # Accessing Specific Results
 
 ## Preprocessing Results
