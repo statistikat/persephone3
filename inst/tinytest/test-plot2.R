@@ -490,6 +490,10 @@ expect_true(any(grepl("line.width", hooks(pl), fixed = TRUE)))
 # attaches nothing)
 expect_true(any(grepl("classList.contains('js-plotly-plot')",
                       hooks(pl), fixed = TRUE)))
+# only a series the cursor touches (within maxdist pixels) is highlighted,
+# not the one nearest to the unified hover line everywhere in the plot
+expect_true(any(grepl("if (best > maxd) { return null; }",
+                      hooks(pl), fixed = TRUE)))
 # the dygraph plots get the fitting code as well
 expect_true(any(grepl("data-p3-height", hooks(plot(x)), fixed = TRUE)))
 # the stylesheets of the package are added to the widget as usual, and nothing

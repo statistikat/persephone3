@@ -511,15 +511,19 @@ p3_hover <- function(p, color = "grey", width = 1) {
 # point's trace is kept without any measuring. A click on a series pins its
 # highlighting (it stays bold when the cursor moves away); clicking on
 # another series pins that one, and clicking on empty space of the plot area
-# lifts the pin and shows all series with equal strength again. The hook is
-# attached once per plotly widget (gd.__p3hl) and travels with the widget
-# like the styles of p3_style_js().
-p3_hover_highlight <- function(p, fade = 0.15, bold = 1.75) {
-  p3_add_hook(p, "render", sprintf(p3_highlight_js, fade, bold))
+# lifts the pin and shows all series with equal strength again. The
+# highlighting requires that the cursor touches the line: a series is only
+# kept when its hovered point is at most maxdist pixels from the cursor, so
+# that the unified hover (whose vertical line is drawn everywhere in the
+# plot) does not highlight anything where no series crosses the cursor. The
+# hook is attached once per plotly widget (gd.__p3hl) and travels with the
+# widget like the styles of p3_style_js().
+p3_hover_highlight <- function(p, fade = 0.15, bold = 0.9, maxdist = 10) {
+  p3_add_hook(p, "render", sprintf(p3_highlight_js, fade, bold, maxdist))
 }
 
-# the code of p3_hover_highlight() with the fade opacity and the extra line
-# width of the bold line as the two %s
+# the code of p3_hover_highlight() with the fade opacity, the extra line
+# width of the bold line and the touch distance as the three %s
 p3_highlight_js <- paste(
   "function (el, x) {",
   # the graph div is the widget container itself (plotly's htmlwidget
@@ -541,7 +545,7 @@ p3_highlight_js <- paste(
   "    }",
   "    if (gd.__p3hl === true) { return; }",
   "    gd.__p3hl = true;",
-  "    var fade = %s, bold = %s, keep = null, pinned = null;",
+  "    var fade = %s, bold = %s, maxd = %s, keep = null, pinned = null;",
   # the line widths of the traces as they were built (restyle() changes
   # gd.data, so the bold width is always computed from this base)
   "    var base = gd.data.map(function (t) {",
@@ -586,6 +590,8 @@ p3_highlight_js <- paste(
   "            }",
   "          } catch (e) { /* keep the first point of the event */ }",
   "        }",
+  "        // only a series the cursor touches is highlighted",
+  "        if (best > maxd) { return null; }",
   "      }",
   "      return wanted;",
   "    };",
