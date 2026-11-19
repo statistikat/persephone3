@@ -13,6 +13,9 @@
 # at the position of the mouse (p3_hover()) and the fluid size of the widget
 # (p3_fluid_plotly()) are added.
 plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
+  # main = "" (like NULL) omits the title, so that a title shown outside the
+  # plot (e.g. the card title of the dashboard) does not compete with it
+  hasTitle <- !is.null(main) && nzchar(main)
   nms <- vapply(p$x$data, function(s) {
     if (isFALSE(s$showlegend)) "" else paste0(s$name, "   ")
   }, "")
@@ -21,10 +24,10 @@ plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
   p %>%
     plotly::layout(
       shapes = attr(p, "p3_shapes") %||% list(),
-      title = if (is.null(main)) {
-        NULL
-      } else {
+      title = if (hasTitle) {
         list(text = main, yref = "paper", y = 1, yanchor = "top")
+      } else {
+        NULL
       },
       legend = list(
         orientation = "h", x = 0, y = 1.1 + 0.05 * (nRows - 1),
@@ -32,7 +35,7 @@ plotlyTsLayout <- function(p, main = NULL, rangeSelector = FALSE) {
       ),
       margin = list(
         l = 50, r = 20, b = 40,
-        t = (if (is.null(main)) 30 else 60) + 20 * (nRows - 1)
+        t = (if (hasTitle) 60 else 30) + 20 * (nRows - 1)
       ),
       hovermode = "x unified",
       plot_bgcolor = "white",
@@ -155,7 +158,7 @@ plotlyLine <- function(p, d, col, name, color,
 #' lines.
 #'
 #' @param object a persephone object of class `persephoneSingle`
-#' @param main plot title (NULL: default title)
+#' @param main plot title (NULL: default title, `""`: no title)
 #' @param forecasts logical, plot the forecasts with confidence band
 #' @param showOutliers logical, mark detected outliers with dots and dashed
 #'   vertical lines
@@ -543,7 +546,7 @@ plotlySiLines <- function(p, dat, cols, dots = NULL,
 #' as lines. For static plots see [plotSiRatiosGgplot].
 #'
 #' @param x an object of class [persephone]
-#' @param main plot title
+#' @param main plot title (`""`: no title)
 #' @param ... passed to [plotly::plot_ly()]
 #' @return A `plotly` htmlwidget
 #' @export
@@ -609,9 +612,9 @@ plotSiRatiosPlotly <- function(x, main = NULL, ...) {
     plotlySiLines(dat, cols = cols, dots = dots, colors = colors)
   p %>%
     plotly::layout(
-      title = main,
+      title = if (nzchar(main)) main else NULL,
       legend = list(orientation = "h", x = 0, y = 1.1, traceorder = "normal"),
-      margin = list(l = 50, r = 20, t = 60, b = 30),
+      margin = list(l = 50, r = 20, t = if (nzchar(main)) 60 else 30, b = 30),
       hovermode = "closest",
       plot_bgcolor = "white",
       yaxis = list(title = "", zeroline = FALSE)

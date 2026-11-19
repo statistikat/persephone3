@@ -34,7 +34,8 @@
 #' @param maxobs maximum number of observations of the time series. If `NULL`,
 #'   `maxobs` equals the length of the time series for plotTypes
 #'   `"arSpec"` and `"periodogram"` and `maxobs=96` for plotType `"arSpecBars"`.
-#' @param main plot title (for several plot types, it is extended by the name
+#' @param main plot title (`""`: no title; for several plot types, it is
+#'   extended by the name
 #'   of the plot type of each plot)
 #' @param n.freq the number of frequencies, i.e. the number of points at which
 #'   to plot. If `NULL`, `n.freq=301` for plotTypes `"arSpec"` and `"periodogram"`

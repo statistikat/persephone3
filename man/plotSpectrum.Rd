@@ -55,7 +55,7 @@ panel, so \code{"panels"} only adds the frame.}
 \code{maxobs} equals the length of the time series for plotTypes
 \code{"arSpec"} and \code{"periodogram"} and \code{maxobs=96} for plotType \code{"arSpecBars"}.}
 
-\item{main}{plot title (for several plot types, it is extended by the name
+\item{main}{plot title (\code{""}: no title; for several plot types, it is extended by the name
 of the plot type of each plot)}
 
 \item{n.freq}{the number of frequencies, i.e. the number of points at which

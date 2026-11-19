@@ -11,7 +11,7 @@
 #'   A numeric value (`1:7`) corresponding to one of these characters is also
 #'   accepted.
 #'
-#' @param main plot title
+#' @param main plot title (for `which = "overview"`: `""` omits the title)
 #' @param interactive If the return value would be a `ggplot` object, wrap it in
 #'   [plotly::ggplotly] before returning.
 #' @param ... other plotting parameters to affect the plot. Not currently used.
@@ -159,6 +159,8 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     if (is.null(main)) {
       main <- "Residual Diagnostics"
     }
+    # main = "" omits the title of the overview
+    hasMain <- nzchar(main)
     p_res <- suppressWarnings(plotly::ggplotly(resPanel()))
     p_qq <- suppressWarnings(plotly::ggplotly(qqPanel()))
     p_acf <- suppressWarnings(plotly::ggplotly(
@@ -193,8 +195,8 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     )
     p <- p %>%
       plotly::layout(
-        title = if (is.null(main)) NULL else list(text = main),
-        margin = list(t = 60)
+        title = if (hasMain) list(text = main) else NULL,
+        margin = list(t = if (hasMain) 60 else 30)
       ) %>%
       # the vertical line at the position of the mouse in every panel, the
       # highlighting of the hovered series, and a figure that fills the plot

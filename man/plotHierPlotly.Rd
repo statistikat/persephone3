@@ -17,7 +17,7 @@ plotHierPlotly(
 \arguments{
 \item{x}{a \code{hierarchicalTimeSeries} object}
 
-\item{main}{plot title (NULL: default title)}
+\item{main}{plot title (\code{""}: no title)}
 
 \item{rangeSelector}{logical, show the range slider below the plot}
 

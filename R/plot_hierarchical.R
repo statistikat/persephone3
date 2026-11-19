@@ -77,7 +77,7 @@ hierPlotTitle <- function(title, name) {
 #'
 #' @name plot
 #' @param x an object of class [persephone].
-#' @param main plot title
+#' @param main plot title (`""`: no title)
 #' @param forecasts logical flag indicating if forecasts should be plotted
 #' @param showOutliers logical flag specifying if outliers should be highlighted
 #'   in the plot

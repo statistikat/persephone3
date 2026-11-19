@@ -33,7 +33,7 @@
 \arguments{
 \item{x}{an object of class \link{persephone}.}
 
-\item{main}{plot title}
+\item{main}{plot title (\code{""}: no title)}
 
 \item{rangeSelector}{logical flag specifying if a range selector should be
 included in the plot (default: \code{FALSE})}

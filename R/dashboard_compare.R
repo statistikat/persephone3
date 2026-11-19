@@ -142,12 +142,15 @@ dashboard_compare <- function(x, y, title = "Series Comparison", file = NULL) {
     }
   }
 
+  # a significant F test (p < 0.05) means that the trading day effects are
+  # significant, which is the expected ("Good") result for a model that
+  # estimates trading day regressors
   classify_td_ftest <- function(p) {
     if (is.null(p) || length(p) == 0 || is.na(p)) {
       return("Undefined")
     }
     p <- as.numeric(p[1])
-    if (p >= 0.05) "Good" else "Bad"
+    if (p < 0.05) "Good" else "Bad"
   }
 
   classify_qstat <- function(q) {

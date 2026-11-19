@@ -18,7 +18,7 @@ plotSiRatios(
 \item{plotEngine}{character. Either \code{"plotly"} (default, interactive plotly
 plots) or \code{"ggplot"} (static ggplot2 plots).}
 
-\item{main}{plot title.}
+\item{main}{plot title (\code{""}: no title).}
 
 \item{interactive}{If \code{plotEngine="ggplot"}, whether to wrap in plotly for
 basic interactivity. Ignored for \code{plotEngine="plotly"}.}

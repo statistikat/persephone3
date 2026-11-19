@@ -70,9 +70,9 @@ expect_equal(nTd, obj2$output$user_defined[["regression.ntd"]])
 expect_equal(sum(grepl("^group_[0-9]+ ", out2)), 0)
 # the effect of the reference day Sunday is derived from the six regressors
 expect_true(any(grepl("^Sunday \\(derived\\) ", out2)))
-# joint F tests, trading days and trading days + outliers
+# joint F tests: the one of the trading days, no trading days + outliers test
 expect_true(any(grepl("Trading days: ", out2, fixed = TRUE)))
-expect_true(grepl("Trading days + outliers: ", hdr2, fixed = TRUE))
+expect_false(grepl("Trading days + outliers", hdr2, fixed = TRUE))
 
 message("Test summary - x13 with leap year")
 

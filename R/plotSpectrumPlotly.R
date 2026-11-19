@@ -279,8 +279,8 @@ plotSpectrumPlotly <- function(
         name = "AR spectrum"
       ) %>%
       plotly::layout(
-        title = main,
-        margin = list(l = 50, r = 20, t = 60, b = 40),
+        title = if (nzchar(main)) main else NULL,
+        margin = list(l = 50, r = 20, t = if (nzchar(main)) 60 else 40, b = 40),
         plot_bgcolor = "white",
         xaxis = list(title = "Frequency", showgrid = FALSE),
         yaxis = list(title = "Spectrum", zeroline = FALSE)
@@ -377,6 +377,10 @@ plotSpectrumPlotly <- function(
         )
       }
     }
+    # main = "" omits the title of the panel grid
+    if (!is.null(args$main) && !nzchar(args$main)) {
+      panels_main <- NULL
+    }
     # the grid of panels has at most two columns and as many rows as
     # needed (3 panels give 2 columns and 2 rows, 6 give 2 columns and
     # 3 rows), the last row may be partially empty. The gap between the
@@ -441,13 +445,17 @@ plotSpectrumPlotly <- function(
       p <- p %>% specLinePlotly(vals, series_labels[k], k, showlegend = TRUE)
     }
     p <- specPlotLinesPlotly(p, args$freq)
+    # main = "" omits the title (the overplot case of the dashboard)
+    ptitle <- plot_main(ptype)
     p %>%
       plotly::layout(
-        title = plot_main(ptype),
+        title = if (nzchar(ptitle)) ptitle else NULL,
         legend = list(
           orientation = "h", x = 0, y = 1.1, traceorder = "normal"
         ),
-        margin = list(l = 50, r = 20, t = 60, b = 40),
+        margin = list(
+          l = 50, r = 20, t = if (nzchar(ptitle)) 60 else 40, b = 40
+        ),
         hovermode = "x unified",
         plot_bgcolor = "white",
         xaxis = list(title = "Frequency", showgrid = FALSE),

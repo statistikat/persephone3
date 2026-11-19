@@ -19,7 +19,7 @@ plotSinglePlotly(
 \arguments{
 \item{object}{a persephone object of class \code{persephoneSingle}}
 
-\item{main}{plot title (NULL: default title)}
+\item{main}{plot title (NULL: default title, \code{""}: no title)}
 
 \item{forecasts}{logical, plot the forecasts with confidence band}
 

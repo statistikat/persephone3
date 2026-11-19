@@ -61,3 +61,21 @@ get_quality <- function(hts, path) {
 
   quality
 }
+
+# one-row diagnostics table of the node at path (NULL if the node was not
+# run or the table cannot be created); generate_diagnostics_table() is an
+# internal function of the package, so it is looked up in the namespace
+get_diagnostics <- function(hts, path) {
+  obj <- get_series_by_path(hts, path)
+  if (is.null(obj$output)) {
+    return(NULL)
+  }
+  gen <- tryCatch(
+    get("generate_diagnostics_table", envir = asNamespace("persephone3")),
+    error = function(e) NULL
+  )
+  if (is.null(gen)) {
+    return(NULL)
+  }
+  tryCatch(gen(obj), error = function(e) NULL)
+}

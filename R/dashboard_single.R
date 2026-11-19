@@ -2,6 +2,12 @@
 #'
 #' Creates an interactive HTML diagnostic dashboard for a single hierarchical
 #' time series object, showing model diagnostics, plots, and quality metrics.
+#' The dashboard is organised in tabs: Overview (model summary and
+#' diagnostics), Plots (the series, the SI ratios, the overlaid spectra and
+#' the residual overview), Trading days (coefficients and the joint F test,
+#' see [getTradingDaysTable()]), Outliers (outlier and mean/leap year
+#' coefficients, see [getOutlierTable()]) and Quality (quality indicators,
+#' see [getQualityTable()]).
 #'
 #' @param x A single time series object (class `x13Single` or `tramoseatsSingle`)
 #' @param title Main title for the dashboard (default: "Diagnostics")
@@ -60,16 +66,6 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
       cur <- nxt
     }
     cur
-  }
-
-  quad_plot_panel <- function(p11, p12, p21, p22) {
-    htmltools::tags$div(
-      class = "quad-grid",
-      htmltools::tags$div(class = "quad-cell", p11),
-      htmltools::tags$div(class = "quad-cell", p12),
-      htmltools::tags$div(class = "quad-cell", p21),
-      htmltools::tags$div(class = "quad-cell", p22)
-    )
   }
 
   first_non_null <- function(...) {
@@ -152,12 +148,15 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
     }
   }
 
+  # a significant F test (p < 0.05) means that the trading day effects are
+  # significant, which is the expected ("Good") result for a model that
+  # estimates trading day regressors
   classify_td_ftest <- function(p) {
     if (is.null(p) || length(p) == 0 || is.na(p)) {
       return("Undefined")
     }
     p <- as.numeric(p[1])
-    if (p >= 0.05) "Good" else "Bad"
+    if (p < 0.05) "Good" else "Bad"
   }
 
   classify_qstat <- function(q) {
@@ -464,35 +463,103 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   st_q1 <- classify_qstat(q1)
   st_q2 <- classify_qstat(q2)
 
-  # ---- Persephone native plots as widgets ----
-  # original_plot  <- render_persephone_plot(plot(x), height = "320px")
-  # si_plot        <- render_persephone_plot(plotSiRatios(x), height = "320px")
-  # spec_orig_plot <- render_persephone_plot(plotSpectrum(x, tsType = "original"),  height = "320px")
-  # spec_sa_plot   <- render_persephone_plot(plotSpectrum(x, tsType = "sa"),        height = "320px")
-  # spec_res_plot  <- render_persephone_plot(plotSpectrum(x, tsType = "residuals"), height = "320px")
-  # resid_density_plot <- render_persephone_plot(plotResiduals(x, which = "sreshist"), height = "100%")
-  # acf_plot <- render_persephone_plot(plotResiduals(x, which = "acf"), height = "100%")
-  # pacf_plot <- render_persephone_plot(plotResiduals(x, which = "pacf"), height = "100%")
-  # resid_qq_plot <- render_persephone_plot(plotResiduals(x, which = "nqq"), height = "100%")
+  # ---- Persephone native plots as plotly widgets ----
+  # main = "": the card titles above the plots replace the plot titles
+  main_plot <- render_persephone_plot(
+    plot(x, plotEngine = "plotly", main = ""), height = "400px"
+  )
+  si_plot <- render_persephone_plot(
+    plotSiRatios(x, main = ""), height = "360px"
+  )
+  spectrum_plot <- render_persephone_plot(
+    plotSpectrum(x, plotEngine = "plotly", tsType = c("original", "sa"),
+                 main = ""),
+    height = "400px"
+  )
+  resid_plot <- render_persephone_plot(
+    plotResiduals(x, which = "overview", main = ""), height = "520px"
+  )
 
-  original_plot <- function() render_persephone_plot(plot(x))
-  si_plot <- function() render_persephone_plot(plotSiRatios(x))
-  spec_orig_plot <- function() {
-    render_persephone_plot(plotSpectrum(x, tsType = "original"))
+  # ---- dashboard tables ----
+  td_df <- tryCatch(getTradingDaysTable(x), error = function(e) NULL)
+  otl_df <- tryCatch(getOutlierTable(x), error = function(e) NULL)
+  q_df <- tryCatch(getQualityTable(x), error = function(e) NULL)
+
+  # coefficient table (trading days, outliers) as formatted HTML
+  fmt_coef_df <- function(df) {
+    blank <- function(v, d) {
+      ifelse(is.na(v), "", formatC(v, digits = d, format = "f"))
+    }
+    out <- data.frame(
+      Variable = df$Variable,
+      Coef = blank(df$Coef, 4),
+      `Std. Error` = blank(df$Std.Error, 4),
+      `t value` = blank(df$t.value, 3),
+      `P-value` = vapply(
+        df$P.value,
+        function(p) {
+          if (is.na(p)) "" else format.pval(p, digits = 3, eps = 1e-10)
+        },
+        ""
+      ),
+      Test = df$Test,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    )
+    out
   }
-  spec_sa_plot <- function() {
-    render_persephone_plot(plotSpectrum(x, tsType = "sa"))
+
+  coef_card <- function(title, df, empty_msg) {
+    if (is.null(df)) {
+      return(card(title, htmltools::tags$div(
+        class = "plot-message", "Table could not be created."
+      )))
+    }
+    if (nrow(df) == 0) {
+      return(card(title, htmltools::tags$div(
+        class = "plot-message", empty_msg
+      )))
+    }
+    card(title, make_table(fmt_coef_df(df)))
   }
-  # spec_res_plot  <- function() render_persephone_plot(plotSpectrum(x, tsType = "residuals"))# wird momentan noch nirgends verwendet
-  resid_density_plot <- function() {
-    render_persephone_plot(plotResiduals(x, which = "sreshist"))
-  }
-  acf_plot <- function() render_persephone_plot(plotResiduals(x, which = "acf"))
-  pacf_plot <- function() {
-    render_persephone_plot(plotResiduals(x, which = "pacf"))
-  }
-  resid_qq_plot <- function() {
-    render_persephone_plot(plotResiduals(x, which = "nqq"))
+
+  # quality table: the status column coloured with the traffic light rule
+  quality_card <- function(df) {
+    if (is.null(df)) {
+      return(card("Quality indicators", htmltools::tags$div(
+        class = "plot-message", "Table could not be created."
+      )))
+    }
+    card(
+      "Quality indicators",
+      htmltools::tags$table(
+        class = "compact-table",
+        htmltools::tags$thead(htmltools::tags$tr(
+          htmltools::tags$th("Indicator"),
+          htmltools::tags$th("Value"),
+          htmltools::tags$th("Status")
+        )),
+        htmltools::tags$tbody(
+          lapply(seq_len(nrow(df)), function(i) {
+            status <- df$Status[i]
+            htmltools::tags$tr(
+              htmltools::tags$td(df$Item[i]),
+              htmltools::tags$td(df$Value[i]),
+              if (status == "") {
+                htmltools::tags$td("")
+              } else {
+                htmltools::tags$td(htmltools::tags$span(
+                  status,
+                  style = paste0(
+                    "color:", status_color(status), ";font-weight:600;"
+                  )
+                ))
+              }
+            )
+          })
+        )
+      )
+    )
   }
 
   diag_df <- data.frame(
@@ -531,40 +598,6 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
           font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
           color: #1f2937;
         }
-        .quad-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: 1fr 1fr;
-          gap: 8px;
-          height: 320px;
-          min-height: 320px;
-          width: 100%;
-        }
-
-        .quad-cell {
-          border: 1px solid #ececec;
-          border-radius: 10px;
-          overflow: hidden;
-          background: #ffffff;
-          min-height: 0;
-          min-width: 0;
-          display: flex;
-          align-items: stretch;
-          justify-content: stretch;
-        }
-
-        .quad-cell .widget-wrap {
-          width: 100%;
-          height: 100% !important;
-          min-height: 0 !important;
-          flex: 1 1 auto;
-        }
-
-        .quad-cell .html-widget {
-          width: 100% !important;
-          height: 100% !important;
-        }
-
         .dash-wrap {
           padding: 14px;
         }
@@ -575,8 +608,7 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
         }
         .dash-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          grid-template-rows: repeat(3, minmax(260px, auto));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
         }
         .card {
@@ -697,98 +729,110 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
           font-size: 12px;
         }
 
-        /* --- NEU: Schriftgrößen für Grafiken verkleinern --- */
-        /*.widget-wrap svg text, .quad-cell svg text {
-        /*  font-size: 10px !important;
-        /*}
-        /*.widget-wrap .plotly text, .quad-cell .plotly text {
-        /*  font-size: 10px !important;
-        /*}
-        /*.widget-wrap .g-gtitle, .quad-cell .g-gtitle {
-        /*  font-size: 12px !important; /* Titel leicht größer als Achsen */
-        /*}
+        /* inner tabs: see p3TabsCss(), added as a separate style tag */
       "
       ))
     ),
+    htmltools::tags$style(htmltools::HTML(p3TabsCss())),
     htmltools::tags$div(
       class = "dash-wrap",
       htmltools::tags$div(class = "dash-title", title),
-      htmltools::tags$div(
-        class = "dash-grid",
+      p3_tabs_html(list(
+        overview = list(
+          label = "Overview",
+          content = htmltools::tags$div(
+            class = "dash-grid",
 
-        # 1) model summary
-        card(
-          "Model summary",
-          htmltools::tags$div(
-            class = "value-box arima-box",
-            style = "border-left: 6px solid #4f46e5;",
-            htmltools::tags$div(class = "box-label", "ARIMA model"),
-            htmltools::tags$div(class = "arima-big", arima_txt)
-          ),
-          htmltools::tags$div(
-            class = "value-grid",
-            metric_box("Log transformation", log_txt, small = TRUE),
-            metric_box(
-              "Outliers",
-              ifelse(is.na(n_out), "Undefined", as.character(n_out)),
-              small = TRUE
+            # 1) model summary
+            card(
+              "Model summary",
+              htmltools::tags$div(
+                class = "value-box arima-box",
+                style = "border-left: 6px solid #4f46e5;",
+                htmltools::tags$div(class = "box-label", "ARIMA model"),
+                htmltools::tags$div(class = "arima-big", arima_txt)
+              ),
+              htmltools::tags$div(
+                class = "value-grid",
+                metric_box("Log transformation", log_txt, small = TRUE),
+                metric_box(
+                  "Outliers",
+                  ifelse(is.na(n_out), "Undefined", as.character(n_out)),
+                  small = TRUE
+                ),
+                metric_box("Q1", fmt_num(q1), st_q1, small = TRUE),
+                metric_box("Q2", fmt_num(q2), st_q2, small = TRUE),
+                metric_box("Quality summary", fmt_num(q_summary), small = TRUE),
+                metric_box(
+                  "Residuals available",
+                  if (!is.null(resids)) "Yes" else "No",
+                  small = TRUE
+                )
+              )
             ),
-            metric_box("Q1", fmt_num(q1), st_q1, small = TRUE),
-            metric_box("Q2", fmt_num(q2), st_q2, small = TRUE),
-            metric_box("Quality summary", fmt_num(q_summary), small = TRUE),
-            metric_box(
-              "Residuals available",
-              if (!is.null(resids)) "Yes" else "No",
-              small = TRUE
+
+            # 2) diagnostics
+            card(
+              "Diagnostics",
+              htmltools::tags$div(
+                class = "status-box-grid",
+                metric_box("Normality", fmt_p(p_norm), st_norm, small = TRUE),
+                metric_box("Independence", fmt_p(p_indep), st_indep, small = TRUE),
+                metric_box("Seasonality", fmt_p(p_seas), st_seas, small = TRUE),
+                metric_box("TD F-test", fmt_p(p_td), st_td, small = TRUE),
+                metric_box("SeasQS", fmt_p(p_seas_qs), st_qs, small = TRUE),
+                metric_box("SeasF", fmt_p(p_seas_f), st_sf, small = TRUE)
+              ),
+              make_table(diag_df),
+              htmltools::tags$div(
+                class = "footer-note",
+                "Color rule: Good = green, Uncertain = orange, Bad/Severe = red, Undefined = grey."
+              )
             )
           )
         ),
-
-        # 2) original series
-        # statt card("Original series", original_plot),
-        card("Original series", original_plot()),
-
-        # für alle anderen auch
-        # 3) SI ratios
-        card("SI ratios", si_plot()),
-
-        # 4) spectrum original
-        card("Spectrum: original series", spec_orig_plot()),
-
-        # 5) spectrum sa
-        card("Spectrum: seasonally adjusted", spec_sa_plot()),
-
-        # 6) spectrum residuals
-        card(
-          "Residual diagnostics",
-          quad_plot_panel(
-            resid_density_plot(), # top-left
-            resid_qq_plot(), # top-right
-            acf_plot(), # bottom-left
-            pacf_plot() # bottom-right
+        plots = list(
+          label = "Plots",
+          content = htmltools::tags$div(
+            class = "stack",
+            card("Original series", main_plot),
+            card("SI ratios", si_plot),
+            card("Spectrum: original vs. seasonally adjusted", spectrum_plot),
+            card("Residual diagnostics", resid_plot)
           )
         ),
-
-        # 9) diagnostics
-        card(
-          "Diagnostics",
-          htmltools::tags$div(
-            class = "status-box-grid",
-            metric_box("Normality", fmt_p(p_norm), st_norm, small = TRUE),
-            metric_box("Independence", fmt_p(p_indep), st_indep, small = TRUE),
-            metric_box("Seasonality", fmt_p(p_seas), st_seas, small = TRUE),
-            metric_box("TD F-test", fmt_p(p_td), st_td, small = TRUE),
-            metric_box("SeasQS", fmt_p(p_seas_qs), st_qs, small = TRUE),
-            metric_box("SeasF", fmt_p(p_seas_f), st_sf, small = TRUE)
-          ),
-          make_table(diag_df),
-          htmltools::tags$div(
-            class = "footer-note",
-            "Color rule: Good = green, Uncertain = orange, Bad/Severe = red, Undefined = grey."
+        tradingdays = list(
+          label = "Trading days",
+          content = htmltools::tags$div(
+            class = "stack",
+            coef_card(
+              "Trading day regressors and joint F test",
+              td_df,
+              "The model has no trading day regressors."
+            )
+          )
+        ),
+        outliers = list(
+          label = "Outliers",
+          content = htmltools::tags$div(
+            class = "stack",
+            coef_card(
+              "Outlier, mean and leap year regressors",
+              otl_df,
+              "The model has no outlier regressors and no mean / leap year coefficients."
+            )
+          )
+        ),
+        quality = list(
+          label = "Quality",
+          content = htmltools::tags$div(
+            class = "stack",
+            quality_card(q_df)
           )
         )
-      )
-    )
+      ))
+    ),
+    p3TabsJs()
   )
 
   out <- htmltools::browsable(ui)

@@ -19,6 +19,12 @@ Browsable HTML UI containing the diagnostic dashboard
 \description{
 Creates an interactive HTML diagnostic dashboard for a single hierarchical
 time series object, showing model diagnostics, plots, and quality metrics.
+The dashboard is organised in tabs: Overview (model summary and
+diagnostics), Plots (the series, the SI ratios, the overlaid spectra and
+the residual overview), Trading days (coefficients and the joint F test, see
+\code{\link[=getTradingDaysTable]{getTradingDaysTable()}}), Outliers (outlier and mean/leap year
+coefficients, see \code{\link[=getOutlierTable]{getOutlierTable()}}) and Quality (quality indicators,
+see \code{\link[=getQualityTable]{getQualityTable()}}).
 }
 \note{
 This is an internal function; use \code{\link[=createDashboard]{createDashboard()}} instead for the public API.

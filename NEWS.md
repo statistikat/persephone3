@@ -1,4 +1,32 @@
 # persephone3 (development version)
+* The single series dashboard (`createDashboard()` / `dashboard_single()`)
+  is now organised in tabs (Overview, Plots, Trading days, Outliers,
+  Quality); the plots use the plotly engine and omit their own titles
+  (`main = ""` now suppresses a plot title) because the cards above the
+  plots carry the titles, the spectra of the original and
+  the seasonally adjusted series are overlaid and the residual diagnostics
+  use `plotResiduals(which = "overview")`. The tables of the new tabs are
+  built by the new exported functions `getTradingDaysTable()` (trading day
+  coefficients with the joint F test), `getOutlierTable()` (outlier, mean
+  and leap year coefficients) and `getQualityTable()` (quality indicators);
+  none of the two coefficient tables has a `Group` column and only the
+  joint F test of the trading days is reported, not one with the outliers
+  together. The four combined calendar tests of the Quality tab carry the
+  names they have in JDemetra+ ("Combined test on SA", "Combined test on
+  irregular", each for all observations and for the last year) and show
+  their p-values. A significant trading day F test is now classified as
+  "Good" (significant trading day effects are the expected result). The
+  derived Sunday effect (`Sunday (derived)` in `summary()` and in
+  `getTradingDaysTable()`) takes the parameterisation of the trading day
+  regressors into account: minus the sum of the six day effects for
+  contrasts against Sunday (the JDemetra+ defaults), minus one seventh of
+  the sum for centered regressors.
+  The overview table of the Shiny dashboard (`createDashboard()` for
+  `perHts()` objects) shows the quality indicators (TotalQ, Q, Q2,
+  Normality, Independence, Seasonality, Outliers) for every series.
+  After every redraw of that table (sorting, paging, filtering) the server
+  now sends the set of selected series back to the browser, so unchecking a
+  row always closes the corresponding tab again.
 * `perHts()` can now handle many aggregates and sub-aggregates at once and
   adjusts chain linked series indirectly in the correct way:
   + New `groups` argument: a named list with one entry per aggregate series

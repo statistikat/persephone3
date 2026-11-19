@@ -56,31 +56,48 @@ mod_table_server <- function(id, hts) {
       df$series
     )
 
-    df$quality <- sapply(df$series, function(s) {
+    # Diagnose-Spalten: TotalQ, Q, Q2 und die Qualitätsklassen der
+    # Tests aus generate_diagnostics_table() des Pakets
+    diags <- lapply(df$series, function(s) {
       tryCatch(
-        get_quality(hts, s),
+        get_diagnostics(hts, s),
         error = function(e) {
-          cat("Error getting quality for", s, ":", conditionMessage(e), "\n")
-          NA_character_
+          cat("Error getting diagnostics for", s, ":", conditionMessage(e), "\n")
+          NULL
         }
       )
     })
 
-    df$quality <- tolower(trimws(df$quality))
+    diag_col <- function(field) {
+      vapply(diags, function(d) {
+        if (is.null(d) || is.null(d[[field]])) {
+          return("")
+        }
+        v <- d[[field]][1]
+        if (is.na(v)) "" else as.character(v)
+      }, "")
+    }
 
-    quality_map <- c(
-      "good" = 3,
-      "ok" = 2,
-      "warning" = 1,
-      "bad" = 0
-    )
-
-    df$quality_score <- quality_map[df$quality]
-    df$quality_score[is.na(df$quality_score)] <- -1
+    df$quality <- tolower(trimws(vapply(df$series, function(s) {
+      tryCatch(
+        get_quality(hts, s),
+        error = function(e) {
+          cat("Error getting quality for", s, ":", conditionMessage(e), "\n")
+          "ok"
+        }
+      )
+    }, "")))
 
     df <- data.frame(
       Series = df$display,
       Quality = df$quality,
+      TotalQ = diag_col("TotalQ"),
+      Q = diag_col("Q"),
+      Q2 = diag_col("Q2"),
+      Normality = diag_col("normality"),
+      Independence = diag_col("independence"),
+      Seasonality = diag_col("seasonality"),
+      Outliers = diag_col("nOutliers"),
       stringsAsFactors = FALSE
     )
 
@@ -93,17 +110,30 @@ mod_table_server <- function(id, hts) {
     # DataTables zählt ab 0, nicht ab 1!
     output$tbl <- DT::renderDT({
       cat("Rendering DT table...\n")
-      DT::datatable(
+      dt <- DT::datatable(
         df,
         escape = FALSE,
         selection = "none",
-        colnames = c("", "Series", "Quality"),
+        colnames = c(
+          "", "Series", "Quality", "TotalQ", "Q", "Q2",
+          "Normality", "Independence", "Seasonality", "Outliers"
+        ),
         options = list(
           pageLength = 10,
           dom = "tip",
           columnDefs = list(
             list(orderable = FALSE, targets = 0)
-          )
+          ),
+          # after every redraw (sorting, paging, filtering recreate the
+          # rows and reset the checkboxes) the server is asked to push the
+          # authoritative selection back to the client
+          drawCallback = DT::JS(sprintf(
+            paste0(
+              "function() { Shiny.setInputValue('%s', Math.random(), ",
+              "{priority: 'event'}); }"
+            ),
+            ns("redraw")
+          ))
         ),
         callback = DT::JS(sprintf(
           "
@@ -155,13 +185,47 @@ mod_table_server <- function(id, hts) {
     Shiny.setInputValue('%s', id, {priority: 'event'});
   });
 
+  // From server: the authoritative set of selected series; resyncs the
+  // checkboxes after a redraw of the table (sorting, paging, filtering
+  // recreate the rows and lose the DOM state of the checkboxes)
+  Shiny.addCustomMessageHandler('%s', function(ids) {
+
+    var sel = ids || [];
+    if (!Array.isArray(sel)) sel = [String(sel)];
+
+    $('input.row-select').each(function() {
+      var on = sel.indexOf(String($(this).data('id'))) >= 0;
+      $(this).prop('checked', on);
+      $(this).closest('tr').toggleClass('selected', on);
+    });
+  });
+
 ",
           ns("row_event"),
           ns("uncheckRow"),
-          ns("uncheckRow_event")
+          ns("uncheckRow_event"),
+          ns("setSelected")
         )),
         class = "stripe hover compact"
       )
+      # quality classes in traffic light font colours (the light counterparts
+      # of the colours of diagnosticsDatatable()); the Quality column holds
+      # the lower case values of get_quality(), the others the classes of
+      # generate_diagnostics_table()
+      classes <- c(
+        Good = "#1a803c", good = "#1a803c", Ok = "#1a803c",
+        ok = "#1a803c", Uncertain = "#b26a00", Warning = "#b26a00",
+        warning = "#b26a00", Bad = "#c93c00", bad = "#c93c00",
+        Severe = "#cc0000", Undefined = "#888888"
+      )
+      for (cn in c(
+        "Quality", "TotalQ", "Normality", "Independence", "Outliers"
+      )) {
+        dt <- dt %>% DT::formatStyle(
+          cn, color = DT::styleEqual(names(classes), unname(classes))
+        )
+      }
+      dt
     })
 
     # User Event
@@ -203,6 +267,17 @@ mod_table_server <- function(id, hts) {
       },
       ignoreInit = TRUE
     )
+
+    # ---------- Autoritativer Selected-Stand zurueck zum Client ----------
+    # Nach jedem Redraw der Tabelle (Sortieren, Blaettern, Filtern setzt die
+    # DOM-Checks der neu erzeugten Zeilen zurueck) und whenever die Auswahl
+    # sich aendert, sendet der Server die aktuelle Auswahl an den Client,
+    # damit Checkboxen und geoeffnete Tabs nie auseinanderlaufen.
+    observe({
+      sel <- selected()
+      input$redraw
+      session$sendCustomMessage(ns("setSelected"), as.character(sel))
+    })
 
     return(selected)
   })

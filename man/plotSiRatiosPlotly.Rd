@@ -9,7 +9,7 @@ plotSiRatiosPlotly(x, main = NULL, ...)
 \arguments{
 \item{x}{an object of class \link{persephone}}
 
-\item{main}{plot title}
+\item{main}{plot title (\code{""}: no title)}
 
 \item{...}{passed to \code{\link[plotly:plot_ly]{plotly::plot_ly()}}}
 }

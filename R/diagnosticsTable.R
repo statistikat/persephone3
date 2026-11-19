@@ -211,22 +211,22 @@ diagColumnMeta <- function() {
       Good: p >= 0.1"
     ),
     combSA_all = list(
-      label = "Calendar in SA (all)",
+      label = "Combined test on SA",
       title = "combined test of the significance of the calendar effects
       left in the s.a. series, all observations; Good: p < 0.05"
     ),
     combSA_last = list(
-      label = "Calendar in SA (last y.)",
+      label = "Combined test on SA (last y.)",
       title = "combined test of the calendar effects left in the s.a.
       series, last year; Good: p < 0.05"
     ),
     combI_all = list(
-      label = "Calendar in Irregular (all)",
+      label = "Combined test on irregular",
       title = "combined test of the calendar effects left in the
       irregular component, all observations; Good: p < 0.05"
     ),
     combI_last = list(
-      label = "Calendar in Irregular (last y.)",
+      label = "Combined test on irregular (last y.)",
       title = "combined test of the calendar effects left in the
       irregular component, last year; Good: p < 0.05"
     ),

@@ -21,7 +21,7 @@ plotResiduals(
 A numeric value (\code{1:7}) corresponding to one of these characters is also
 accepted.}
 
-\item{main}{plot title}
+\item{main}{plot title (for \code{which = "overview"}: \code{""} omits the title)}
 
 \item{interactive}{If the return value would be a \code{ggplot} object, wrap it in
 \link[plotly:ggplotly]{plotly::ggplotly} before returning.}

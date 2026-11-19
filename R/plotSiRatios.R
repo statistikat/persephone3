@@ -7,7 +7,7 @@
 #' @param x an object of class [persephone].
 #' @param plotEngine character. Either `"plotly"` (default, interactive plotly
 #'   plots) or `"ggplot"` (static ggplot2 plots).
-#' @param main plot title.
+#' @param main plot title (`""`: no title).
 #' @param interactive If `plotEngine="ggplot"`, whether to wrap in plotly for
 #'   basic interactivity. Ignored for `plotEngine="plotly"`.
 #' @param ... other parameters passed to the underlying plot function.
