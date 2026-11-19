@@ -62,8 +62,26 @@ the trading-day regressors are not justified by the data}
 \item{nRecentout}{Number of outliers falling into the last observations
 of the series (see the \code{recentout} column of
 \code{\link{getOutliers}})}
-\item{Q}{M-statistics Q value}
-\item{Q2}{M-statistics Q-M2 value}
+\item{nSigRecentout}{Number of \emph{significant} recent outliers: those
+recent outliers whose absolute t-statistic exceeds the model's
+critical value, i.e. \code{recentout} and \code{abs(t) > crit.value}
+in \code{\link{getOutliers}}. This is the same threshold JDemetra+
+uses to decide whether an effect enters the model at all, so
+automatically detected recent outliers essentially always count.
+The value differs from \code{nRecentout} mainly for manually
+specified recent outliers that do not reach the threshold, and for
+outliers with a non-estimable t-statistic (e.g. \code{coef.type =
+        "FIXED"}), which are never counted as significant.}
+\item{Q}{Composite quality indicator built from the X-11 M-statistics
+(M1 to M11): a weighted mean of the individual statistics, each of
+which ranges from 0 to 3 and is accepted below 1; a value below 1
+indicates a satisfactory quality}
+\item{Q2}{The same composite computed without the M2 statistic
+(\code{Q-M2})}
+\item{nMstatOutside}{Number of X-11 M-statistics outside their acceptance
+limits (value above 1); statistics that could not be computed do
+not count, and the value is \code{NA} when no M-statistics are
+available at all (e.g. TRAMO-SEATS)}
 \item{TotalQ}{Overall quality summary (JDemetra+ node
 \code{quality.summary}): an aggregate of all standard diagnostic
 tests (residual, forecasting, outlier, spectral, seasonality and

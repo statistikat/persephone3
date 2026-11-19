@@ -14,6 +14,10 @@
 #'   \item{stde}{Standard error of the coefficient (`NA` if `coef.type` is
 #'     "FIXED")}
 #'   \item{t}{T-statistic, `coef.value / stde`}
+#'   \item{crit.value}{Critical value of the outlier test applied by
+#'     JDemetra+: the value from the `outlier` specification if positive
+#'     (x13: per outlier type, falling back to `defva`), otherwise the
+#'     threshold computed internally (see Details)}
 #'   \item{pvalue}{Two-sided p-value of `t` under a t distribution with
 #'     `neffectiveobs - nparams` degrees of freedom}
 #'   \item{date}{Date of the outlier as Date object}
@@ -47,6 +51,18 @@
 #' `tramo$regression$outliers` for tramoseats). `recentout` is evaluated
 #' independently of `autoout`, so a manually specified outlier close to the
 #' end of the series is flagged as well.
+#'
+#' If the `outlier` specification defines no critical value, JDemetra+
+#' computes one internally from the number of observations `n` of the
+#' estimation domain: x13 uses `max(advancedComputer(0.05)(n), 2.8)`, an
+#' extreme-value approximation for the 95% quantile of the maximum of `n`
+#' standard normal variables; tramoseats uses `max(simpleComputer()(n), 2)`,
+#' i.e. 3.3 up to 50 observations, rising by 0.0025 per observation up to
+#' 4.3. Both formulas are reproduced in [calcOutlierCrit()] and verified
+#' against the jdplus implementation. Note that during automatic model
+#' identification the engines may lower this value once (by about 14% for
+#' x13 and 12% for tramoseats); that reduction is not reported in the run
+#' output and is therefore not reflected in `crit.value`.
 #'
 #' @note This is an internal function used by other get* functions and diagnostics.
 #' @keywords internal
@@ -174,6 +190,29 @@ getOutliers <- function(x) {
     lag_periods <- round((as.numeric(tail(time(x$ts), 1)) - per) * frq)
     outliers$recentout <- lag_periods >= 0 & lag_periods <= k - 1
 
+    # crit.value: the threshold JDemetra+ used to decide whether an effect
+    # enters the model. A positive value in the outlier specification wins; if
+    # there is none, the engine computed the threshold from the number of
+    # observations of the estimation domain (see calcOutlierCrit).
+    is_x13 <- inherits(x$output, "JD3_X13_RSLTS")
+    otl_spec <- spec$outlier
+    auto_cv <- if (is_x13) {
+      calcOutlierCrit(NROW(x$output$preprocessing$estimation$y), "x13")
+    } else {
+      calcOutlierCrit(sum(!is.na(x$output$preprocessing$estimation$y)),
+                      "tramoseats")
+    }
+    spec_cv <- vapply(outliers$type, function(tp) {
+      if (!is_x13) {
+        return(as.numeric(otl_spec$va))
+      }
+      type_o <- Filter(function(o) identical(as.character(o$type), tp),
+                       otl_spec$outliers)
+      va <- if (length(type_o)) as.numeric(type_o[[1]]$va) else 0
+      if (va > 0) va else as.numeric(otl_spec$defva)
+    }, numeric(1))
+    outliers$crit.value <- ifelse(spec_cv > 0, spec_cv, auto_cv)
+
     rownames(outliers) <- NULL
     outliers <- outliers[, c(
       "name",
@@ -181,6 +220,7 @@ getOutliers <- function(x) {
       "coef.value",
       "stde",
       "t",
+      "crit.value",
       "pvalue",
       "date",
       "coef.type",
@@ -192,6 +232,44 @@ getOutliers <- function(x) {
     outliers <- NA
   }
   outliers
+}
+
+#' Critical value computed internally by JDemetra+ for outlier detection
+#'
+#' Transcribes the thresholds the engines apply when the `outlier`
+#' specification leaves the critical value unset: x13 uses
+#' `max(advancedComputer(0.05)(n), 2.8)`, an extreme-value approximation for
+#' the 95% quantile of the maximum of `n` standard normal variables;
+#' tramoseats uses `max(simpleComputer()(n), 2)`, i.e. 3.3 up to 50
+#' observations, rising by 0.0025 per observation up to 4.3. Verified
+#' against the jdplus implementation (`X13Utility.calcCv`,
+#' `TramoUtility.calcCv`) via `rJava`.
+#'
+#' @param n Number of observations of the estimation domain
+#' @param method Either `"x13"` or `"tramoseats"`
+#' @return The critical value.
+#' @keywords internal
+calcOutlierCrit <- function(n, method = c("x13", "tramoseats")) {
+  method <- match.arg(method)
+  if (method == "tramoseats") {
+    return(max(min(3.3 + 0.0025 * max(n - 50, 0), 4.3), 2))
+  }
+  threshold <- 0.05
+  if (n <= 1) return(max(qnorm(threshold / 2, lower.tail = FALSE), 2.8))
+  calc_val <- function(nvals, eps) {
+    a <- sqrt(2 * log(nvals))
+    b <- a - (log(log(nvals)) + log(4 * pi)) / (2 * a)
+    -log(-0.5 * log(2 - sqrt(1 + eps))) / a + b
+  }
+  ncal <- c(2, 100, 200)
+  a_cal <- sqrt(2 * log(ncal))
+  b_cal <- (log(log(ncal)) + log(4 * pi)) / (2 * a_cal)
+  y <- c(qnorm((1 + sqrt(1 - threshold)) / 2),
+         calc_val(100, threshold), calc_val(200, threshold))
+  coefs <- solve(cbind(1, b_cal, a_cal), y)
+  a <- sqrt(2 * log(n))
+  b <- (log(log(n)) + log(4 * pi)) / (2 * a)
+  max(coefs[1] + coefs[2] * b + coefs[3] * a, 2.8)
 }
 
 #' Extract regression coefficients from a Persephone object
@@ -213,6 +291,10 @@ getOutliers <- function(x) {
 #'   \item{stde}{Standard error (NA for non-estimated types)}
 #'   \item{t}{T-statistic for estimated coefficients}
 #'   \item{pvalue}{Two-sided p-value for estimated coefficients}
+#'
+#'   The result additionally carries the joint F test of the trading day
+#'   regressors (when the model has any) as the attribute `ftests`
+#'   (one-row data frame from the internal `tdJointFTest()` helper).
 #'
 #' @details
 #' One regression variable can carry several coefficients (trading days: one
@@ -313,51 +395,274 @@ getRegressors <- function(x) {
     xregs$type <- regtype
     xregs <- xregs[, c("name", "type", "value", "stde", "t", "pvalue")]
     class(xregs) <- c("persephoneRegressors", "data.frame")
+    attr(xregs, "ftests") <- tryCatch(tdJointFTest(x), error = function(e) NULL)
     xregs
   } else {
     NULL
   }
 }
 
+#' Format a p-value as a plain-decimal string with a lower bound
+#'
+#' Shows plain decimals (`0.005`) instead of scientific notation and replaces
+#' values below the display threshold by `"< 0.001"`. Only used for printing;
+#' the data frame keeps the exact numeric value.
+#' @param p numeric vector of p-values
+#' @param digits number of decimal places (also sets the `"< ..."` bound)
+#' @return character vector
+#' @keywords internal
+fmt.pvalue <- function(p, digits = 3) {
+  s <- formatC(p, format = "f", digits = digits)
+  small <- !is.na(p) & p < 10^(-digits)
+  s[small] <- paste0("< ", formatC(10^(-digits), format = "f", digits = digits))
+  trimws(s)
+}
+
+#' Significance stars as in printCoefmat()/summary()
+#' @param p numeric vector of p-values
+#' @return character vector of `"***"`, `"**"`, `"*"`, `"."` or `""`
+#' @keywords internal
+fmt.sig <- function(p) {
+  ifelse(is.na(p), "", ifelse(p < 0.001, "***",
+    ifelse(p < 0.01, "**", ifelse(p < 0.05, "*", ifelse(p < 0.1, ".", "")))))
+}
+
+#' Joint F test of the trading day regressors
+#'
+#' Tests H0: all trading day coefficients of the regression are zero. Uses the
+#' test reported by JDemetra+ (`regression.td-ftest`), which also backs the
+#' `TD_Ftest` column of [diagnosticsTable()], so that both views report the
+#' same numbers. If the node is missing or incomplete (e.g. the trading day
+#' pre-test `td.test = "Remove"` dropped the regressors during the run), the
+#' test is computed as a Wald test, `F = (b' V^-1 b) / q` against `F(q, df)`,
+#' from the estimated coefficient vector `b` and the covariance matrix `bvar`.
+#'
+#' @param x A Persephone object with completed model run
+#' @return A one-row data frame with the columns `group`, `value`, `df1`,
+#'   `df2` and `pvalue`, or `NULL` when the model contains no trading day
+#'   regressors or the test cannot be computed.
+#' @keywords internal
+tdJointFTest <- function(x) {
+  pp <- x$output$preprocessing
+  variables <- pp$description$variables
+  n_est <- vapply(variables, function(v) {
+    if (is.null(v$coef$type)) {
+      0L
+    } else {
+      sum(as.character(v$coef$type) == "ESTIMATED")
+    }
+  }, integer(1))
+  is_td <- vapply(variables, function(v) as.character(v$type) == "TD", TRUE)
+  q <- sum(n_est[is_td])
+  if (q == 0L) {
+    return(NULL)
+  }
+  df <- as.integer(pp$estimation$likelihood$neffectiveobs -
+                     pp$estimation$likelihood$nparams)
+
+  # the test reported by JDemetra+ in preference: identical numbers to
+  # diagnosticsTable(); $ (not [[ ) so that a missing node yields NULL
+  # instead of an error and the fallback below can take over
+  node <- x$output$user_defined$`regression.td-ftest`
+  fstat <- suppressWarnings(as.numeric(node$value[1]))
+  pval <- suppressWarnings(as.numeric(node$pvalue[1]))
+  if (length(fstat) != 1L || length(pval) != 1L || is.na(fstat) || is.na(pval)) {
+    # fallback: Wald test of all trading day coefficients from the estimation
+    b <- pp$estimation$b
+    bvar <- pp$estimation$bvar
+    if (length(b) == 0 || length(bvar) == 0 || nrow(bvar) != sum(n_est)) {
+      return(NULL)
+    }
+    first <- cumsum(c(0L, head(n_est, -1))) + 1L
+    idx <- unlist(lapply(which(is_td & n_est > 0), function(i) {
+      first[i] + seq_len(n_est[i]) - 1L
+    }))
+    V <- bvar[idx, idx, drop = FALSE]
+    Vinv <- tryCatch(solve(V), error = function(e) {
+      # nearly singular covariance matrix: use the pseudo inverse
+      ev <- eigen(V, symmetric = TRUE)
+      tol <- max(dim(V)) * max(ev$values) * .Machine$double.eps
+      ev$vectors %*% diag(ifelse(ev$values > tol, 1 / ev$values, 0),
+                         nrow = length(ev$values)) %*% t(ev$vectors)
+    })
+    fstat <- drop(crossprod(b[idx], Vinv %*% b[idx])) / q
+    pval <- stats::pf(fstat, q, df, lower.tail = FALSE)
+  }
+  data.frame(
+    group = "Trading days", value = fstat, df1 = q, df2 = df,
+    pvalue = pval, stringsAsFactors = FALSE
+  )
+}
+
+#' Print the joint F tests computed by [tdJointFTest()]
+#'
+#' Formats the one-row data frame returned by [tdJointFTest()] as one line
+#' per test, `group: F(df1, df2) = value P ...`, with the p-value in the same
+#' format as the coefficient tables. Used by the print method of
+#' [getRegressors()] and by [summary.persephone()].
+#'
+#' @param ft one-row data frame from [tdJointFTest()]
+#' @param p_digits number of decimal places for the p-value
+#' @return `ft`, invisibly
+#' @keywords internal
+printFTests <- function(ft, p_digits = 3) {
+  for (i in seq_len(nrow(ft))) {
+    p_str <- fmt.pvalue(ft$pvalue[i], p_digits)
+    p_str <- if (startsWith(p_str, "<")) {
+      paste0("P ", p_str)
+    } else {
+      paste0("P = ", p_str)
+    }
+    cat(sprintf("  %-15s F(%d, %d) = %.3f  %s\n",
+                paste0(ft$group[i], ":"), ft$df1[i], ft$df2[i],
+                ft$value[i], p_str))
+  }
+  invisible(ft)
+}
+
+#' Print an aligned table of pre-formatted display strings
+#'
+#' Prints a data frame of already formatted strings with one common width per
+#' column across all rows: the columns named in `right_cols` are right
+#' aligned, the others left aligned; headers are left aligned. Unlike
+#' [print.data.frame()], which pads and trims the columns itself, this keeps
+#' the alignment of the numeric columns (the decimal points line up). Tables
+#' wider than `width` are split into blocks of columns that are printed one
+#' below the other, as [print.data.frame()] does.
+#'
+#' @param df data frame of display strings
+#' @param right_cols character vector of column names to right align
+#' @param width maximal line width; defaults to `getOption("width")`
+#' @return `df`, invisibly
+#' @keywords internal
+printAlignedTable <- function(df, right_cols = character(0),
+                              width = getOption("width")) {
+  if (length(df) == 0) {
+    return(invisible(df))
+  }
+  widths <- vapply(seq_along(df), function(j) {
+    max(c(nchar(names(df)[j]),
+          nchar(trimws(as.character(df[[j]])))))
+  }, integer(1))
+  cells <- lapply(seq_along(df), function(j) {
+    nm <- names(df)[j]
+    s <- trimws(as.character(df[[j]]))
+    pad <- strrep(" ", widths[[j]] - nchar(s))
+    body <- if (nm %in% right_cols) paste0(pad, s) else paste0(s, pad)
+    c(paste0(nm, strrep(" ", widths[[j]] - nchar(nm))), body)
+  })
+  # split the columns into blocks that fit into width (greedily, from the
+  # left), like print.data.frame() does for wide tables
+  labels <- format(seq_len(max(nrow(df), 1L)), justify = "right")
+  rn <- max(nchar(labels))
+  budget <- max(as.integer(width) - rn - 2L, 1L)
+  block_end <- integer(0)
+  used <- widths[[1L]]
+  if (length(widths) > 1L) {
+    for (j in seq_along(widths)[-1L]) {
+      if (used + 2L + widths[[j]] > budget) {
+        block_end <- c(block_end, j - 1L)
+        used <- widths[[j]]
+      } else {
+        used <- used + 2L + widths[[j]]
+      }
+    }
+  }
+  block_end <- c(block_end, length(widths))
+  mat <- do.call(cbind, cells)
+  lines <- unlist(lapply(seq_along(block_end), function(b) {
+    cols <- if (b == 1L) {
+      seq_len(block_end[[b]])
+    } else {
+      (block_end[[b - 1L]] + 1L):block_end[[b]]
+    }
+    lab <- c(strrep(" ", rn), labels)
+    paste0(lab, "  ",
+           apply(mat[, cols, drop = FALSE], 1, paste, collapse = "  "))
+  }))
+  cat(sub(" +$", "", lines), sep = "\n")
+  invisible(df)
+}
+
 #' Print method for the outlier table of a Persephone object
 #'
-#' Prints the data frame returned by [getOutliers()] with left aligned
-#' character columns; the standard print method of [print.data.frame()]
-#' right aligns them.
+#' Prints the data frame returned by [getOutliers()] as an aligned table:
+#' text columns left aligned, numbers right aligned with fixed decimals so
+#' that the decimal points line up. The standard print method of
+#' [print.data.frame()] would left align the numbers and show them in full
+#' precision.
 #'
 #' @param x A data frame of class `persephoneOutliers`, as returned by
 #'   [getOutliers()]
-#' @param ... further arguments passed to [print.data.frame()]
+#' @param ... further arguments passed to the aligned table printer,
+#'   e.g. `width` (defaults to `getOption("width")`)
+#' @param p_digits number of decimal places for the p-value (also sets the
+#'   `"< 0.001"` lower bound); defaults to 3
 #' @return `x`, invisibly
 #'
 #' @export
-print.persephoneOutliers <- function(x, ...) {
-  # drop only our own class, not "data.frame": row.names() does not work on a
-  # plain list, which unclass(x) would produce
+print.persephoneOutliers <- function(x, p_digits = 3, ...) {
+  # readable fixed-decimal numbers; crit.value and t get 2 decimals, the
+  # (much smaller) coefficients 4; p-value as plain decimal with a "< 0.001"
+  # floor. No significance stars here on purpose -- outlier significance is
+  # the abs(t) > crit.value rule (see nSigRecentout), not a 5% t-test.
   df <- x
-  class(df) <- "data.frame"
-  print(df, right = FALSE, ...)
+  if (is.numeric(df$coef.value)) df$coef.value <- formatC(df$coef.value, format = "f", digits = 4)
+  if (is.numeric(df$stde))       df$stde       <- formatC(df$stde,       format = "f", digits = 4)
+  if (is.numeric(df$t))          df$t          <- formatC(df$t,          format = "f", digits = 2)
+  if (is.numeric(df$crit.value)) df$crit.value <- formatC(df$crit.value, format = "f", digits = 2)
+  if (is.numeric(df$pvalue))     df$pvalue     <- fmt.pvalue(df$pvalue, p_digits)
+  printAlignedTable(
+    df,
+    right_cols = c("coef.value", "stde", "t", "crit.value", "pvalue"),
+    ...
+  )
   invisible(x)
 }
 
 #' Print method for the regression table of a Persephone object
 #'
-#' Prints the data frame returned by [getRegressors()] with left aligned
-#' character columns; the standard print method of [print.data.frame()]
-#' right aligns them.
+#' Prints the data frame returned by [getRegressors()] as an aligned table:
+#' text columns left aligned, numbers right aligned with fixed decimals so
+#' that the decimal points line up, plus a column of significance stars and,
+#' when the model has trading day regressors, their joint F test below the
+#' table. The standard print method of [print.data.frame()] would left align
+#' the numbers and show them in full precision.
 #'
 #' @param x A data frame of class `persephoneRegressors`, as returned by
 #'   [getRegressors()]
-#' @param ... further arguments passed to [print.data.frame()]
+#' @param ... further arguments passed to the aligned table printer,
+#'   e.g. `width` (defaults to `getOption("width")`)
+#' @param p_digits number of decimal places for the p-value (also sets the
+#'   `"< 0.001"` lower bound); defaults to 3
 #' @return `x`, invisibly
 #'
 #' @export
-print.persephoneRegressors <- function(x, ...) {
-  # drop only our own class, not "data.frame": row.names() does not work on a
-  # plain list, which unclass(x) would produce
+print.persephoneRegressors <- function(x, p_digits = 3, ...) {
   df <- x
-  class(df) <- "data.frame"
-  print(df, right = FALSE, ...)
+  # readable numbers: fixed decimals per column (value/stde keep 4 decimals
+  # so small calendar effects stay visible); p-value in plain decimals with a
+  # "< 0.001" floor; add printCoefmat-style significance stars
+  if (is.numeric(df$value)) df$value <- formatC(df$value, format = "f", digits = 4)
+  if (is.numeric(df$stde))  df$stde  <- formatC(df$stde,  format = "f", digits = 4)
+  if (is.numeric(df$t))     df$t     <- formatC(df$t,     format = "f", digits = 2)
+  if (is.numeric(x$pvalue)) {
+    # insert the significance stars right after pvalue, using the original
+    # numeric p-values, then reformat the displayed p-value
+    p <- match("pvalue", names(df))
+    head_df <- df[, seq_len(p), drop = FALSE]
+    tail_df <- if (p < ncol(df)) df[, -seq_len(p), drop = FALSE] else NULL
+    df <- cbind(head_df, sig = fmt.sig(x$pvalue))
+    if (!is.null(tail_df)) df <- cbind(df, tail_df)
+    df$pvalue <- fmt.pvalue(x$pvalue, p_digits)
+  }
+  printAlignedTable(df, right_cols = c("value", "stde", "t", "pvalue"), ...)
+  # joint F tests attached by getRegressors() (trading days only)
+  ft <- attr(x, "ftests")
+  if (!is.null(ft) && nrow(ft) > 0) {
+    cat("\nJoint F tests\n")
+    printFTests(ft, p_digits)
+  }
   invisible(x)
 }
 

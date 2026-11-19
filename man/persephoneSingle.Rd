@@ -10,6 +10,10 @@ Class for single time series
 }
 \details{
 A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSingle}
+
+In addition to the methods of \link{persephone}, single series objects provide
+a \code{summary()} method that prints a report of the model run, see
+\code{\link[=summary.persephone]{summary.persephone()}}.
 }
 \section{Super class}{
 \code{\link[persephone3:persephone]{persephone3::persephone}} -> \code{persephoneSingle}
@@ -19,6 +23,7 @@ A common class for the wrapper classes \link{x13Single} and \link{tramoseatsSing
 \itemize{
 \item \href{#method-persephoneSingle-new}{\code{persephoneSingle$new()}}
 \item \href{#method-persephoneSingle-run}{\code{persephoneSingle$run()}}
+\item \href{#method-persephoneSingle-summary}{\code{persephoneSingle$summary()}}
 \item \href{#method-persephoneSingle-clone}{\code{persephoneSingle$clone()}}
 }
 }
@@ -96,6 +101,20 @@ run the model
 \item{\code{verbose}}{wether to display outputs after the run}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-persephoneSingle-summary"></a>}}
+\if{latex}{\out{\hypertarget{method-persephoneSingle-summary}{}}}
+\subsection{Method \code{summary()}}{
+print a summary of the model run,
+see \code{\link[=summary.persephone]{summary.persephone()}}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{persephoneSingle$summary()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+\code{self}, invisibly
 }
 }
 \if{html}{\out{<hr>}}

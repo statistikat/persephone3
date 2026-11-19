@@ -49,8 +49,26 @@
 #'   \item{nRecentout}{Number of outliers falling into the last observations
 #'         of the series (see the \code{recentout} column of
 #'         \code{\link{getOutliers}})}
-#'   \item{Q}{M-statistics Q value}
-#'   \item{Q2}{M-statistics Q-M2 value}
+#'   \item{nSigRecentout}{Number of \emph{significant} recent outliers: those
+#'         recent outliers whose absolute t-statistic exceeds the model's
+#'         critical value, i.e. \code{recentout} and \code{abs(t) > crit.value}
+#'         in \code{\link{getOutliers}}. This is the same threshold JDemetra+
+#'         uses to decide whether an effect enters the model at all, so
+#'         automatically detected recent outliers essentially always count.
+#'         The value differs from \code{nRecentout} mainly for manually
+#'         specified recent outliers that do not reach the threshold, and for
+#'         outliers with a non-estimable t-statistic (e.g. \code{coef.type =
+#'         "FIXED"}), which are never counted as significant.}
+#'   \item{Q}{Composite quality indicator built from the X-11 M-statistics
+#'         (M1 to M11): a weighted mean of the individual statistics, each of
+#'         which ranges from 0 to 3 and is accepted below 1; a value below 1
+#'         indicates a satisfactory quality}
+#'   \item{Q2}{The same composite computed without the M2 statistic
+#'         (\code{Q-M2})}
+#'   \item{nMstatOutside}{Number of X-11 M-statistics outside their acceptance
+#'         limits (value above 1); statistics that could not be computed do
+#'         not count, and the value is \code{NA} when no M-statistics are
+#'         available at all (e.g. TRAMO-SEATS)}
 #'   \item{TotalQ}{Overall quality summary (JDemetra+ node
 #'         \code{quality.summary}): an aggregate of all standard diagnostic
 #'         tests (residual, forecasting, outlier, spectral, seasonality and
@@ -90,8 +108,10 @@ generate_diagnostics_table <- function(x) {
       nOutliers = NA,
       nAutoout = NA,
       nRecentout = NA,
+      nSigRecentout = NA,
       Q = NA,
       Q2 = NA,
+      nMstatOutside = NA,
       TotalQ = NA
     ))
   }
@@ -193,6 +213,14 @@ generate_diagnostics_table <- function(x) {
 
   qStat <- x$output$mstats$q
   qStat2 <- x$output$mstats$qm2
+  # number of M-statistics outside their acceptance limits: every numeric m
+  # field of the mstats block (m1..m11, zero padding as reported), each
+  # ranging from 0 to 3 and accepted below 1; statistics that could not be
+  # computed (NA, e.g. M6 without a 3x5 filter or M8 to M11 for series
+  # shorter than 6 years) are not counted
+  mstats <- x$output$mstats
+  mfields <- mstats[grepl("^m[0-9]{1,2}$", names(mstats))]
+  mvals <- suppressWarnings(as.numeric(unlist(mfields, use.names = FALSE)))
   out_p <- userdef$regression.nout / length(x$ts)
   fTest <- userdef$`regression.td-ftest`$pvalue[1]
   out <- getOutliers(x)
@@ -223,8 +251,12 @@ generate_diagnostics_table <- function(x) {
     nOutliers = ifelse(is.null(nrow(out)), NA, nrow(out)),
     nAutoout = ifelse(is.null(nrow(out)), NA, sum(out$autoout)),
     nRecentout = ifelse(is.null(nrow(out)), NA, sum(out$recentout)),
+    nSigRecentout = ifelse(is.null(nrow(out)), NA, sum(
+      out$recentout & abs(out$t) > out$crit.value, na.rm = TRUE
+    )),
     Q = ifelse(is.null(qStat), NA, round(qStat, digits = 2)),
     Q2 = ifelse(is.null(qStat2), NA, round(qStat2, digits = 2)),
+    nMstatOutside = if (all(is.na(mvals))) NA else sum(mvals > 1, na.rm = TRUE),
     TotalQ = userdef$quality.summary
   )
 }
@@ -248,7 +280,9 @@ generate_diagnostics_table <- function(x) {
 #'   \item \strong{Seasonality tests:} QS and F-tests for residual seasonality
 #'   \item \strong{Calendar effects:} tests for trading day and other calendar effects
 #'   \item \strong{Model information:} ARIMA specification, transformation, outliers
-#'   \item \strong{Quality measures:} M-statistics (Q, Q2) and overall quality
+#'   \item \strong{Quality measures:} composite M-statistics indicators
+#'   (Q, Q2), number of M-statistics outside their acceptance limits
+#'   (nMstatOutside) and overall quality
 #' }
 #'
 #' All p-values are classified into quality categories (Good, Uncertain, Bad, Severe)

@@ -2,6 +2,11 @@
 #'
 #' A common class for the wrapper classes [x13Single] and [tramoseatsSingle]
 #'
+#' @details
+#' In addition to the methods of [persephone], single series objects provide
+#' a `summary()` method that prints a report of the model run, see
+#' [summary.persephone()].
+#'
 #' @export
 persephoneSingle <- R6::R6Class(
   "persephoneSingle",
@@ -43,6 +48,12 @@ persephoneSingle <- R6::R6Class(
         invisible(output)
       else
         output
+    },
+    #' @description print a summary of the model run,
+    #'   see [summary.persephone()]
+    #' @return `self`, invisibly
+    summary = function() {
+      summary.persephone(self)
     }
   )
 )

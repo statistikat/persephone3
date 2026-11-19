@@ -49,6 +49,7 @@ obj$output
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephone" data-id="updateParams"><a href='../../persephone3/html/persephone.html#method-persephone-updateParams'><code>persephone3::persephone$updateParams()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephoneSingle" data-id="initialize"><a href='../../persephone3/html/persephoneSingle.html#method-persephoneSingle-initialize'><code>persephone3::persephoneSingle$initialize()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="persephone3" data-topic="persephoneSingle" data-id="run"><a href='../../persephone3/html/persephoneSingle.html#method-persephoneSingle-run'><code>persephone3::persephoneSingle$run()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="persephone3" data-topic="persephoneSingle" data-id="summary"><a href='../../persephone3/html/persephoneSingle.html#method-persephoneSingle-summary'><code>persephone3::persephoneSingle$summary()</code></a></span></li>
 </ul>
 </details>
 }}

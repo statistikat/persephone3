@@ -20,6 +20,10 @@ summarized as "outlier"}
 \item{stde}{Standard error (NA for non-estimated types)}
 \item{t}{T-statistic for estimated coefficients}
 \item{pvalue}{Two-sided p-value for estimated coefficients}
+
+The result additionally carries the joint F test of the trading day
+regressors (when the model has any) as the attribute \code{ftests}
+(one-row data frame from the internal \code{tdJointFTest()} helper).
 }
 \description{
 This function retrieves the coefficients of all regression variables of a

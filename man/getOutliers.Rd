@@ -18,6 +18,10 @@ A data frame with columns:
 \item{stde}{Standard error of the coefficient (\code{NA} if \code{coef.type} is
 "FIXED")}
 \item{t}{T-statistic, \code{coef.value / stde}}
+\item{crit.value}{Critical value of the outlier test applied by
+JDemetra+: the value from the \code{outlier} specification if positive
+(x13: per outlier type, falling back to \code{defva}), otherwise the
+threshold computed internally (see Details)}
 \item{pvalue}{Two-sided p-value of \code{t} under a t distribution with
 \code{neffectiveobs - nparams} degrees of freedom}
 \item{date}{Date of the outlier as Date object}
@@ -57,6 +61,18 @@ read from the model specification (\code{regarima$regression$outliers} for x13,
 \code{tramo$regression$outliers} for tramoseats). \code{recentout} is evaluated
 independently of \code{autoout}, so a manually specified outlier close to the
 end of the series is flagged as well.
+
+If the \code{outlier} specification defines no critical value, JDemetra+
+computes one internally from the number of observations \code{n} of the
+estimation domain: x13 uses \code{max(advancedComputer(0.05)(n), 2.8)}, an
+extreme-value approximation for the 95\% quantile of the maximum of \code{n}
+standard normal variables; tramoseats uses \code{max(simpleComputer()(n), 2)},
+i.e. 3.3 up to 50 observations, rising by 0.0025 per observation up to
+4.3. Both formulas are reproduced in \code{\link[=calcOutlierCrit]{calcOutlierCrit()}} and verified
+against the jdplus implementation. Note that during automatic model
+identification the engines may lower this value once (by about 14\% for
+x13 and 12\% for tramoseats); that reduction is not reported in the run
+output and is therefore not reflected in \code{crit.value}.
 }
 \note{
 This is an internal function used by other get* functions and diagnostics.

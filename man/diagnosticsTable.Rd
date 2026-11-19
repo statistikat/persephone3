@@ -26,7 +26,9 @@ The diagnostics table provides an overview of key quality indicators:
 \item \strong{Seasonality tests:} QS and F-tests for residual seasonality
 \item \strong{Calendar effects:} tests for trading day and other calendar effects
 \item \strong{Model information:} ARIMA specification, transformation, outliers
-\item \strong{Quality measures:} M-statistics (Q, Q2) and overall quality
+\item \strong{Quality measures:} composite M-statistics indicators
+(Q, Q2), number of M-statistics outside their acceptance limits
+(nMstatOutside) and overall quality
 }
 
 All p-values are classified into quality categories (Good, Uncertain, Bad, Severe)
