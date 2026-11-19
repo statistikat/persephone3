@@ -1348,7 +1348,8 @@ hierarchicalTimeSeries <- R6::R6Class(
       tbl$tdTest <- vapply(tests, function(t) unname(t[["tdTest"]]), 0)
       tbl <- tbl[, c(
         "component", "run", "method", "type", "agg", "seasonality",
-        "logTransform", "arimaMdl", "nOutliers", "Q", "Q2", "TotalQ",
+        "logTransform", "arimaMdl", "nOutliers", "nAutoout", "nRecentout",
+        "Q", "Q2", "TotalQ",
         "seasTest", "tdTest"
       ), drop = FALSE]
       if (identical(private$adjustment, "direct")) {

@@ -19,10 +19,9 @@ such outlier.
 Returns only the outliers that were detected automatically by
 X-13ARIMA-SEATS or TRAMO/SEATS, that is all outliers reported in the model
 output minus the ones specified manually with the \code{outliers} argument. The
-manual ones are read from the model specification
-(\code{regarima$regression$outliers} for x13, \code{tramo$regression$outliers} for
-tramoseats), because the output of the run does not distinguish manually
-specified from automatically detected outliers.
+manual ones are the rows with \code{autoout = FALSE} in \code{\link[=getOutliers]{getOutliers()}}, which
+reads them from the model specification (\code{regarima$regression$outliers}
+for x13, \code{tramo$regression$outliers} for tramoseats).
 }
 \note{
 This is an internal function. Unlike \code{\link[=getOutliers]{getOutliers()}} it works on single

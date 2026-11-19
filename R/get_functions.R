@@ -16,6 +16,13 @@
 #'   \item{pvalue}{Two-sided p-value}
 #'   \item{date}{Date of the outlier as Date object}
 #'   \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
+#'   \item{autoout}{Logical, TRUE for outliers detected automatically by
+#'     X-13ARIMA-SEATS or TRAMO/SEATS, FALSE for outliers that were specified
+#'     manually with the `outliers` argument}
+#'   \item{recentout}{Logical, TRUE if the outlier falls into one of the last
+#'     observations of the series: the last 5 observations for monthly series,
+#'     the last 3 for quarterly series, the last 1 for all other frequencies
+#'     (e.g., annual).}
 #'
 #' @note This is an internal function used by other get* functions and diagnostics.
 #' @keywords internal
@@ -100,6 +107,45 @@ getOutliers <- function(x) {
     outliers$t <- t
     outliers$pvalue <- pval
 
+    # The output of the run does not distinguish manually specified from
+    # automatically detected outliers; only the specification knows the manual
+    # ones (regarima$regression$outliers for x13, tramo$regression$outliers
+    # for tramoseats). Matching works on the type/date pair.
+    spec <- unclass(x$params)
+    spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
+    spec_outliers <- spec$regression$outliers
+    manual <- if (length(spec_outliers) == 0) {
+      NULL
+    } else {
+      data.frame(
+        type = vapply(spec_outliers, function(o) as.character(o$code), ""),
+        date = as.Date(
+          vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
+          origin = "1970-01-01"
+        )
+      )
+    }
+    outliers$autoout <- if (is.null(manual)) {
+      TRUE
+    } else {
+      !(paste(outliers$type, outliers$date) %in% paste(manual$type, manual$date))
+    }
+
+    # recentout: outliers falling into the last 5 (monthly) or 3 (quarterly)
+    # observations of the series, regardless of how they entered the model
+    frq <- frequency(x$ts)
+    k <- if (frq == 12) 5 else if (frq == 4) 3 else 1
+    per <- if (frq == 12) {
+      lubridate::year(outliers$date) +
+        (lubridate::month(outliers$date) - 1) / 12
+    } else {
+      lubridate::year(outliers$date) +
+        (lubridate::quarter(outliers$date) - 1) / 4
+    }
+    lag_periods <- round((as.numeric(tail(time(x$ts), 1)) - per) * frq)
+    outliers$recentout <- lag_periods >= 0 & lag_periods <= k - 1
+
+    rownames(outliers) <- NULL
     outliers <- outliers[, c(
       "name",
       "type",
@@ -108,7 +154,9 @@ getOutliers <- function(x) {
       "t",
       "pvalue",
       "date",
-      "coef.type"
+      "coef.type",
+      "autoout",
+      "recentout"
     )]
   } else {
     outliers <- NA
@@ -121,10 +169,9 @@ getOutliers <- function(x) {
 #' Returns only the outliers that were detected automatically by
 #' X-13ARIMA-SEATS or TRAMO/SEATS, that is all outliers reported in the model
 #' output minus the ones specified manually with the `outliers` argument. The
-#' manual ones are read from the model specification
-#' (`regarima$regression$outliers` for x13, `tramo$regression$outliers` for
-#' tramoseats), because the output of the run does not distinguish manually
-#' specified from automatically detected outliers.
+#' manual ones are the rows with `autoout = FALSE` in [getOutliers()], which
+#' reads them from the model specification (`regarima$regression$outliers`
+#' for x13, `tramo$regression$outliers` for tramoseats).
 #'
 #' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`) with
 #'   completed model run
@@ -143,20 +190,6 @@ getOutliers <- function(x) {
 #' # getNewOutliers(obj)  # without the manually specified one
 getNewOutliers <- function(x) {
   all_outliers <- getOutliers(x)
-  spec <- unclass(x$params)
-  spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
-  spec_outliers <- spec$regression$outliers
-  manual <- if (length(spec_outliers) == 0) {
-    NULL
-  } else {
-    data.frame(
-      type = vapply(spec_outliers, function(o) as.character(o$code), ""),
-      date = as.Date(
-        vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
-        origin = "1970-01-01"
-      )
-    )
-  }
   if (length(all_outliers) == 1 && is.na(all_outliers)) {
     return(data.frame(
       name = character(0),
@@ -166,15 +199,12 @@ getNewOutliers <- function(x) {
       t = numeric(0),
       pvalue = numeric(0),
       date = as.Date(character(0)),
-      coef.type = character(0)
+      coef.type = character(0),
+      autoout = logical(0),
+      recentout = logical(0)
     ))
   }
-  if (is.null(manual)) {
-    return(all_outliers)
-  }
-  keep <- !(paste(all_outliers$type, all_outliers$date) %in%
-    paste(manual$type, manual$date))
-  new_outliers <- all_outliers[keep, , drop = FALSE]
+  new_outliers <- all_outliers[all_outliers$autoout, , drop = FALSE]
   rownames(new_outliers) <- NULL
   new_outliers
 }

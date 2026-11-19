@@ -20,6 +20,13 @@ A data frame with columns:
 \item{pvalue}{Two-sided p-value}
 \item{date}{Date of the outlier as Date object}
 \item{coef.type}{Type of coefficient (usually "ESTIMATED")}
+\item{autoout}{Logical, TRUE for outliers detected automatically by
+X-13ARIMA-SEATS or TRAMO/SEATS, FALSE for outliers that were specified
+manually with the \code{outliers} argument}
+\item{recentout}{Logical, TRUE if the outlier falls into one of the last
+observations of the series: the last 5 observations for monthly series,
+the last 3 for quarterly series, the last 1 for all other frequencies
+(e.g., annual).}
 }
 \description{
 This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
