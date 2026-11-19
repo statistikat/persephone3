@@ -158,41 +158,76 @@ ht_europe
 #>  south_part/south_eastern_europe/Cyprus   TRUE tramoseats single   
 #>  south_part/south_eastern_europe/Bulgaria TRUE tramoseats single   
 #>  south_part/south_eastern_europe/Romania  TRUE tramoseats single   
-#>  seasonality  logTransform arimaMdl       nOutliers Q  Q2 TotalQ
-#>  Present       TRUE        (2 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (3 1 0)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  4        NA NA Severe
-#>  Present       TRUE        (2 1 3)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (2 1 0)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  2        NA NA Good  
-#>  Present       TRUE        (2 1 1)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (3 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (3 1 1)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (2 1 3)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (2 1 0)(0 1 1)  3        NA NA Severe
-#>  Present      FALSE        (2 1 0)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (3 1 1)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1) NA        NA NA Severe
-#>  Present       TRUE        (2 1 0)(0 1 1)  4        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  5        NA NA Severe
-#>  Present       TRUE        (1 1 1)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (2 1 0)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (2 1 0)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  2        NA NA Severe
-#>  Present       TRUE        (3 1 1)(0 1 1)  1        NA NA Severe
-#>  Present       TRUE        (3 1 1)(0 1 1)  2        NA NA Severe
-#>  ProbablyNone  TRUE        (0 1 1)(0 1 1)  9        NA NA Good  
-#>  Present       TRUE        (0 1 1)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  8        NA NA Severe
-#>  Present       TRUE        (2 1 1)(0 1 1)  9        NA NA Severe
-#>  Present       TRUE        (0 1 1)(0 1 1)  3        NA NA Severe
-#>  Present       TRUE        (1 1 2)(0 1 1)  4        NA NA Severe
+#>  seasonality  logTransform arimaMdl       nOutliers nAutoout
+#>  Present       TRUE        (2 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (2 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (3 1 0)(0 1 1)  3         3      
+#>  Present       TRUE        (2 1 1)(0 1 1)  4         4      
+#>  Present       TRUE        (2 1 3)(0 1 1)  2         2      
+#>  Present       TRUE        (2 1 0)(0 1 1)  1         1      
+#>  Present       TRUE        (0 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (2 1 1)(0 1 1)  3         3      
+#>  Present       TRUE        (3 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (3 1 1)(0 1 1)  1         1      
+#>  Present       TRUE        (2 1 1)(0 1 1)  3         3      
+#>  Present       TRUE        (0 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (2 1 3)(0 1 1)  1         1      
+#>  Present       TRUE        (2 1 0)(0 1 1)  3         3      
+#>  Present      FALSE        (2 1 0)(0 1 1)  2         2      
+#>  Present       TRUE        (2 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (3 1 1)(0 1 1)  3         3      
+#>  Present       TRUE        (0 1 1)(0 1 1) NA        NA      
+#>  Present       TRUE        (2 1 0)(0 1 1)  4         4      
+#>  Present       TRUE        (0 1 1)(0 1 1)  1         1      
+#>  Present       TRUE        (0 1 1)(0 1 1)  5         5      
+#>  Present       TRUE        (1 1 1)(0 1 1)  1         1      
+#>  Present       TRUE        (2 1 0)(0 1 1)  3         3      
+#>  Present       TRUE        (2 1 1)(0 1 1)  1         1      
+#>  Present       TRUE        (2 1 0)(0 1 1)  1         1      
+#>  Present       TRUE        (2 1 1)(0 1 1)  2         2      
+#>  Present       TRUE        (3 1 1)(0 1 1)  1         1      
+#>  Present       TRUE        (3 1 1)(0 1 1)  2         2      
+#>  ProbablyNone  TRUE        (0 1 1)(0 1 1)  9         9      
+#>  Present       TRUE        (0 1 1)(0 1 1)  3         3      
+#>  Present       TRUE        (0 1 1)(0 1 1)  8         8      
+#>  Present       TRUE        (2 1 1)(0 1 1)  9         9      
+#>  Present       TRUE        (0 1 1)(0 1 1)  3         3      
+#>  Present       TRUE        (1 1 2)(0 1 1)  4         4      
+#>  nRecentout Q  Q2 TotalQ
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Good  
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>  NA         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Good  
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
+#>   0         NA NA Severe
 ```
 
 ## Weights

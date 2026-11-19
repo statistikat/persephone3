@@ -38,7 +38,9 @@ The diagnostics table provides an overview of key quality indicators:
 
 - **Model information:** ARIMA specification, transformation, outliers
 
-- **Quality measures:** M-statistics (Q, Q2) and overall quality
+- **Quality measures:** composite M-statistics indicators (Q, Q2),
+  number of M-statistics outside their acceptance limits (nMstatOutside)
+  and overall quality
 
 All p-values are classified into quality categories (Good, Uncertain,
 Bad, Severe) based on commonly used thresholds in seasonal adjustment

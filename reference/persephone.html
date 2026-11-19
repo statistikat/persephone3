@@ -59,6 +59,10 @@ effects for a persephone object, see <a href="plotSeasIrrCal.html">plotSeasIrrCa
 <li><p><code>plotResiduals(...)</code>: Several interactive plots in connection with
 residuals for a persephone
 object, see <a href="plotResiduals.html">plotResiduals</a></p></li>
+<li><p><code><a href="getOutliers.html">getOutliers()</a></code>: Extract outlier information from the model run, see
+<code><a href="getOutliers.html">getOutliers()</a></code></p></li>
+<li><p><code><a href="getRegressors.html">getRegressors()</a></code>: Extract the coefficients of all regression variables
+of the model run, see <code><a href="getRegressors.html">getRegressors()</a></code></p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="read-only-fields">Read-Only fields<a class="anchor" aria-label="anchor" href="#read-only-fields"></a></h2>
@@ -154,6 +158,8 @@ the first time.</p></dd>
 <li><p><a href="#method-persephone-generateQrTable"><code>persephone$generateQrTable()</code></a></p></li>
 <li><p><a href="#method-persephone-fixModel"><code>persephone$fixModel()</code></a></p></li>
 <li><p><a href="#method-persephone-fixOutlier"><code>persephone$fixOutlier()</code></a></p></li>
+<li><p><a href="#method-persephone-getOutliers"><code>persephone$getOutliers()</code></a></p></li>
+<li><p><a href="#method-persephone-getRegressors"><code>persephone$getRegressors()</code></a></p></li>
 <li><p><a href="#method-persephone-clone"><code>persephone$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-persephone-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
@@ -425,10 +431,38 @@ where outliers are not fixed</p></dd>
 </dl><p></p></div>
 </div>
 
+</div><p></p><hr><a id="method-persephone-getOutliers"></a><div class="section">
+<h3 id="method-getoutliers-">Method <code><a href="getOutliers.html">getOutliers()</a></code><a class="anchor" aria-label="anchor" href="#method-getoutliers-"></a></h3>
+<p>extract outlier information from the model run,
+see <code><a href="getOutliers.html">getOutliers()</a></code></p><div class="section">
+<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">persephone</span><span class="op">$</span><span class="fu">getOutliers</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="returns">Returns<a class="anchor" aria-label="anchor" href="#returns"></a></h4>
+<p>A data frame as described in <code><a href="getOutliers.html">getOutliers()</a></code>, <code>NA</code> if the model
+contains no outliers</p>
+</div>
+
+</div><p></p><hr><a id="method-persephone-getRegressors"></a><div class="section">
+<h3 id="method-getregressors-">Method <code><a href="getRegressors.html">getRegressors()</a></code><a class="anchor" aria-label="anchor" href="#method-getregressors-"></a></h3>
+<p>extract the coefficients of all regression variables of
+the model run, see <code><a href="getRegressors.html">getRegressors()</a></code></p><div class="section">
+<h4 id="usage-16">Usage<a class="anchor" aria-label="anchor" href="#usage-16"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">persephone</span><span class="op">$</span><span class="fu">getRegressors</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
+<p>A data frame as described in <code><a href="getRegressors.html">getRegressors()</a></code>, <code>NULL</code> if the
+model contains no regression variables</p>
+</div>
+
 </div><p></p><hr><a id="method-persephone-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
+<h4 id="usage-17">Usage<a class="anchor" aria-label="anchor" href="#usage-17"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">persephone</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 

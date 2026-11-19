@@ -22,3 +22,9 @@
 
 - [Hierarchical time series - construction and
   weights](https://statistikat.github.io/persephone3/articles/persephone-hierarchicalEU.md):
+
+- [Diagnostics in
+  persephone3](https://statistikat.github.io/persephone3/articles/persephone-diagnostics.md):
+
+  How the diagnostics table is generated and how the overall quality
+  summary (TotalQ) is computed.

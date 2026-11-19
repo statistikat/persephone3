@@ -60,6 +60,10 @@
 "Bad" (0.001 ≤ p &lt; 0.01), "Severe" (p &lt; 0.001)</p></li>
 <li><p><strong>Seasonality/TD tests:</strong> "Good" (p ≥ 0.1), "Uncertain" (0.05 ≤ p &lt; 0.1),
 "Bad" (0.01 ≤ p &lt; 0.05), "Severe" (p &lt; 0.01)</p></li>
+<li><p><strong>TD regression F-test (<code>TD_status</code>):</strong> small p indicates a
+significant trading day effect and thus justified trading-day
+regressors, i.e. the reverse direction of the residual tests:
+"Good" (p &lt; 0.05), "Uncertain" (0.05 ≤ p &lt; 0.1), "Bad" (p ≥ 0.1)</p></li>
 <li><p><strong>Outliers:</strong> "Good" (&lt; 3\<!-- %), "Uncertain" (3-5\\%), "Severe" (&gt; 5\\%) --></p></li>
 </ul></div>
     <div class="section level2">
@@ -106,7 +110,16 @@
 <dd><p>F-test for trading day effects in SA series</p></dd>
 
 <dt>TD_Ftest</dt>
-<dd><p>P-value of regression F-test for trading days</p></dd>
+<dd><p>P-value of regression F-test for trading days. <code>NA</code>
+if the final model contains no trading-day regressors — e.g.
+templates without calendar effects (<code>"rsa3"</code>) or when the
+automatic pre-test (<code>td.test = "Remove"</code>, as in <code>"rsa5c"</code>)
+dropped them; use <code>td.test = "None"</code> to force their inclusion</p></dd>
+
+<dt>TD_status</dt>
+<dd><p>Classification of the regression F-test for trading days:
+"Good" if the trading day effect is significant (small p), "Bad" if
+the trading-day regressors are not justified by the data</p></dd>
 
 <dt>logTransform</dt>
 <dd><p>Logical indicating if log transformation was applied</p></dd>
@@ -114,17 +127,59 @@
 <dt>arimaMdl</dt>
 <dd><p>ARIMA model specification as string</p></dd>
 
-<dt>nOutliers</dt>
+<dt>nOutliers_Q</dt>
 <dd><p>Classification of outlier proportion</p></dd>
 
+<dt>nOutliers</dt>
+<dd><p>Number of outliers in the model</p></dd>
+
+<dt>nAutoout</dt>
+<dd><p>Number of automatically detected outliers (see the
+<code>autoout</code> column of <code><a href="getOutliers.html">getOutliers</a></code>)</p></dd>
+
+<dt>nRecentout</dt>
+<dd><p>Number of outliers falling into the last observations
+of the series (see the <code>recentout</code> column of
+<code><a href="getOutliers.html">getOutliers</a></code>)</p></dd>
+
+<dt>nSigRecentout</dt>
+<dd><p>Number of <em>significant</em> recent outliers: those
+recent outliers whose absolute t-statistic exceeds the model's
+critical value, i.e. <code>recentout</code> and <code>abs(t) &gt; crit.value</code>
+in <code><a href="getOutliers.html">getOutliers</a></code>. This is the same threshold JDemetra+
+uses to decide whether an effect enters the model at all, so
+automatically detected recent outliers essentially always count.
+The value differs from <code>nRecentout</code> mainly for manually
+specified recent outliers that do not reach the threshold, and for
+outliers with a non-estimable t-statistic (e.g. <code>coef.type =
+        "FIXED"</code>), which are never counted as significant.</p></dd>
+
 <dt>Q</dt>
-<dd><p>M-statistics Q value</p></dd>
+<dd><p>Composite quality indicator built from the X-11 M-statistics
+(M1 to M11): a weighted mean of the individual statistics, each of
+which ranges from 0 to 3 and is accepted below 1; a value below 1
+indicates a satisfactory quality</p></dd>
 
 <dt>Q2</dt>
-<dd><p>M-statistics Q-M2 value</p></dd>
+<dd><p>The same composite computed without the M2 statistic
+(<code>Q-M2</code>)</p></dd>
+
+<dt>nMstatOutside</dt>
+<dd><p>Number of X-11 M-statistics outside their acceptance
+limits (value above 1); statistics that could not be computed do
+not count, and the value is <code>NA</code> when no M-statistics are
+available at all (e.g. TRAMO-SEATS)</p></dd>
 
 <dt>TotalQ</dt>
-<dd><p>Overall quality summary</p></dd>
+<dd><p>Overall quality summary (JDemetra+ node
+<code>quality.summary</code>): an aggregate of all standard diagnostic
+tests (residual, forecasting, outlier, spectral, seasonality and
+trading-day tests, plus the M-statistics Q/Q2 for X-13 or the
+Wiener-Kolmogorov tests for SEATS), classified as <code>Good</code>,
+<code>Uncertain</code>, <code>Bad</code>, <code>Severe</code> or <code>Undefined</code>.
+See the
+<a href="https://statistikat.github.io/persephone3/articles/persephone-diagnostics.html">diagnostics vignette</a>
+for details</p></dd>
 
 
 </dl></div>

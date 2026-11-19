@@ -165,14 +165,14 @@ case.</p>
 <span><span class="co">#&gt;  hts_child   FALSE tramoseats aggregate &lt;NA&gt;          NA        </span></span>
 <span><span class="co">#&gt;  hts_child/a FALSE x13        single    &lt;NA&gt;          NA        </span></span>
 <span><span class="co">#&gt;  b           FALSE tramoseats single    &lt;NA&gt;          NA        </span></span>
-<span><span class="co">#&gt;  arimaMdl       nOutliers Q    Q2   TotalQ</span></span>
-<span><span class="co">#&gt;  &lt;NA&gt;           NA          NA   NA &lt;NA&gt;  </span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA          NA   NA Good  </span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        0.26 0.29 Good  </span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA          NA   NA Good  </span></span>
-<span><span class="co">#&gt;  &lt;NA&gt;           NA          NA   NA &lt;NA&gt;  </span></span>
-<span><span class="co">#&gt;  &lt;NA&gt;           NA          NA   NA &lt;NA&gt;  </span></span>
-<span><span class="co">#&gt;  &lt;NA&gt;           NA          NA   NA &lt;NA&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt;  arimaMdl       nOutliers nAutoout nRecentout Q    Q2   TotalQ</span></span>
+<span><span class="co">#&gt;  &lt;NA&gt;           NA        NA       NA           NA   NA &lt;NA&gt;  </span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  </span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA         0.26 0.29 Good  </span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  </span></span>
+<span><span class="co">#&gt;  &lt;NA&gt;           NA        NA       NA           NA   NA &lt;NA&gt;  </span></span>
+<span><span class="co">#&gt;  &lt;NA&gt;           NA        NA       NA           NA   NA &lt;NA&gt;  </span></span>
+<span><span class="co">#&gt;  &lt;NA&gt;           NA        NA       NA           NA   NA &lt;NA&gt;</span></span></code></pre></div>
 <p>As you can see, the structure of <code>hts</code> is available within
 this nested object.</p>
 </div>
@@ -225,10 +225,10 @@ also applied to all components recursively:</p>
 <span><span class="co">#&gt;            TRUE tramoseats aggregate Present     TRUE        </span></span>
 <span><span class="co">#&gt;  a         TRUE x13        single    Present     TRUE        </span></span>
 <span><span class="co">#&gt;  b         TRUE tramoseats single    Present     TRUE        </span></span>
-<span><span class="co">#&gt;  arimaMdl       nOutliers Q    Q2   TotalQ</span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA          NA   NA Good  </span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        0.26 0.29 Good  </span></span>
-<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA          NA   NA Good</span></span></code></pre></div>
+<span><span class="co">#&gt;  arimaMdl       nOutliers nAutoout nRecentout Q    Q2   TotalQ</span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  </span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA         0.26 0.29 Good  </span></span>
+<span><span class="co">#&gt;  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good</span></span></code></pre></div>
 <p>The <code>automdl.enabled = FALSE</code> setting was applied to both
 the aggregate series and both components (<code>a</code> and
 <code>b</code>). You can verify this by inspecting the

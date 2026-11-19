@@ -19,10 +19,8 @@ its dependencies from GitHub:
 
 ``` r
 
-# Install rjdverse dependencies first
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# Install rjdverse dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # Install persephone3
 remotes::install_github("statistikat/persephone3")
@@ -127,8 +125,8 @@ obj_x13
 #> Output:
 #>  run  method type   seasonality logTransform arimaMdl       nOutliers
 #>  TRUE x13    single Present     TRUE         (0 1 1)(0 1 1) NA       
-#>  Q    Q2   TotalQ
-#>  0.26 0.29 Good
+#>  nAutoout nRecentout Q    Q2   TotalQ
+#>  NA       NA         0.26 0.29 Good
 
 # Access the rjd3 output object
 obj_x13$output
@@ -159,10 +157,12 @@ obj_x13$diagnosticsTable()
 #> 1           TRUE    x13 single     Present      Good         Good
 #>   QS_seas F_seas combSA_all combSA_last combI_all combI_last
 #> 1    Good   Good       Good        Good      Good       Good
-#>   fTestSA_td TD_Ftest logTransform       arimaMdl nOutliers    Q   Q2
-#> 1  Uncertain       NA         TRUE (0 1 1)(0 1 1)      Good 0.26 0.29
-#>   TotalQ
-#> 1   Good
+#>   fTestSA_td TD_Ftest TD_status logTransform       arimaMdl
+#> 1  Uncertain       NA Undefined         TRUE (0 1 1)(0 1 1)
+#>   nOutliers_Q nOutliers nAutoout nRecentout nSigRecentout    Q   Q2
+#> 1        Good        NA       NA         NA            NA 0.26 0.29
+#>   nMstatOutside TotalQ
+#> 1             0   Good
 ```
 
 #### Visualization
@@ -242,10 +242,12 @@ obj_x13$diagnosticsTable()
 #> 1           TRUE    x13 single     Present      Good    Uncertain
 #>   QS_seas F_seas combSA_all combSA_last combI_all combI_last
 #> 1    Good   Good       Good        Good      Good       Good
-#>   fTestSA_td TD_Ftest logTransform       arimaMdl nOutliers    Q   Q2
-#> 1     Severe       NA        FALSE (0 1 1)(0 1 0)      Good 0.47 0.53
-#>   TotalQ
-#> 1 Severe
+#>   fTestSA_td TD_Ftest TD_status logTransform       arimaMdl
+#> 1     Severe       NA Undefined        FALSE (0 1 1)(0 1 0)
+#>   nOutliers_Q nOutliers nAutoout nRecentout nSigRecentout    Q   Q2
+#> 1        Good         1        1          0             0 0.47 0.53
+#>   nMstatOutside TotalQ
+#> 1             3 Severe
 ```
 
 ### Available Spec-Blocks

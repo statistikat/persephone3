@@ -58,6 +58,8 @@ Inherited methods
 - [`persephone3::persephone$diagnosticsTable()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-diagnosticsTable)
 - [`persephone3::persephone$fixModel()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixModel)
 - [`persephone3::persephone$fixOutlier()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixOutlier)
+- [`persephone3::persephone$getOutliers()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getOutliers)
+- [`persephone3::persephone$getRegressors()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getRegressors)
 - [`persephone3::persephone$hchart()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-hchart)
 - [`persephone3::persephone$plot()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-plot)
 - [`persephone3::persephone$plotResiduals()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-plotResiduals)

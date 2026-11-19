@@ -27,6 +27,8 @@ Inherited methods
 - [`persephone3::persephone$fixModel()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixModel)
 - [`persephone3::persephone$fixOutlier()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixOutlier)
 - [`persephone3::persephone$generateQrTable()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-generateQrTable)
+- [`persephone3::persephone$getOutliers()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getOutliers)
+- [`persephone3::persephone$getRegressors()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getRegressors)
 - [`persephone3::persephone$hchart()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-hchart)
 - [`persephone3::persephone$iterate()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-iterate)
 - [`persephone3::persephone$plot()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-plot)
@@ -38,6 +40,7 @@ Inherited methods
 - [`persephone3::persephone$updateParams()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-updateParams)
 - [`persephone3::persephoneSingle$initialize()`](https://statistikat.github.io/persephone3/html/persephoneSingle.html#method-persephoneSingle-initialize)
 - [`persephone3::persephoneSingle$run()`](https://statistikat.github.io/persephone3/html/persephoneSingle.html#method-persephoneSingle-run)
+- [`persephone3::persephoneSingle$summary()`](https://statistikat.github.io/persephone3/html/persephoneSingle.html#method-persephoneSingle-summary)
 
 ------------------------------------------------------------------------
 

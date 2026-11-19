@@ -63,6 +63,12 @@
   : is.persephone
 - [`iterate()`](https://statistikat.github.io/persephone3/reference/iterate.md)
   : Iterate over a hierarchical persephone object
+- [`print(`*`<persephoneOutliers>`*`)`](https://statistikat.github.io/persephone3/reference/print.persephoneOutliers.md)
+  : Print method for the outlier table of a Persephone object
+- [`print(`*`<persephoneRegressors>`*`)`](https://statistikat.github.io/persephone3/reference/print.persephoneRegressors.md)
+  : Print method for the regression table of a Persephone object
+- [`summary(`*`<persephone>`*`)`](https://statistikat.github.io/persephone3/reference/summary.persephone.md)
+  : Summary of a Seasonal Adjustment
 
 ## Example Data
 

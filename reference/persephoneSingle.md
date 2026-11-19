@@ -11,6 +11,13 @@ A common class for the wrapper classes
 and
 [tramoseatsSingle](https://statistikat.github.io/persephone3/reference/tramoseatsSingle.md)
 
+In addition to the methods of
+[persephone](https://statistikat.github.io/persephone3/reference/persephone.md),
+single series objects provide a
+[`summary()`](https://rdrr.io/r/base/summary.html) method that prints a
+report of the model run, see
+[`summary.persephone()`](https://statistikat.github.io/persephone3/reference/summary.persephone.md).
+
 ## Super class
 
 [`persephone3::persephone`](https://statistikat.github.io/persephone3/reference/persephone.md)
@@ -24,6 +31,8 @@ and
 
 - [`persephoneSingle$run()`](#method-persephoneSingle-run)
 
+- [`persephoneSingle$summary()`](#method-persephoneSingle-summary)
+
 - [`persephoneSingle$clone()`](#method-persephoneSingle-clone)
 
 Inherited methods
@@ -32,6 +41,8 @@ Inherited methods
 - [`persephone3::persephone$fixModel()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixModel)
 - [`persephone3::persephone$fixOutlier()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-fixOutlier)
 - [`persephone3::persephone$generateQrTable()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-generateQrTable)
+- [`persephone3::persephone$getOutliers()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getOutliers)
+- [`persephone3::persephone$getRegressors()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-getRegressors)
 - [`persephone3::persephone$hchart()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-hchart)
 - [`persephone3::persephone$iterate()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-iterate)
 - [`persephone3::persephone$plot()`](https://statistikat.github.io/persephone3/html/persephone.html#method-persephone-plot)
@@ -117,6 +128,21 @@ run the model
 - `verbose`:
 
   wether to display outputs after the run
+
+------------------------------------------------------------------------
+
+### Method [`summary()`](https://rdrr.io/r/base/summary.html)
+
+print a summary of the model run, see
+[`summary.persephone()`](https://statistikat.github.io/persephone3/reference/summary.persephone.md)
+
+#### Usage
+
+    persephoneSingle$summary()
+
+#### Returns
+
+`self`, invisibly
 
 ------------------------------------------------------------------------
 

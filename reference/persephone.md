@@ -26,6 +26,15 @@ Common interface for x13 and tramoseats
   residuals for a persephone object, see
   [plotResiduals](https://statistikat.github.io/persephone3/reference/plotResiduals.md)
 
+- [`getOutliers()`](https://statistikat.github.io/persephone3/reference/getOutliers.md):
+  Extract outlier information from the model run, see
+  [`getOutliers()`](https://statistikat.github.io/persephone3/reference/getOutliers.md)
+
+- [`getRegressors()`](https://statistikat.github.io/persephone3/reference/getRegressors.md):
+  Extract the coefficients of all regression variables of the model run,
+  see
+  [`getRegressors()`](https://statistikat.github.io/persephone3/reference/getRegressors.md)
+
 ## Read-Only fields
 
 - `params`: A parameters object of class `SA_spec`. See
@@ -137,6 +146,10 @@ Common interface for x13 and tramoseats
 - [`persephone$fixModel()`](#method-persephone-fixModel)
 
 - [`persephone$fixOutlier()`](#method-persephone-fixOutlier)
+
+- [`persephone$getOutliers()`](#method-persephone-getOutliers)
+
+- [`persephone$getRegressors()`](#method-persephone-getRegressors)
 
 - [`persephone$clone()`](#method-persephone-clone)
 
@@ -430,6 +443,41 @@ create a new single object
 
   number of months from the end of the time series where outliers are
   not fixed
+
+------------------------------------------------------------------------
+
+### Method [`getOutliers()`](https://statistikat.github.io/persephone3/reference/getOutliers.md)
+
+extract outlier information from the model run, see
+[`getOutliers()`](https://statistikat.github.io/persephone3/reference/getOutliers.md)
+
+#### Usage
+
+    persephone$getOutliers()
+
+#### Returns
+
+A data frame as described in
+[`getOutliers()`](https://statistikat.github.io/persephone3/reference/getOutliers.md),
+`NA` if the model contains no outliers
+
+------------------------------------------------------------------------
+
+### Method [`getRegressors()`](https://statistikat.github.io/persephone3/reference/getRegressors.md)
+
+extract the coefficients of all regression variables of the model run,
+see
+[`getRegressors()`](https://statistikat.github.io/persephone3/reference/getRegressors.md)
+
+#### Usage
+
+    persephone$getRegressors()
+
+#### Returns
+
+A data frame as described in
+[`getRegressors()`](https://statistikat.github.io/persephone3/reference/getRegressors.md),
+`NULL` if the model contains no regression variables
 
 ------------------------------------------------------------------------
 

@@ -100,14 +100,14 @@ hts_nested
 #>  hts_child   FALSE tramoseats aggregate <NA>          NA        
 #>  hts_child/a FALSE x13        single    <NA>          NA        
 #>  b           FALSE tramoseats single    <NA>          NA        
-#>  arimaMdl       nOutliers Q    Q2   TotalQ
-#>  <NA>           NA          NA   NA <NA>  
-#>  (0 1 1)(0 1 1) NA          NA   NA Good  
-#>  (0 1 1)(0 1 1) NA        0.26 0.29 Good  
-#>  (0 1 1)(0 1 1) NA          NA   NA Good  
-#>  <NA>           NA          NA   NA <NA>  
-#>  <NA>           NA          NA   NA <NA>  
-#>  <NA>           NA          NA   NA <NA>
+#>  arimaMdl       nOutliers nAutoout nRecentout Q    Q2   TotalQ
+#>  <NA>           NA        NA       NA           NA   NA <NA>  
+#>  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  
+#>  (0 1 1)(0 1 1) NA        NA       NA         0.26 0.29 Good  
+#>  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  
+#>  <NA>           NA        NA       NA           NA   NA <NA>  
+#>  <NA>           NA        NA       NA           NA   NA <NA>  
+#>  <NA>           NA        NA       NA           NA   NA <NA>
 ```
 
 As you can see, the structure of `hts` is available within this nested
@@ -166,10 +166,10 @@ hts_custom
 #>            TRUE tramoseats aggregate Present     TRUE        
 #>  a         TRUE x13        single    Present     TRUE        
 #>  b         TRUE tramoseats single    Present     TRUE        
-#>  arimaMdl       nOutliers Q    Q2   TotalQ
-#>  (0 1 1)(0 1 1) NA          NA   NA Good  
-#>  (0 1 1)(0 1 1) NA        0.26 0.29 Good  
-#>  (0 1 1)(0 1 1) NA          NA   NA Good
+#>  arimaMdl       nOutliers nAutoout nRecentout Q    Q2   TotalQ
+#>  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good  
+#>  (0 1 1)(0 1 1) NA        NA       NA         0.26 0.29 Good  
+#>  (0 1 1)(0 1 1) NA        NA       NA           NA   NA Good
 ```
 
 The `automdl.enabled = FALSE` setting was applied to both the aggregate

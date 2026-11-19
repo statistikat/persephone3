@@ -21,10 +21,8 @@ java interface.
 
 ``` r
 
-# install dependencies
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# install dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # install the package from GitHub
 remotes::install_github("statistikat/persephone3")
@@ -158,6 +156,12 @@ site](https://statistikat.github.io/persephone3/) for persephone.
   : is.persephone
 - [`iterate()`](https://statistikat.github.io/persephone3/reference/iterate.md)
   : Iterate over a hierarchical persephone object
+- [`print(`*`<persephoneOutliers>`*`)`](https://statistikat.github.io/persephone3/reference/print.persephoneOutliers.md)
+  : Print method for the outlier table of a Persephone object
+- [`print(`*`<persephoneRegressors>`*`)`](https://statistikat.github.io/persephone3/reference/print.persephoneRegressors.md)
+  : Print method for the regression table of a Persephone object
+- [`summary(`*`<persephone>`*`)`](https://statistikat.github.io/persephone3/reference/summary.persephone.md)
+  : Summary of a Seasonal Adjustment
 
 ## Example Data
 
@@ -238,3 +242,9 @@ site](https://statistikat.github.io/persephone3/) for persephone.
 
 - [Hierarchical time series - construction and
   weights](https://statistikat.github.io/persephone3/articles/persephone-hierarchicalEU.md):
+
+- [Diagnostics in
+  persephone3](https://statistikat.github.io/persephone3/articles/persephone-diagnostics.md):
+
+  How the diagnostics table is generated and how the overall quality
+  summary (TotalQ) is computed.

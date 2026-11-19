@@ -21,10 +21,8 @@ java interface.
 
 ``` r
 
-# install dependencies
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# install dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # install the package from GitHub
 remotes::install_github("statistikat/persephone3")
