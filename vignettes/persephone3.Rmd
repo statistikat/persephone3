@@ -29,10 +29,8 @@ knitr::opts_chunk$set(
 Install `{persephone3}` and its dependencies from GitHub:
 
 ```r
-# Install rjdverse dependencies first
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# Install rjdverse dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # Install persephone3
 remotes::install_github("statistikat/persephone3")

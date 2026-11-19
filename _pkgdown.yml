@@ -72,6 +72,9 @@ reference:
       - generateQrTable
       - is.persephone
       - iterate
+      - print.persephoneOutliers
+      - print.persephoneRegressors
+      - summary.persephone
   - title: "Example Data"
     contents:
       - pi_caladj

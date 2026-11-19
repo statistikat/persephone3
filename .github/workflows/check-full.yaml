@@ -47,7 +47,7 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -64,8 +64,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
+          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-3-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-3-
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -109,11 +109,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Install GitHub dependencies first
-          remotes::install_github("rjdverse/rjd3toolkit@*release", upgrade = "never")
-          remotes::install_github("rjdverse/rjd3tramoseats@*release", upgrade = "never")
-          remotes::install_github("rjdverse/rjd3x13@*release", upgrade = "never")
-          remotes::install_deps(dependencies = TRUE)
+          remotes::install_deps(dependencies = TRUE, upgrade = "never")
           remotes::install_cran("rcmdcheck")
         shell: Rscript {0}
 
@@ -130,7 +126,7 @@ jobs:
           _R_CHECK_FORCE_SUGGESTS_: false
         run: |
           options(crayon.enabled = TRUE)
-          rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "warning", check_dir = "check")
+          rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "error", check_dir = "check")
         shell: Rscript {0}
 
       - name: Show testthat output
@@ -140,7 +136,7 @@ jobs:
 
       - name: Upload check results
         if: failure()
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-r${{ matrix.config.r }}-results
           path: check

@@ -202,14 +202,21 @@ getOutliers <- function(x) {
       calcOutlierCrit(sum(!is.na(x$output$preprocessing$estimation$y)),
                       "tramoseats")
     }
+    # a missing or empty spec entry gives numeric(0) via as.numeric(), which
+    # vapply cannot coerce to length 1 -- treat it as 0 and fall back to the
+    # threshold computed by calcOutlierCrit.
+    as_crit <- function(v) {
+      v <- suppressWarnings(as.numeric(v))
+      if (length(v) != 1L || is.na(v)) 0 else v
+    }
     spec_cv <- vapply(outliers$type, function(tp) {
       if (!is_x13) {
-        return(as.numeric(otl_spec$va))
+        return(as_crit(otl_spec$va))
       }
       type_o <- Filter(function(o) identical(as.character(o$type), tp),
                        otl_spec$outliers)
-      va <- if (length(type_o)) as.numeric(type_o[[1]]$va) else 0
-      if (va > 0) va else as.numeric(otl_spec$defva)
+      va <- if (length(type_o)) as_crit(type_o[[1]]$va) else 0
+      if (va > 0) va else as_crit(otl_spec$defva)
     }, numeric(1))
     outliers$crit.value <- ifelse(spec_cv > 0, spec_cv, auto_cv)
 
@@ -805,36 +812,3 @@ gettsout <- function(x) {
   return(list(tsout, dateout))
 }
 
-#' Run multiple diagnostic extraction functions on a Persephone object
-#'
-#' This convenience function allows running several diagnostic extraction
-#' functions at once and printing their results. It is primarily used for
-#' interactive exploration and debugging.
-#'
-#' @param x A Persephone object (e.g., `x13Single` or `tramoseatsSingle`)
-#' @param ... Additional functions to run (passed as character strings)
-#' @param funcs Character vector of function names to run (default: `c("getOutliers", "getRegressors")`)
-#' @return Invisible list of results from each function
-#'
-#' @note This is an internal function for interactive diagnostics.
-#' @keywords internal
-#'
-#' @examples
-#' # obj <- perX13(AirPassengers, "rsa3")
-#' # obj$run()
-#' # getDiagnostics(obj)
-#' # getDiagnostics(obj, funcs = c("getOutliers", "getRegressors", "gettsout"))
-getDiagnostics <- function(x, ..., funcs = c("getOutliers", "getRegressors")) {
-  # Combine default functions with additional ones
-  all_funcs <- c(funcs, c(...))
-
-  results <- list()
-
-  for (f in all_funcs) {
-    cat("\n=== ", toupper(f), " ===\n")
-    results[[f]] <- get(f)(x)
-    print(results[[f]])
-  }
-
-  invisible(results)
-}
