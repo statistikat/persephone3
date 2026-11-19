@@ -2,6 +2,7 @@
 #'
 #' This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
 #' model, including coefficients, standard errors, t-statistics, and p-values.
+#'
 #' It processes the raw output from X-13ARIMA-SEATS or TRAMO/SEATS into a clean
 #' data frame with formatted dates and names.
 #'
