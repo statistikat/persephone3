@@ -1,0 +1,90 @@
+### TEMPLATE rsa4
+### PROTO_BYTES 248
+0ab7010a060a0010011801120b080a1900000000000000c01a1f0a040a02414f0a040a024c530a040a025443120029666666666666e63f301e220c18012202100130013a0210012a4c080111666666666666ee3f19000000000000f03f21280af4893c49c23f29cdccccccccccf03f31d151812fae7ef03f392fbae8a28b2ef23f419a9999999999b93f4967202a1dd933f03f580132161a0a08011001300250016200220808011008180152003a0b0a001148afbc9af2d77a3e1224100122010029000000000000f83f31000000000000044038ffffffffffffffffff0160031a16100219000000000000f03f21000000000000f03f2801
+### PROTO_TEXT
+regarima {
+  basic {
+    span {
+    }
+    preprocessing: true
+    preliminary_check: true
+  }
+  transform {
+    transformation: FN_AUTO
+    aicdiff: -2.0
+  }
+  outlier {
+    outliers {
+      code: "AO"
+    }
+    outliers {
+      code: "LS"
+    }
+    outliers {
+      code: "TC"
+    }
+    span {
+    }
+    monthly_tc_rate: 0.7
+    maxiter: 30
+  }
+  arima {
+    d: 1
+    theta {
+      type: PARAMETER_UNDEFINED
+    }
+    bd: 1
+    btheta {
+      type: PARAMETER_UNDEFINED
+    }
+  }
+  automodel {
+    enabled: true
+    ljungbox: 0.95
+    tsig: 1.0
+    predcv: 0.14286
+    ubfinal: 1.05
+    ub1: 1.0309278350515465
+    ub2: 1.1363636363636365
+    cancel: 0.1
+    fct: 1.0126582278481011
+    mixed: true
+  }
+  regression {
+    td {
+      td: TD2
+      lp: LP_LEAPYEAR
+      test: TEST_REMOVE
+      auto_adjust: true
+      lpcoefficient {
+      }
+    }
+    easter {
+      type: EASTER_STANDARD
+      duration: 8
+      test: TEST_ADD
+      coefficient {
+      }
+    }
+  }
+  estimate {
+    span {
+    }
+    tol: 1.0E-7
+  }
+}
+x11 {
+  seasonal: true
+  sfilters: SEASONAL_FILTER_MSR
+  lsig: 1.5
+  usig: 2.5
+  nfcasts: -1
+  bias: BIAS_RATIO
+}
+benchmarking {
+  target: BENCH_TARGET_CALENDARADJUSTED
+  lambda: 1.0
+  rho: 1.0
+  bias: BENCH_BIAS_NONE
+}
+

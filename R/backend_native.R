@@ -17,12 +17,39 @@
 # JVM x11.mode = UNKNOWN, whose effective mode X13Kernel.forceMode derives from
 # the log decision). Of the six rsa templates only rsa3 (transform AUTO +
 # automodel enabled + no calendar/Easter/user regressors) fits the qualified
-# envelope; rsa0/rsa1/rsa2c run with automodel disabled and fixed transform
-# (rsa0) or calendar regressors (rsa2c), and rsa4/rsa5c detect trading days and
-# Easter -- all refused by name with the measured template facts, mirroring the
-# core's fail-closed matrix (21-I deferral status quoted verbatim). Zero
-# horizons are the only R-qualified domain; a user can neither request
-# horizons nor mutate the pinned module state (only the sigma policy).
+# envelope; rsa4/rsa5c detect trading days and Easter -- refused by name with
+# the measured template facts, mirroring the core's fail-closed matrix (21-I
+# deferral status quoted verbatim). Zero horizons are the only R-qualified
+# domain; a user can neither request horizons nor mutate the pinned module
+# state (only the sigma policy).
+#
+# M4-gap slice (2026-11-21): the automodel-OFF templates rsa0/rsa1/rsa2c were
+# re-decoded LIVE from the pinned jars (X13Spec.fromString -> X13.toBuffer ->
+# Spec.parseFrom().toString() proto TextFormat plus the fully expanded rjd3
+# x13_spec walk; probe m4gap-templates-probe.R sha256
+# d3525549f06d5add59b290a8a8604fd139020b91364dfe825c8f5171b4b54104, two JVM
+# processes, 12/12 files byte-identical) and evaluated against BOTH qualified
+# routes. They stay refused on both, with measured facts (nothing adapted):
+# the AUTOMATIC route refuses them as before (automodel disabled is a dead
+# branch; rsa2c additionally carries the 21-I calendar facts), and the
+# RESTRICTED fixed-coefficient route cannot represent them either: every one
+# of the three states ARIMA coefficients PARAMETER_UNDEFINED (ESTIMATED at
+# run time -- landing bits measured in the pinned demand captures), requests
+# x11 sfilters SEASONAL_FILTER_MSR (core: "unsupported:x13 fit fixed seasonal
+# requests only"), the automatic Henderson 0 (core: "unsupported:x13 fit
+# fixed Henderson trend length") and nfcasts -1 = 12 forecast months (core:
+# "unsupported:x13 fit requires zero horizons"; measured 12 forecasts in all
+# nine demand runs); rsa1/rsa2c additionally request the FN_AUTO log test and
+# AO/LS/TC detection, and rsa2c carries the ESTIMATED leap-year/easter
+# regressors (TD2 columns removed by TEST_REMOVE, leap-year kept -- measured).
+# No fixed-spec mapping is pinnable from template data: the candidate fixed
+# values (final Henderson 9 vs 13, S3X3/S3X5/S3X9, log TRUE/FALSE) are
+# series-dependent RUN OUTPUTS of estimation the restricted route never
+# performs, so pinning them would be mapping fudge. The refusals below carry
+# both envelopes' violated fields; the pinned captures live under
+# inst/tinytest/fixtures/native/refusals-m4gap/ (decode + demand lines,
+# double-JVM byte-identical) and the JVM lane re-verifies them against the
+# live stack. Notes: tmp_opencode/persephone-m4gap-pinning.md.
 #
 # Sigma policy (maintainer decision 2026-11-17): the X-11 sigma-rule product
 # default is "legacy" (bit-exact against the pinned DefaultExtremeValuesCorrector
@@ -72,24 +99,61 @@ backend_native_gate <- function(context = "the restricted fit", method = "x13") 
 # The templates the native backend can construct: the restricted fixed
 # specification and the automatic rsa3 template (pinned decode table, see
 # below). Every other automatic template is refused naming the measured
-# JDemetra+ template facts that put it outside the qualified envelope.
+# JDemetra+ template facts that put it outside the qualified envelope(s).
+# The restricted-route facts below are MEASURED, not derived: the pinned core
+# statuses are the live answers of rkalos 0.1.0 / core f500162 to the decoded
+# requests (m4gap-envelope-probe.R sha256
+# 2e59fe75312bef3d55d1775c859fea83db4f74654591f629607e3e575cbf0d1e), and the
+# template facts come from the double-JVM captures
+# inst/tinytest/fixtures/native/refusals-m4gap/ (probe sha256
+# d3525549f06d5add59b290a8a8604fd139020b91364dfe825c8f5171b4b54104 and
+# 77ea273a6a32db948026ec016cca5b2cfdfafc547ec931fdc214496d4840bee0).
+backend_native_restricted_refusal <- paste0(
+  "the pinned JDemetra+ specification states the ARIMA coefficients ",
+  "PARAMETER_UNDEFINED (ESTIMATED at run time) and requests the X-11 filters ",
+  "SEASONAL_FILTER_MSR with the automatic Henderson 0 and nfcasts = -1 (12 ",
+  "forecast months; measured in the pinned demand captures), which the ",
+  "restricted fixed-coefficient route refuses verbatim with ",
+  "'unsupported:x13 fit fixed seasonal requests only', 'unsupported:x13 fit ",
+  "fixed Henderson trend length' and 'unsupported:x13 fit requires zero ",
+  "horizons' (nothing is estimated there: fixed_coefficients_only); ")
+
 backend_native_auto_refusals <- list(
-  rsa0 = list(violated = c("transform.auto_log_test", "automodel"),
+  rsa0 = list(violated = c("transform.auto_log_test", "automodel",
+                           "fixed_coefficients_only",
+                           "fixed_seasonal_requests_only",
+                           "fixed_trend_length_only", "zero_horizon_only"),
               detail = paste0("the pinned JDemetra+ rsa0 specification fixes ",
                               "transform.fn = Level (the automatic log test is ",
                               "the only wired transform branch) and runs with ",
-                              "automodel.enabled = FALSE; ")),
-  rsa1 = list(violated = "automodel",
-              detail = paste0("the pinned JDemetra+ rsa1 specification runs with ",
-                              "automodel.enabled = FALSE; the qualified automatic ",
-                              "pipeline is the automatic-modeling route; ")),
-  rsa2c = list(violated = c("automodel", "automatic_fit.deferred"),
+                              "automodel.enabled = FALSE; ",
+                              backend_native_restricted_refusal)),
+  rsa1 = list(violated = c("automodel", "fixed_coefficients_only",
+                           "fixed_seasonal_requests_only",
+                           "fixed_trend_length_only", "zero_horizon_only"),
+              detail = paste0("the pinned JDemetra+ rsa1 specification runs ",
+                              "with automodel.enabled = FALSE; the qualified ",
+                              "automatic pipeline is the automatic-modeling ",
+                              "route; it additionally requests the FN_AUTO log ",
+                              "test and AO/LS/TC outlier detection (measured ",
+                              "ESTIMATED AO variables in the pinned demand ",
+                              "captures), and ",
+                              backend_native_restricted_refusal)),
+  rsa2c = list(violated = c("automodel", "automatic_fit.deferred",
+                            "fixed_coefficients_only",
+                            "fixed_seasonal_requests_only",
+                            "fixed_trend_length_only", "zero_horizon_only"),
                detail = paste0("the pinned JDemetra+ rsa2c specification runs with ",
                                "automodel.enabled = FALSE and carries the TD2/leap-year ",
                                "(test REMOVE) and Easter (test ADD) regressors; ",
                                "calendar detection is deferred (21-I): the core ",
                                "answers 'unsupported:x13 automatic fit defers ",
-                               "calendar/easter/TD/user detection (21-I)'; ")),
+                               "calendar/easter/TD/user detection (21-I)'; it ",
+                               "additionally requests the FN_AUTO log test and ",
+                               "AO/LS/TC outlier detection, and TEST_REMOVE ",
+                               "measurably keeps the ESTIMATED leap-year and ",
+                               "easter coefficients, and ",
+                               backend_native_restricted_refusal)),
   rsa4 = list(violated = "automatic_fit.deferred",
               detail = paste0("the pinned JDemetra+ rsa4 specification carries the ",
                               "TD2/leap-year (test REMOVE) and Easter (test ADD) ",
@@ -132,7 +196,7 @@ backend_native_check_template <- function(template, method = "x13") {
                                      native_backend_entry, name, refusal$detail))
     }
     backend_native_refusal("specification construction", method, refusal$violated,
-                           sprintf("template '%s' is outside the qualified native automatic envelope: %s",
+                           sprintf("template '%s' is outside the qualified native envelopes (automatic and restricted): %s",
                                    name, refusal$detail))
   }
   backend_native_refusal("specification construction", method,

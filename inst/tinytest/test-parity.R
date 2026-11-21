@@ -295,6 +295,85 @@ spec_matrix <- expand.grid(method = c("x13", "tramoseats"),
                            template = c("rsa0", "rsa3"),
                            freq = c(12L, 4L),
                            stringsAsFactors = FALSE)
+
+# M4-gap (2026-11-21): the automodel-OFF templates refuse naming the measured
+# facts of BOTH qualified envelopes. The AUTOMATIC facts are asserted above;
+# below, each refusal must name the restricted fixed-coefficient violations
+# AND quote the pinned core status verbatim -- and those statuses must be the
+# LIVE rkalos answers to the decoded requests (fail-closed matrix: aspects
+# measured through the namespace entries the product path calls; no Java).
+local({
+  restricted_fields <- c("fixed_coefficients_only", "fixed_seasonal_requests_only",
+                         "fixed_trend_length_only", "zero_horizon_only")
+  core_statuses <- c(
+    msr = "unsupported:x13 fit fixed seasonal requests only",
+    henderson = "unsupported:x13 fit fixed Henderson trend length",
+    horizon = "unsupported:x13 fit requires zero horizons")
+  refuse_tpl <- function(template) {
+    tryCatch({perX13(series_m, template, backend = "native"); "no error"},
+             error = function(e) conditionMessage(e))
+  }
+  for (tpl in c("rsa0", "rsa1", "rsa2c")) {
+    msg <- refuse_tpl(tpl)
+    expect_match(msg, "outside the qualified native envelopes \\(automatic and restricted\\)",
+                 fixed = FALSE, info = paste(tpl, "dual-envelope framing"))
+    for (field in restricted_fields) {
+      expect_match(msg, field, fixed = TRUE, info = paste(tpl, field))
+    }
+    for (cs in core_statuses) {
+      expect_match(msg, cs, fixed = TRUE, info = paste(tpl, cs))
+    }
+    expect_match(msg, "PARAMETER_UNDEFINED", fixed = TRUE, info = paste(tpl, "estimation fact"))
+    expect_match(msg, "SEASONAL_FILTER_MSR", fixed = TRUE, info = paste(tpl, "msr fact"))
+    expect_match(msg, "nfcasts = -1", fixed = TRUE, info = paste(tpl, "horizon fact"))
+  }
+  # rsa1/rsa2c extra measured facts; rsa0 has NEITHER (measured: LEVEL fixed,
+  # outlier types empty -- rsa0's text must not claim log-test or detection).
+  expect_match(refuse_tpl("rsa1"), "FN_AUTO log test and AO/LS/TC outlier detection",
+               fixed = TRUE)
+  expect_match(refuse_tpl("rsa2c"), "FN_AUTO log test and AO/LS/TC outlier detection",
+               fixed = TRUE)
+  expect_match(refuse_tpl("rsa2c"), "keeps the ESTIMATED leap-year and easter coefficients",
+               fixed = TRUE)
+  m0 <- refuse_tpl("rsa0")
+  expect_false(grepl("FN_AUTO", m0, fixed = TRUE))
+  expect_match(m0, "transform.fn = Level", fixed = TRUE)
+  # Live core answers for the decoded aspects (rkalos 0.1.0, core f500162):
+  # verbatim equality with the statuses quoted in the refusals above.
+  fit_fun <- get0("native_x13_fit", envir = asNamespace("rkalos"), mode = "function")
+  raw_fun <- get0(".native_x13_fit", envir = asNamespace("rkalos"))
+  expect_true(is.function(fit_fun) && is.function(raw_fun))
+  y <- as.numeric(AirPassengers)
+  st <- fit_fun(y, seasonal = rep("msr", 12L), trend_length = 13L,
+                frequency = 12L, start_period = 1L)
+  expect_identical(st$status, core_statuses[["msr"]])
+  st <- fit_fun(y, seasonal = rep("s3x3", 12L), trend_length = 0L,
+                frequency = 12L, start_period = 1L)
+  expect_identical(st$status, core_statuses[["henderson"]])
+  st <- fit_fun(y, seasonal = rep("s3x3", 12L), trend_length = 13L,
+                frequency = 12L, start_period = 1L, forecast = 12L)
+  expect_identical(st$status, core_statuses[["horizon"]])
+  # Template-faithful -1 (the core normalizes |h| to annual frequencies):
+  st <- fit_fun(y, seasonal = rep("s3x3", 12L), trend_length = 13L,
+                frequency = 12L, start_period = 1L, forecast = -1L)
+  expect_identical(st$status, core_statuses[["horizon"]])
+  # Estimated coefficients have no carrier: a non-finite coefficient throws at
+  # the pinned preadjust shape guard (never an estimation seam).
+  thrown <- tryCatch({
+    raw_fun(y, list(list(class = "user", effect = "undefined",
+                         coefficient = NA_real_, columns = list(seq_along(y)))),
+            FALSE, 12L, 1L, rep("s3x3", 12L), 13L, "legacy", 1.5, 2.5,
+            "jdplus", "additive", 0L, 0L)
+    NA_character_
+  }, error = function(e) conditionMessage(e))
+  expect_match(thrown, "x13 preadjust coefficients are finite", fixed = TRUE)
+  # Contrast: the in-envelope fixed request runs (the envelope itself works --
+  # what the templates request is not in it).
+  st <- fit_fun(y, seasonal = rep("s3x3", 12L), trend_length = 13L,
+                frequency = 12L, start_period = 1L)
+  expect_identical(st$status, "available")
+})
+
 for (i in seq_len(nrow(spec_matrix))) {
   spec <- spec_matrix[i, ]
   if (identical(spec$method, "x13") && identical(spec$template, "rsa3") &&
@@ -487,13 +566,22 @@ local({
   cap <- backend_capabilities("native")
   af <- cap$automatic_fit
   expect_identical(cap$native_x13_fit_automatic, TRUE)
-  expect_identical(af$schema_version, 2L)
+  # Re-baselined 2026-11-21 at rkalos b90d367 (automatic_fit schema 3L):
+  # x11$zero_horizon_only was REPLACED by x11$horizon_envelope (the 21-H.4 R
+  # horizon qualification); the Persephone automatic request still pins the
+  # zero horizons of the decode table, and the RESTRICTED fit keeps
+  # zero_horizon_only = TRUE (asserted in the restricted block above).
+  expect_identical(af$schema_version, 3L)
   expect_identical(af$native_x13_fit_automatic, TRUE)
   expect_identical(af$frequency, 12L)
   expect_true(af$monthly_only)
   expect_true(af$complete_finite_input_only)
   expect_identical(af$transform$auto_log_test, TRUE)
-  expect_identical(af$x11$zero_horizon_only, TRUE)
+  expect_null(af$x11$zero_horizon_only)
+  expect_true(is.character(af$x11$horizon_envelope) &&
+                length(af$x11$horizon_envelope) == 1L &&
+                grepl("backcast/forecast", af$x11$horizon_envelope, fixed = TRUE))
+  expect_identical(cap$restricted_fit$zero_horizon_only, TRUE)
   expect_identical(af$x11$sigma_policy_default, "legacy")
   expect_identical(af$x11$msr_requests_pinned, TRUE)
   expect_identical(af$x11$automatic_henderson, TRUE)
@@ -873,6 +961,113 @@ local({
     if (length(problems)) message("AUTOMATIC DUAL-LANE VIOLATIONS (", id, "):\n",
                                   paste(problems, collapse = "\n"))
     expect_identical(problems, character(0))
+  }
+})
+
+# M4-gap stack pin (2026-11-21): the pinned decode and demand captures under
+# fixtures/native/refusals-m4gap/ (double-JVM byte-identical at capture; see
+# the refusal-table header in R/backend_native.R for probe hashes) must be
+# reproduced BYTE-IDENTICALLY by the live stack: the jar proto text and the
+# rjd3 spec walk for all six templates, and the product-lane demand runs
+# (x13_fast with the template defaults intact, nfcasts = -1 included) for the
+# three automodel-OFF templates on the standard series. The refusals for
+# rsa0/rsa1/rsa2c cite exactly these facts, so the refusal contract is
+# re-verified against the live JVM here -- no native run exists to compare.
+if (has_rjd3) local({
+  ref_dir <- file.path(parity_auto_dir(), "..", "refusals-m4gap")
+  ref_dir <- normalizePath(ref_dir, mustWork = TRUE)
+  read_bytes <- function(path) {
+    con <- file(path, "rb"); on.exit(close(con))
+    readBin(path, what = "raw", n = file.size(path))
+  }
+  g <- function(v) if (is.null(v) || !length(v)) "NULL" else
+    paste(sprintf("%.17g", as.numeric(v)), collapse = ";")
+  pickv <- function(x) if (is.null(x) || !length(x)) NULL else
+    unlist(x[seq(1, length(x), 2)])
+  proto_capture <- function(t) {
+    jobj <- rJava::.jcall("jdplus/x13/base/api/x13/X13Spec",
+                          "Ljdplus/x13/base/api/x13/X13Spec;", "fromString", t)
+    buf <- rJava::.jcall("jdplus/x13/base/r/X13", "[B", "toBuffer", jobj)
+    msg <- rJava::.jcall("jdplus/x13/base/protobuf/Spec",
+                         "Ljdplus/x13/base/protobuf/Spec;", "parseFrom", buf)
+    c(sprintf("### TEMPLATE %s", t), sprintf("### PROTO_BYTES %d", length(buf)),
+      paste(sprintf("%02x", as.integer(buf)), collapse = ""),
+      "### PROTO_TEXT", rJava::.jcall(msg, "S", "toString"))
+  }
+  rspec_capture <- function(t) {
+    out <- character(0)
+    walk <- function(x, prefix) {
+      if (is.list(x)) {
+        for (n in names(x)) walk(x[[n]], paste0(prefix, ".", n))
+      } else {
+        out[[length(out) + 1L]] <<- sprintf(
+          "%s = %s", prefix,
+          paste(format(x, trim = TRUE, digits = 17), collapse = "|"))
+      }
+    }
+    walk(rjd3x13::x13_spec(t), t)
+    c(sprintf("### TEMPLATE %s", t), out)
+  }
+  demand_capture <- function(tpl, id, series) {
+    f <- rjd3x13::x13_fast(series, spec = rjd3x13::x13_spec(tpl),
+                           userdefined = c("sa", "t", "i", "y_f"))
+    d <- f$preprocessing$description
+    names_ <- vapply(d$variables, function(v) v$name, character(1))
+    nonconst <- names_ != "const"
+    fs <- f$decomposition$final_seasonal
+    c(paste0("template=", tpl),
+      paste0("series=", id),
+      paste0("log=", d$log),
+      paste0("d=", d$arima$d, " bd=", d$arima$bd),
+      paste0("p=", length(d$arima$phi) %/% 2L),
+      paste0("q=", length(d$arima$theta) %/% 2L),
+      paste0("bp=", length(d$arima$bphi) %/% 2L),
+      paste0("bq=", length(d$arima$btheta) %/% 2L),
+      paste0("theta=", g(pickv(d$arima$theta))),
+      paste0("btheta=", g(pickv(d$arima$btheta))),
+      paste0("phi=", g(pickv(d$arima$phi))),
+      paste0("bphi=", g(pickv(d$arima$bphi))),
+      paste0("nvars=", sum(nonconst)),
+      paste0("vars=", paste(names_[nonconst], collapse = "|")),
+      paste0("lsr_coef=", g(unlist(lapply(d$variables[nonconst],
+                                          function(v) v$coef$value)))),
+      paste0("coef_types=", paste(vapply(d$variables[nonconst],
+                                         function(v) v$coef$type[1], character(1)),
+                                  collapse = "|")),
+      paste0("nforecast=", length(na.omit(as.numeric(f$user_defined$y_f)))),
+      paste0("final_henderson=", g(f$decomposition$final_henderson)),
+      paste0("final_seasonal=", paste(as.character(fs), collapse = "|")),
+      paste0("final_seasonal_n=", length(fs)))
+  }
+  write_tmp <- function(lines) {
+    path <- tempfile(fileext = ".txt")
+    con <- file(path, "w"); writeLines(lines, con); close(con)
+    path
+  }
+  for (t in c("rsa0", "rsa1", "rsa2c", "rsa3", "rsa4", "rsa5c")) {
+    expect_identical(read_bytes(write_tmp(proto_capture(t))),
+                     read_bytes(file.path(ref_dir, paste0("proto-", t, ".txt"))),
+                     info = paste(t, "live jar proto vs pinned capture"))
+    expect_identical(read_bytes(write_tmp(rspec_capture(t))),
+                     read_bytes(file.path(ref_dir, paste0("rspec-", t, ".txt"))),
+                     info = paste(t, "live rjd3 spec walk vs pinned capture"))
+  }
+  ref_series <- list(air = series_m)
+  for (id in c("ao", "seas")) {
+    k <- parity_auto_key_lines(file.path(parity_auto_dir(),
+                                         paste0("series-", id, ".txt")))
+    ref_series[[id]] <- stats::ts(
+      as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
+      start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
+      frequency = as.integer(k[["frequency"]]))
+  }
+  for (tpl in c("rsa0", "rsa1", "rsa2c")) {
+    for (id in names(ref_series)) {
+      expect_identical(
+        read_bytes(write_tmp(demand_capture(tpl, id, ref_series[[id]]))),
+        read_bytes(file.path(ref_dir, sprintf("demand-%s-%s.txt", tpl, id))),
+        info = paste("demand run", tpl, id, "live vs pinned"))
+    }
   }
 })
 

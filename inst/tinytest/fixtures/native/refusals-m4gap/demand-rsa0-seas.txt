@@ -1,0 +1,20 @@
+template=rsa0
+series=seas
+log=FALSE
+d=1 bd=1
+p=0
+q=1
+bp=0
+bq=1
+theta=-0.27860379976521354
+btheta=-0.99999996914347389
+phi=NULL
+bphi=NULL
+nvars=0
+vars=
+lsr_coef=NULL
+coef_types=
+nforecast=12
+final_henderson=13
+final_seasonal=FILTER_S3X9
+final_seasonal_n=1

@@ -1,0 +1,20 @@
+template=rsa2c
+series=ao
+log=TRUE
+d=1 bd=1
+p=0
+q=1
+bp=0
+bq=1
+theta=-0.90053617182830215
+btheta=-0.45756318796778367
+phi=NULL
+bphi=NULL
+nvars=1
+vars=AO (1994-01-01)
+lsr_coef=0.2285401244515417
+coef_types=ESTIMATED
+nforecast=12
+final_henderson=13
+final_seasonal=FILTER_S3X5
+final_seasonal_n=1

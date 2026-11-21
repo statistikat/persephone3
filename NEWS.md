@@ -1,5 +1,19 @@
 # persephone3 (development version)
 
+* The automodel-OFF templates rsa0/rsa1/rsa2c were re-decoded live from the
+  pinned JDemetra+ jars (double-JVM byte-identical captures) and evaluated
+  against the restricted fixed-coefficient route in addition to the automatic
+  one. They remain refused - by evidence, on both routes: the decoded
+  specifications state estimated (non-fixed) ARIMA/regression coefficients
+  and request SEASONAL_FILTER_MSR filters with the automatic Henderson 0 and
+  nfcasts = -1 (12 forecast months), which the qualified core refuses
+  verbatim ("unsupported:x13 fit fixed seasonal requests only", "... fixed
+  Henderson trend length", "... requires zero horizons"); the candidate fixed
+  values are series-dependent run outputs, so no fixed-spec mapping exists to
+  pin. The refusals now name the violated scope fields and measured facts of
+  both envelopes; the pinned decode/demand fixtures are re-verified against
+  the live reference stack in the test suite. The rsa4/rsa5c refusals
+  (calendar deferral) are unchanged.
 * The native backend now also qualifies the automatic X-13 fit for the pinned
   template: `perX13(ts, "rsa3", backend = "native")` runs the rkalos
   automatic pipeline (`capabilities()$native_x13_fit_automatic`) without Java.

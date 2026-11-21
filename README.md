@@ -76,9 +76,16 @@ at the qualification tiers) and takes only the sigma policy as request data.
 Both default the sigma policy to "legacy" — the pinned JDemetra behavior
 (maintainer decision 2026-11-17; "accurate" is selectable) — run zero
 horizons on monthly series only, and the automatic fit defers calendar/Easter/
-trading-day detection (the remaining rsa templates refuse by name: rsa0/rsa1/
-rsa2c run with automodel disabled, rsa2c/rsa4/rsa5c carry calendar regressors).
-Anything outside this scope raises
+trading-day detection. The remaining rsa templates refuse by name with the
+measured JDemetra+ jar facts evaluated against BOTH qualified routes: the
+automatic route refuses rsa0/rsa1/rsa2c (automodel disabled is a dead branch
+there; rsa2c/rsa4/rsa5c additionally carry calendar regressors) and the
+restricted route cannot represent them either — the decoded specifications
+state estimated (non-fixed) ARIMA/regression coefficients, request the
+SEASONAL_FILTER_MSR filters with the automatic Henderson 0 and 12 forecast
+months, which the qualified core refuses verbatim. The candidate fixed values
+are series-dependent run outputs, so no fixed-spec mapping is pinnable for
+these templates. Anything outside the qualified scope raises
 an explicit error naming the violated scope field(s) and never falls back
 silently to Java. Full native seasonal-adjustment fitting beyond this qualified
 scope remains unavailable.

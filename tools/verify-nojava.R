@@ -24,6 +24,19 @@ stopifnot(identical(cap$fit, FALSE), identical(cap$status, "unimplemented"))
 options(persephone.backend = "native")
 err <- tryCatch(perX13(AirPassengers, "rsa0"), error = identity)
 stopifnot(inherits(err, "error"), grepl("native backend does not yet implement", conditionMessage(err)))
+# M4-gap (2026-11-21): the automodel-OFF refusals cite BOTH qualified envelopes
+# with measured jar facts; the restricted-route part must name the fixed-
+# coefficient violations and quote the pinned core statuses verbatim -- and
+# those statuses must be what the installed core actually answers right now.
+msg0 <- conditionMessage(err)
+stopifnot(grepl("envelopes \\(automatic and restricted\\)", msg0),
+          grepl("fixed_seasonal_requests_only", msg0, fixed = TRUE),
+          grepl("zero_horizon_only", msg0, fixed = TRUE),
+          grepl("unsupported:x13 fit requires zero horizons", msg0, fixed = TRUE))
+fit_fun <- get0("native_x13_fit", envir = asNamespace("rkalos"), mode = "function")
+st <- fit_fun(as.numeric(AirPassengers), seasonal = rep("msr", 12L), trend_length = 13L,
+              frequency = 12L, start_period = 1L)
+stopifnot(identical(st$status, "unsupported:x13 fit fixed seasonal requests only"))
 err <- tryCatch(perTramo(AirPassengers, backend = "rjd3"), error = identity)
 stopifnot(inherits(err, "error"), grepl("optional package", conditionMessage(err)))
 # rkalos is a required dependency; it supplies every compiled primitive.

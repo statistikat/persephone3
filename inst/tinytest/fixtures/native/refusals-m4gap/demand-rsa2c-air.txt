@@ -1,0 +1,20 @@
+template=rsa2c
+series=air
+log=TRUE
+d=1 bd=1
+p=0
+q=1
+bp=0
+bq=1
+theta=-0.11553444701262496
+btheta=-0.49741420847960022
+phi=NULL
+bphi=NULL
+nvars=3
+vars=td|easter|AO (1951-05-01)
+lsr_coef=-0.002949739126686929;0.017767422770192959;0.10015618870371237
+coef_types=ESTIMATED|ESTIMATED|ESTIMATED
+nforecast=12
+final_henderson=9
+final_seasonal=FILTER_S3X3
+final_seasonal_n=1
