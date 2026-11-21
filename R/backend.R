@@ -29,12 +29,15 @@ backend_block_registry <- function() {
 #'
 #' Reports the explicitly selected backend's implementation status without
 #' initializing Java. Since rkalos schema_version 2, the native backend
-#' qualifies exactly one fit: the restricted fixed-coefficient X-13 fit,
-#' gated by `capabilities()$native_x13_fit_restricted` and described by
-#' `capabilities()$restricted_fit` — never by `capabilities()$fit`, which
-#' keeps its meaning that UNRESTRICTED native fitting is unimplemented.
-#' Requests outside the restricted domain raise an explicit error naming the
-#' violated scope field(s) and never fall back to rjd3.
+#' qualifies two fits: the restricted fixed-coefficient X-13 fit, gated by
+#' `capabilities()$native_x13_fit_restricted` and described by
+#' `capabilities()$restricted_fit`, and the automatic-spec X-13 fit for the
+#' qualified template, gated by `capabilities()$native_x13_fit_automatic` and
+#' described by `capabilities()$automatic_fit` -- never by
+#' `capabilities()$fit`, which keeps its meaning that UNRESTRICTED native
+#' fitting is unimplemented. Requests outside the qualified domains raise an
+#' explicit error naming the violated scope field(s) and never fall back to
+#' rjd3.
 #'
 #' @param backend Either `"rjd3"` or `"native"`. If `NULL`, use the deliberate
 #'   `persephone.backend` option, defaulting to `"rjd3"` when unset.
@@ -176,8 +179,8 @@ backend_fit <- function(ts, spec, context = NULL, userdefined = NULL,
   backend <- resolve_backend(backend)
   if (backend == "native" && method != "x13") {
     backend_native_refusal("seasonal-adjustment fitting", method,
-                           "native_x13_fit_restricted",
-                           sprintf("the qualified native surface provides only the restricted X-13 fit (entry points: %s); ",
+                           c("native_x13_fit_restricted", "native_x13_fit_automatic"),
+                           sprintf("the qualified native surface provides the restricted and the automatic X-13 fit only (entry points: %s); ",
                                    native_backend_entry))
   }
   if (!stats::is.ts(ts) || !is.numeric(ts) || !is.null(dim(ts)) || !length(ts)) {

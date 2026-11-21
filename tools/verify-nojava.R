@@ -22,7 +22,7 @@ stopifnot(!any(forbidden %in% loadedNamespaces()))
 cap <- backend_capabilities("native")
 stopifnot(identical(cap$fit, FALSE), identical(cap$status, "unimplemented"))
 options(persephone.backend = "native")
-err <- tryCatch(perX13(AirPassengers), error = identity)
+err <- tryCatch(perX13(AirPassengers, "rsa0"), error = identity)
 stopifnot(inherits(err, "error"), grepl("native backend does not yet implement", conditionMessage(err)))
 err <- tryCatch(perTramo(AirPassengers, backend = "rjd3"), error = identity)
 stopifnot(inherits(err, "error"), grepl("optional package", conditionMessage(err)))
@@ -57,6 +57,38 @@ if (identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)) {
   stopifnot(grepl("sigma_policy_default", refused),
             grepl("No Java fallback", refused))
   cat("PASS: restricted native X-13 fit through the product path without Java\n")
+}
+# Automatic native fit (item M4): the qualified automatic-spec X-13 fit for
+# the pinned rsa3 decode table, gated by capabilities()$native_x13_fit_
+# automatic, runs through the product path WITHOUT Java; the remaining rsa
+# templates refuse naming the measured template facts, and the zero-horizon
+# module state is not adjustable.
+if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
+  stopifnot(identical(rkalos::capabilities()$automatic_fit$x11$sigma_policy_default,
+                      "legacy"))
+  obj <- perX13(AirPassengers, "rsa3", backend = "native")
+  obj$run()
+  stopifnot(identical(obj$result$status$code, "success"),
+            identical(obj$result$backend, "native"),
+            inherits(obj$result, "persephone_native_automatic_fit"),
+            identical(obj$result$provenance$decode_template, "rsa3"),
+            identical(obj$result$provenance$sigma_provenance, "legacy (default)"),
+            stats::frequency(obj$adjusted) == 12L,
+            is.null(obj$forecasts),
+            identical(as.numeric(obj$adjusted)[142:144],
+                      c(499.37673144370382, 484.86271289531953, 485.24840286656132)))
+  refused <- tryCatch({
+    perX13(AirPassengers, "rsa4", backend = "native")
+    "no error"
+  }, error = function(e) conditionMessage(e))
+  stopifnot(grepl("automatic_fit.deferred", refused),
+            grepl("No Java fallback", refused))
+  refused <- tryCatch({
+    perX13(AirPassengers, "rsa3", speclist = list(forecast = 6L), backend = "native")
+    "no error"
+  }, error = function(e) conditionMessage(e))
+  stopifnot(grepl("not part of the automatic native specification", refused))
+  cat("PASS: automatic native X-13 fit (rsa3 decode table) through the product path without Java\n")
 }
 if ("--native" %in% args) {
   y <- ts(exp(c(0, 1, 2, 3)), start=c(2000, 1), frequency=12)

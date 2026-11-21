@@ -67,9 +67,11 @@ The package offers convenient options for setting certain parameters to improve 
 Documentation pending.}
 
 \item{backend}{Backend name, or NULL to use option persephone.backend (default rjd3).
-The native backend qualifies only the restricted X-13 fit, so every native
-tramoseats request fails explicitly naming the violated scope field(s)
-(entry points: native_x13_fit(), native_x13_preadjust(), native_x13_restore()).}
+The native backend qualifies only X-13 fits (restricted and automatic),
+so every native tramoseats request fails explicitly naming the violated
+scope field(s)
+(entry points: native_x13_fit(), native_x13_preadjust(),
+native_x13_restore(), native_x13_fit_automatic()).}
 }
 \value{
 An object of class \code{\link{tramoseatsSingle}} representing an tramoseats seasonal

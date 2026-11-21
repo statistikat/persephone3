@@ -160,11 +160,15 @@ x13Single <- R6::R6Class(
 #' see the rjd3x13 documentation:
 #' \url{https://rjdverse.github.io/rjd3x13/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
-#'   The native backend provides only the restricted fixed-coefficient X-13 fit
+#'   The native backend qualifies the restricted fixed-coefficient X-13 fit
 #'   through `template = "restricted"` (rkalos gating contract
-#'   `capabilities()$native_x13_fit_restricted`, never `capabilities()$fit`);
-#'   every other native request fails explicitly with the violated scope
-#'   field(s) named. See the examples in the README for a restricted run.
+#'   `capabilities()$native_x13_fit_restricted`) and the automatic X-13 fit
+#'   through `template = "rsa3"`, whose module state is a pinned decode table
+#'   of the JDemetra+ rsa3 specification
+#'   (`capabilities()$native_x13_fit_automatic`) -- never
+#'   `capabilities()$fit`. Every other native template fails explicitly with
+#'   the violated scope field(s) named. See the examples in the README for a
+#'   restricted run.
 #' @export
 perX13 <- function(ts,
                    template = c( "rsa3", "rsa0", "rsa1", "rsa2c", "rsa4","rsa5c"),
@@ -174,8 +178,9 @@ perX13 <- function(ts,
                    ..., backend = NULL) {
   backend <- resolve_backend(backend)
   if (identical(backend, "native")) {
-    # The native restricted constructor owns the template contract; the
-    # default and all automatic templates are refused naming the scope field.
+    # The native template contract owns the templates: 'restricted' and the
+    # pinned automatic 'rsa3' qualify; everything else is refused naming the
+    # violated scope field(s).
     backend_native_check_template(template)
   } else {
     template <- match.arg(template)

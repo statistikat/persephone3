@@ -23,8 +23,12 @@ local({
   expect_identical(capability$runtime_checked, FALSE)
   expect_identical(sort(intersect(loadedNamespaces(), java_packages)), before)
   expect_error(backend_capabilities("native", "x1"), "exactly")
-  expect_error(persephone3:::backend_default_spec("x13", "rsa3", 12, "native"),
+  expect_error(persephone3:::backend_default_spec("x13", "rsa0", 12, "native"),
                "does not yet implement specification construction")
+  # rsa3 is the qualified automatic template; its native spec is the pinned
+  # automatic constructor (capabilities()$native_x13_fit_automatic gate).
+  native_auto_spec <- persephone3:::backend_default_spec("x13", "rsa3", 12, "native")
+  expect_true(inherits(native_auto_spec, "persephone_native_auto_spec"))
   expect_error(persephone3:::backend_fit(AirPassengers, list(), method = "x13", backend = "native"),
                "No Java fallback")
   expect_error(persephone3:::backend_update_spec(list(), "x13", 12, list(), "native"),
@@ -109,7 +113,7 @@ if (all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
     expect_identical(object$backend, "rjd3")
     expect_inherits(object$specification, "persephone_spec")
     options(persephone.backend = "native")
-    expect_error(perX13(AirPassengers), "does not yet implement")
+    expect_error(perX13(AirPassengers, "rsa4"), "does not yet implement")
     object$run()
     expect_identical(object$backend, "rjd3")
     expect_identical(object$result$backend, "rjd3")

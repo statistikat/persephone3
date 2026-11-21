@@ -67,11 +67,15 @@ The package offers convenient options for setting certain parameters to improve 
 Documentation pending.}
 
 \item{backend}{Backend name, or NULL to use option persephone.backend (default rjd3).
-The native backend provides only the restricted fixed-coefficient X-13 fit
+The native backend qualifies the restricted fixed-coefficient X-13 fit
 through \code{template = "restricted"} (rkalos gating contract
-\code{capabilities()$native_x13_fit_restricted}, never \code{capabilities()$fit});
-every other native request fails explicitly with the violated scope
-field(s) named. See the examples in the README for a restricted run.}
+\code{capabilities()$native_x13_fit_restricted}) and the automatic X-13 fit
+through \code{template = "rsa3"}, whose module state is a pinned decode table
+of the JDemetra+ rsa3 specification
+(\code{capabilities()$native_x13_fit_automatic}) -- never
+\code{capabilities()$fit}. Every other native template fails explicitly with
+the violated scope field(s) named. See the examples in the README for a
+restricted run.}
 }
 \value{
 An object of class \code{\link{x13Single}} representing an x13 seasonal

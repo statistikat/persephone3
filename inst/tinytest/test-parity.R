@@ -7,21 +7,39 @@
 # failures, while numerical drift is caught.
 #
 # Native status (honest, asserted, not assumed): since rkalos schema_version 2
-# the native backend qualifies exactly one fit, the restricted fixed-
-# coefficient X-13 fit. The gate is capabilities()$native_x13_fit_restricted
-# (never capabilities()$fit, which keeps its meaning that UNRESTRICTED native
-# fitting is unimplemented). For the pinned fixed specification below the
-# native lane runs through the real product path (perX13 + $run()) and is
-# compared against the rjd3 reference — first native-vs-rjd3 numeric agreement
-# measurement in the family, recorded 2026-11-16 as bit-exact (all final-series
-# max diffs 0.000e+00, far inside the 1e-8 policy). Everything outside the
-# restricted domain (automatic templates that estimate coefficients, other
-# methods or frequencies) must still raise the explicit "no Java fallback"
-# error, asserted below. Since the maintainer decision of 2026-11-17 the
-# sigma policy defaults to "legacy" (= pinned JDemetra behavior; "accurate"
-# stays selectable): the dual-lane specification states no sigma policy, so
-# the default path is exercised end-to-end, and bit-exactness must persist
-# because the default maps to the same pinned rule the explicit policy used.
+# the native backend qualifies two fits: the restricted fixed-coefficient
+# X-13 fit (gate capabilities()$native_x13_fit_restricted) and the
+# automatic-spec X-13 fit for the pinned rsa3 decode table (gate
+# capabilities()$native_x13_fit_automatic) -- never capabilities()$fit, which
+# keeps its meaning that UNRESTRICTED native fitting is unimplemented. For the
+# pinned fixed specification below the native lane runs through the real
+# product path (perX13 + $run()) and is compared against the rjd3 reference —
+# first native-vs-rjd3 numeric agreement measurement in the family, recorded
+# 2026-11-16 as bit-exact (all final-series max diffs 0.000e+00, far inside
+# the 1e-8 policy). Everything outside the qualified domains (the automatic
+# templates other than rsa3, other methods or frequencies) must still raise
+# the explicit "no Java fallback" error, asserted below. Since the maintainer
+# decision of 2026-11-17 the sigma policy defaults to "legacy" (= pinned
+# JDemetra behavior; "accurate" stays selectable): the dual-lane
+# specifications state no sigma policy, so the default path is exercised
+# end-to-end, and bit-exactness must persist because the default maps to the
+# same pinned rule the explicit policy used.
+#
+# Automatic-lane parity contract (item 21-H/M4, 2026-11-21): the rsa3 native
+# lane is compared against pinned JVM captures (fixtures native/parity-m4/,
+# byte-identical across independent JVM processes) at the tiers of the
+# rkalos x13-automatic-pipeline contract (docs/contracts, table after the
+# 21-H.3 note): decision bits BIT-EXACT (log, d/bd/p/q/bp/bq, mean, outlier
+# variables, neffective, nparams, final Henderson, final seasonal filter);
+# landing coefficients 1e-2 rel (contract worst 9.8e-3; measured worst
+# 4.1e-4); loglik/AICC 2e-3 rel (measured worst 2.0e-8); downstream tables
+# (out/d11final family: sa) 1e-6 rel (measured 1.7e-7); split finals (d12: t)
+# 1e-5 (measured 8.2e-8); the d13 class (irregular i) 2e-4 rel -- the
+# contract's own measured class "~2e-4", driven by the landing-basin drift
+# seam the contract names (G2); measured worst 1.97e-4 on the 'seas' fixture,
+# deterministic across processes. These bands are contract values, never
+# widened here; a violation must STOP with diagnostics like the 1e-8 policy
+# above.
 #
 # Structure: the native lane (gate contract, refusals, restricted fit through
 # the product path with pinned baseline metrics) must pass WITHOUT Java or
@@ -65,6 +83,129 @@ series_q <- stats::aggregate(AirPassengers, nfrequency = 4)
 TOL_KEY <- 1e-8
 TOL_HTS <- 1e-8
 
+# Automatic-lane comparison helpers (item M4). Both lanes are reduced to the
+# same canonical key/value lines as the pinned JVM captures so decision
+# strings compare byte-identically; numeric tiers are applied separately at
+# the contract bands (see the header). Fixture format: "key=value" lines.
+parity_auto_dir <- function() {
+  path <- system.file("tinytest", "fixtures", "native", "parity-m4",
+                      package = "persephone3")
+  stopifnot(nzchar(path))
+  path
+}
+
+parity_auto_key_lines <- function(path) {
+  ls <- readLines(path)
+  stats::setNames(sub("^[^=]*=", "", ls), sub("=.*", "", ls))
+}
+
+parity_auto_g <- function(v) {
+  if (is.null(v) || !length(v)) return("NULL")
+  paste(sprintf("%.17g", as.numeric(v)), collapse = ";")
+}
+
+# Canonical lines from the rkalos automatic fit (product output envelope).
+parity_auto_native_lines <- function(fit) {
+  m <- fit$model
+  s <- fit$selection
+  c(template = "rsa3",
+    log = as.character(m$log),
+    d = paste0(m$d, " bd=", m$bd),
+    p = as.character(m$p), q = as.character(m$q),
+    bp = as.character(m$bp), bq = as.character(m$bq),
+    mean = as.character(m$mean),
+    nvars = as.character(length(m$variables$name)),
+    vars = paste(m$variables$name, collapse = "|"),
+    neff = as.character(as.integer(m$effective_observations)),
+    nparams = as.character(m$n_coefficients),
+    theta = parity_auto_g(m$coefficients$ma),
+    btheta = parity_auto_g(m$coefficients$sma),
+    phi = parity_auto_g(m$coefficients$ar),
+    bphi = parity_auto_g(m$coefficients$sar),
+    ll = parity_auto_g(m$log_likelihood),
+    aicc = parity_auto_g(m$aicc),
+    final_henderson = parity_auto_g(s$d$final_henderson_length),
+    final_seasonal = parity_auto_g(as.integer(s$d$seas_filter)),
+    ud_sa_full = parity_auto_g(as.numeric(fit$finalSA)),
+    ud_t_full = parity_auto_g(as.numeric(fit$finalTrend)),
+    ud_i_full = parity_auto_g(as.numeric(fit$finalIrregular)))
+}
+
+# Canonical lines from a raw rjd3 x13_fast result (rsa3-shaped request).
+parity_auto_jvm_lines <- function(f) {
+  d <- f$preprocessing$description
+  pick <- function(x) if (is.null(x) || !length(x)) NULL else
+    unlist(x[seq(1, length(x), 2)])
+  names_ <- vapply(d$variables, function(v) v$name, character(1))
+  nonconst <- names_ != "const"
+  fs <- f$decomposition$final_seasonal
+  code <- if (length(fs) == 1L && is.character(fs))
+    suppressWarnings(as.numeric(sub("FILTER_S3X", "", fs))) else as.numeric(fs)[1L]
+  seasonal <- if (is.na(code)) as.character(fs) else
+    paste(rep(sprintf("%.17g", code), stats::frequency(f$final$d11final)),
+          collapse = ";")
+  c(template = "rsa3",
+    log = as.character(d$log),
+    d = paste0(d$arima$d, " bd=", d$arima$bd),
+    p = as.character(length(d$arima$phi) %/% 2L),
+    q = as.character(length(d$arima$theta) %/% 2L),
+    bp = as.character(length(d$arima$bphi) %/% 2L),
+    bq = as.character(length(d$arima$btheta) %/% 2L),
+    mean = as.character(any(names_ == "const")),
+    nvars = as.character(sum(nonconst)),
+    vars = paste(names_[nonconst], collapse = "|"),
+    neff = as.character(as.integer(
+      f$preprocessing$estimation$likelihood$neffectiveobs)),
+    nparams = as.character(length(f$preprocessing$estimation$parameters$val)),
+    theta = parity_auto_g(pick(d$arima$theta)),
+    btheta = parity_auto_g(pick(d$arima$btheta)),
+    phi = parity_auto_g(pick(d$arima$phi)),
+    bphi = parity_auto_g(pick(d$arima$bphi)),
+    ll = parity_auto_g(f$preprocessing$estimation$likelihood$ll),
+    aicc = parity_auto_g(f$preprocessing$estimation$likelihood$aicc),
+    final_henderson = parity_auto_g(f$decomposition$final_henderson),
+    final_seasonal = seasonal,
+    ud_sa_full = parity_auto_g(as.numeric(f$user_defined$sa)),
+    ud_t_full = parity_auto_g(as.numeric(f$user_defined$t)),
+    ud_i_full = parity_auto_g(as.numeric(f$user_defined$i)))
+}
+
+# Decision-line keys (bit-exact tier) and numeric tier bands (contract
+# x13-automatic-pipeline-contract.md, 21-H.3 table and horizon-envelope note).
+PARITY_AUTO_DECISIONS <- c("log", "d", "p", "q", "bp", "bq", "mean",
+                           "nvars", "vars", "neff", "nparams",
+                           "final_henderson", "final_seasonal")
+PARITY_AUTO_BANDS <- c(theta = 1e-2, btheta = 1e-2, phi = 1e-2, bphi = 1e-2,
+                       ll = 2e-3, aicc = 2e-3,
+                       ud_sa_full = 1e-6, ud_t_full = 1e-5, ud_i_full = 2e-4)
+
+parity_auto_compare <- function(native, jvm, prefix = "") {
+  problems <- character(0)
+  for (key in PARITY_AUTO_DECISIONS) {
+    if (!identical(native[[key]], jvm[[key]])) {
+      problems <- c(problems, sprintf("decision %s: native '%s' vs jvm '%s'",
+                                      key, native[[key]], jvm[[key]]))
+    }
+  }
+  for (key in names(PARITY_AUTO_BANDS)) {
+    if (identical(native[[key]], "NULL") && identical(jvm[[key]], "NULL")) next
+    a <- as.numeric(strsplit(native[[key]], ";", fixed = TRUE)[[1]])
+    b <- as.numeric(strsplit(jvm[[key]], ";", fixed = TRUE)[[1]])
+    if (length(a) != length(b)) {
+      problems <- c(problems, sprintf("tier %s: length %d vs %d", key, length(a), length(b)))
+      next
+    }
+    worst <- suppressWarnings(max(abs(a - b) / pmax(abs(b), 1e-300)))
+    if (!is.finite(worst) || worst > PARITY_AUTO_BANDS[[key]]) {
+      problems <- c(problems, sprintf("tier %s: rel %.3g exceeds band %.3g",
+                                      key, worst, PARITY_AUTO_BANDS[[key]]))
+    }
+    message(prefix, "parity ", key, " worst rel ", format(worst, digits = 3),
+            " (band ", PARITY_AUTO_BANDS[[key]], ")")
+  }
+  problems
+}
+
 # The pinned restricted fixed specification both lanes must reproduce:
 # fixed s3x15 seasonal filter in every period, fixed Henderson length 13,
 # additive mode, no regression variables, zero horizons, monthly frequency.
@@ -107,18 +248,60 @@ local({
                     "pseudo_additive") %in% rf$modes))
 })
 
+# Native template routing matrix: rsa3 (automatic decode table) and
+# 'restricted' construct; every other template refuses naming the violated
+# scope field(s) and the measured template facts, no Java fallback.
+local({
+  constructed <- perX13(series_m, "rsa3", backend = "native")
+  expect_true(inherits(constructed$specification$parameters,
+                       "persephone_native_auto_spec"))
+  refuse_tpl <- function(template, method = "x13") {
+    series <- if (method == "x13") series_m else series_q
+    tryCatch({
+      if (method == "x13") perX13(series, template, backend = "native")
+      else perTramo(series, template, backend = "native")
+      "no error"
+    }, error = function(e) conditionMessage(e))
+  }
+  e0 <- refuse_tpl("rsa0")
+  expect_match(e0, "does not yet implement specification construction")
+  expect_match(e0, "transform.auto_log_test")
+  expect_match(e0, "automodel")
+  expect_match(e0, "No Java fallback")
+  expect_match(refuse_tpl("rsa1"), "automodel")
+  e2 <- refuse_tpl("rsa2c")
+  expect_match(e2, "automodel")
+  expect_match(e2, "automatic_fit.deferred")
+  expect_match(e2, "unsupported:x13 automatic fit defers calendar/easter/TD/user detection \\(21-I\\)")
+  e4 <- refuse_tpl("rsa4")
+  expect_match(e4, "automatic_fit.deferred")
+  expect_match(e4, "TD2")
+  e5 <- refuse_tpl("rsa5c")
+  expect_match(e5, "automatic_fit.deferred")
+  expect_match(e5, "TD7")
+  # The automatic template on a frequency outside the qualified domain.
+  # The automatic template is x13-only: native tramoseats names the entries.
+  eq <- refuse_tpl("rsa3", method = "tramoseats")
+  expect_match(eq, "does not yet implement specification construction")
+  expect_match(eq, "native_x13_fit_automatic")
+  expect_match(tryCatch({perX13(series_q, "rsa3", backend = "native"); "no error"},
+                        error = function(e) conditionMessage(e)),
+               "monthly_only")
+})
+
 # Out-of-domain native requests: explicit refusal naming the violated scope
-# field(s), no Java fallback. First the per-specification template contract
-# (automatic templates estimate coefficients), mirroring the matrix grid.
+# field(s), no Java fallback, mirroring the matrix grid.
 spec_matrix <- expand.grid(method = c("x13", "tramoseats"),
                            template = c("rsa0", "rsa3"),
                            freq = c(12L, 4L),
                            stringsAsFactors = FALSE)
 for (i in seq_len(nrow(spec_matrix))) {
   spec <- spec_matrix[i, ]
+  if (identical(spec$method, "x13") && identical(spec$template, "rsa3") &&
+      identical(spec$freq, 12L)) next  # qualified: asserted in the routing matrix
   native_series <- if (spec$freq == 12) series_m else series_q
   err <- tryCatch({
-    if (spec$method == "x13") perX13(native_series, backend = "native")
+    if (spec$method == "x13") perX13(native_series, spec$template, backend = "native")
     else perTramo(native_series, backend = "native")
     "no error"
   }, error = function(e) conditionMessage(e))
@@ -293,6 +476,195 @@ local({
   expect_true(abs(sum(sa) - 40363) <= TOL_KEY)
 })
 
+# ---- Native automatic lane (rsa3 decode table, item M4) ---------------------
+# Everything in this section runs WITHOUT Java or rjd3: the automatic gate
+# contract, the update/fail-closed matrix, the product fit with pinned
+# bit-level metrics and the decision-bit matrix against the pinned JVM
+# captures in fixtures/native/parity-m4/ (each capture double-produced
+# byte-identical in independent JVM processes; evidence recorded in
+# IMPLEMENTATION_STATUS.md).
+local({
+  cap <- backend_capabilities("native")
+  af <- cap$automatic_fit
+  expect_identical(cap$native_x13_fit_automatic, TRUE)
+  expect_identical(af$schema_version, 2L)
+  expect_identical(af$native_x13_fit_automatic, TRUE)
+  expect_identical(af$frequency, 12L)
+  expect_true(af$monthly_only)
+  expect_true(af$complete_finite_input_only)
+  expect_identical(af$transform$auto_log_test, TRUE)
+  expect_identical(af$x11$zero_horizon_only, TRUE)
+  expect_identical(af$x11$sigma_policy_default, "legacy")
+  expect_identical(af$x11$msr_requests_pinned, TRUE)
+  expect_identical(af$x11$automatic_henderson, TRUE)
+  expect_identical(af$entry_points, "native_x13_fit_automatic()")
+})
+
+auto_fit_m4 <- local({
+  obj <- perX13(series_m, "rsa3", backend = "native")
+  obj$run()
+  obj
+})
+local({
+  res <- auto_fit_m4$result
+  expect_true(inherits(res, "persephone_native_automatic_fit"))
+  expect_false(inherits(res, "persephone_result"))
+  expect_true(inherits(auto_fit_m4$output, "persephone_native_x13_automatic_fit"))
+  expect_null(auto_fit_m4$output$user_defined)
+  expect_identical(res$status$code, "success")
+  expect_identical(res$status$convergence, "converged")
+  expect_identical(res$provenance$backend, "native")
+  expect_true(res$provenance$automatic)
+  expect_identical(res$provenance$decode_template, "rsa3")
+  expect_identical(res$provenance$scope, "automatic_spec_x13_fit_only")
+  # Sigma provenance (automatic surface): no policy stated -> the qualified
+  # default is applied at the rkalos interface and echoed as such.
+  expect_identical(res$provenance$sigma_provenance, "legacy (default)")
+  # mode "additive" is the neutral (JVM UNKNOWN) request; the effective mode
+  # is X13Kernel.forceMode's log-driven derivation -- multiplicative here.
+  expect_identical(res$provenance$mode_requested, "additive")
+  expect_identical(res$provenance$mode_effective, "multiplicative")
+  expect_match(res$provenance$request_fingerprint, "^[0-9a-f]{8}-[0-9a-f]{8}$")
+  expect_null(res$forecasts)                 # zero_horizon_only
+  expect_null(auto_fit_m4$forecasts)
+  avail <- stats::setNames(res$availability$state, res$availability$field)
+  expect_true(all(avail[c("t", "sa", "i")] == "available"))
+  expect_true(all(avail[c("y", "s", "cal", "y_f", "t_f", "sa_f", "s_f",
+                           "i_f", "cal_f", "y_ef")] == "not_provided"))
+  sa <- res$components$sa
+  expect_identical(as.integer(stats::frequency(sa)), 12L)
+  expect_identical(time_domain(stats::tsp(sa)), time_domain(stats::tsp(series_m)))
+  expect_identical(auto_fit_m4$adjusted, auto_fit_m4$output$finalSA)
+  expect_false(auto_fit_m4$is_stale)
+  expect_identical(unserialize(serialize(res, NULL)), res)
+  m <- res$provenance$model
+  expect_true(m$log)
+  expect_identical(c(m$p, m$d, m$q, m$bp, m$bd, m$bq), c(0L, 1L, 1L, 0L, 1L, 1L))
+  expect_identical(as.integer(m$effective_observations), 131L)
+  # The pinned JDemetra+ decisions on this series (rsa3, zero horizons).
+  expect_identical(as.integer(auto_fit_m4$output$selection$d$final_henderson_length), 9L)
+  expect_true(all(auto_fit_m4$output$selection$d$seas_filter == 3L))
+  # is_stale semantics for the single adjustable field.
+  auto_fit_m4$updateParams(speclist = list(sigma_policy = "legacy"))
+  expect_true(auto_fit_m4$is_stale)
+})
+
+# Sigma semantics on the automatic lane: the omitted policy is the effective
+# "legacy" (identical fingerprint and components, distinct provenance);
+# "accurate" is selectable and fingerprint-visible; an invalid stated policy
+# is refused at run() naming the contract field. Module-state fields are
+# refused at construction: the template's decode table is pinned data.
+local({
+  refit <- perX13(series_m, "rsa3", backend = "native")
+  refit$run()
+  expect_identical(refit$result$provenance$request_fingerprint,
+                   auto_fit_m4$result$provenance$request_fingerprint)
+  explicit <- perX13(series_m, "rsa3", speclist = list(sigma_policy = "legacy"),
+                     backend = "native")
+  explicit$run()
+  expect_identical(explicit$result$provenance$sigma_provenance, "legacy (explicit)")
+  expect_identical(explicit$result$provenance$request_fingerprint,
+                   auto_fit_m4$result$provenance$request_fingerprint)
+  expect_identical(explicit$result$components, auto_fit_m4$result$components)
+  accurate <- perX13(series_m, "rsa3", speclist = list(sigma_policy = "accurate"),
+                     backend = "native")
+  accurate$run()
+  expect_identical(accurate$result$status$code, "success")
+  expect_identical(accurate$result$provenance$sigma_provenance, "accurate (explicit)")
+  expect_false(identical(accurate$result$provenance$request_fingerprint,
+                         auto_fit_m4$result$provenance$request_fingerprint))
+  bad <- perX13(series_m, "rsa3", speclist = list(sigma_policy = "jdemetra"),
+                backend = "native")
+  expect_match(tryCatch({bad$run(); "no error"}, error = conditionMessage),
+               "sigma_policy_default")
+  for (change in list(list(forecast = 6L), list(backcast = 6L),
+                      list(transform.fun = "Log"), list(arima.p = 1L),
+                      list(x11.henderson.filter = 13L), list(lower_sigma = 2),
+                      list(mode = "multiplicative"))) {
+    expect_match(tryCatch({perX13(series_m, "rsa3", speclist = change,
+                                  backend = "native"); "no error"},
+                          error = conditionMessage),
+                 "not part of the automatic native specification")
+  }
+  # Contexts and user-defined outputs stay refused (rjd3 features).
+  expect_match(tryCatch({perX13(series_m, "rsa3", context = list(a = series_m),
+                                backend = "native")$run(); "no error"},
+                        error = conditionMessage),
+               "No Java fallback")
+  expect_match(tryCatch({perX13(series_m, "rsa3", userdefined = "weird",
+                                backend = "native")$run(); "no error"},
+                        error = conditionMessage),
+               "userdefined")
+})
+
+# Fail-closed matrix (verbatim core statuses through the product path): the
+# automatic lane answers the pinned unsupported: status for an incomplete
+# series, with the request fingerprint and no Java fallback. Zero-horizon
+# requests cannot be mutated into horizons (refused above at construction).
+local({
+  broken <- series_m
+  broken[5L] <- NA_real_
+  obj <- perX13(broken, "rsa3", backend = "native")
+  err <- tryCatch({obj$run(); "no error"}, error = conditionMessage)
+  expect_match(err, "verbatim core status: unsupported:x13 automatic fit requires a complete finite series")
+  expect_match(err, "No Java fallback")
+})
+
+# Pinned native automatic baseline: bit-level values (the native lane is
+# byte-deterministic across processes on the qualified stack, proven by the
+# capture pairs; text identity of the %.17g renderings is the pin), recorded
+# 2026-11-21 for rkalos 00c3a88 / core f500162 through the product path.
+local({
+  sa <- as.numeric(auto_fit_m4$result$components$sa)
+  t <- as.numeric(auto_fit_m4$result$components$t)
+  i <- as.numeric(auto_fit_m4$result$components$i)
+  g <- function(v) paste(sprintf("%.17g", v), collapse = ";")
+  expect_identical(g(rev(utils::tail(sa, 4))),
+                   "485.24840286656132;484.86271289531953;499.37673144370382;481.9029100100957")
+  expect_identical(g(rev(utils::tail(t, 4))),
+                   "485.31117497124382;484.47953905665042;483.91343452551052;483.46082170609282")
+  expect_identical(g(rev(utils::tail(i, 4))),
+                   "0.9998706559668934;1.0007908978765443;1.0319546758055094;0.99677758439556818")
+  expect_identical(sprintf("%.17g", mean(sa)), "280.02966131208768")
+  expect_identical(sprintf("%.17g", mean(t)), "279.93986187656731")
+  expect_identical(sprintf("%.17g", sum(sa)), "40324.271228940626")
+  expect_identical(sprintf("%.17g", sum(t)), "40311.340110225698")
+  expect_identical(sprintf("%.17g", sum(i)), "144.03999396875952")
+})
+
+# Decision-bit matrix against the pinned JVM captures (JVM-free here): the
+# product lane's decisions must be byte-identical to the pinned JDemetra+
+# choices on all three corpus series; tier families must stay inside the
+# contract bands (violations print their magnitudes and fail).
+local({
+  fixture_dir <- parity_auto_dir()
+  read_series_fixture <- function(id) {
+    k <- parity_auto_key_lines(file.path(fixture_dir, paste0("series-", id, ".txt")))
+    stats::ts(as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
+              start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
+              frequency = as.integer(k[["frequency"]]))
+  }
+  fits <- list(air = auto_fit_m4)
+  for (id in c("ao", "seas")) {
+    obj <- perX13(read_series_fixture(id), "rsa3", backend = "native")
+    obj$run()
+    expect_identical(obj$result$status$code, "success")
+    fits[[id]] <- obj
+  }
+  for (id in names(fits)) {
+    pinned <- parity_auto_key_lines(file.path(fixture_dir, paste0("jvm-rsa3-", id, ".txt")))
+    native <- parity_auto_native_lines(fits[[id]]$output)
+    for (key in PARITY_AUTO_DECISIONS) {
+      expect_identical(native[[key]], pinned[[key]],
+                       info = paste(id, "decision bit", key))
+    }
+    problems <- parity_auto_compare(native, pinned, prefix = paste0(id, "/"))
+    if (length(problems)) message("AUTOMATIC TIER VIOLATIONS (", id, "):\n",
+                                  paste(problems, collapse = "\n"))
+    expect_identical(problems, character(0))
+  }
+})
+
 # Java-free proof for this section: if the reference packages are absent the
 # restricted fit above must have run without ever loading a Java package.
 if (!has_rjd3) {
@@ -400,8 +772,9 @@ for (i in seq_len(nrow(spec_matrix))) {
   # Self-parity proves the summary extraction is deterministic.
   expect_identical(parity_compare(ref, parity_summary(fit)), character(0))
 
-  # Automatic templates estimate coefficients: outside the restricted native
-  # domain, so the hook must report absence rather than fake parity.
+  # This hook carries the RESTRICTED 1e-8 absolute-parity contract only; the
+  # automatic template is qualified solely at the contract tiers (see the
+  # automatic dual-lane section below), never through absolute parity here.
   expect_null(parity_native_fit(spec$method, spec$template, spec$freq))
 }
 
@@ -452,6 +825,54 @@ local({
     maxdiff <- max(abs(as.numeric(dual_lane$ud[[key]]) -
                          as.numeric(native_fit$result$components[[key]])))
     expect_true(maxdiff <= TOL_KEY)
+  }
+})
+
+# Dual-lane automatic template (rsa3, item M4), reference exactly as in the
+# capture evidence: raw x13_fast on the pinned rsa3 template with zero
+# horizons (the decisions are contract-proven horizon-invariant; zero horizons
+# pin the native envelope). Three checks per corpus series: the LIVE JVM fit
+# must reproduce the PINNED capture (stack-pin drift check -- the captures
+# were byte-identical across independent JVM processes), the NATIVE product
+# fit must reproduce the pinned DECISION BITS, and the tier families must stay
+# inside the contract bands (STOP-with-diagnostics, never widen).
+local({
+  fixture_dir <- parity_auto_dir()
+  read_series_fixture <- function(id) {
+    k <- parity_auto_key_lines(file.path(fixture_dir, paste0("series-", id, ".txt")))
+    stats::ts(as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
+              start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
+              frequency = as.integer(k[["frequency"]]))
+  }
+  xspec <- rjd3x13::set_x11(rjd3x13::x13_spec("rsa3"), fcasts = 0, bcasts = 0)
+  native_objects <- list(air = auto_fit_m4)
+  for (id in c("ao", "seas")) {
+    obj <- perX13(read_series_fixture(id), "rsa3", backend = "native")
+    obj$run()
+    native_objects[[id]] <- obj
+  }
+  for (id in names(native_objects)) {
+    series <- if (identical(id, "air")) series_m else read_series_fixture(id)
+    reference <- rjd3x13::x13_fast(series, spec = xspec,
+                                   userdefined = c("sa", "t", "i"))
+    jvm_live <- parity_auto_jvm_lines(reference)
+    jvm_pinned <- parity_auto_key_lines(file.path(fixture_dir, paste0("jvm-rsa3-", id, ".txt")))
+    native <- parity_auto_native_lines(native_objects[[id]]$output)
+    # Stack pin: live JVM decisions must equal the pinned choices exactly.
+    for (key in PARITY_AUTO_DECISIONS) {
+      expect_identical(jvm_live[[key]], jvm_pinned[[key]],
+                       info = paste(id, "jvm live vs pinned", key))
+    }
+    # Native decisions bit-exact against the pinned choices.
+    for (key in PARITY_AUTO_DECISIONS) {
+      expect_identical(native[[key]], jvm_pinned[[key]],
+                       info = paste(id, "native vs pinned", key))
+    }
+    # Tiers against the LIVE reference (measured worsts printed).
+    problems <- parity_auto_compare(native, jvm_live, prefix = paste0(id, "/live "))
+    if (length(problems)) message("AUTOMATIC DUAL-LANE VIOLATIONS (", id, "):\n",
+                                  paste(problems, collapse = "\n"))
+    expect_identical(problems, character(0))
   }
 })
 

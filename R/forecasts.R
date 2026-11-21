@@ -111,8 +111,9 @@ forecasts_from_output <- function(output, observed) {
 }
 
 forecasts_from_result <- function(result, output, observed) {
-  if (inherits(result, "persephone_native_restricted_fit")) return(NULL)
-  # zero_horizon_only: the native restricted path delivers no forecasts.
+  if (inherits(result, c("persephone_native_restricted_fit",
+                         "persephone_native_automatic_fit"))) return(NULL)
+  # zero_horizon_only: the native restricted and automatic paths deliver no forecasts.
   # Evaluating the observed domain also checks hierarchy aggregation inputs.
   force(observed)
   if (inherits(result$forecasts, "persephone_forecasts")) return(result$forecasts)

@@ -34,6 +34,9 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
   if (inherits(output, "persephone_native_x13_fit")) {
     return(normalize_native_result(output, spec, ts))
   }
+  if (inherits(output, "persephone_native_x13_automatic_fit")) {
+    return(normalize_native_automatic_result(output, spec, ts))
+  }
   if (!is.null(output) && !is.list(output)) {
     stop("Backend output must be a list or NULL.", call. = FALSE)
   }
