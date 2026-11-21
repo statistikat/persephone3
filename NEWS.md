@@ -1,5 +1,13 @@
 # persephone3 (development version)
 
+* The native backend now also qualifies the automatic X-13 fit for the pinned
+  template: `perX13(ts, "rsa3", backend = "native")` runs the rkalos
+  automatic pipeline (`capabilities()$native_x13_fit_automatic`) without Java.
+  The specification is the pinned JDemetra+ rsa3 decode table - the sigma
+  policy is the only adjustable field, horizons stay zero, monthly series
+  only; the other rsa templates refuse by name (automodel disabled, or
+  calendar/Easter/trading-day detection deferred). Decisions are bit-exact
+  against the reference implementation at the qualification tiers.
 * The native backend (`backend = "rjd3"` remains the default) now provides the
   restricted fixed-coefficient X-13 fit without Java through
   `perX13(ts, template = "restricted", speclist = ..., backend = "native")`:

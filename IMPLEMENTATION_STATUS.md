@@ -631,6 +631,100 @@ parity harness), 0 failures/errors/skips** on the qualified JVM 21 stack
 (parity file 129 → 146, net +17). JVM-free lane: parity file 70/70 with no
 Java namespace loaded; `tools/verify-nojava.R` PASS without Java.
 
+## Linux M4 — automatic native X-13 fit (rsa3 decode table) — 2026-11-21
+
+**Pins.** rkalos Remotes moved `83016bd` → `00c3a88` (bundled Kalos core
+`f500162`); the scratch lane `tmp_opencode/rlib-m4` built rkalos from a
+`git archive` snapshot with `KALOS_OPENBLAS_ROOT` (static `libopenblas.a`,
+`.so` self-bound: zero dynamic BLAS/LAPACK references). Capabilities at the
+new pin: schema 2, `native_x13_fit_automatic = TRUE`, automatic sigma default
+`"legacy"`. BEFORE any product change the existing suites were reconciled at
+the new pin: JVM lane 1,476 assertions / 0 failures; JVM-free parity 70/70 —
+exact baseline reproduction, no pin drift.
+
+**Product path.** `perX13(ts, "rsa3", backend = "native")$run()` is the
+automatic lane: the specification is the PINNED JDemetra+ rsa3 decode table
+(measured from the pinned rjd3 3.9.0 template-spec dump, captured 2026-11-20;
+transform AUTO aiccDiff -2; automodel grid with ub1/ub2 as reciprocals of the
+JVM values 1.0309278350515465/1.1363636363636365; outliers AO/LS/TC full span
+maxiter 30 tcrate 0.7; AMI 1e-7/1e-5/defva 0/predcv 0.14286/ljbox 0.95; mean
+tests 1.96/1.0, tsig 1; X-11 msr-pinned, automatic Henderson, zero horizons,
+msr_policy "jdplus", neutral mode request). The ONLY adjustable field is the
+sigma policy (NULL = default `"legacy"`; `"accurate"` selectable; invalid
+values refused at run() naming `sigma_policy_default`); every other
+`speclist` field — horizons, transform, arima, x11, sigmas, mode — is refused
+at construction naming `automatic_spec_pinned`, because the module state is
+decode data, not user data. Result envelope `persephone_native_automatic_fit`
+(honest sibling of the restricted one: t/sa/i available, everything else
+`not_provided`, forecasts NULL, `sigma_provenance` echo, decision chain
+carried verbatim). The request fingerprint hashes the full decode state plus
+the effective sigma policy; omitted and explicit-`"legacy"` requests are
+fingerprint-identical (restricted-lane precedent), `"accurate"` differs.
+Mode semantics: the request value `"additive"` is the neutral JVM-UNKNOWN
+request; `mode_effective` (`"multiplicative"` on log=TRUE series) is
+`X13Kernel.forceMode`'s log-driven derivation, mirrored verbatim by the core
+(`x13_automatic.cpp` forceMode copy).
+
+**Template envelope (measured, contract surprise).** Of the six rsa
+templates, exactly ONE fits the qualified automatic envelope: rsa3. rsa0
+(transform Level + automodel disabled), rsa1 (automodel disabled) and rsa2c
+(automodel disabled + TD2/leap-year REMOVE + Easter ADD) plus rsa4/rsa5c
+(TD2/TD7 + Easter ADD — the jar dump shows Easter is ADD on BOTH, not only
+TD) refuse at specification construction, naming the measured template facts;
+the 21-I deferrals quote the pinned core status
+`unsupported:x13 automatic fit defers calendar/easter/TD/user detection (21-I)`
+verbatim. This is narrower than the aspirational plan row "rsa0–rsa3 fully
+supported": the automatic pipeline IS the automatic-modeling route
+(`isAutoModelling()==false` is a dead branch in the contract), so the
+automodel-disabled templates were never inside the envelope.
+
+**Fail-closed matrix (asserted, verbatim).** Construction: rsa0/rsa1/rsa2c/
+rsa4/rsa5c named refusals; perTramo names `native_x13_fit_automatic`;
+rsa3@freq-4 names `monthly_only`; speclist mutations name
+`automatic_spec_pinned`. Run: invalid sigma names `sigma_policy_default`;
+NA series echoes `unsupported:x13 automatic fit requires a complete finite
+series` with fingerprint and no-Java-fallback framing; contexts and
+user-defined outputs refuse as rjd3 features.
+
+**Parity evidence (pinned, byte-stable).** Fixtures
+`inst/tinytest/fixtures/native/parity-m4/`: `jvm-rsa3-{air,ao,seas}.txt` —
+raw `x13_fast(rsa3 + x11.fcasts=0/bcasts=0, userdefined=c("sa","t","i"))` on
+AirPassengers and the rkalos oracle 'ao'/'seas' inputs, EACH captured in two
+independent JVM processes with byte-identical results (`cmp` clean, series
+counted as estimation-touching: double-captured per doctrine), plus the two
+fixture input series. The native lane (JVM-free) reproduces all 13 decision
+lines BIT-identically on all three series (log, d/bd, p/q/bp/bq, mean,
+variable set, neffective, nparams, final Henderson 9/13/13, final seasonal
+s3x3/s3x15/s3x9-broadcast). Tier families at the contract bands with the
+measured worsts (pinned in test output, never widened): landing coefficients
+4.1e-4 vs 1e-2; loglik 2.0e-9 / AICC 2.0e-8 vs 2e-3; sa (d11final) 1.7e-7 vs
+1e-6; t (d12final) 8.2e-8 vs 1e-5; irregular (d13 class) 1.97e-4 vs the
+contract's own measured d13 class ~2e-4 (G2 landing-basin drift, documented
+in the contract's horizon envelope; deterministic across processes — the
+seas worst sits inside the contract class without any band adjustment).
+AirPassengers is bit-exact (0.0) on every family including d13. The JVM-lane
+section re-verifies the LIVE stack against the pinned captures (decisions
+byte-identical) before comparing tiers.
+
+**CI (pinned provider).** `native-foundations.yaml` and `check-full.yaml`
+build the OpenBLAS provider from the kalos lockfile pin (0.3.34) via
+`tools/build-openblas.py` fetched from `statistikat/kalos@f500162a…` (the
+bundled core commit) and export `KALOS_OPENBLAS_ROOT` before the rkalos
+source build; Windows keeps the Rtools-supplied OpenBLAS that rkalos'
+configure detects. `checkout@v5` bumps preserved.
+
+**Suite state.** JVM lane: 21 files, **1,685 assertions, 0 failures**
+(parity 146 → 354, backend 88 → 89, all other files byte-equal to the 21H
+baseline rows). JVM-free lane: parity file **197/197** with no Java namespace
+loaded; `tools/verify-nojava.R --native` PASS including the automatic lane
+(final SA pinned bit-exact). NOTE (host, not package): two long whole-suite
+JVM sessions were SIGKILLed mid-run by the shared host; the suite was
+re-run per-file (own Rscript per file) and completed green — recorded for
+honesty, not a Persephone defect. The suite runner's tally now uses the CI
+`all(as.logical(res))` semantics after an earlier broken aggregation silently
+reported zeros (caught by the parity file's own violation report, fixed,
+both lanes re-run clean).
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,

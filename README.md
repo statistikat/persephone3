@@ -49,9 +49,12 @@ models.
 Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
 its optional packages and Java runtime. The package itself can now load without
 them. `backend_capabilities("native")` reports the native implementation status.
-The native backend qualifies one fit without Java: the restricted
+The native backend qualifies two fits without Java: the restricted
 fixed-coefficient X-13 fit, gated by rkalos'
-`capabilities()$native_x13_fit_restricted` contract.
+`capabilities()$native_x13_fit_restricted` contract, and the automatic X-13 fit
+for `template = "rsa3"`, gated by `capabilities()$native_x13_fit_automatic` —
+its specification is the pinned decode table of the JDemetra+ rsa3 module state
+(no specification data is accepted beyond the sigma policy).
 
 ```r
 obj <- perX13(AirPassengers, template = "restricted",
@@ -60,15 +63,24 @@ obj <- perX13(AirPassengers, template = "restricted",
               backend = "native")
 obj$run()
 obj$adjusted
+
+auto <- perX13(AirPassengers, "rsa3", backend = "native")
+auto$run()
+auto$adjusted
 ```
 
-Its scope is explicit: fixed coefficients only (no automatic templates), fixed
-seasonal and Henderson trend requests, a sigma policy that defaults to
-"legacy" — the pinned JDemetra behavior (maintainer decision 2026-11-17;
-"accurate" is selectable) — zero horizons, monthly series. Anything outside
-this scope raises
+Their scope is explicit: the restricted fit takes fixed coefficients only,
+fixed seasonal and Henderson trend requests; the automatic fit reproduces the
+pinned rsa3 decisions (verified bit-exact against the reference implementation
+at the qualification tiers) and takes only the sigma policy as request data.
+Both default the sigma policy to "legacy" — the pinned JDemetra behavior
+(maintainer decision 2026-11-17; "accurate" is selectable) — run zero
+horizons on monthly series only, and the automatic fit defers calendar/Easter/
+trading-day detection (the remaining rsa templates refuse by name: rsa0/rsa1/
+rsa2c run with automodel disabled, rsa2c/rsa4/rsa5c carry calendar regressors).
+Anything outside this scope raises
 an explicit error naming the violated scope field(s) and never falls back
-silently to Java. Full native seasonal-adjustment fitting beyond this restricted
+silently to Java. Full native seasonal-adjustment fitting beyond this qualified
 scope remains unavailable.
 Persephone now requires [rkalos](https://github.com/statistikat/rkalos), which
 bundles a pinned [Kalos](https://github.com/statistikat/kalos) C++ engine and uses
