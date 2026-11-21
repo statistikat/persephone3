@@ -51,7 +51,7 @@ Suggests:
     tinytest,
     bookdown
 Remotes:
-     github::statistikat/rkalos@83016bdae2def03c675f0fd1baed59ce6b33d851,
+     github::statistikat/rkalos@00c3a884d4bbd845d778253209f7bdb3e915973f,
      github::rjdverse/rjd3toolkit,
      github::rjdverse/rjd3tramoseats,
      github::rjdverse/rjd3x13
