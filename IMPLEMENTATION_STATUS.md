@@ -725,6 +725,87 @@ honesty, not a Persephone defect. The suite runner's tally now uses the CI
 reported zeros (caught by the parity file's own violation report, fixed,
 both lanes re-run clean).
 
+## Linux M4-gap — automodel-OFF templates vs the restricted route (rsa0/rsa1/rsa2c) — 2026-11-21
+
+**Pin advance (honest order).** rkalos moved `00c3a88` → `b90d367` (the
+qualified restricted route is at `10afd3e` and untouched since; the b90d367
+delta is the automatic_fit horizon qualification). rlib-m4 rebuilt from a
+`git archive` snapshot (core.lock.json unchanged: core `f500162a…`),
+`KALOS_OPENBLAS_ROOT` provider, `.so` with zero dynamic BLAS/LAPACK
+references. BEFORE fixtures/product work the first no-Java parity run at the
+new pin exposed exactly ONE pre-existing assertion block pinned to the old
+automatic_fit schema (schema 2L / `x11$zero_horizon_only`): re-baselined to
+schema 3L / `horizon_envelope` with a recorded reason (the rkalos b90d367
+surface change itself); the restricted `zero_horizon_only = TRUE` assertion
+was KEPT. No other pre-existing assertion moved.
+
+**Decode (LIVE, double-JVM byte-identical, doctrine-grade).** The six
+templates were re-captured from the pinned jars through
+`X13Spec.fromString -> X13.toBuffer -> Spec.parseFrom().toString()` (proto
+TextFormat — `toProtoString` does not exist on X13Spec) plus the fully
+expanded rjd3 `x13_spec` walk (probe sha256 `d3525549f06d…`), and the
+PRODUCT-lane demand runs `x13_fast(series, x13_spec(template))` with template
+defaults intact on the three parity series (probe sha256 `77ea273a6a32…`).
+Two independent JVM processes per capture; 12/12 decode files and 9/9 demand
+files byte-identical (`cmp` clean); fixtures
+`inst/tinytest/fixtures/native/refusals-m4gap/` (21 files). rsa3 continuity
+anchor: this session's proto dump matches the pinned M4 rsa3 decode table.
+Measured facts: rsa0 transform LEVEL (the rsa1-vs-rsa0 proto contrast is the
+proof: `transformation: FN_AUTO` vs silent default), automodel FALSE, outlier
+types EMPTY (rsa0 detects nothing — measured even on the planted-AO series);
+rsa1/rsa2c FN_AUTO + AO/LS/TC detection; rsa2c TD2/TEST_REMOVE + Easter
+STANDARD/TEST_ADD; all three: theta/btheta PARAMETER_UNDEFINED (ESTIMATED —
+landing bits measured), SEASONAL_FILTER_MSR, automatic Henderson 0, nfcasts
+-1 = 12 forecast months (measured `nforecast=12` in all nine demand runs).
+Surprise recorded: TEST_REMOVE drops the TD2 columns but the LEAP-YEAR
+variable stays and is ESTIMATED (with ESTIMATED easter).
+
+**Verdict: 0 of 3 native-qualified — evidence-backed refusals on BOTH routes.**
+The restricted fixed-coefficient envelope refuses each template's own request
+verbatim: seasonal msr → `unsupported:x13 fit fixed seasonal requests only`;
+Henderson 0 → `unsupported:x13 fit fixed Henderson trend length`; forecast
+12 (or -1) → `unsupported:x13 fit requires zero horizons`; estimated
+coefficients have NO carrier (non-finite carrier throws `x13 preadjust
+coefficients are finite`) — all four measured against the live installed core
+(f500162), asserted in the JVM-free lane, quoted verbatim in the refusals.
+The rsa3 horizon-forcing precedent does NOT rescue them: their decisions
+(log, outlier picks, filters — measured flipping across the three series)
+depend on estimation the restricted route never performs. No fixed-spec
+mapping is pinnable without overfitting series-dependent run outputs
+(final Henderson 9 vs 13, S3X3/S3X5/S3X9) — pinning those would be mapping
+fudge, so none was attempted; no silent adaptation, no new rkalos call sites.
+The "rsa0–rsa3 fully supported" clause is now CLOSED by evidence: rsa3 native
+(M4); rsa0/rsa1/rsa2c natively impossible on both qualified routes, refused
+by name with the measured facts; rsa4/rsa5c refusals untouched (21-I verbatim).
+
+**Product change.** `backend_native.R`: the three refusals now frame BOTH
+envelopes ("outside the qualified native envelopes (automatic and
+restricted)"), name the restricted scope fields
+(`fixed_coefficients_only`, `fixed_seasonal_requests_only`,
+`fixed_trend_length_only`, `zero_horizon_only`) and quote the pinned core
+statuses; header carries the probe hashes. `tools/verify-nojava.R` gained the
+rsa0 restricted-fact assertions plus one LIVE-core msr-status check. No
+export surface change (NAMESPACE/man untouched).
+
+**Parity.** No native lane exists for the refused names, so there is nothing
+to compare against rjd3 finals; the JVM lane carries the substitute contract:
+the live stack must reproduce the pinned decode captures (proto + spec walk,
+all six templates) and the pinned demand captures (three refused templates ×
+three series) BYTE-IDENTICALLY — 21 stack-pin assertions; the JVM-free lane
+asserts the refusal texts and the live-core aspect matrix (45 assertions).
+
+**Suite state.** JVM lane (per-file, own Rscript each): 21 files, **1,753
+assertions, 0 failures** = the M4 baseline 1,685 with the parity file 354 →
+422 (+68: 45 M4-gap matrix + 2 schema-3 re-baseline + 21 stack-pins) and every
+other file's source unchanged in git; backend.R 89 as recorded at M4, totals
+reconcile exactly. JVM-free lane: parity file **244/244** (was 197; +45 +2);
+`tools/verify-nojava.R --native` PASS including the new restricted-fact and
+LIVE-core msr-status checks. CI untouched (M4's pinned-provider wiring already
+covers rkalos). Friction: the user library shadows rlib-m4 unless `R_LIBS`
+(first priority) is set — `R_LIBS_SITE` sorts AFTER `R_LIBS_USER`;
+README.Rmd lacks the M4-era native paragraph that README.md carries
+(pre-existing drift, left untouched).
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,
