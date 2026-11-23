@@ -950,6 +950,10 @@ Implemented and checked on macOS ARM64 on 2026-11-23. Both chart engines display
 
 Implemented and checked on macOS ARM64 on 2026-11-23. The single-series dashboard shows the native decomposition effects, adjusted spectrum and original spectrum. The residual panel identifies unavailable diagnostics. Previously the dashboard embedded plot errors for those panels. The interactive and static spectrum functions share the same component selection. The Java-free chart suite passed **68/68**, including both rendered dashboards and exact comparisons with independently computed periodograms for observed, adjusted and irregular series. The reference plot and diagnostic suites passed **16/16** and **180/180**. [Single-series dashboard](R/dashboard_single.R) · [Java-free chart tests](inst/tinytest/test-native-charts.R)
 
+### Reference-backend reinitialization (application item 14)
+
+The package check exposed an outdated expectation that constructing the default native X-13 model fails. The isolated process now checks the successful `rsa3` default and the refusal for `rsa0`, then exercises both rjd3 methods through descriptor-pool detach and recovery. With rjd3toolkit 3.9.1 and Temurin 21.0.11, **15/15** assertions passed. [Reinitialization test](inst/tinytest/test-backend-reinitialization.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

@@ -16,7 +16,8 @@ local({
                               "rjd3tramoseats") %in% loadedNamespaces())
     lazy_search <- !"RProtoBuf:DescriptorPool" %in% search()
     backend_capabilities("rjd3")
-    native_error <- tryCatch(perX13(AirPassengers, backend = "native"),
+    native <- perX13(AirPassengers, backend = "native")
+    native_error <- tryCatch(perX13(AirPassengers, "rsa0", backend = "native"),
                             error = conditionMessage)
     lazy_after_native <- !any(c("rJava", "RProtoBuf") %in% loadedNamespaces()) &&
       !"RProtoBuf:DescriptorPool" %in% search()
@@ -93,6 +94,7 @@ local({
     perX13(AirPassengers, "rsa3", backend = "rjd3")
     list(lazy_namespaces = lazy_namespaces, lazy_search = lazy_search,
          lazy_after_native = lazy_after_native, native_error = native_error,
+         native_template = native$specification$template,
          descriptor_still_present = descriptor_still_present,
          fit_recovered = fit_recovered, construct_recovered = construct_recovered,
          unique_pool = unique_pool, toolkit_recovered = toolkit_recovered,
@@ -106,6 +108,7 @@ local({
   expect_true(result$lazy_namespaces)
   expect_true(result$lazy_search)
   expect_true(result$lazy_after_native)
+  expect_identical(result$native_template, "rsa3")
   expect_true(grepl("No Java fallback", result$native_error, fixed = TRUE))
   expect_equal(result$descriptor_still_present, c(TRUE, TRUE))
   expect_equal(result$fit_recovered, c(TRUE, TRUE))
