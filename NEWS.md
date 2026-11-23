@@ -3,6 +3,9 @@
 * Native monthly RSA3 now identifies SARIMA orders and returns dated SEATS
   components and forecasts for fits accepted at the first reference comparison.
 
+* Native RSA1 original-series forecast intervals use the fitted TR1
+  model on both level and log scales.
+
 * Native RSA1 exposes the residual standard error and reports residual
   normality and independence in the dashboard, diagnostics table and quality report.
 

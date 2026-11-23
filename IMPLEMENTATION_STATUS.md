@@ -1486,3 +1486,21 @@ package check with **3,611/3,611** tests, rebuilt vignettes, PDF manual
 and **Status OK**. The earlier `61e9840` passed **3,427/3,427** and
 also completed the source check with **Status OK**.
 [RSA3 product replay](inst/tinytest/test-native-tramoseats-rsa3.R)
+
+## Original-series forecast intervals for native RSA1 (2026-11-24)
+
+The rkalos `0.1.0.9016` pin at `61a6733` supplies dated original-series
+forecast standard errors for raw monthly RSA1. The product normalizer
+selects these errors for the original-series forecast and chart. The
+conditional SEATS errors remain available under
+`result$seats_forecast_standard_errors`. The twelve public fits
+matched all **288 preprocessing forecast errors** within the registered
+tolerance and all **288 conditional forecast errors** exactly. Both
+chart bounds matched the public series uncertainty at all horizons.
+Tests exercised 24 forecast months, custom 3/6 backcasts and forecasts,
+and a zero horizon.
+
+The updated RSA1 product suite passed **810/810** in a Java-free
+library and **1,182/1,182** against live JDemetra. The existing RSA0
+and RSA3 suites also passed in both environments.
+[RSA1 uncertainty and chart checks](inst/tinytest/test-native-tramoseats-rsa1.R)

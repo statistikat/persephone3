@@ -72,7 +72,7 @@ series with a decomposable fitted model. RSA3 fits automatic orders when the fir
 speclist or updateParams. Positive counts specify months and negative counts
 specify years. The defaults are two years of forecasts and zero backcasts.
 The result includes fitted components, point forecasts and conditional
-SEATS standard errors. RSA0 also supplies preprocessing forecast errors for the original series.}
+SEATS standard errors. RSA0 and RSA1 supply preprocessing forecast errors for the original series.}
 }
 \value{
 An object of class \code{\link{tramoseatsSingle}} representing an tramoseats seasonal

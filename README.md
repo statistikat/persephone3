@@ -76,6 +76,7 @@ The native monthly RSA1 route estimates the log or level transformation and
 detects outliers before SEATS decomposition. Use
 `perTramo(series, "rsa1", backend = "native")` and call `$run()`.
 Its `$result$model$outliers` lists the fitted coefficients and positions.
+The original-series forecast intervals use its fitted TR1 standard errors.
 
 The native RSA3 route also identifies SARIMA orders. Fits accepted by the
 first reference comparison and the subsequent controller sweep produce

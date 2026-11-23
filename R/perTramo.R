@@ -167,7 +167,7 @@ tramoseatsSingle <- R6::R6Class(
 #'   speclist or updateParams. Positive counts specify months and negative counts
 #'   specify years. The defaults are two years of forecasts and zero backcasts.
 #'   The result includes fitted components, point forecasts and conditional
-#'   SEATS standard errors. RSA0 also supplies preprocessing forecast errors for the original series.
+#'   SEATS standard errors. RSA0 and RSA1 supply preprocessing forecast errors for the original series.
 #' @export
 perTramo <- function(ts,
                    template = c("rsa3","rsafull", "rsa0", "rsa1", "rsa2",  "rsa4", "rsa5"),

@@ -11,6 +11,8 @@ cases <- c(cases, additional_cases("rsa1-level-effects-x86_64.txt", "level_"),
            additional_cases("rsa1-log-tc-x86_64.txt", "log_tc_"))
 diagnostics <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa1-residual-diagnostics-x86_64.txt"))
 expect_identical(sort(names(diagnostics)), sort(names(cases)))
+forecast_errors <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa1-forecast-errors-x86_64.txt"))
+expect_identical(sort(names(forecast_errors)), sort(names(cases)))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
@@ -29,8 +31,24 @@ for (id in names(cases)) {
   expect_identical(fitted$forecasts$mode, if (log) "Multiplicative" else "Additive", info = id)
   expect_true(all(fitted$components$cal == as.numeric(log)), info = id)
   expect_true(all(fitted$forecasts$points$cal == as.numeric(log)), info = id)
-  expect_null(fitted$forecasts$standard_errors$y, info = id)
-  expect_identical(obj$output$series_forecast_stdev_status, "not_qualified", info = id)
+  errors <- forecast_errors[[id]]
+  expected <- tokens(errors[startsWith(errors, "y_ef ")])
+  reference_errors <- helper$fixture_hex_doubles(expected[-seq_len(4L)])
+  actual_errors <- fitted$forecasts$standard_errors$y
+  expect_identical(actual_errors, obj$output$series_forecast_stdev, info = id)
+  expect_identical(obj$output$series_forecast_stdev_status, "available", info = id)
+  expect_identical(fitted$forecasts$availability$standard_errors[1L], "available", info = id)
+  expect_identical(domain(actual_errors), domain(fitted$forecasts$points$y), info = id)
+  expect_true(all(abs(as.numeric(actual_errors) - reference_errors) <= 2e-8 * (1 + abs(reference_errors))), info = id)
+  wk <- tokens(errors[startsWith(errors, "wk_series_stdev_forecast ")])
+  expect_identical(as.numeric(fitted$seats_forecast_standard_errors$y),
+                   helper$fixture_hex_doubles(wk[-seq_len(4L)]), info = id)
+  chart <- obj$hchart()$x$hc_opts$series
+  interval <- chart[[match("confidence interval", vapply(chart, "[[", character(1), "name"))]]$data
+  expect_identical(vapply(interval, "[[", numeric(1), "low"),
+                   as.numeric(fitted$forecasts$points$y - 1.96 * actual_errors), info = id)
+  expect_identical(vapply(interval, "[[", numeric(1), "high"),
+                   as.numeric(fitted$forecasts$points$y + 1.96 * actual_errors), info = id)
   expected_outliers <- lines[startsWith(lines, "variable ") & !startsWith(lines, "variable const ")]
   outliers <- obj$getOutliers()
   expect_identical(nrow(outliers), length(expected_outliers), info = id)
@@ -88,8 +106,11 @@ for (id in names(cases)) {
     expect_identical(obj$fixModel(), obj$params)
   }
   if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
-    jd <- perTramo(x, "rsa1", backend = "rjd3", userdefined = "cal_f(24)")
+    jd <- perTramo(x, "rsa1", backend = "rjd3", userdefined = c("cal_f(24)", "y_ef(24)"))
     jd$run()
+    jd_errors <- jd$output$user_defined[["y_ef(24)"]]
+    expect_identical(domain(actual_errors), domain(jd_errors), info = id)
+    expect_true(all(abs(actual_errors - jd_errors) <= 2e-8 * (1 + abs(jd_errors))), info = id)
     for (name in names(diagnostic_keys)) {
       key <- diagnostic_keys[[name]]
       native <- metrics[[name]]
@@ -118,6 +139,10 @@ for (id in names(cases)) {
     obj$run()
     expect_identical(length(obj$forecasts$points$sa), 6L)
     expect_identical(length(obj$forecasts$points$cal), 6L)
+    expect_identical(length(obj$forecasts$standard_errors$y), 6L)
+    expect_identical(domain(obj$forecasts$standard_errors$y), domain(obj$forecasts$points$y))
+    expect_true(all(abs(as.numeric(obj$forecasts$standard_errors$y) - head(reference_errors, 6L)) <=
+                    2e-8 * (1 + abs(head(reference_errors, 6L)))))
     back <- obj$output$merged
     expect_identical(length(back$values[[which(back$component == "Trend" & back$information == "Backcast")]]), 3L)
     expect_true(all(obj$forecasts$points$cal == 1))
