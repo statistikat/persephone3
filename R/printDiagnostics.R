@@ -19,6 +19,12 @@ printDiagnostics <- function(x) {
       TotalQ = NA
     ))
 
+  if (identical(x$result$backend, "native")) {
+    row <- generate_diagnostics_table(x)
+    return(row[c("run", "method", "type", "seasonality", "logTransform", "arimaMdl",
+                 "nOutliers", "nAutoout", "nRecentout", "Q", "Q2", "TotalQ")])
+  }
+
   userdef <-  x$output$user_defined
   preproc <-  x$output$preprocessing
 

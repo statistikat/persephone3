@@ -39,7 +39,7 @@ x13Single <- R6::R6Class(
       if (is.null(method)) {
         method <- "x13"
       }
-      init_spec <- backend_spec_parameters(init_spec, method, self$backend)
+      init_spec <- backend_spec_parameters(init_spec, method, self$backend, freq)
       if(is.null(spec_list)) {
       # extract additional parameters from ...
       spec_list <- list(...) # extra arguments
@@ -50,6 +50,8 @@ x13Single <- R6::R6Class(
         spec_new <- init_spec
       }
       # neue specs speichern
+      if (self$backend == "native")
+        backend_validate_native_spec(spec_new, method, private$ts_internal, allow_unset_filters = TRUE)
       private$params_internal <- spec_new
       return(spec_new)
     },
@@ -181,6 +183,7 @@ perX13 <- function(ts,
     # The native template contract owns the templates: 'restricted' and the
     # pinned automatic 'rsa3' qualify; everything else is refused naming the
     # violated scope field(s).
+    if (missing(template)) template <- "rsa3"
     backend_native_check_template(template)
   } else {
     template <- match.arg(template)

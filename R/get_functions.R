@@ -80,6 +80,48 @@ outlier_variable_dates <- function(variables, manual) {
   as.Date(value, origin = "1970-01-01")
 }
 
+# Native automatic variables carry positions and estimated coefficients.
+# Restricted variables carry supplied columns and fixed coefficients, without
+# outlier subtypes, dates or coefficient inference.
+native_regression_records <- function(result) {
+  if (inherits(result, "persephone_native_automatic_fit")) {
+    v <- result$model$variables
+    return(data.frame(name = v$name, type = rep("outlier", length(v$name)),
+      value = v$coefficient, subtype = v$type, position = v$position))
+  }
+  variables <- result$specification$variables
+  rows <- lapply(seq_along(variables), function(i) {
+    v <- variables[[i]]
+    n <- length(v$coefficient)
+    labels <- names(v$columns)
+    fallback <- paste(v$class, i, seq_len(n), sep = ".")
+    if (is.null(labels)) labels <- fallback
+    missing <- is.na(labels) | !nzchar(labels)
+    labels[missing] <- fallback[missing]
+    data.frame(name = labels, type = v$class, value = v$coefficient,
+               subtype = NA_character_, position = NA_integer_)
+  })
+  do.call(rbind, rows)
+}
+
+native_outlier_table <- function(x) {
+  rows <- native_regression_records(x$result)
+  if (is.null(rows) || !any(rows$type == "outlier")) return(empty_outlier_table())
+  rows <- rows[rows$type == "outlier", , drop = FALSE]
+  dates <- as.Date(rep(NA_character_, nrow(rows)))
+  dated <- !is.na(rows$position)
+  if (any(dated)) {
+    ordinals <- round(stats::time(x$ts)[rows$position[dated]] * stats::frequency(x$ts))
+    dates[dated] <- outlier_period_dates(as.numeric(ordinals), stats::frequency(x$ts))
+  }
+  automatic <- inherits(x$result, "persephone_native_automatic_fit")
+  structure(data.frame(name = rows$name, type = rows$subtype, coef.value = rows$value,
+    stde = NA_real_, t = NA_real_, pvalue = NA_real_, date = dates,
+    coef.type = if (automatic) "ESTIMATED" else "FIXED", crit.value = NA_real_,
+    autoout = automatic, recentout = rows$position > length(x$ts) - 5L),
+    class = c("persephoneOutliers", "data.frame"))
+}
+
 empty_outlier_table <- function() {
   structure(data.frame(name = character(), type = character(), coef.value = double(),
                        stde = double(), t = double(), pvalue = double(),
@@ -248,6 +290,7 @@ outlier_estimation_periods <- function(series, spec) {
 #' # subset(getOutliers(obj), autoout) # without the manually specified one
 getOutliers <- function(x) {
   if (is.null(x$output)) stop("No results from run available.\n")
+  if (identical(x$result$backend, "native")) return(native_outlier_table(x))
   stopifnot(inherits(x$output, c("JD3_X13_RSLTS", "JD3_TRAMOSEATS_RSLTS")))
   variables <- x$output$preprocessing$description$variables
   selected <- which(vapply(variables, function(variable) variable$type %in% c("AO", "LS", "TC"), logical(1)))
@@ -392,6 +435,14 @@ calcOutlierCrit <- function(n, method = c("x13", "tramoseats")) {
 #' # getRegressors(obj)
 getRegressors <- function(x) {
   if (is.null(x$output)) stop("No results from run available.\n")
+  if (identical(x$result$backend, "native")) {
+    rows <- native_regression_records(x$result)
+    if (is.null(rows) || !nrow(rows)) return(NULL)
+    out <- rows[c("name", "type", "value")]
+    out$stde <- out$t <- out$pvalue <- NA_real_
+    return(structure(out, class = c("persephoneRegressors", "data.frame"),
+                     unavailable = c("stde", "t", "pvalue")))
+  }
   stopifnot(inherits(x$output, c("JD3_X13_RSLTS", "JD3_TRAMOSEATS_RSLTS")))
   q <- x$output$preprocessing
   records <- regression_coefficient_table(q)

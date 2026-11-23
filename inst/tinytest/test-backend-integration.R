@@ -18,7 +18,7 @@ expect_identical(x$result$backend, "rjd3")
 expect_false(x$is_stale)
 
 options(persephone.backend = "native")
-expect_error(perX13(AirPassengers), "native backend does not yet implement")
+expect_identical(perX13(AirPassengers)$params$template, "rsa3")
 # Existing objects, explicit selection and cloned children retain their engine.
 x$run()
 expect_identical(x$backend, "rjd3")

@@ -82,6 +82,19 @@ summary.persephone <- function(x, ...) {
   if (is.null(x$output)) {
     stop("No results from run available.\n", call. = FALSE)
   }
+  if (identical(x$result$backend, "native")) {
+    d <- generate_diagnostics_table(x)
+    cat("Native X-13 / X-11", x$result$provenance$mode_effective, "\n")
+    cat("Observations", length(x$ts), "| Log transform", diagnostic_format(d$logTransform),
+        "| Outliers", d$nOutliers, "\n")
+    cat("ARIMA", diagnostic_format(d$arimaMdl), "\n")
+    coefficients <- unlist(x$result$model$coefficients)
+    if (length(coefficients)) print(coefficients)
+    reg <- getRegressors(x)
+    if (!is.null(reg)) print(reg)
+    cat("Coefficient standard errors and JDemetra quality indicators are unavailable.\n")
+    return(invisible(x))
+  }
   ts <- x$ts
   ud <- x$output$user_defined
 

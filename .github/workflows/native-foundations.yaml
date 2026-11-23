@@ -32,9 +32,6 @@ jobs:
           # 2026-11-23 M5: bumped with the rkalos core pin f500162 -> 0e064dd
           # (provider tooling and OpenBLAS lockfile byte-identical between the
           # two refs; this keeps "provider == bundled core" doctrine).
-          # NOTE: DESCRIPTION Remotes now pins rkalos 49e2b11 -- a LOCAL,
-          # NOT-YET-PUSHED rkalos commit; this leg stays red until rkalos main
-          # is pushed (and this branch). See IMPLEMENTATION_STATUS.md (M5).
           ref: 0e064dd18eb45568fc35e1bed337161598ace36f
           path: .kalos-provider
       - name: Build pinned OpenBLAS provider
@@ -60,3 +57,5 @@ jobs:
           library(persephone3)
           result <- tinytest::run_test_file("inst/tinytest/test-backend.R")
           stopifnot(all(as.logical(result)))
+          reports <- tinytest::run_test_file("inst/tinytest/test-native-reporting.R")
+          stopifnot(all(as.logical(reports)))

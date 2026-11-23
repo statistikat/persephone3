@@ -33,14 +33,14 @@ stopifnot(grepl("envelopes \\(automatic and restricted\\)", msg0),
           grepl("fixed_seasonal_requests_only", msg0, fixed = TRUE),
           grepl("zero_horizon_only", msg0, fixed = TRUE),
           grepl("unsupported:x13 fit requires zero horizons", msg0, fixed = TRUE))
-fit_fun <- get0("native_x13_fit", envir = asNamespace("rkalos"), mode = "function")
+fit_fun <- rkalos::native_x13_fit
 st <- fit_fun(as.numeric(AirPassengers), seasonal = rep("msr", 12L), trend_length = 13L,
               frequency = 12L, start_period = 1L)
 stopifnot(identical(st$status, "unsupported:x13 fit fixed seasonal requests only"))
 err <- tryCatch(perTramo(AirPassengers, backend = "rjd3"), error = identity)
 stopifnot(inherits(err, "error"), grepl("optional package", conditionMessage(err)))
 # rkalos is a required dependency; it supplies every compiled primitive.
-stopifnot(identical(cap, rkalos::capabilities()),
+stopifnot(identical(cap$methods, "x13"),
           grepl("^[0-9a-f]{40}$", rkalos::core_version()$commit))
 # Restricted native fit (rkalos schema_version 2): the qualified fixed-
 # coefficient X-13 fit must run through the product path WITHOUT Java, and
@@ -54,6 +54,14 @@ if (identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)) {
   obj <- perX13(AirPassengers, template = "restricted",
                 speclist = list(seasonal = rep("s3x15", 12L), trend_length = 13L))
   obj$run()
+  saved <- obj$result
+  stopifnot(!obj$is_stale, inherits(try(obj$updateParams(spec = list(bad = TRUE)),
+                                       silent = TRUE), "try-error"),
+            identical(obj$result, saved), !obj$is_stale)
+  obj$getRegressors()
+  obj$getOutliers()
+  summary(obj)
+  print(obj)
   stopifnot(identical(obj$result$status$code, "success"),
             identical(obj$result$backend, "native"),
             !inherits(obj$result, "persephone_result"),
@@ -81,6 +89,14 @@ if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
                       "legacy"))
   obj <- perX13(AirPassengers, "rsa3", backend = "native")
   obj$run()
+  saved <- obj$result
+  stopifnot(!obj$is_stale, inherits(try(obj$updateParams(spec = list(bad = TRUE)),
+                                       silent = TRUE), "try-error"),
+            identical(obj$result, saved), !obj$is_stale)
+  obj$getRegressors()
+  obj$getOutliers()
+  summary(obj)
+  print(obj)
   stopifnot(identical(obj$result$status$code, "success"),
             identical(obj$result$backend, "native"),
             inherits(obj$result, "persephone_native_automatic_fit"),
@@ -88,8 +104,10 @@ if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
             identical(obj$result$provenance$sigma_provenance, "legacy (default)"),
             stats::frequency(obj$adjusted) == 12L,
             is.null(obj$forecasts),
-            identical(as.numeric(obj$adjusted)[142:144],
-                      c(499.37673144370382, 484.86271289531953, 485.24840286656132)))
+            # Compare the 17-digit round-trip strings directly. Parsing these
+            # decimals as R literals can round to a neighbour on macOS ARM64.
+            identical(sprintf("%.17g", as.numeric(obj$adjusted)[142:144]),
+                      c("499.37673144370382", "484.86271289531953", "485.24840286656132")))
   refused <- tryCatch({
     perX13(AirPassengers, "rsa4", backend = "native")
     "no error"

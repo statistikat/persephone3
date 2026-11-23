@@ -150,7 +150,8 @@ generate_diagnostics_table <- function(x) {
     nOutliers = n_out,
     nAutoout = if (is.null(out)) NA_integer_ else sum(out$autoout),
     nRecentout = if (is.null(out)) NA_integer_ else sum(out$recentout),
-    nSigRecentout = if (is.null(out)) NA_integer_ else sum(
+    nSigRecentout = if (is.null(out) || (identical(x$result$backend, "native") &&
+      any(out$recentout %in% c(TRUE, NA)))) NA_integer_ else sum(
       out$recentout & abs(out$t) > out$crit.value, na.rm = TRUE
     ),
     Q = round(metrics$q$value, 2),

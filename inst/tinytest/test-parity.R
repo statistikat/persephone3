@@ -99,6 +99,15 @@ parity_auto_key_lines <- function(path) {
   stats::setNames(sub("^[^=]*=", "", ls), sub("=.*", "", ls))
 }
 
+# The captured finite values are round-trip binary64 decimals. Parse the input
+# once with a correctly rounded conversion on platforms with 64-bit long double.
+read_series_fixture <- function(id) {
+  k <- parity_auto_key_lines(file.path(parity_auto_dir(), paste0("series-", id, ".txt")))
+  values <- jsonlite::fromJSON(paste0("[", chartr(";", ",", k[["values"]]), "]"))
+  stats::ts(values, start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
+            frequency = as.integer(k[["frequency"]]))
+}
+
 parity_auto_g <- function(v) {
   if (is.null(v) || !length(v)) return("NULL")
   paste(sprintf("%.17g", as.numeric(v)), collapse = ";")
@@ -228,7 +237,7 @@ time_domain <- function(t) c(floor(t[1]),
 local({
   cap <- backend_capabilities("native")
   # The gating contract itself (schema_version 2, verbatim rkalos passthrough).
-  expect_identical(cap, rkalos::capabilities())
+  expect_identical(cap$restricted_fit, rkalos::capabilities()$restricted_fit)
   expect_identical(cap$schema_version, 2L)
   expect_identical(cap$native_x13_fit_restricted, TRUE)
   expect_false(cap$fit)
@@ -340,7 +349,7 @@ local({
   expect_match(m0, "transform.fn = Level", fixed = TRUE)
   # Live core answers for the decoded aspects (rkalos 0.1.0, core f500162):
   # verbatim equality with the statuses quoted in the refusals above.
-  fit_fun <- get0("native_x13_fit", envir = asNamespace("rkalos"), mode = "function")
+  fit_fun <- rkalos::native_x13_fit
   raw_fun <- get0(".native_x13_fit", envir = asNamespace("rkalos"))
   expect_true(is.function(fit_fun) && is.function(raw_fun))
   y <- as.numeric(AirPassengers)
@@ -661,10 +670,8 @@ local({
   expect_identical(accurate$result$provenance$sigma_provenance, "accurate (explicit)")
   expect_false(identical(accurate$result$provenance$request_fingerprint,
                          auto_fit_m4$result$provenance$request_fingerprint))
-  bad <- perX13(series_m, "rsa3", speclist = list(sigma_policy = "jdemetra"),
-                backend = "native")
-  expect_match(tryCatch({bad$run(); "no error"}, error = conditionMessage),
-               "sigma_policy_default")
+  expect_error(perX13(series_m, "rsa3", speclist = list(sigma_policy = "jdemetra"),
+                      backend = "native"), "sigma_policy_default")
   for (change in list(list(forecast = 6L), list(backcast = 6L),
                       list(transform.fun = "Log"), list(arima.p = 1L),
                       list(x11.henderson.filter = 13L), list(lower_sigma = 2),
@@ -713,11 +720,29 @@ local({
                    "485.31117497124382;484.47953905665042;483.91343452551052;483.46082170609282")
   expect_identical(g(rev(utils::tail(i, 4))),
                    "0.9998706559668934;1.0007908978765443;1.0319546758055094;0.99677758439556818")
-  expect_identical(sprintf("%.17g", mean(sa)), "280.02966131208768")
-  expect_identical(sprintf("%.17g", mean(t)), "279.93986187656731")
-  expect_identical(sprintf("%.17g", sum(sa)), "40324.271228940626")
-  expect_identical(sprintf("%.17g", sum(t)), "40311.340110225698")
-  expect_identical(sprintf("%.17g", sum(i)), "144.03999396875952")
+  # R's sum/mean intermediates depend on the platform's long double.
+  # Accumulate rounding residuals so identical binary64 component vectors
+  # give the same 17-digit checksum on arm64 and x86.
+  compensated_sum <- function(values) {
+    total <- correction <- 0
+    for (value in values) {
+      next_total <- total + value
+      lost <- if (abs(total) >= abs(value)) (total - next_total) + value else
+        (value - next_total) + total
+      correction <- correction + lost
+      total <- next_total
+    }
+    total + correction
+  }
+  corrected_mean <- function(values) {
+    estimate <- compensated_sum(values) / length(values)
+    estimate + compensated_sum(values - estimate) / length(values)
+  }
+  expect_identical(sprintf("%.17g", corrected_mean(sa)), "280.02966131208768")
+  expect_identical(sprintf("%.17g", corrected_mean(t)), "279.93986187656731")
+  expect_identical(sprintf("%.17g", compensated_sum(sa)), "40324.271228940626")
+  expect_identical(sprintf("%.17g", compensated_sum(t)), "40311.340110225698")
+  expect_identical(sprintf("%.17g", compensated_sum(i)), "144.03999396875952")
 })
 
 # Decision-bit matrix against the pinned JVM captures (JVM-free here): the
@@ -726,12 +751,6 @@ local({
 # contract bands (violations print their magnitudes and fail).
 local({
   fixture_dir <- parity_auto_dir()
-  read_series_fixture <- function(id) {
-    k <- parity_auto_key_lines(file.path(fixture_dir, paste0("series-", id, ".txt")))
-    stats::ts(as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
-              start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
-              frequency = as.integer(k[["frequency"]]))
-  }
   fits <- list(air = auto_fit_m4)
   for (id in c("ao", "seas")) {
     obj <- perX13(read_series_fixture(id), "rsa3", backend = "native")
@@ -926,12 +945,6 @@ local({
 # inside the contract bands (STOP-with-diagnostics, never widen).
 local({
   fixture_dir <- parity_auto_dir()
-  read_series_fixture <- function(id) {
-    k <- parity_auto_key_lines(file.path(fixture_dir, paste0("series-", id, ".txt")))
-    stats::ts(as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
-              start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
-              frequency = as.integer(k[["frequency"]]))
-  }
   xspec <- rjd3x13::set_x11(rjd3x13::x13_spec("rsa3"), fcasts = 0, bcasts = 0)
   native_objects <- list(air = auto_fit_m4)
   for (id in c("ao", "seas")) {
@@ -1054,12 +1067,7 @@ if (has_rjd3) local({
   }
   ref_series <- list(air = series_m)
   for (id in c("ao", "seas")) {
-    k <- parity_auto_key_lines(file.path(parity_auto_dir(),
-                                         paste0("series-", id, ".txt")))
-    ref_series[[id]] <- stats::ts(
-      as.numeric(strsplit(k[["values"]], ";", fixed = TRUE)[[1]]),
-      start = c(as.integer(k[["start_year"]]), as.integer(k[["start_period"]])),
-      frequency = as.integer(k[["frequency"]]))
+    ref_series[[id]] <- read_series_fixture(id)
   }
   for (tpl in c("rsa0", "rsa1", "rsa2c")) {
     for (id in names(ref_series)) {

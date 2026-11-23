@@ -20,7 +20,7 @@ new_backend_spec <- function(method, template = NULL, frequency, parameters,
             class = "persephone_spec")
 }
 
-backend_spec_parameters <- function(spec, method, backend) {
+backend_spec_parameters <- function(spec, method, backend, frequency = NULL) {
   if (inherits(spec, "persephone_spec")) {
     if (!identical(spec$schema_version, 1L)) {
       stop("Unsupported Persephone specification schema version.", call. = FALSE)
@@ -32,6 +32,11 @@ backend_spec_parameters <- function(spec, method, backend) {
       stop("Specification backend does not match the requested backend; explicit conversion is required.",
            call. = FALSE)
     }
+    if (!is.null(frequency) && !identical(as.numeric(spec$frequency), as.numeric(frequency)))
+      stop("Specification frequency does not match the series.", call. = FALSE)
+    if (backend == "native" && !is.null(spec$template) &&
+        !identical(spec$template, spec$parameters$template))
+      stop("Specification envelope and parameter templates disagree.", call. = FALSE)
     spec <- spec$parameters
   }
   # Retain the public legacy specification representation while preventing
@@ -60,16 +65,12 @@ specification_changes <- function(speclist, dots) {
 
 prepare_specification_update <- function(current, method, frequency, backend,
                                          template = NULL, spec = NULL,
-                                         changes = list()) {
+                                         changes = list(), series = NULL) {
   if (!is.null(template) && !is.null(spec)) {
     stop("Supply either 'template' or a complete 'spec', not both.", call. = FALSE)
   }
   if (!is.null(spec)) {
-    if (inherits(spec, "persephone_spec") &&
-        !identical(as.numeric(spec$frequency), as.numeric(frequency))) {
-      stop("Specification frequency does not match the series.", call. = FALSE)
-    }
-    proposed <- backend_spec_parameters(spec, method, backend)
+    proposed <- backend_spec_parameters(spec, method, backend, frequency)
     expected <- if (method == "x13") "JD3_X13_SPEC" else "JD3_TRAMOSEATS_SPEC"
     if (backend == "rjd3" && !inherits(proposed, expected)) {
       stop("A complete rjd3 specification must have class ", expected, ".", call. = FALSE)
@@ -81,6 +82,12 @@ prepare_specification_update <- function(current, method, frequency, backend,
   }
   if (length(changes)) {
     proposed <- backend_update_spec(proposed, method, frequency, changes, backend)
+  }
+  if (backend == "native") {
+    draft <- is.null(current$seasonal) || is.null(current$trend_length)
+    allow_draft <- identical(template, "restricted") ||
+      (is.null(spec) && is.null(template) && draft)
+    backend_validate_native_spec(proposed, method, series, allow_unset_filters = allow_draft)
   }
   proposed
 }

@@ -90,7 +90,8 @@ hierarchicalTimeSeries <- R6::R6Class(
       if (missing(template) || is.null(template)) {
         template <- "rsa3"
       }
-      check_template(template, private$method)
+      if (self$backend == "native") backend_native_check_template(template, private$method)
+      else check_template(template, private$method)
       private$template <- template
       # keep context and userdefined in private state for runDirect
       private$context_internal <- context
@@ -316,7 +317,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       }
       proposed <- prepare_specification_update(
         private$params_internal, self$method, frequency(private$ts_internal),
-        self$backend, template, spec, changes)
+        self$backend, template, spec, changes, series = private$ts_internal)
       # Preflight clones to avoid partially changing a hierarchy when a later
       # node rejects an option. Real component identities are preserved.
       if (iterate) {
@@ -528,7 +529,7 @@ hierarchicalTimeSeries <- R6::R6Class(
         tmpl <- if (!is.null(name)) name else private$template
         init_spec <- backend_default_spec(private$method, tmpl, freq, self$backend)
       }
-      init_spec <- backend_spec_parameters(init_spec, private$method, self$backend)
+      init_spec <- backend_spec_parameters(init_spec, private$method, self$backend, freq)
       # if spec_list not provided, construct from ... to allow passing named spec args
       if (is.null(spec_list)) {
         spec_list <- list(...)
@@ -544,6 +545,8 @@ hierarchicalTimeSeries <- R6::R6Class(
       } else {
         spec_new <- init_spec
       }
+      if (self$backend == "native")
+        backend_validate_native_spec(spec_new, private$method, private$ts_internal, allow_unset_filters = TRUE)
       private$params_internal <- spec_new
       return(spec_new)
     },

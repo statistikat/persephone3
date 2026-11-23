@@ -75,11 +75,13 @@ diagnostic_metrics <- function(x) {
     test(paths, rule)
   }
   orders <- vapply(c("p", "d", "q", "bp", "bd", "bq"), function(order) {
+    if (identical(x$result$backend, "native")) return(diagnostic_number(x$result$model[[order]]))
     diagnostic_number(diagnostic_at(output, c("user_defined", paste0("arima.", order))))
   }, numeric(1))
   arima <- if (anyNA(orders) || any(orders < 0 | orders != floor(orders))) NA_character_ else
     paste0("(", paste(orders[1:3], collapse = " "), ")(", paste(orders[4:6], collapse = " "), ")")
   log <- diagnostic_at(output, c("preprocessing", "description", "log"))
+  if (identical(x$result$backend, "native")) log <- x$result$model$log %||% x$result$provenance$log
   if (!is.logical(log) || length(log) != 1L) log <- NA
   list(
     normality = metric("residuals.doornikhansen", c("preprocessing", "diagnostics", "doornikhansen"), "normality"),
@@ -130,6 +132,7 @@ diagnostic_dashboard_values <- function(x) {
 
 # An absent preprocessing description is unknown, not evidence of zero outliers.
 diagnostic_outliers <- function(x) {
+  if (identical(x$result$backend, "native")) return(native_outlier_table(x))
   if (is.null(diagnostic_at(x$output, c("preprocessing", "description")))) return(NULL)
   getOutliers(x)
 }

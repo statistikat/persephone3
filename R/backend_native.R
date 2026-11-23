@@ -316,7 +316,7 @@ backend_native_update_spec <- function(spec, spec_list, method) {
                                             "adjustable field is sigma_policy). "),
                                      paste(bad, collapse = "', '")))
     }
-    for (name in names(spec_list)) spec[[name]] <- spec_list[[name]]
+    for (name in names(spec_list)) spec[name] <- spec_list[name]
     class(spec) <- c("persephone_native_auto_spec", "persephone_native_spec")
     return(spec)
   }
@@ -328,9 +328,35 @@ backend_native_update_spec <- function(spec, spec_list, method) {
       sprintf("field(s) '%s' are not part of the restricted native specification; ",
               paste(bad, collapse = "', '")))
   }
-  for (name in names(spec_list)) spec[[name]] <- spec_list[[name]]
+  for (name in names(spec_list)) spec[name] <- spec_list[name]
   class(spec) <- "persephone_native_spec"
   spec
+}
+
+# Check the same route and values used by run() before replacing R6 state.
+backend_validate_native_spec <- function(spec, method, ts, allow_unset_filters = FALSE) {
+  if (!inherits(spec, "persephone_native_spec") || !identical(spec$method, method) ||
+      !identical(method, "x13") || !is.numeric(spec$frequency) ||
+      !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts))))
+    stop("Native specification class, method or frequency does not match this series.", call. = FALSE)
+  automatic <- inherits(spec, "persephone_native_auto_spec")
+  route <- if (automatic) "rsa3" else "restricted"
+  if (!identical(spec$template, route))
+    stop("Native specification template does not match its route.", call. = FALSE)
+  shape <- backend_native_default_spec(method, route, spec$frequency)
+  optional <- c("sigma_policy", if (!automatic) c("trend_length", "seasonal"))
+  if (anyDuplicated(names(spec)) || length(setdiff(names(spec), names(shape))) ||
+      length(setdiff(setdiff(names(shape), optional), names(spec))))
+    stop("Invalid fields in native specification.", call. = FALSE)
+  if (automatic) {
+    if (!identical(spec$lower_sigma, shape$lower_sigma) ||
+        !identical(spec$upper_sigma, shape$upper_sigma))
+      stop("Automatic sigma limits must match the pinned template.", call. = FALSE)
+    backend_native_auto_request(spec, ts)
+  } else {
+    backend_native_request(spec, ts, allow_unset_filters)
+  }
+  invisible(spec)
 }
 
 # Cheap deterministic fingerprint (two rolling prime-modulus hashes of a
@@ -382,7 +408,7 @@ native_auto_canonical_text <- function(template, request) {
 
 # Full scope validation: returns the rkalos native_x13_fit argument list or
 # refuses naming every violated scope field.
-backend_native_request <- function(spec, ts) {
+backend_native_request <- function(spec, ts, allow_unset_filters = FALSE) {
   rf <- backend_native_gate("seasonal-adjustment fitting", "x13")
   freq <- stats::frequency(ts)
   violated <- character(0)
@@ -396,7 +422,7 @@ backend_native_request <- function(spec, ts) {
     detail <- c(detail, sprintf("frequency %d is not the qualified frequency %d;",
                                 freq, rf$frequency))
   }
-  if (!is.list(spec$variables)) {
+  if (!is.list(spec$variables) || is.data.frame(spec$variables)) {
     violated <- c(violated, "fixed_coefficients_only")
     detail <- c(detail, "variables must be a list of fixed-coefficient specifications;")
   }
@@ -408,20 +434,20 @@ backend_native_request <- function(spec, ts) {
     v <- spec$variables[[index]]
     where <- sprintf("variable %d", index)
     if (!is.list(v) || !all(c("class", "effect", "coefficient", "columns") %in% names(v)) ||
-        length(v$class) != 1L || !(v$class %in% var_classes) ||
-        length(v$effect) != 1L || !(v$effect %in% var_effects) ||
+        !is.character(v$class) || !is.null(dim(v$class)) || length(v$class) != 1L || !(v$class %in% var_classes) ||
+        !is.character(v$effect) || !is.null(dim(v$effect)) || length(v$effect) != 1L || !(v$effect %in% var_effects) ||
         !is.list(v$columns) || !length(v$columns)) {
       violated <- c(violated, "fixed_coefficients_only")
       detail <- c(detail, sprintf("%s must provide class, effect, coefficient and column vectors from the pinned vocabulary;", where))
       next
     }
-    if (!is.numeric(v$coefficient) || length(v$coefficient) != length(v$columns) ||
+    if (!is.numeric(v$coefficient) || !is.null(dim(v$coefficient)) || length(v$coefficient) != length(v$columns) ||
         anyNA(v$coefficient) || any(!is.finite(v$coefficient))) {
       violated <- c(violated, "fixed_coefficients_only")
       detail <- c(detail, sprintf("%s must carry one finite coefficient per regression column (nothing is estimated);", where))
     }
-    bad_columns <- !all(vapply(v$columns, function(col) is.numeric(col) && length(col) == n &&
-                                 !anyNA(col), logical(1)))
+    bad_columns <- !all(vapply(v$columns, function(col) is.numeric(col) && is.null(dim(col)) && length(col) == n &&
+                                 all(is.finite(col)), logical(1)))
     if (bad_columns) {
       violated <- c(violated, "fixed_coefficients_only")
       detail <- c(detail, sprintf("%s must provide numeric columns of series length %d;", where, n))
@@ -429,7 +455,8 @@ backend_native_request <- function(spec, ts) {
   }
   fixed_filters <- c("stable", "s3x1", "s3x3", "s3x5", "s3x9", "s3x15")
   seasonal <- spec$seasonal
-  if (is.null(seasonal) || length(seasonal) != freq || anyNA(seasonal)) {
+  if (!(allow_unset_filters && is.null(seasonal)) &&
+      (!is.character(seasonal) || !is.null(dim(seasonal)) || length(seasonal) != freq || anyNA(seasonal))) {
     violated <- c(violated, "fixed_seasonal_requests_only")
     detail <- c(detail, "the seasonal requests must state one pinned filter per calendar period (no default is applied);")
   } else if (any(!seasonal %in% fixed_filters)) {
@@ -439,8 +466,9 @@ backend_native_request <- function(spec, ts) {
                                 paste(fixed_filters, collapse = ", ")))
   }
   trend <- spec$trend_length
-  if (is.null(trend) || length(trend) != 1L || is.na(trend) || !is.finite(trend) ||
-      trend != floor(trend) || trend < 5 || trend %% 2 == 0) {
+  if (!(allow_unset_filters && is.null(trend)) &&
+      (!is.numeric(trend) || !is.null(dim(trend)) || length(trend) != 1L || is.na(trend) || !is.finite(trend) ||
+      trend != floor(trend) || trend < 5 || trend > .Machine$integer.max || trend %% 2 == 0)) {
     violated <- c(violated, "fixed_trend_length_only")
     detail <- c(detail, "the Henderson trend filter length must be a stated odd integer >= 5 (the automatic 0 is refused);")
   }
@@ -449,28 +477,32 @@ backend_native_request <- function(spec, ts) {
   # two pinned values -- the core validates it verbatim downstream.
   sigma <- spec$sigma_policy
   sigma_stated <- !is.null(sigma)
-  if (sigma_stated && (length(sigma) != 1L || is.na(sigma) ||
+  if (sigma_stated && (!is.character(sigma) || !is.null(dim(sigma)) || length(sigma) != 1L || is.na(sigma) ||
       !sigma %in% c("legacy", "accurate"))) {
     violated <- c(violated, "sigma_policy_default")
     detail <- c(detail, sprintf("a stated sigma policy must be \"legacy\" or \"accurate\" (the qualified default is \"%s\");",
                                 rf$sigma_policy_default))
   }
   if (!sigma_stated) sigma <- rf$sigma_policy_default
-  if (is.null(spec$mode) || length(spec$mode) != 1L || !spec$mode %in% rf$modes) {
+  if (!is.character(spec$mode) || !is.null(dim(spec$mode)) || length(spec$mode) != 1L || !spec$mode %in% rf$modes) {
     violated <- c(violated, "modes")
     detail <- c(detail, sprintf("the decomposition mode must be one of %s;",
                                 paste(rf$modes, collapse = ", ")))
   }
-  if (!is.logical(spec$log) || length(spec$log) != 1L || is.na(spec$log)) {
+  if (!is.logical(spec$log) || !is.null(dim(spec$log)) || length(spec$log) != 1L || is.na(spec$log)) {
     violated <- c(violated, "modes")
     detail <- c(detail, "the log flag must be TRUE or FALSE;")
   }
   for (name in c("lower_sigma", "upper_sigma")) {
     value <- spec[[name]]
-    if (!is.numeric(value) || length(value) != 1L || is.na(value) || !is.finite(value) || value <= 0.5) {
+    if (!is.numeric(value) || !is.null(dim(value)) || length(value) != 1L || is.na(value) || !is.finite(value) || value <= 0.5) {
       violated <- c(violated, name)
       detail <- c(detail, sprintf("%s must be a finite number greater than 0.5;", name))
     }
+  }
+  if (!length(violated) && spec$upper_sigma <= spec$lower_sigma) {
+    violated <- "upper_sigma"
+    detail <- "upper_sigma must exceed lower_sigma;"
   }
   if (length(violated)) refuse()
   span <- stats::tsp(ts)
@@ -500,7 +532,7 @@ backend_native_auto_request <- function(spec, ts) {
   }
   sigma <- spec$sigma_policy
   sigma_stated <- !is.null(sigma)
-  if (sigma_stated && (length(sigma) != 1L || is.na(sigma) ||
+  if (sigma_stated && (!is.character(sigma) || !is.null(dim(sigma)) || length(sigma) != 1L || is.na(sigma) ||
       !sigma %in% c("legacy", "accurate"))) {
     violated <- c(violated, "sigma_policy_default")
     detail <- c(detail, sprintf("a stated sigma policy must be \"legacy\" or \"accurate\" (the qualified default is \"%s\");",
@@ -550,16 +582,8 @@ backend_native_fit <- function(ts, spec, context, userdefined) {
       "the specification was not built by the native constructor; ")
   }
   request <- backend_native_request(spec, ts)
-  # The fit entry points exist in the rkalos namespace but are not exported
-  # yet; access them through the namespace (documented seam, no ::: in the
-  # installed code path is impossible for unexported entries, get0 is explicit).
-  fit_fun <- get0("native_x13_fit", envir = asNamespace("rkalos"), mode = "function")
-  if (is.null(fit_fun)) {
-    backend_native_refusal("seasonal-adjustment fitting", "x13", "native_x13_fit_restricted",
-      "the rkalos namespace does not provide native_x13_fit(); ")
-  }
   fingerprint <- native_request_fingerprint(request)
-  fit <- do.call(fit_fun, c(list(series = ts), request[c("variables", "log",
+  fit <- do.call(rkalos::native_x13_fit, c(list(series = ts), request[c("variables", "log",
     "seasonal", "trend_length", "sigma", "mode", "lower_sigma", "upper_sigma",
     "frequency", "start_period")]))
   if (!identical(fit$status, "available")) {
@@ -577,14 +601,8 @@ backend_native_fit <- function(ts, spec, context, userdefined) {
 # refuses with an explicit unsupported:/failed: status and we stop with it --
 # NEVER a fallback to the restricted fit and never a Java call.
 backend_native_auto_fit <- function(ts, spec) {
-  fit_fun <- get0("native_x13_fit_automatic", envir = asNamespace("rkalos"),
-                  mode = "function")
-  if (is.null(fit_fun)) {
-    backend_native_refusal("seasonal-adjustment fitting", "x13", "native_x13_fit_automatic",
-      "the rkalos namespace does not provide native_x13_fit_automatic(); ")
-  }
   built <- backend_native_auto_request(spec, ts)
-  fit <- do.call(fit_fun, built$args)
+  fit <- do.call(rkalos::native_x13_fit_automatic, built$args)
   if (!identical(fit$status, "available")) {
     stop(sprintf(paste0("The native automatic fit refused the request with the verbatim core status: %s ",
                         "(request fingerprint %s). No Java fallback was used. ",

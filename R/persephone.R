@@ -100,7 +100,7 @@ persephone <- R6::R6Class(
       validate_update_context(context, userdefined)
       proposed <- prepare_specification_update(
         private$params_internal, self$method, frequency(private$ts_internal),
-        self$backend, template, spec, changes)
+        self$backend, template, spec, changes, series = private$ts_internal)
       # Validation/setters above must succeed before any state is changed.
       private$params_internal <- proposed
       if (!is.null(template)) private$template_internal <- template

@@ -52,7 +52,15 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
   backend <- resolve_backend(backend)
   methods <- if (is.null(method)) c("x13", "tramoseats") else backend_method(method)
   if (backend == "native") {
-    return(rkalos::capabilities())
+    cap <- rkalos::capabilities()
+    cap$methods <- intersect(methods, "x13")
+    if (!length(cap$methods)) {
+      cap$native_x13_fit_restricted <- cap$native_x13_fit_automatic <- FALSE
+      cap$restricted_fit <- cap$automatic_fit <- NULL
+      cap$primitives <- character()
+      cap$reason <- "Native TRAMO-SEATS fitting is unavailable."
+    }
+    return(cap)
   }
   packages <- unique(c("rjd3toolkit", paste0("rjd3", methods)))
   available <- vapply(packages, function(package) {
