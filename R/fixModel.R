@@ -18,7 +18,7 @@ fixModel <- function(x, verbose = FALSE) {
     return(invisible(NULL))
   }
   if (identical(x$result$backend, "native")) {
-    if (inherits(x$result, "persephone_native_tramo_fit")) {
+    if (inherits(x$result, "persephone_native_tramo_fit") && x$result$specification$template %in% c("rsa0", "rsa1")) {
       if (verbose) message(toupper(x$result$specification$template), " already fixes the airline model orders.")
       current <- if (inherits(x, "hierarchicalTimeSeries")) x$paramsDirect else x$params
       return(invisible(current))

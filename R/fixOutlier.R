@@ -92,10 +92,10 @@ prepare_fixed_outliers <- function(x, timespan) {
   if (inherits(current, "persephone_native_auto_spec"))
     backend_native_refusal("fixing detected outlier locations", x$method, "automatic_spec_pinned",
                            "RSA3 requires its full detection span and has no manual outlier inputs;")
-  if (inherits(current, "persephone_native_tramo_spec") && identical(current$template, "rsa1") &&
+  if (inherits(current, "persephone_native_tramo_spec") && current$template %in% c("rsa1", "rsa3") &&
       any(x$result$model$outliers$position <= length(periods) - protected))
     backend_native_refusal("fixing detected outlier locations", x$method, "automatic_spec_pinned",
-                           "RSA1 fits its outliers from the full input span; ")
+                           paste0(toupper(current$template), " fits its outliers from the full input span; "))
   if (inherits(current, "persephone_native_spec")) return(unchanged)
   regression_spec <- if (x$method == "x13") current$regarima else current$tramo
   detection <- regression_spec$outlier

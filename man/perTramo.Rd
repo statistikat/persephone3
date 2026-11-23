@@ -67,8 +67,8 @@ The package offers convenient options for setting certain parameters to improve 
 Documentation pending.}
 
 \item{backend}{Backend name, or NULL to use option persephone.backend (default rjd3).
-Native TRAMO-SEATS supports the monthly RSA0 and RSA1 templates on complete finite
-series with a decomposable fitted model. Set forecast and backcast via
+Native TRAMO-SEATS supports the monthly RSA0, RSA1 and RSA3 templates on complete finite
+series with a decomposable fitted model. RSA3 fits automatic orders when the first reference comparison and controller sweep complete without a restart. Set forecast and backcast via
 speclist or updateParams. Positive counts specify months and negative counts
 specify years. The defaults are two years of forecasts and zero backcasts.
 The result includes fitted components, point forecasts and conditional

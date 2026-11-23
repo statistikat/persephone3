@@ -1465,3 +1465,24 @@ the 60 diagnostic scalars, report classifications and downstream
 component and forecast series. The existing RSA0 independence and
 normality suites also passed in both environments.
 [RSA1 product and reporting tests](inst/tinytest/test-native-tramoseats-rsa1.R)
+
+## First accepted monthly TR3 identification in native RSA3 (2026-11-24)
+
+Persephone now pins rkalos `0.1.0.9015` at `29abd91`. Native
+`perTramo(series, "rsa3")` estimates the orders, transformation, mean
+and automatic outliers from the observations. Six public monthly fitted
+models matched all **573 dated residuals and 3,960 component and
+forecast values bit-for-bit**. The product displays the estimated AR
+and seasonal AR coefficients, and exposes the core refusal when the
+first identification comparison requires another round. Fixing automatic
+orders or detected outliers also raises the corresponding typed refusal.
+
+The RSA3 product replay passed **295/295** assertions in isolation
+without Java and **445/445** with the live monthly JDemetra pipeline.
+Both earlier templates and the capability suite also passed. The Java-free
+parity suite checked the actual method/template rows and passed **243/243**. The
+preceding diagnostics commit `350c249` completed the full source
+package check with **3,611/3,611** tests, rebuilt vignettes, PDF manual
+and **Status OK**. The earlier `61e9840` passed **3,427/3,427** and
+also completed the source check with **Status OK**.
+[RSA3 product replay](inst/tinytest/test-native-tramoseats-rsa3.R)

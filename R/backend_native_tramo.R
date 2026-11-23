@@ -1,7 +1,7 @@
-# Both stock monthly templates estimate the coefficients of the airline model.
+# Monthly RSA0 and RSA1 fit the airline orders. RSA3 identifies the orders.
 validate_native_tramo_spec <- function(spec, ts) {
   if (!inherits(spec, "persephone_native_tramo_spec") || !identical(spec$method, "tramoseats") ||
-      length(spec$template) != 1L || !spec$template %in% c("rsa0", "rsa1") || !identical(spec$frequency, 12L) ||
+      length(spec$template) != 1L || !spec$template %in% c("rsa0", "rsa1", "rsa3") || !identical(spec$frequency, 12L) ||
       anyDuplicated(names(spec)) ||
       !setequal(names(spec), c("method", "template", "frequency", "backcast", "forecast")))
     stop("Invalid native TRAMO-SEATS specification.", call. = FALSE)
@@ -68,6 +68,8 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
     stringsAsFactors = FALSE, row.names = NULL)
   model <- fit$model
   model$coefficients <- list(ma = model$theta, sma = model$btheta)
+  if (length(model$phi)) model$coefficients$ar <- model$phi
+  if (length(model$bphi)) model$coefficients$sar <- model$bphi
   fingerprint <- native_text_fingerprint(paste(c("tramoseats", spec$template, stats::start(ts),
                                                   spec$backcast, spec$forecast), collapse = "/"))
   structure(list(schema_version = 1L, method = "tramoseats", backend = "native",

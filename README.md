@@ -77,6 +77,12 @@ detects outliers before SEATS decomposition. Use
 `perTramo(series, "rsa1", backend = "native")` and call `$run()`.
 Its `$result$model$outliers` lists the fitted coefficients and positions.
 
+The native RSA3 route also identifies SARIMA orders. Fits accepted by the
+first reference comparison and the subsequent controller sweep produce
+components, point forecasts, dated residuals and estimated outliers. A
+further identification round, fast mean-test retry or seasonality restart
+raises its corresponding engine error.
+
 For a complete monthly series, the native RSA0 route estimates the airline model
 and decomposes it with SEATS. It runs without Java and defaults to 24 forecast
 months.

@@ -21,7 +21,7 @@ local({
   expect_true(capability$native_x13_fit_automatic)
   tramo <- backend_capabilities("native", "tramoseats")
   expect_identical(tramo$methods, "tramoseats")
-  expect_identical(tramo$tramo_seats_fit$templates, c("RSA0", "RSA1"))
+  expect_identical(tramo$tramo_seats_fit$templates, c("RSA0", "RSA1", "RSA3"))
   expect_false(tramo$native_x13_fit_restricted)
   expect_false(tramo$native_x13_fit_automatic)
   expect_identical(capability$fit, FALSE)

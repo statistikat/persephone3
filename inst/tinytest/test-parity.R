@@ -290,7 +290,7 @@ local({
   expect_match(e5, "TD7")
   # The automatic template on a frequency outside the qualified domain.
   # The automatic X-13 template and TRAMO RSA0 have separate gates.
-  eq <- refuse_tpl("rsa3", method = "tramoseats")
+  eq <- refuse_tpl("rsa2", method = "tramoseats")
   expect_match(eq, "does not yet implement specification construction")
   expect_match(eq, "tramo_seats_fit.templates", fixed = TRUE)
   expect_match(tryCatch({perX13(series_q, "rsa3", backend = "native"); "no error"},
@@ -385,16 +385,15 @@ local({
 
 for (i in seq_len(nrow(spec_matrix))) {
   spec <- spec_matrix[i, ]
-  if (identical(spec$method, "x13") && identical(spec$template, "rsa3") &&
-      identical(spec$freq, 12L)) next  # qualified: asserted in the routing matrix
-  native_series <- if (spec$freq == 12) series_m else series_q
+  native_series <- if (spec$freq == 12L) series_m else series_q
   err <- tryCatch({
     if (spec$method == "x13") perX13(native_series, spec$template, backend = "native")
-    else perTramo(native_series, backend = "native")
+    else perTramo(native_series, spec$template, backend = "native")
     "no error"
   }, error = function(e) conditionMessage(e))
-  expect_match(err, "native backend does not yet implement|No Java fallback",
-               fixed = FALSE)
+  qualified <- spec$freq == 12L && (spec$method == "tramoseats" || spec$template == "rsa3")
+  if (qualified) expect_identical(err, "no error")
+  else expect_match(err, "native backend does not yet implement|No Java fallback", fixed = FALSE)
 }
 
 # Per-scope-field refusals inside the fit path (constructed, then refused at
