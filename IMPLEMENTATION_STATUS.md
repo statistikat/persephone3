@@ -1055,6 +1055,21 @@ tests passed **20/20** and **164/164** without Java, and **28/28** and
 [Product regression](inst/tinytest/test-native-residual-independence.R) ·
 [Pinned R diagnostic](https://github.com/statistikat/rkalos/commit/472258e792e083af0b81b55939ad066ebb1af55b)
 
+## M5 monthly RSA1 with additive AO and LS effects (2026-11-24)
+
+The application now pins rkalos `0.1.0.9012` at `468c3e8`. Two
+additional public series select level adjustment and contain one AO and
+an LS/AO pair. The native application restored all 1,200 observed and
+forecast component values exactly and exposed the detected locations
+and coefficients in its diagnostics. The eight-case product suite passed
+**375/375** without Java and **575/575** with live JDemetra. Adjacent
+RSA0 and SI suites passed **276/276** and **357/357** respectively.
+
+The preceding `104f952` RSA1 application archive completed its full
+source check with **Status OK**, **2,959/2,959** assertions, rebuilt
+vignettes and PDF manual.
+[Product qualification](inst/tinytest/test-native-tramoseats-rsa1.R)
+
 ## M5 monthly RSA1 application fits (2026-11-24)
 
 The application pins rkalos `0.1.0.9011` at `7026c3b`. A complete monthly

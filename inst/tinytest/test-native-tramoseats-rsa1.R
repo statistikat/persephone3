@@ -2,6 +2,9 @@ helper <- new.env(parent = baseenv())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 path <- system.file("tinytest/fixtures/native/tramo-seats-bridge/rsa1-x86_64.txt", package = "rkalos", mustWork = TRUE)
 cases <- helper$fixture_named_rsa0_cases(path)
+level_cases <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa1-level-effects-x86_64.txt"))
+names(level_cases) <- paste0("level_", names(level_cases))
+cases <- c(cases, level_cases)
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
@@ -81,7 +84,7 @@ for (id in names(cases)) {
     expect_true(all(obj$forecasts$points$cal == 1))
   }
 }
-expect_identical(c(length(cases), rows, points), c(6L, 60L, 3960L))
+expect_identical(c(length(cases), rows, points), c(8L, 80L, 5160L))
 zero <- perTramo(AirPassengers, "rsa1", backend = "native", speclist = list(forecast = 0L))
 zero$run()
 expect_null(zero$forecasts)

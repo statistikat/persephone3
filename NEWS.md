@@ -1,5 +1,7 @@
 # persephone3 (development version)
 
+* Extended native RSA1 to level-scale AO and LS estimation and restoration.
+
 * Added native RSA1 adjustment for complete monthly series with automatic
   transformation and outlier estimation, dated SEATS components and forecasts.
 
