@@ -9,6 +9,8 @@ additional_cases <- function(file, prefix) {
 cases <- c(cases, additional_cases("rsa1-level-effects-x86_64.txt", "level_"),
            additional_cases("rsa1-level-tc-x86_64.txt", "level_tc_"),
            additional_cases("rsa1-log-tc-x86_64.txt", "log_tc_"))
+diagnostics <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa1-residual-diagnostics-x86_64.txt"))
+expect_identical(sort(names(diagnostics)), sort(names(cases)))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
@@ -46,6 +48,31 @@ for (id in names(cases)) {
   tsres <- fitted$diagnostics$residuals$tsres
   expect_identical(as.integer(start(tsres)), as.integer(expected_residual[2:3]), info = id)
   expect_identical(as.numeric(tsres), helper$fixture_hex_doubles(expected_residual[-seq_len(4L)]), info = id)
+  diagnostic_reference <- diagnostics[[id]]
+  expected <- function(key, index) {
+    line <- diagnostic_reference[startsWith(diagnostic_reference, paste0("residuals.", key, " "))]
+    helper$fixture_hex_doubles(tokens(line)[index])
+  }
+  residuals <- fitted$diagnostics$residuals
+  expect_identical(residuals$ser, expected("ser", 2L), info = id)
+  metrics <- persephone3:::diagnostic_metrics(obj)
+  panel <- persephone3:::diagnostic_dashboard_values(obj)
+  report <- obj$generateQrTable()
+  table <- obj$diagnosticsTable()
+  diagnostic_keys <- c(independence = "lb", normality = "doornikhansen")
+  for (name in names(diagnostic_keys)) {
+    key <- diagnostic_keys[[name]]
+    ref <- expected(key, 2:3)
+    metric <- metrics[[name]]
+    expect_identical(c(metric$statistic, metric$pvalue), ref, info = paste(id, key))
+    expect_identical(metric$source, paste0("residuals/", key), info = id)
+    expect_identical(metric$availability, "available", info = id)
+    expect_identical(table[[name]], metric$status, info = id)
+  }
+  expect_identical(c(panel$p_indep, panel$p_norm),
+                   c(metrics$independence$pvalue, metrics$normality$pvalue), info = id)
+  expect_identical(c(report$Ljung.Box.p.value, report$Doornik.Hansen.p.value),
+                   c(metrics$independence$pvalue, metrics$normality$pvalue), info = id)
   for (line in lines[startsWith(lines, "merged ")]) {
     row <- tokens(line)
     key <- unname(keys[row[2L]])
@@ -63,6 +90,14 @@ for (id in names(cases)) {
   if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
     jd <- perTramo(x, "rsa1", backend = "rjd3", userdefined = "cal_f(24)")
     jd$run()
+    for (name in names(diagnostic_keys)) {
+      key <- diagnostic_keys[[name]]
+      native <- metrics[[name]]
+      ref <- jd$output$user_defined[[paste0("residuals.", key)]]
+      expect_equal(c(native$statistic, native$pvalue), c(ref$value, ref$pvalue),
+                   tolerance = 2e-8, info = paste(id, key))
+      expect_identical(table[[name]], jd$diagnosticsTable()[[name]], info = id)
+    }
     for (key in c("y", "t", "sa", "s", "i", "cal")) {
       for (part in c("observed", "forecast")) {
         actual <- if (part == "observed") fitted$components[[key]] else fitted$forecasts$points[[key]]
@@ -93,3 +128,8 @@ zero <- perTramo(AirPassengers, "rsa1", backend = "native", speclist = list(fore
 zero$run()
 expect_null(zero$forecasts)
 expect_error(perTramo(UKgas, "rsa1", backend = "native"), "monthly_only")
+short <- perTramo(stats::ts(as.numeric(AirPassengers)[1:37], frequency = 12), "rsa1", backend = "native")
+short$run()
+expect_identical(short$diagnosticsTable()$independence, "Undefined")
+expect_identical(short$generateQrTable()$Ljung.Box.p.value, NA_real_)
+expect_true(is.finite(short$generateQrTable()$Doornik.Hansen.p.value))

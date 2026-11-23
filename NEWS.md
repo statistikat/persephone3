@@ -1,5 +1,8 @@
 # persephone3 (development version)
 
+* Native RSA1 exposes the residual standard error and reports residual
+  normality and independence in the dashboard, diagnostics table and quality report.
+
 * Native RSA1 now restores automatically estimated monthly transitory changes
   on both model scales in components and forecasts.
 

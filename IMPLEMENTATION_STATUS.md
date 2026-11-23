@@ -1449,3 +1449,19 @@ names, dates and coefficients. It passed **598/598** checks in an
 isolated Java-free library and **898/898** with the live rjd3 backend,
 including the calendar series, forecast domains and SI chart data.
 [RSA1 product replay](inst/tinytest/test-native-tramoseats-rsa1.R)
+
+## Monthly RSA1 residual tests in reports (2026-11-24)
+
+The rkalos `0.1.0.9014` dependency at `03d6cbd` brings the public
+TR1 residual standard error, Ljung–Box independence and Doornik–Hansen
+normality tests to native RSA1 output. The dashboard, diagnostics table
+and quality report use their independently calculated native statistics
+and probabilities. A series with 24 residuals reports undefined
+independence and a finite normality probability.
+
+All twelve JVM reference fits passed **734/734** RSA1 assertions in
+the Java-free library and **1,082/1,082** with live rjd3, covering
+the 60 diagnostic scalars, report classifications and downstream
+component and forecast series. The existing RSA0 independence and
+normality suites also passed in both environments.
+[RSA1 product and reporting tests](inst/tinytest/test-native-tramoseats-rsa1.R)
