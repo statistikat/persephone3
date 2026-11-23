@@ -24,6 +24,10 @@
 #' If that intersection is empty, automatic detection is disabled. Existing
 #' manually specified outliers, names and fixed coefficients are preserved.
 #'
+#' Native RSA3 requires automatic detection over the full span. Requesting a
+#' shorter detection window raises an error during preflight. Native RSA0 and
+#' restricted X-13 use specifications with automatic detection disabled.
+#'
 #' Results remain the results of the previous fit and become stale after a
 #' specification changes. Call `$run()` again to estimate the new specification.
 #' Repeating the operation does not add duplicate type/date pairs. All selected
@@ -84,6 +88,10 @@ prepare_fixed_outliers <- function(x, timespan) {
   protected <- if (timespan >= length(periods) * 12 / frq) length(periods) else ceiling(timespan * frq / 12)
   if (protected == length(periods)) return(unchanged)
   current <- if (inherits(x, "hierarchicalTimeSeries")) x$paramsDirect else x$params
+  if (inherits(current, "persephone_native_auto_spec"))
+    backend_native_refusal("fixing detected outlier locations", x$method, "automatic_spec_pinned",
+                           "RSA3 requires its full detection span and has no manual outlier inputs;")
+  if (inherits(current, "persephone_native_spec")) return(unchanged)
   regression_spec <- if (x$method == "x13") current$regarima else current$tramo
   detection <- regression_spec$outlier
   enabled <- if (x$method == "x13") length(detection$outliers) > 0L else isTRUE(detection$enabled)

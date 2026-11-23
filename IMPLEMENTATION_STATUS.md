@@ -1038,6 +1038,12 @@ The installed application passed **20/20** residual assertions without Java and 
 
 The fixed X-13 calendar allocation also matched RSA3 specifications through their common R class. On an extended fit that selected A6 and A7 from the extended calendar. The product now applies the fixed allocation only to the restricted template and uses the observed D18 table for RSA3. With three backcasts and six forecasts, all 144 observed calendar effects align with the original series and the six forecast effects keep their future dates. The forecast suite passed **58/58** assertions without Java and **74/74** with the reference. [Forecast domains](inst/tinytest/test-native-forecasts.R)
 
+### Fixing model orders and outliers on native fits
+
+Calling `fixModel()` on native RSA0 now returns the existing airline specification, whose orders are already fixed. Requesting fixed orders on automatic RSA3 identifies the automatic-selection constraint. The restricted X-13 fit reports that it has no estimated ARIMA orders. Previously `fixOutlier()` silently ignored attempts to freeze RSA3 outliers. It now reports the unsupported change before mutating any selected model. Fixed native specifications and requests protecting the entire series keep their existing fit state.
+
+The installed package passed **16/16** Java-free assertions, including a fitted series with a detected outlier, and **192/192** existing reference checks for both methods, hierarchies and batches. [Native model-update checks](inst/tinytest/test-native-fix-model.R) · [Reference outlier regressions](inst/tinytest/test-fix-outliers.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

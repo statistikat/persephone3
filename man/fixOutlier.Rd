@@ -38,6 +38,10 @@ spans. The function never enables disabled detection or broadens those spans.
 If that intersection is empty, automatic detection is disabled. Existing
 manually specified outliers, names and fixed coefficients are preserved.
 
+Native RSA3 requires automatic detection over the full span. Requesting a
+shorter detection window raises an error during preflight. Native RSA0 and
+restricted X-13 use specifications with automatic detection disabled.
+
 Results remain the results of the previous fit and become stale after a
 specification changes. Call \verb{$run()} again to estimate the new specification.
 Repeating the operation does not add duplicate type/date pairs. All selected

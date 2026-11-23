@@ -37,6 +37,8 @@ jobs:
           stopifnot(all(as.logical(charts)))
           si <- tinytest::run_test_file("inst/tinytest/test-native-si-ratios.R")
           stopifnot(all(as.logical(si)))
+          fixing <- tinytest::run_test_file("inst/tinytest/test-native-fix-model.R")
+          stopifnot(all(as.logical(fixing)))
           forecasts <- tinytest::run_test_file("inst/tinytest/test-native-forecasts.R")
           stopifnot(all(as.logical(forecasts)))
           dashboard <- tinytest::run_test_file("inst/tinytest/test-native-dashboard.R")

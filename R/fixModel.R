@@ -4,71 +4,36 @@
 #'   selection. This does not fix free coefficient values; they can be
 #'   re-estimated on the next run. Existing fixed-coefficient constraints remain.
 #'
+#' @details Native TRAMO-SEATS RSA0 fixes the airline orders when the model is
+#' constructed. Native RSA3 requires automatic order selection. The restricted
+#' X-13 decomposition receives its preprocessing inputs from the caller.
+#'
 #' @param x a persephone object
 #' @param verbose if TRUE the changed parameters will be reported
 #'
 #' @export
-fixModel = function(x, verbose = FALSE) {
-  if(is.null(x$output)){
+fixModel <- function(x, verbose = FALSE) {
+  if (is.null(x$output)) {
     warning("not run yet.")
     return(invisible(NULL))
   }
-  p <-x$output$user_defined$arima.p
-  d <-x$output$user_defined$arima.d
-  q <-x$output$user_defined$arima.q
-  bp <-x$output$user_defined$arima.bp
-  bd <-x$output$user_defined$arima.bd
-  bq <-x$output$user_defined$arima.bq
-  # if(x$output$regarima$specification$arima$specification$enabled){
-    if(verbose){
-      message("The model", paste("(",p,d,q,") (",bp,bd,bq,") is now fixed."))
+  if (identical(x$result$backend, "native")) {
+    if (inherits(x$result, "persephone_native_tramo_fit")) {
+      if (verbose) message("RSA0 already fixes the airline model orders.")
+      current <- if (inherits(x, "hierarchicalTimeSeries")) x$paramsDirect else x$params
+      return(invisible(current))
     }
-    x$updateParams(arima.p=p,arima.d=d,arima.q=q,
-                   arima.bp=bp,arima.bd=bd,arima.bq=bq,
-                   automdl.enabled = FALSE
-    )
-
-  # }else if(verbose){
-  #   message("The model", paste("(",p,d,q,") (",bp,bd,bq,") was already fixed."))
-  # }
+    if (inherits(x$result, "persephone_native_restricted_fit"))
+      stop("The restricted X-13 fit has no estimated ARIMA orders to fix.", call. = FALSE)
+    backend_native_refusal("fixing estimated ARIMA orders", x$method, "automatic_spec_pinned",
+                           "the RSA3 route requires automatic order selection;")
+  }
+  orders <- x$output$user_defined
+  if (verbose) {
+    message(sprintf("Fixing ARIMA orders (%d %d %d)(%d %d %d).", orders$arima.p,
+      orders$arima.d, orders$arima.q, orders$arima.bp, orders$arima.bd, orders$arima.bq))
+  }
+  x$updateParams(arima.p = orders$arima.p, arima.d = orders$arima.d, arima.q = orders$arima.q,
+                 arima.bp = orders$arima.bp, arima.bd = orders$arima.bd, arima.bq = orders$arima.bq,
+                 automdl.enabled = FALSE)
 }
-
-# noch an rjd3 anpassen; bzw. überhaupt anders aufziehen, Logik ist jetzt etwas anders.
-
-# x$params$regarima$automodel
-
-# Identifier |	Log/level detection |	Outliers detection |	Calendar effects |	ARIMA
-# RSA1 |	automatic |	AO/LS/TC |	NA |	Airline(+mean)
-# RSA3 |	automatic |	AO/LS/TC |	NA |	automatic
-
-# # Nach fixModel():
-# obj$fixModel()
-#
-# # Spezifikation extrahieren:
-# fixed_spec <- obj$params
-#
-# # Für neue Daten wiederverwenden:
-# # so in etwa, evt bei template eigenes spec zulassen
-# # evt in template?
-# perX13(
-#   ts,
-#   template = c("rsa4", "rsa0", "rsa1", "rsa2c", "rsa3", "rsa5c"),
-#   context = NULL,
-#   userdefined = NULL,
-#   ...
-# )
-# new_obj <- perX13(new_series, spec = fixed_spec)
-# new_obj$run()
-#
-#
-#
-# saveRDS(obj, "fixed_model.rds")
-#
-# # Später laden:
-# obj <- readRDS("fixed_model.rds")
-#
-# # Neue Daten anhängen:
-# # oder so, mit eigener Funktion, wo das obj selbst gespeichert werden kann und
-# # auf die neue Zeitreihe dann die alten specs angewandt werden
-# obj$updateSeries(new_series)
-# obj$run()
