@@ -62,9 +62,8 @@ generate_Qr_List <- function(x) {
   if (!is.na(ntd) && (ntd < 0 || ntd != floor(ntd))) ntd <- NA_real_
   if (inherits(x$result, "persephone_native_restricted_fit") ||
       (identical(x$result$backend, "native") &&
-       identical(x$result$specification$template,
-                 if (x$method == "x13") "rsa3" else "rsa0"))) {
-    # Automatic RSA3 and TRAMO RSA0 admit no calendar regressors. The fixed
+       x$result$specification$template %in% (if (x$method == "x13") "rsa3" else c("rsa0", "rsa1")))) {
+    # Automatic X-13 RSA3 and TRAMO RSA0/RSA1 admit no calendar regressors. The fixed
     # X-13 route can carry user-supplied effects without a calendar subtype.
     variables <- x$result$specification$variables
     classes <- vapply(variables, "[[", character(1), "class")

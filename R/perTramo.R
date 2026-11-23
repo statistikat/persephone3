@@ -162,12 +162,12 @@ tramoseatsSingle <- R6::R6Class(
 #' see the rjd3tramoseats documentation:
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
-#'   Native TRAMO-SEATS supports the monthly RSA0 template on complete finite
+#'   Native TRAMO-SEATS supports the monthly RSA0 and RSA1 templates on complete finite
 #'   series with a decomposable fitted model. Set forecast and backcast via
 #'   speclist or updateParams. Positive counts specify months and negative counts
 #'   specify years. The defaults are two years of forecasts and zero backcasts.
 #'   The result includes fitted components, point forecasts and conditional
-#'   SEATS standard errors. Original-series forecast intervals use the TRAMO model variance.
+#'   SEATS standard errors. RSA0 also supplies preprocessing forecast errors for the original series.
 #' @export
 perTramo <- function(ts,
                    template = c("rsa3","rsafull", "rsa0", "rsa1", "rsa2",  "rsa4", "rsa5"),

@@ -1,5 +1,8 @@
 # persephone3 (development version)
 
+* Added native RSA1 adjustment for complete monthly series with automatic
+  transformation and outlier estimation, dated SEATS components and forecasts.
+
 * Native monthly RSA0 fits report the public Doornik–Hansen residual
   normality test in the dashboard, diagnostics table and Eurostat report.
 

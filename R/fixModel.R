@@ -4,7 +4,7 @@
 #'   selection. This does not fix free coefficient values; they can be
 #'   re-estimated on the next run. Existing fixed-coefficient constraints remain.
 #'
-#' @details Native TRAMO-SEATS RSA0 fixes the airline orders when the model is
+#' @details Native TRAMO-SEATS RSA0 and RSA1 fix the airline orders when the model is
 #' constructed. Native RSA3 requires automatic order selection. The restricted
 #' X-13 decomposition receives its preprocessing inputs from the caller.
 #'
@@ -19,7 +19,7 @@ fixModel <- function(x, verbose = FALSE) {
   }
   if (identical(x$result$backend, "native")) {
     if (inherits(x$result, "persephone_native_tramo_fit")) {
-      if (verbose) message("RSA0 already fixes the airline model orders.")
+      if (verbose) message(toupper(x$result$specification$template), " already fixes the airline model orders.")
       current <- if (inherits(x, "hierarchicalTimeSeries")) x$paramsDirect else x$params
       return(invisible(current))
     }

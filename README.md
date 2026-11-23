@@ -72,6 +72,11 @@ obj$plot()
 
 ## Native TRAMO-SEATS
 
+The native monthly RSA1 route estimates the log or level transformation and
+detects outliers before SEATS decomposition. Use
+`perTramo(series, "rsa1", backend = "native")` and call `$run()`.
+Its `$result$model$outliers` lists the fitted coefficients and positions.
+
 For a complete monthly series, the native RSA0 route estimates the airline model
 and decomposes it with SEATS. It runs without Java and defaults to 24 forecast
 months.

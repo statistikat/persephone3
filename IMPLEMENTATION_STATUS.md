@@ -1055,6 +1055,32 @@ tests passed **20/20** and **164/164** without Java, and **28/28** and
 [Product regression](inst/tinytest/test-native-residual-independence.R) ·
 [Pinned R diagnostic](https://github.com/statistikat/rkalos/commit/472258e792e083af0b81b55939ad066ebb1af55b)
 
+## M5 monthly RSA1 application fits (2026-11-24)
+
+The application pins rkalos `0.1.0.9011` at `7026c3b`. A complete monthly
+series can now run through `perTramo(series, "rsa1", backend = "native")`.
+TR1 selects the transformation and estimates the airline model, mean and
+automatic outliers. The result exposes residuals and merged product
+components on their calendars. The fitted mode determines the calendar
+effect (zero or one) and forecast scales. Reports retain estimated AO/LS
+coefficients and positions. SI plots use the WK components before
+restoring outlier effects. The original-series RSA1 forecast standard
+error is marked unavailable.
+
+The six public inputs matched **60 component rows and 3,960 values
+bit-for-bit**. The product tests passed **280/280** with Java excluded
+and **430/430** with the live JDemetra reference. A three-backcast,
+six-forecast mixed-outlier rerun preserved calendar alignment. The
+adjacent RSA0, SI, fix-model, reporting and backend suites passed
+**379/379** and **525/525** respectively.
+
+The `bc0f285` independence and `e18231a` normality archives both
+completed source checks with **Status OK**, rebuilt vignettes and PDF
+manuals. Their full test suite counts were **2,477/2,477** and
+**2,529/2,529**.
+[Product reference replay](inst/tinytest/test-native-tramoseats-rsa1.R) ·
+[Pinned R dependency](https://github.com/statistikat/rkalos/commit/7026c3b6fa70ea08a5b877933f58f2e6df8784c5)
+
 ## M5 — monthly RSA0 fits that need SEATS approximation
 
 The application now pins rkalos 0.1.0.9008 at `b6fb5f9`. A 156-month

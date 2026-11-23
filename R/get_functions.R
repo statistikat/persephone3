@@ -85,13 +85,19 @@ outlier_variable_dates <- function(variables, manual) {
 # outlier subtypes, dates or coefficient inference.
 native_regression_records <- function(result) {
   if (inherits(result, "persephone_native_tramo_fit")) {
-    return(data.frame(name = "const", type = "MEAN", value = result$model$mean_coefficient,
-                      subtype = NA_character_, position = NA_integer_))
-  }
-  if (inherits(result, "persephone_native_automatic_fit")) {
+    mean <- data.frame(name = "const", type = "MEAN", value = result$model$mean_coefficient,
+                       subtype = NA_character_, position = NA_integer_)
+    if (identical(result$model$mean_correction, FALSE)) mean <- mean[FALSE, , drop = FALSE]
+    v <- result$model$outliers
+    if (is.null(v) || !nrow(v)) return(mean)
+  } else if (inherits(result, "persephone_native_automatic_fit")) {
+    mean <- NULL
     v <- result$model$variables
-    return(data.frame(name = v$name, type = rep("outlier", length(v$name)),
-      value = v$coefficient, subtype = v$type, position = v$position))
+  } else v <- NULL
+  if (!is.null(v)) {
+    rows <- data.frame(name = v$name, type = rep("outlier", length(v$name)),
+                       value = v$coefficient, subtype = v$type, position = v$position)
+    return(rbind(mean, rows))
   }
   variables <- result$specification$variables
   rows <- lapply(seq_along(variables), function(i) {
@@ -118,7 +124,7 @@ native_outlier_table <- function(x) {
     ordinals <- round(stats::time(x$ts)[rows$position[dated]] * stats::frequency(x$ts))
     dates[dated] <- outlier_period_dates(as.numeric(ordinals), stats::frequency(x$ts))
   }
-  automatic <- inherits(x$result, "persephone_native_automatic_fit")
+  automatic <- inherits(x$result, c("persephone_native_automatic_fit", "persephone_native_tramo_fit"))
   structure(data.frame(name = rows$name, type = rows$subtype, coef.value = rows$value,
     stde = NA_real_, t = NA_real_, pvalue = NA_real_, date = dates,
     coef.type = if (automatic) "ESTIMATED" else "FIXED", crit.value = NA_real_,

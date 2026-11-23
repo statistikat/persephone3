@@ -26,8 +26,12 @@ si_plot_data <- function(x) {
       `SF Mean` = stats::ave(as.numeric(seasonal), phase, FUN = mean), check.names = FALSE))
   }
   if (native && identical(x$result$method, "tramoseats")) {
-    # RSA0 has no deterministic regressors. These are the final SEATS components.
-    si <- x$result$components$s + x$result$components$i
+    # The dashboard uses SEATS components before restoring AO and LS effects.
+    table <- x$output$final
+    component <- function(key) table$values[[which(table$component == key & table$information == "Value")]]
+    s <- component("Seasonal")
+    i <- component("Irregular")
+    si <- if (identical(x$output$mode, "multiplicative")) s * i else s + i
   } else if (inherits(x$output$decomposition, "JD3_SEATS")) {
     ud <- x$output$user_defined
     si <- if (ud$mode == "Additive") ud$decomposition.s_cmp + ud$decomposition.i_cmp else

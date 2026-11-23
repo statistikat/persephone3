@@ -39,7 +39,8 @@ If that intersection is empty, automatic detection is disabled. Existing
 manually specified outliers, names and fixed coefficients are preserved.
 
 Native RSA3 requires automatic detection over the full span. Requesting a
-shorter detection window raises an error during preflight. Native RSA0 and
+shorter detection window raises an error during preflight. Native TRAMO RSA1
+also requires its full span when eligible outliers are present. Native RSA0 and
 restricted X-13 use specifications with automatic detection disabled.
 
 Results remain the results of the previous fit and become stale after a

@@ -169,9 +169,10 @@ backend_native_auto_refusals <- list(
 backend_native_check_template <- function(template, method = "x13") {
   if (identical(method, "tramoseats")) {
     scope <- rkalos::capabilities()$tramo_seats_fit
-    if (!identical(template, "rsa0") || !isTRUE(scope$available) || !"RSA0" %in% scope$templates)
+    if (length(template) != 1L || !template %in% c("rsa0", "rsa1") ||
+        !isTRUE(scope$available) || !toupper(template) %in% scope$templates)
       backend_native_refusal("specification construction", method, "tramo_seats_fit.templates",
-                             "the qualified monthly TRAMO-SEATS template is rsa0; ")
+                             "the qualified monthly TRAMO-SEATS templates are rsa0 and rsa1; ")
     return(invisible(TRUE))
   }
   if (identical(template, "restricted") || identical(template, "rsa3")) return(invisible(TRUE))
@@ -261,7 +262,7 @@ backend_native_default_spec <- function(method, template, freq) {
   backend_native_check_template(template, method)
   if (method == "tramoseats") {
     if (freq != 12L) backend_native_refusal("specification construction", method, "monthly_only",
-                                            "RSA0 requires a monthly series; ")
+                                            paste0(toupper(template), " requires a monthly series; "))
     return(structure(list(method = method, template = template, frequency = 12L,
                           backcast = 0L, forecast = -2L),
                      class = c("persephone_native_tramo_spec", "persephone_native_spec")))
@@ -300,7 +301,7 @@ backend_native_update_spec <- function(spec, spec_list, method) {
   if (inherits(spec, "persephone_native_tramo_spec")) {
     if (length(setdiff(names(spec_list), c("forecast", "backcast"))))
       backend_native_refusal("specification updates", method, "tramo_seats_fit.templates",
-                             "RSA0 accepts forecast and backcast counts; ")
+                             paste0(toupper(spec$template), " accepts forecast and backcast counts; "))
     spec[names(spec_list)] <- spec_list
     return(spec)
   }
