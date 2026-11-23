@@ -28,14 +28,10 @@ backend_block_registry <- function() {
 #' Inspect seasonal-adjustment backend capabilities
 #'
 #' Reports the explicitly selected backend's implementation status without
-#' initializing Java. Since rkalos schema_version 2, the native backend
-#' qualifies two fits: the restricted fixed-coefficient X-13 fit, gated by
-#' `capabilities()$native_x13_fit_restricted` and described by
-#' `capabilities()$restricted_fit`, and the automatic-spec X-13 fit for the
-#' qualified template, gated by `capabilities()$native_x13_fit_automatic` and
-#' described by `capabilities()$automatic_fit` -- never by
-#' `capabilities()$fit`, which keeps its meaning that UNRESTRICTED native
-#' fitting is unimplemented. Requests outside the qualified domains raise an
+#' initializing Java. The native backend reports its qualified X-13 fits in
+#' `capabilities()$restricted_fit` and `capabilities()$automatic_fit`, and its
+#' monthly TRAMO-SEATS templates in `capabilities()$tramo_seats_fit`.
+#' `capabilities()$fit` describes unrestricted fitting. Requests outside the qualified domains raise an
 #' explicit error naming the violated scope field(s) and never fall back to
 #' rjd3.
 #'
@@ -53,13 +49,14 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
   methods <- if (is.null(method)) c("x13", "tramoseats") else backend_method(method)
   if (backend == "native") {
     cap <- rkalos::capabilities()
-    cap$methods <- intersect(methods, "x13")
-    if (!length(cap$methods)) {
+    tramo <- cap$tramo_seats_fit
+    cap$methods <- intersect(methods, c("x13", if (isTRUE(tramo$available)) "tramoseats"))
+    if (!"x13" %in% methods) {
       cap$native_x13_fit_restricted <- cap$native_x13_fit_automatic <- FALSE
       cap$restricted_fit <- cap$automatic_fit <- NULL
-      cap$primitives <- character()
-      cap$reason <- "Native TRAMO-SEATS fitting is unavailable."
+      cap$primitives <- cap$primitives[grepl("^(tramo|seats)", cap$primitives)]
     }
+    if (!"tramoseats" %in% methods) cap$tramo_seats_fit <- NULL
     return(cap)
   }
   packages <- unique(c("rjd3toolkit", paste0("rjd3", methods)))
@@ -185,12 +182,6 @@ backend_fit <- function(ts, spec, context = NULL, userdefined = NULL,
                         method, backend = NULL) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
-  if (backend == "native" && method != "x13") {
-    backend_native_refusal("seasonal-adjustment fitting", method,
-                           c("native_x13_fit_restricted", "native_x13_fit_automatic"),
-                           sprintf("the qualified native surface provides the restricted and the automatic X-13 fit only (entry points: %s); ",
-                                   native_backend_entry))
-  }
   if (!stats::is.ts(ts) || !is.numeric(ts) || !is.null(dim(ts)) || !length(ts)) {
     stop("'ts' must be a nonempty univariate numeric time series.", call. = FALSE)
   }
@@ -205,6 +196,7 @@ backend_fit <- function(ts, spec, context = NULL, userdefined = NULL,
   }
   spec <- backend_spec_parameters(spec, method, backend)
   if (backend == "native") {
+    if (method == "tramoseats") return(backend_native_tramo_fit(ts, spec, context, userdefined))
     return(backend_native_fit(ts, spec, context, userdefined))
   }
   fun <- backend_rjd3_function(paste0("rjd3", method),

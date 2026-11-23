@@ -167,33 +167,17 @@ backend_native_auto_refusals <- list(
                                "defers calendar/easter/TD/user detection (21-I)'; ")))
 
 backend_native_check_template <- function(template, method = "x13") {
-  if (length(template) == 1L && identical(template, "restricted")) {
-    if (method != "x13") {
-      backend_native_refusal("specification construction", method,
-                             "native_x13_fit_restricted",
-                             sprintf("the qualified native surface provides the restricted and the automatic X-13 fit only (entry points: %s); ",
-                                     native_backend_entry))
-    }
+  if (identical(method, "tramoseats")) {
+    scope <- rkalos::capabilities()$tramo_seats_fit
+    if (!identical(template, "rsa0") || !isTRUE(scope$available) || !"RSA0" %in% scope$templates)
+      backend_native_refusal("specification construction", method, "tramo_seats_fit.templates",
+                             "the qualified monthly TRAMO-SEATS template is rsa0; ")
     return(invisible(TRUE))
   }
-  if (length(template) == 1L && identical(template, "rsa3")) {
-    if (method != "x13") {
-      backend_native_refusal("specification construction", method,
-                             "native_x13_fit_automatic",
-                             sprintf("the qualified native surface provides the restricted and the automatic X-13 fit only (entry points: %s); ",
-                                     native_backend_entry))
-    }
-    return(invisible(TRUE))
-  }
+  if (identical(template, "restricted") || identical(template, "rsa3")) return(invisible(TRUE))
   name <- if (length(template) == 1L && is.character(template)) template else NULL
   refusal <- if (!is.null(name)) backend_native_auto_refusals[[name]] else NULL
   if (!is.null(refusal)) {
-    if (method != "x13") {
-      backend_native_refusal("specification construction", method,
-                             c("native_x13_fit_automatic", refusal$violated),
-                             sprintf(paste0("the qualified native surface provides the restricted and the automatic X-13 fit only (entry points: %s); template '%s' is additionally outside the automatic envelope: %s"),
-                                     native_backend_entry, name, refusal$detail))
-    }
     backend_native_refusal("specification construction", method, refusal$violated,
                            sprintf("template '%s' is outside the qualified native envelopes (automatic and restricted): %s",
                                    name, refusal$detail))
@@ -275,6 +259,13 @@ backend_native_auto_decode <- function(sigma, lower_sigma, upper_sigma) {
 
 backend_native_default_spec <- function(method, template, freq) {
   backend_native_check_template(template, method)
+  if (method == "tramoseats") {
+    if (freq != 12L) backend_native_refusal("specification construction", method, "monthly_only",
+                                            "RSA0 requires a monthly series; ")
+    return(structure(list(method = method, template = template, frequency = 12L,
+                          backcast = 0L, forecast = -2L),
+                     class = c("persephone_native_tramo_spec", "persephone_native_spec")))
+  }
   if (identical(template, "rsa3")) {
     af <- backend_native_auto_gate("specification construction", method)
     if (as.numeric(freq) != af$frequency) {
@@ -306,6 +297,13 @@ backend_native_default_spec <- function(method, template, freq) {
 # and sigma policy. The automatic module state is pinned decode data; anything
 # else keeps the established refusal.
 backend_native_update_spec <- function(spec, spec_list, method) {
+  if (inherits(spec, "persephone_native_tramo_spec")) {
+    if (length(setdiff(names(spec_list), c("forecast", "backcast"))))
+      backend_native_refusal("specification updates", method, "tramo_seats_fit.templates",
+                             "RSA0 accepts forecast and backcast counts; ")
+    spec[names(spec_list)] <- spec_list
+    return(spec)
+  }
   if (inherits(spec, "persephone_native_auto_spec")) {
     bad <- setdiff(names(spec_list), c("sigma_policy", "backcast", "forecast"))
     if (length(bad)) {
@@ -335,6 +333,7 @@ backend_native_update_spec <- function(spec, spec_list, method) {
 
 # Check the same route and values used by run() before replacing R6 state.
 backend_validate_native_spec <- function(spec, method, ts, allow_unset_filters = FALSE) {
+  if (method == "tramoseats") return(validate_native_tramo_spec(spec, ts))
   if (!inherits(spec, "persephone_native_spec") || !identical(spec$method, method) ||
       !identical(method, "x13") || !is.numeric(spec$frequency) ||
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts))))

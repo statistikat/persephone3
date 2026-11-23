@@ -75,7 +75,10 @@ diagnostic_metrics <- function(x) {
     test(paths, rule)
   }
   orders <- vapply(c("p", "d", "q", "bp", "bd", "bq"), function(order) {
-    if (identical(x$result$backend, "native")) return(diagnostic_number(x$result$model[[order]]))
+    if (identical(x$result$backend, "native")) {
+      model <- x$result$model
+      return(diagnostic_number(if (is.null(model$orders)) model[[order]] else model$orders[[order]]))
+    }
     diagnostic_number(diagnostic_at(output, c("user_defined", paste0("arima.", order))))
   }, numeric(1))
   arima <- if (anyNA(orders) || any(orders < 0 | orders != floor(orders))) NA_character_ else

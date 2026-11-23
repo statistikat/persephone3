@@ -990,9 +990,17 @@ The batch constructor and raw-series coercion now accept the restricted native X
 
 The reference X-13 product route now handles explicit zero and short forecast horizons. At zero months, `perX13(..., backend = "rjd3")$run()` succeeds and returns `NULL` forecasts. At three months it retains the three matching original-series standard errors for plotting. The twelve-month preprocessing series remains accessible through `$output`. The fixed M3 reference fit now runs through both public backends. Its trend, adjusted and irregular series matched direct `x13_fast` exactly. The installed package passed **195/195** forecast, **16/16** chart and **93/93** backend assertions and all four fixed-fit product comparisons. [Forecast contract](R/forecasts.R) · [Live regression tests](inst/tinytest/test-forecasts.R)
 
+### Native TRAMO-SEATS RSA0 product fit
+
+`perTramo(series, "rsa0", backend = "native")$run()` now estimates and decomposes complete monthly series through rkalos 0.1.0.9004. The product returns dated observed, trend, seasonally adjusted, seasonal and irregular series, with 24 forecast months by default. Both direct and indirect hierarchy results are available. The summary and diagnostics table report the fitted airline model, and the regressors table carries the estimated mean.
+
+Across six frozen public JVM cases, all **3,960** fitted and forecast point values matched bit-for-bit through the R6 product path. It passed **160/160** Java-free assertions and **190/190** with the live reference. All five AirPassengers conditional SEATS forecast standard errors matched the JVM stochastic decomposition at every month. Its conditional series uncertainty differs from the preprocessing model's `y_ef` (maximum absolute difference 1.994175). The dedicated SEATS field exposes the conditional values. The public original-series model uncertainty remains unavailable at this checkpoint. RSA3, full automatic TRAMO and models requiring SEATS approximation remain open. [Product regression](inst/tinytest/test-native-tramoseats.R) · [Pinned binding](https://github.com/statistikat/rkalos/commit/e1f99993d91646be69a58f5bc0cfa7a9093a1bd5)
+
+The preceding JVM-profile application source archive passed a full macOS ARM64 `R CMD check` with status **OK**, including **1,948/1,948** assertions, five vignettes and the PDF manual. This completed the earlier eight-failure reference replay. A separate package check covers the RSA0 changes. [Cross-architecture parity regression](inst/tinytest/test-parity.R)
+
 ## Next application work
 
-Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.
+Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.
 
 ## Application correctness record
 

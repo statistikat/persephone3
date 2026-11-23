@@ -135,7 +135,7 @@ native_automatic_forecasts <- function(fit, observed) {
 }
 
 forecasts_from_result <- function(result, output, observed) {
-  if (inherits(result, c("persephone_native_restricted_fit",
+  if (inherits(result, c("persephone_native_restricted_fit", "persephone_native_tramo_fit",
                          "persephone_native_automatic_fit"))) return(result$forecasts)
   # Evaluating the observed domain also checks hierarchy aggregation inputs.
   force(observed)

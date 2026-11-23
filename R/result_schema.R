@@ -31,6 +31,9 @@ backend_versions <- function(backend, method) {
 normalize_backend_result <- function(output, method, backend, spec, ts) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
+  if (inherits(output, "native_tramoseats_fit")) {
+    return(normalize_native_tramo_result(output, spec, ts))
+  }
   if (inherits(output, "persephone_native_x13_fit")) {
     return(normalize_native_result(output, spec, ts))
   }

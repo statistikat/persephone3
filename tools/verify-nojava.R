@@ -40,8 +40,12 @@ stopifnot(identical(st$status, "unsupported:x13 fit fixed seasonal requests only
 err <- tryCatch(perTramo(AirPassengers, backend = "rjd3"), error = identity)
 stopifnot(inherits(err, "error"), grepl("optional package", conditionMessage(err)))
 # rkalos is a required dependency; it supplies every compiled primitive.
-stopifnot(identical(cap$methods, "x13"),
+stopifnot(identical(cap$methods, c("x13", "tramoseats")),
           grepl("^[0-9a-f]{40}$", rkalos::core_version()$commit))
+tramo <- perTramo(AirPassengers, template = "rsa0", backend = "native")
+tramo$run()
+stopifnot(identical(tramo$adjusted, tramo$output$finalSA),
+          identical(tramo$result$backend, "native"), length(tramo$forecasts$points$y) == 24L)
 # Restricted native fit (rkalos schema_version 2): the qualified fixed-
 # coefficient X-13 fit must run through the product path WITHOUT Java, and
 # out-of-domain requests must refuse naming the violated scope field.

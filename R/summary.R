@@ -84,7 +84,8 @@ summary.persephone <- function(object, ...) {
   }
   if (identical(object$result$backend, "native")) {
     d <- generate_diagnostics_table(object)
-    cat("Native X-13 / X-11", object$result$provenance$mode_effective, "\n")
+    engine <- if (object$method == "tramoseats") "TRAMO / SEATS" else "X-13 / X-11"
+    cat("Native", engine, object$result$provenance$mode_effective, "\n")
     cat("Observations", length(object$ts), "| Log transform", diagnostic_format(d$logTransform),
         "| Outliers", d$nOutliers, "\n")
     cat("ARIMA", diagnostic_format(d$arimaMdl), "\n")

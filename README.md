@@ -70,6 +70,23 @@ obj$plot()
 
 ![](man/figures/README-unnamed-chunk-1-1.png)
 
+## Native TRAMO-SEATS
+
+For a complete monthly series, the native RSA0 route estimates the airline model
+and decomposes it with SEATS. It runs without Java and defaults to 24 forecast
+months.
+
+```r
+x <- perTramo(AirPassengers, "rsa0", backend = "native")
+x$run()
+x$adjusted
+x$forecasts$points$t
+x$result$seats_forecast_standard_errors$t
+```
+
+The final field contains the conditional SEATS uncertainty. The original-series
+model forecast standard error has a separate availability entry.
+
 ## Further reading
 
 This section still needs an update to persephone3.

@@ -84,6 +84,10 @@ outlier_variable_dates <- function(variables, manual) {
 # Restricted variables carry supplied columns and fixed coefficients, without
 # outlier subtypes, dates or coefficient inference.
 native_regression_records <- function(result) {
+  if (inherits(result, "persephone_native_tramo_fit")) {
+    return(data.frame(name = "const", type = "MEAN", value = result$model$mean_coefficient,
+                      subtype = NA_character_, position = NA_integer_))
+  }
   if (inherits(result, "persephone_native_automatic_fit")) {
     v <- result$model$variables
     return(data.frame(name = v$name, type = rep("outlier", length(v$name)),

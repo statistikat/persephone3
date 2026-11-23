@@ -255,6 +255,7 @@ persephone <- R6::R6Class(
     #' @field adjustedDirect see [perHts]
     adjustedDirect = function() {
       out <- self$output
+      if (identical(self$result$backend, "native")) return(self$result$components$sa)
       if (inherits(out, c("persephone_native_x13_fit",
                           "persephone_native_x13_automatic_fit"))) return(out$finalSA)
       out$user_defined$sa

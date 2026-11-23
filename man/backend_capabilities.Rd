@@ -21,14 +21,10 @@ is deliberately not probed here because probing would initialize Java.
 }
 \description{
 Reports the explicitly selected backend's implementation status without
-initializing Java. Since rkalos schema_version 2, the native backend
-qualifies two fits: the restricted fixed-coefficient X-13 fit, gated by
-\code{capabilities()$native_x13_fit_restricted} and described by
-\code{capabilities()$restricted_fit}, and the automatic-spec X-13 fit for the
-qualified template, gated by \code{capabilities()$native_x13_fit_automatic} and
-described by \code{capabilities()$automatic_fit} -- never by
-\code{capabilities()$fit}, which keeps its meaning that UNRESTRICTED native
-fitting is unimplemented. Requests outside the qualified domains raise an
+initializing Java. The native backend reports its qualified X-13 fits in
+\code{capabilities()$restricted_fit} and \code{capabilities()$automatic_fit}, and its
+monthly TRAMO-SEATS templates in \code{capabilities()$tramo_seats_fit}.
+\code{capabilities()$fit} describes unrestricted fitting. Requests outside the qualified domains raise an
 explicit error naming the violated scope field(s) and never fall back to
 rjd3.
 }

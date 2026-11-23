@@ -289,10 +289,10 @@ local({
   expect_match(e5, "automatic_fit.deferred")
   expect_match(e5, "TD7")
   # The automatic template on a frequency outside the qualified domain.
-  # The automatic template is x13-only: native tramoseats names the entries.
+  # The automatic X-13 template and TRAMO RSA0 have separate gates.
   eq <- refuse_tpl("rsa3", method = "tramoseats")
   expect_match(eq, "does not yet implement specification construction")
-  expect_match(eq, "native_x13_fit_automatic")
+  expect_match(eq, "tramo_seats_fit.templates", fixed = TRUE)
   expect_match(tryCatch({perX13(series_q, "rsa3", backend = "native"); "no error"},
                         error = function(e) conditionMessage(e)),
                "monthly_only")
@@ -436,7 +436,7 @@ local({
                       columns = list(as.numeric(series_m))))
   expect_match(refuse(mod(fixed, variables = badvar)),
                "fixed_coefficients_only")
-  # The qualified fit is x13-only; native tramoseats names the entry points.
+  # The fixed X-13 specification is outside the TRAMO RSA0 envelope.
   expect_match(refuse(fixed, method = "tramoseats"),
                "does not yet implement specification construction")
 })

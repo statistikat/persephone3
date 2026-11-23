@@ -49,6 +49,8 @@ tramoseatsSingle <- R6::R6Class(
       } else {
         spec_new <- init_spec
       }
+      if (self$backend == "native")
+        backend_validate_native_spec(spec_new, method, private$ts_internal)
       # neue specs speichern
       private$params_internal <- spec_new
       return(spec_new)
@@ -160,11 +162,12 @@ tramoseatsSingle <- R6::R6Class(
 #' see the rjd3tramoseats documentation:
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
-#'   The native backend qualifies only X-13 fits (restricted and automatic),
-#'   so every native tramoseats request fails explicitly naming the violated
-#'   scope field(s)
-#'   (entry points: native_x13_fit(), native_x13_preadjust(),
-#'   native_x13_restore(), native_x13_fit_automatic()).
+#'   Native TRAMO-SEATS supports the monthly RSA0 template on complete finite
+#'   series with a decomposable fitted model. Set forecast and backcast via
+#'   speclist or updateParams. Positive counts specify months and negative counts
+#'   specify years. The defaults are two years of forecasts and zero backcasts.
+#'   The result includes fitted components, point forecasts and conditional
+#'   SEATS standard errors. The original-series model forecast error is unavailable.
 #' @export
 perTramo <- function(ts,
                    template = c("rsa3","rsafull", "rsa0", "rsa1", "rsa2",  "rsa4", "rsa5"),
@@ -174,8 +177,7 @@ perTramo <- function(ts,
                    ..., backend = NULL) {
   backend <- resolve_backend(backend)
   if (identical(backend, "native")) {
-    # The native restricted constructor owns the template contract; the
-    # default and all automatic templates are refused naming the scope field.
+    if (missing(template)) template <- "rsa3"
     backend_native_check_template(template, "tramoseats")
   } else {
     template <- match.arg(template)
