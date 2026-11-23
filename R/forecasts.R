@@ -100,13 +100,22 @@ new_forecast_contract <- function(points, standard_errors = list(), observed = N
                  availability = availability), class = "persephone_forecasts")
 }
 
-forecasts_from_output <- function(output, observed) {
+forecasts_from_output <- function(output, observed, method = NULL, parameters = NULL) {
   if (is.null(output)) return(NULL)
+  x13 <- identical(method, "x13")
+  # X-13 preprocessing can return a calendar effect and model uncertainty
+  # for a full year even when the requested X-11 horizon is zero.
+  if (x13 && isTRUE(parameters$x11$nfcasts == 0)) return(NULL)
   components <- forecast_component_names()
   points <- stats::setNames(lapply(components, function(name) {
     output$user_defined[[paste0(name, "_f")]]
   }), components)
-  new_forecast_contract(points, list(y = output$user_defined$y_ef), observed,
+  se <- output$user_defined$y_ef
+  if (x13 && length(points$y) > 0L && length(se) > length(points$y)) {
+    se <- forecast_series(se, "y", observed, error = TRUE)
+    se <- stats::window(se, end = stats::end(points$y))
+  }
+  new_forecast_contract(points, list(y = se), observed,
                         mode = forecast_mode(output))
 }
 
@@ -132,7 +141,7 @@ forecasts_from_result <- function(result, output, observed) {
   force(observed)
   if (inherits(result$forecasts, "persephone_forecasts")) return(result$forecasts)
   # Accommodate results created before the normalized forecast contract existed.
-  forecasts_from_output(output, observed)
+  forecasts_from_output(output, observed, result$method, result$specification$parameters)
 }
 
 aggregate_forecast_contracts <- function(forecasts, weights = NULL,

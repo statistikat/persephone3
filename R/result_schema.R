@@ -54,9 +54,7 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
   component_names <- c("y", "t", "sa", "s", "i", "cal")
   components <- stats::setNames(lapply(component_names, function(name) user_defined[[name]]),
                                 component_names)
-  points <- stats::setNames(lapply(component_names, function(name) user_defined[[paste0(name, "_f")]]),
-                            component_names)
-  errors <- list(y = user_defined$y_ef)
+  forecasts <- forecasts_from_output(output, ts, method, specification$parameters)
   diagnostics_names <- names(user_defined)[grepl(
     "^(diagnostics\\.|residuals\\.(doornikhansen|lb)$|regression\\.td-ftest$|quality\\.summary$|m-statistics\\.)",
     names(user_defined))]
@@ -67,7 +65,8 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
   availability <- data.frame(
     field = field_names,
     state = vapply(field_names, function(name) {
-      value <- user_defined[[name]]
+      value <- if (endsWith(name, "_f")) forecasts$points[[sub("_f$", "", name)]]
+        else if (name == "y_ef") forecasts$standard_errors$y else user_defined[[name]]
       if (is.null(value)) "not_provided" else if (length(value) && all(is.na(value))) "missing" else "available"
     }, character(1)),
     stringsAsFactors = FALSE,
@@ -79,8 +78,7 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
                  provenance = list(backend = backend, packages = backend_versions(backend, method)),
                  status = list(code = code, convergence = "not_reported"),
                  domain = backend_domain(ts), components = components,
-                 forecasts = new_forecast_contract(points, errors, observed = ts,
-                                                   mode = forecast_mode(output)),
+                 forecasts = forecasts,
                  diagnostics = diagnostics, availability = availability,
                  raw = output), class = "persephone_result")
 }

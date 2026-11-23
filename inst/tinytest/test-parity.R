@@ -884,13 +884,8 @@ for (i in seq_len(nrow(spec_matrix))) {
   expect_null(parity_native_fit(spec$method, spec$template, spec$freq))
 }
 
-# Dual-lane fixed specification: the milestone headline. The rjd3 reference is
-# the raw x13_fast output for the pinned fixed specification (the same data
-# the reference lane feeds its normalizer; the product-level rjd3 path cannot
-# itself carry zero-horizon outputs because the pre-existing forecast contract
-# rejects rjd3's residual cal_f/y_ef series against zero point forecasts — a
-# pre-existing rjd3-lane limitation, untouched here). The native candidate
-# runs through perX13(backend = "native")$run().
+# Both public backends run the fixed specification with zero forecast months.
+# Retain the direct x13_fast call as the independent numerical reference.
 dual_lane <- local({
   spec <- rjd3x13::x13_spec("rsa0")
   spec <- rjd3toolkit::set_transform(spec, fun = "none")
@@ -901,6 +896,11 @@ dual_lane <- local({
   ud <- rjd3x13::x13_fast(series_m, spec = spec,
                           userdefined = c("sa", "t", "i"))$user_defined
   keys <- c("sa", "t", "i")
+  product <- perX13(series_m, "rsa0", backend = "rjd3")
+  product$updateParams(spec = spec)
+  product$run()
+  expect_null(product$forecasts)
+  for (key in keys) expect_identical(product$result$components[[key]], ud[[key]])
   reference <- parity_build(stats::setNames(lapply(keys, function(k) ud[[k]]), keys),
                             forecast_n = length(ud$y_f))
   candidate <- parity_native_fit("x13", "restricted", 12L)

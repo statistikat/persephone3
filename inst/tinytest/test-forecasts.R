@@ -130,3 +130,31 @@ if (all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
     }
   }
 }
+if (requireNamespace("rjd3x13", quietly = TRUE)) local({
+  # JDemetra supplies twelve preprocessing errors and calendar forecasts
+  # independently of the final X-11 horizon.
+  x <- perX13(AirPassengers, "rsa3", speclist = list(x11.fcasts = 0L), backend = "rjd3")
+  x$run()
+  expect_identical(x$result$status$code, "success")
+  expect_null(x$forecasts)
+  expect_null(x$result$forecasts)
+  expect_identical(length(x$output$user_defined$y_ef), 12L)
+  expect_identical(length(x$output$user_defined$cal_f), 12L)
+  available <- setNames(x$result$availability$state, x$result$availability$field)
+  expect_true(all(available[c("y_f", "cal_f", "y_ef")] == "not_provided"))
+  expect_false("Forecasts" %in% x$plot()$x$attrs$labels)
+  x$updateParams(x11.fcasts = 3L)
+  expect_true(x$is_stale)
+  expect_null(x$forecasts)
+  x$run()
+  fc <- x$forecasts
+  expect_identical(fc$points$y, x$output$user_defined$y_f)
+  expect_identical(fc$points$cal, x$output$user_defined$cal_f)
+  expect_identical(fc$standard_errors$y,
+                   window(x$output$user_defined$y_ef, end = end(fc$points$y)))
+  expect_identical(length(fc$standard_errors$y), 3L)
+  expect_identical(fc$availability$standard_errors[1], "available")
+  hc <- x$hchart()$x$hc_opts$series
+  interval <- hc[[match("confidence interval", vapply(hc, "[[", character(1), "name"))]]
+  expect_identical(length(interval$data), 3L)
+})

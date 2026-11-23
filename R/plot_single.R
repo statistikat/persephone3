@@ -11,7 +11,13 @@ fitted_plot_series <- function(x) {
     }
     return(components)
   }
-  x$output$user_defined
+  series <- x$output$user_defined
+  if (inherits(x$result, "persephone_result") && "forecasts" %in% names(x$result)) {
+    for (field in forecast_component_names())
+      series[[paste0(field, "_f")]] <- x$result$forecasts$points[[field]]
+    series$y_ef <- x$result$forecasts$standard_errors$y
+  }
+  series
 }
 
 #' @name plot

@@ -986,6 +986,10 @@ Both single-series widgets and the aggregate dygraph plot the dated native forec
 
 The batch constructor and raw-series coercion now accept the restricted native X-13 template. Previously both checked it against the rjd3 template list before it reached the native constructor. On macOS ARM64 the installed package passed **19/19** Java-free assertions covering an existing object beside a raw series, cloned child state, refusal of unsupported templates, aggregate rendering, and the HTTP startup and shutdown of both Shiny dashboards. The reference batch and hierarchy-value suites passed **10/10** and **79/79**. [Dashboard regression](inst/tinytest/test-native-dashboard.R)
 
+### Zero and short X-13 forecast horizons in the reference backend
+
+The reference X-13 product route now handles explicit zero and short forecast horizons. At zero months, `perX13(..., backend = "rjd3")$run()` succeeds and returns `NULL` forecasts. At three months it retains the three matching original-series standard errors for plotting. The twelve-month preprocessing series remains accessible through `$output`. The fixed M3 reference fit now runs through both public backends. Its trend, adjusted and irregular series matched direct `x13_fast` exactly. The installed package passed **195/195** forecast, **16/16** chart and **93/93** backend assertions and all four fixed-fit product comparisons. [Forecast contract](R/forecasts.R) · [Live regression tests](inst/tinytest/test-forecasts.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

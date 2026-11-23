@@ -48,6 +48,9 @@
 #' forecasts or standard errors than original-series forecasts. The contract's
 #' `availability` table records these partial horizons and unavailable fields;
 #' standard errors are never recycled to fill a longer horizon.
+#' X-13 with zero forecast months returns `NULL`. For a shorter positive
+#' horizon, original-series uncertainty covers only the matching point dates.
+#' The complete preprocessing output remains accessible through `$output`.
 #'
 #' Hierarchies aggregate level forecasts using their usual sum or weighted mean.
 #' Selected indirect forecasts honor nested children's direct/indirect choices,
