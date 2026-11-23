@@ -1055,6 +1055,20 @@ tests passed **20/20** and **164/164** without Java, and **28/28** and
 [Product regression](inst/tinytest/test-native-residual-independence.R) ·
 [Pinned R diagnostic](https://github.com/statistikat/rkalos/commit/472258e792e083af0b81b55939ad066ebb1af55b)
 
+## M5 — monthly RSA0 fits that need SEATS approximation
+
+The application now pins rkalos 0.1.0.9008 at `b6fb5f9`. A 156-month
+airline series that raised an approximation error with 0.1.0.9007 now
+runs through `perTramo(..., "rsa0", backend = "native")`. For the observed
+series and 24-month forecast, all six component grids and their 1,080 values
+match JDemetra exactly. The calendar forecast comparison requests the same
+24-month horizon from JDemetra. Automatic RSA3 and Full remain open.
+
+On macOS the new regression passed 5/5 checks in a Java-free installation
+and 29/29 with JDemetra. The adjacent RSA0 and independence tests passed
+207/207 Java-free and 246/246 with JDemetra.
+[Pinned R implementation](https://github.com/statistikat/rkalos/commit/b6fb5f9efd10aa48825988c984503744bb73661e)
+
 ### RSA3 observed calendar with nonzero horizons
 
 The fixed X-13 calendar allocation also matched RSA3 specifications through their common R class. On an extended fit that selected A6 and A7 from the extended calendar. The product now applies the fixed allocation only to the restricted template and uses the observed D18 table for RSA3. With three backcasts and six forecasts, all 144 observed calendar effects align with the original series and the six forecast effects keep their future dates. The forecast suite passed **58/58** assertions without Java and **74/74** with the reference. [Forecast domains](inst/tinytest/test-native-forecasts.R)
