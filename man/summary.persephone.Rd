@@ -4,16 +4,16 @@
 \alias{summary.persephone}
 \title{Summary of a Seasonal Adjustment}
 \usage{
-\method{summary}{persephone}(x, ...)
+\method{summary}{persephone}(object, ...)
 }
 \arguments{
-\item{x}{a \code{persephone} object of a single series (created with
+\item{object}{a \code{persephone} object of a single series (created with
 \code{\link[=perX13]{perX13()}} or \code{\link[=perTramo]{perTramo()}}) for which \code{run()} has been called.}
 
 \item{...}{currently ignored.}
 }
 \value{
-\code{x}, invisibly.
+\code{object}, invisibly.
 }
 \description{
 Prints a summary of a run of a single series: the frequency, span and

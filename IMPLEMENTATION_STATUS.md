@@ -954,6 +954,10 @@ Implemented and checked on macOS ARM64 on 2026-11-23. The single-series dashboar
 
 The package check exposed an outdated expectation that constructing the default native X-13 model fails. The isolated process now checks the successful `rsa3` default and the refusal for `rsa0`, then exercises both rjd3 methods through descriptor-pool detach and recovery. With rjd3toolkit 3.9.1 and Temurin 21.0.11, **15/15** assertions passed. [Reinitialization test](inst/tinytest/test-backend-reinitialization.R)
 
+### Summary method compatibility (application item 14)
+
+The package check flagged the summary method's argument name. The method and its documentation now use the S3 generic's `object` argument. On installed native and rjd3 fits, `summary(object = fit)` printed the report and returned the original fit invisibly. [Summary method](R/summary.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

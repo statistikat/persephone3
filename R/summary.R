@@ -59,11 +59,11 @@
 #' See the
 #' [JDemetra+ documentation](https://jdemetradocumentation.github.io/JDemetra-documentation/pages/reference-manual/sa-output-X13.html).
 #'
-#' @param x a `persephone` object of a single series (created with
+#' @param object a `persephone` object of a single series (created with
 #'   [perX13()] or [perTramo()]) for which `run()` has been called.
 #' @param ... currently ignored.
 #'
-#' @return `x`, invisibly.
+#' @return `object`, invisibly.
 #'
 #' @examples
 #' \dontrun{
@@ -74,32 +74,32 @@
 #' }
 #'
 #' @export
-summary.persephone <- function(x, ...) {
-  if (!inherits(x, "persephoneSingle")) {
+summary.persephone <- function(object, ...) {
+  if (!inherits(object, "persephoneSingle")) {
     stop("summary() is only available for single series objects ",
          "(perX13() and perTramo()).", call. = FALSE)
   }
-  if (is.null(x$output)) {
+  if (is.null(object$output)) {
     stop("No results from run available.\n", call. = FALSE)
   }
-  if (identical(x$result$backend, "native")) {
-    d <- generate_diagnostics_table(x)
-    cat("Native X-13 / X-11", x$result$provenance$mode_effective, "\n")
-    cat("Observations", length(x$ts), "| Log transform", diagnostic_format(d$logTransform),
+  if (identical(object$result$backend, "native")) {
+    d <- generate_diagnostics_table(object)
+    cat("Native X-13 / X-11", object$result$provenance$mode_effective, "\n")
+    cat("Observations", length(object$ts), "| Log transform", diagnostic_format(d$logTransform),
         "| Outliers", d$nOutliers, "\n")
     cat("ARIMA", diagnostic_format(d$arimaMdl), "\n")
-    coefficients <- unlist(x$result$model$coefficients)
+    coefficients <- unlist(object$result$model$coefficients)
     if (length(coefficients)) print(coefficients)
-    reg <- getRegressors(x)
+    reg <- getRegressors(object)
     if (!is.null(reg)) print(reg)
     cat("Coefficient standard errors and JDemetra quality indicators are unavailable.\n")
-    return(invisible(x))
+    return(invisible(object))
   }
-  ts <- x$ts
-  ud <- x$output$user_defined
+  ts <- object$ts
+  ud <- object$output$user_defined
 
   # one call each: the regression coefficient table and the diagnostic row
-  reg <- getRegressors(x)
+  reg <- getRegressors(object)
   if (is.null(reg)) {
     reg <- data.frame(
       name = character(0), type = character(0), value = numeric(0),
@@ -107,7 +107,7 @@ summary.persephone <- function(x, ...) {
       stringsAsFactors = FALSE
     )
   }
-  drow <- generate_diagnostics_table(x)
+  drow <- generate_diagnostics_table(object)
 
   # ---- header ----
   cat("Frequency:", stats::frequency(ts), "  ",
@@ -125,7 +125,7 @@ summary.persephone <- function(x, ...) {
   cat("-- Model definition ", strrep("-", 42), "\n", sep = "")
   cat("ARIMA model:     ", drow$arimaMdl, "\n")
   cat("Transformation:  ", if (isTRUE(drow$logTransform)) "Log" else "None", "\n")
-  cat("Leap year:       ", if (hasLeapYear(x)) "Yes" else "None", "\n")
+  cat("Leap year:       ", if (hasLeapYear(object)) "Yes" else "None", "\n")
   cat("Trading day:     ",
       paste0(n_td, if (n_td == 1) " regressor" else " regressors"), "\n")
   cat("Easter effect:   ", if ("EASTER" %in% reg$type) "Yes" else "None", "\n")
@@ -145,7 +145,7 @@ summary.persephone <- function(x, ...) {
 
   # ---- coefficient tables ----
   sumPrintCoef(
-    sumArimaTable(x),
+    sumArimaTable(object),
     paste("ARIMA parameters", drow$arimaMdl)
   )
   sumPrintCoef(
@@ -153,12 +153,12 @@ summary.persephone <- function(x, ...) {
     "Outliers"
   )
   td_sel <- reg$type == "TD"
-  tdTab <- sumCoefFromReg(reg, td_sel, sumTdLabels(x, sum(td_sel)))
+  tdTab <- sumCoefFromReg(reg, td_sel, sumTdLabels(object, sum(td_sel)))
   if (!is.null(tdTab) && nrow(tdTab) == 6 &&
       !any(grepl("^sun", tolower(rownames(tdTab))))) {
     # six day regressors (Monday to Saturday): the effect of the reference
     # day Sunday is derived from them and added as a further row
-    sunday <- sumTdSunday(x)
+    sunday <- sumTdSunday(object)
     if (!is.null(sunday)) {
       tdTab <- rbind(tdTab, sunday)
     }
@@ -189,8 +189,8 @@ summary.persephone <- function(x, ...) {
   # ---- SA decomposition ----
   cat("-- SA decomposition ", strrep("-", 41), "\n", sep = "")
   cat("Seasonal adjustment: ", tolower(as.character(ud$mode)), "\n")
-  if (inherits(x$output$decomposition, "JD3X11")) {
-    dec <- x$output$decomposition
+  if (inherits(object$output$decomposition, "JD3X11")) {
+    dec <- object$output$decomposition
     cat("Final MA filter:     ", sumFilterName(dec$final_seasonal), "\n")
     hend <- dec$final_henderson
     if (!is.null(hend) && !is.na(hend)) {
@@ -230,7 +230,7 @@ summary.persephone <- function(x, ...) {
       cat("Total quality:       ", as.character(drow$TotalQ), "\n")
     }
   }
-  invisible(x)
+  invisible(object)
 }
 
 # ---------------------------------------------------------------------------
