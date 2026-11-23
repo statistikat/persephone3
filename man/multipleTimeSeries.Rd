@@ -121,7 +121,8 @@ This argument can also handle mts objects}
       \item{\code{method}}{specifies the method to be used for the direct adjustment of
 the aggregate series, i.e. "tramoseats" or "x13"}
       \item{\code{template}}{the name of the predefined specification template, passed
-as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}}
+as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()}} or \code{\link[rjd3tramoseats:tramoseats_spec]{rjd3tramoseats::tramoseats_spec()}}.
+Native X-13 also accepts \code{"restricted"} with fixed seasonal filters and trend length.}
       \item{\code{context}}{a list of external regressors (calendar or other) to be used for estimation,
 passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}}
       \item{\code{userdefined}}{a character vector of user-defined variables to be included in the output,

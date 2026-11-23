@@ -32,7 +32,8 @@ as.persephone <- function(x, method = c("tramoseats", "x13"), template = NULL, b
   if (!stats::is.ts(x)) {
     stop("cannot coerce object of type ", class(x)[1], " to persephone")
   }
-  if (!is.null(template)) {
+  # The native constructors validate their own template vocabulary.
+  if (!is.null(template) && resolve_backend(backend) == "rjd3") {
     check_template(template, method)
   }
   if (method == "x13") {

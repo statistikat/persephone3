@@ -20,7 +20,7 @@
 #' Must be one of:
 #' `"rsa0"`, `"rsa1"`, `"rsa2c"`, `"rsa3"`, `"rsa4"`, `"rsa5c"` for x13
 #' `"rsafull"`, `"rsa0"`, `"rsa1"`, `"rsa2"`, `"rsa3"`, `"rsa4"`, `"rsa5"` for tramoseats.
-#' Defaults to `"rsa3"`.
+#' Defaults to `"rsa3"`. Native X-13 also accepts `"restricted"` with fixed seasonal filters and trend length.
 #' @param context a list of external regressors (calendar or other) to be used for estimation,
 #' passed as the `context` argument of [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]..
 #' @param userdefined a character vector of user-defined variables to be included in the output,
@@ -64,6 +64,7 @@ multipleTimeSeries <- R6::R6Class(
     #'   the aggregate series, i.e. "tramoseats" or "x13"
     #' @param template the name of the predefined specification template, passed
     #'   as the `name` argument to [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()]
+    #'   Native X-13 also accepts `"restricted"` with fixed seasonal filters and trend length.
     #' @param context a list of external regressors (calendar or other) to be used for estimation,
     #'   passed as the `context` argument of [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]
     #' @param userdefined a character vector of user-defined variables to be included in the output,
@@ -109,7 +110,13 @@ multipleTimeSeries <- R6::R6Class(
       if (missing(template) || is.null(template)) {
         template <- "rsa3"
       }
-      check_template(template, private$method)
+      # A batch can contain already fitted objects from another backend.
+      # New series validate their fit capability in the single-series constructor.
+      if (self$backend == "native" && identical(template, "restricted")) {
+        backend_native_check_template(template, private$method)
+      } else {
+        check_template(template, private$method)
+      }
       private$template <- template
       # keep context and userdefined in private state for runDirect
       private$context_internal <- context
@@ -362,7 +369,7 @@ multipleTimeSeries <- R6::R6Class(
 #' Must be one of:
 #' `"rsa0"`, `"rsa1"`, `"rsa2c"`, `"rsa3"`, `"rsa4"`, `"rsa5c"` for x13
 #' `"rsafull"`, `"rsa0"`, `"rsa1"`, `"rsa2"`, `"rsa3"`, `"rsa4"`, `"rsa5"` for tramoseats.
-#' Defaults to `"rsa3"`.
+#' Defaults to `"rsa3"`. Native X-13 also accepts `"restricted"` with fixed seasonal filters and trend length.
 #' @param context a list of external regressors (calendar or other) to be used for estimation,
 #' passed as the `context` argument of [rjd3x13::x13_fast()] or [rjd3tramoseats::tramoseats_fast()]..
 #' @param userdefined a character vector of user-defined variables to be included in the output,

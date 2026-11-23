@@ -978,6 +978,10 @@ The installed-package CI smoke test now fits the default zero-horizon request, u
 
 Both single-series widgets and the aggregate dygraph plot the dated native forecast points. Confidence intervals use the periods for which the backend supplies standard errors. The indirect hierarchy returns level forecasts from its fitted children and records that their cross-covariance is unavailable. The Java-free forecast suite passed **56/56**, including point values read back from the widgets and a two-child aggregate. With rjd3 present the same file passed **66/66**. All **36/36** reference-backed hierarchy chart assertions also passed. [Single-series chart](R/plot_single.R) · [Hierarchy chart](R/plot_hierarchical.R) · [Forecast regressions](inst/tinytest/test-native-forecasts.R)
 
+### Native batch and hierarchy dashboards (items 14 and 26)
+
+The batch constructor and raw-series coercion now accept the restricted native X-13 template. Previously both checked it against the rjd3 template list before it reached the native constructor. On macOS ARM64 the installed package passed **19/19** Java-free assertions covering an existing object beside a raw series, cloned child state, refusal of unsupported templates, aggregate rendering, and the HTTP startup and shutdown of both Shiny dashboards. The reference batch and hierarchy-value suites passed **10/10** and **79/79**. [Dashboard regression](inst/tinytest/test-native-dashboard.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

@@ -37,7 +37,7 @@ as the \code{name} argument to \code{\link[rjd3x13:x13_spec]{rjd3x13::x13_spec()
 Must be one of:
 \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2c"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5c"} for x13
 \code{"rsafull"}, \code{"rsa0"}, \code{"rsa1"}, \code{"rsa2"}, \code{"rsa3"}, \code{"rsa4"}, \code{"rsa5"} for tramoseats.
-Defaults to \code{"rsa3"}.}
+Defaults to \code{"rsa3"}. Native X-13 also accepts \code{"restricted"} with fixed seasonal filters and trend length.}
 
 \item{context}{a list of external regressors (calendar or other) to be used for estimation,
 passed as the \code{context} argument of \code{\link[rjd3x13:x13_fast]{rjd3x13::x13_fast()}} or \code{\link[rjd3tramoseats:tramoseats_fast]{rjd3tramoseats::tramoseats_fast()}}..}
