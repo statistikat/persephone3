@@ -1,3 +1,18 @@
+effect_chart_labels <- c(s = "Seasonal Component", i = "Irregular Component",
+                         cal = "Calendar Effects", s_f = "Forecasts Seasonal Comp.",
+                         i_f = "Forecasts Irregular Comp.", cal_f = "Forecasts Calendar Eff.")
+
+effect_chart_series <- function(x, forecasts = TRUE) {
+  series <- fitted_plot_series(x)
+  if (is.null(series)) stop("No results from run available.", call. = FALSE)
+  fields <- if (forecasts) names(effect_chart_labels) else c("s", "i", "cal")
+  available <- intersect(fields, names(series))
+  values <- Filter(length, series[available])
+  if (!length(values)) stop("The fit supplies no seasonal, irregular or calendar effects.",
+                            call. = FALSE)
+  values
+}
+
 #' Interactive Seasonal, Irregular, and Calendar Effects Plot
 #'
 #' Create interactive plots of seasonal, irregular, and calendar effects using

@@ -942,6 +942,10 @@ The application pins rkalos `50eee9f`. Both restricted and automatic native X-13
 
 Implemented and checked on macOS ARM64 on 2026-11-23. The dygraph and Highchart use the observed input and the fitted native trend and seasonally adjusted components. Previously the dygraph showed an original-only preview after a native fit and the Highchart failed. A restricted fit and an automatic fit with a detected outlier passed **26/26** Java-free assertions on serialized values, calendar dates, markers, and the before-fit preview. The rjd3 plot suites passed **11/11** single-series and **36/36** hierarchy assertions on Temurin 21.0.11. The native-foundations workflow runs the new chart checks. [Chart regressions](inst/tinytest/test-native-charts.R)
 
+### Seasonal, irregular and calendar effects charts (application items 14 and 26)
+
+Implemented and checked on macOS ARM64 on 2026-11-23. Both chart engines display the effects and forecasts supplied by the fit. Both native routes expose irregular effects on the observed calendar. The Java-free chart suite passed **36/36**, including exact widget values for both fits. The reference plot suite passed **16/16**, including the case where only the seasonal effect has a forecast. [Effects chart](R/plotSeasIrrCal.R) · [Reference plot tests](inst/tinytest/test-plot.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

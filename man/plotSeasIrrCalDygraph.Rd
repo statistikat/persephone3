@@ -37,7 +37,7 @@ Produces a dygraph (see the
 \href{https://rstudio.github.io/dygraphs/}{online documentation} for more detail).
 The function generates an interactive time series plot of the seasonal
 component, irregular component and calendar effects
-for a \link{persephone} object together with one year forecasts.
+for a \link{persephone} object, including the components and forecasts supplied by the fit.
 }
 \examples{
 data(AirPassengers, package = "datasets")

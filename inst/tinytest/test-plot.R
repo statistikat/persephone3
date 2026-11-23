@@ -33,6 +33,20 @@ obj_seas$run()
 expect_silent(obj_seas$plotSeasIrrCal())
 expect_silent(plotSeasIrrCal(obj_seas, annualComparison = 1))
 
+# A backend can supply a forecast for just one effect. Both chart engines
+# should keep that forecast and the observed effects on their own calendars.
+ud <- obj_seas$output$user_defined
+partial <- list(output = list(user_defined = list(s = ud$s, i = ud$i, s_f = ud$s_f)))
+dy <- plotSeasIrrCalDygraph(partial)
+expected <- c("Seasonal Component", "Irregular Component", "Forecasts Seasonal Comp.")
+expect_identical(dy$x$attrs$labels[-1L], expected)
+expect_identical(plotSeasIrrCalDygraph(partial, forecasts = FALSE)$x$attrs$labels[-1L],
+                 expected[1:2])
+hc <- plotSeasIrrCalHc(partial)$x$hc_opts$series
+expect_identical(vapply(hc, "[[", character(1), "name"), expected)
+expect_identical(hc[[3L]]$linkedTo, "s")
+expect_identical(vapply(hc[[3L]]$data, "[[", numeric(1), 2L), as.numeric(ud$s_f))
+
 message("Test plotResiduals")
 
 obj_res <- perX13(AirPassengers, "rsa1")

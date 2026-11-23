@@ -27,6 +27,14 @@ for (obj in list(fixed, automatic)) {
                  as.numeric(dates) * 86400000, tolerance = 0)
     expect_identical(vapply(points, "[[", numeric(1), 2L), as.numeric(expected[[name]]))
   }
+  effects <- plotSeasIrrCal(obj, plotEngine = "dygraph", annualComparison = 1L)
+  expect_identical(effects$x$attrs$labels[-1L], "Irregular Component")
+  expect_identical(as.Date(effects$x$data[[1L]]), dates)
+  expect_identical(as.numeric(effects$x$data[[2L]]), as.numeric(obj$result$components$i))
+  hc_effects <- obj$plotSeasIrrCal()$x$hc_opts$series
+  expect_identical(vapply(hc_effects, "[[", character(1), "name"), "Irregular Component")
+  expect_identical(vapply(hc_effects[[1L]]$data, "[[", numeric(1), 2L),
+                   as.numeric(obj$result$components$i))
   if (identical(obj, automatic)) {
     outliers <- obj$getOutliers()
     expect_true(nrow(outliers) > 0L)
