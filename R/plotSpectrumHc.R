@@ -226,20 +226,13 @@ plotSpectrum_series <- function(
     tsType <- match.arg(tsType)
   }
 
-  if (tsType == "original") {
-    tsobj <- x$ts
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "sa") {
-    tsobj <- x$output$user_defined$sa
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "irregular") {
-    tsobj <- x$output$user_defined$i
-    d1 <- tsobj
-  } else if (tsType == "residuals") {
-    tsobj <- x$output$regarima$residuals
-    d1 <- tsobj
+  fitted <- fitted_plot_series(x)
+  tsobj <- switch(tsType, original = x$ts, sa = fitted$sa, irregular = fitted$i,
+                  residuals = fitted$residuals.tsres %||% x$output$regarima$residuals)
+  if (!stats::is.ts(tsobj)) {
+    stop("The fit does not supply a time series for the ", tsType, " spectrum.",
+         call. = FALSE)
   }
+  d1 <- if (tsType %in% c("original", "sa")) diff(tsobj) else tsobj
   list(ts = tsobj, d = d1, type = tsType)
 }

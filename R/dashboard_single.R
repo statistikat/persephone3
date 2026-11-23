@@ -238,6 +238,7 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
   # pacf_plot <- render_persephone_plot(plotResiduals(x, which = "pacf"), height = "100%")
   # resid_qq_plot <- render_persephone_plot(plotResiduals(x, which = "nqq"), height = "100%")
 
+  native_fit <- identical(x$result$backend, "native")
   original_plot <- function() render_persephone_plot(plot(x))
   si_plot <- function() render_persephone_plot(plotSiRatios(x))
   spec_orig_plot <- function() {
@@ -514,7 +515,11 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
 
         # für alle anderen auch
         # 3) SI ratios
-        card("SI ratios", si_plot()),
+        if (native_fit) {
+          card("Decomposition effects", render_persephone_plot(plotSeasIrrCal(x)))
+        } else {
+          card("SI ratios", si_plot())
+        },
 
         # 4) spectrum original
         card("Spectrum: original series", spec_orig_plot()),
@@ -525,7 +530,9 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
         # 6) spectrum residuals
         card(
           "Residual diagnostics",
-          quad_plot_panel(
+          if (native_fit && is.null(resids)) {
+            htmltools::tags$p("Residual diagnostics are unavailable for this native fit.")
+          } else quad_plot_panel(
             resid_density_plot(), # top-left
             resid_qq_plot(), # top-right
             acf_plot(), # bottom-left

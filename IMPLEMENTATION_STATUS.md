@@ -946,6 +946,10 @@ Implemented and checked on macOS ARM64 on 2026-11-23. The dygraph and Highchart 
 
 Implemented and checked on macOS ARM64 on 2026-11-23. Both chart engines display the effects and forecasts supplied by the fit. Both native routes expose irregular effects on the observed calendar. The Java-free chart suite passed **36/36**, including exact widget values for both fits. The reference plot suite passed **16/16**, including the case where only the seasonal effect has a forecast. [Effects chart](R/plotSeasIrrCal.R) · [Reference plot tests](inst/tinytest/test-plot.R)
 
+### Single-series dashboard and spectra (application items 14 and 26)
+
+Implemented and checked on macOS ARM64 on 2026-11-23. The single-series dashboard shows the native decomposition effects, adjusted spectrum and original spectrum. The residual panel identifies unavailable diagnostics. Previously the dashboard embedded plot errors for those panels. The interactive and static spectrum functions share the same component selection. The Java-free chart suite passed **68/68**, including both rendered dashboards and exact comparisons with independently computed periodograms for observed, adjusted and irregular series. The reference plot and diagnostic suites passed **16/16** and **180/180**. [Single-series dashboard](R/dashboard_single.R) · [Java-free chart tests](inst/tinytest/test-native-charts.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.

@@ -101,7 +101,7 @@ plotSpectrumGgplot <- function(
 ) {
   freq <- spec <- spec_new1 <- NULL # nolint
 
-  if (is.null(x$output$user_defined)) {
+  if (is.null(x$output)) {
     stop("No results from run available.\n")
   }
 
@@ -110,11 +110,8 @@ plotSpectrumGgplot <- function(
   } else {
     plotType <- match.arg(plotType)
   }
-  if (is.numeric(tsType)) {
-    tsType <- c("original", "sa", "irregular", "residuals")[tsType]
-  } else {
-    tsType <- match.arg(tsType)
-  }
+  series <- plotSpectrum_series(x, tsType)
+  tsType <- series$type
   if (is.null(n.freq)) {
     if (plotType %in% c("arSpec", "periodogram")) {
       n.freq <- 301
@@ -123,21 +120,8 @@ plotSpectrumGgplot <- function(
     }
   }
 
-  if (tsType == "original") {
-    tsobj <- x$ts
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "sa") {
-    tsobj <- x$output$user_defined$sa
-    # First differences -> stationary ts
-    d1 <- diff(tsobj, 1)
-  } else if (tsType == "irregular") {
-    tsobj <- x$output$user_defined$i
-    d1 <- tsobj
-  } else if (tsType == "residuals") {
-    tsobj <- x$output$user_defined$residuals.tsres
-    d1 <- tsobj
-  }
+  tsobj <- series$ts
+  d1 <- series$d
 
   # Seasonal and trading day frequencies
   if (frequency(tsobj) == 4) {

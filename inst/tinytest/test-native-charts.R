@@ -35,6 +35,22 @@ for (obj in list(fixed, automatic)) {
   expect_identical(vapply(hc_effects, "[[", character(1), "name"), "Irregular Component")
   expect_identical(vapply(hc_effects[[1L]]$data, "[[", numeric(1), 2L),
                    as.numeric(obj$result$components$i))
+  for (type in c("original", "sa", "irregular")) {
+    signal <- switch(type, original = diff(obj$ts), sa = diff(obj$result$components$sa),
+                     irregular = obj$result$components$i)
+    reference <- stats::spec.pgram(signal, plot = FALSE)
+    static <- plotSpectrum(obj, "ggplot", type, "periodogram")$data
+    interactive <- plotSpectrum(obj, "hc", type, "periodogram")$x$hc_opts$series[[1L]]$data
+    expect_identical(static$spec, as.numeric(reference$spec))
+    expect_identical(static$freq, as.numeric(reference$freq) / frequency(signal))
+    expect_identical(vapply(interactive, "[[", numeric(1), "y"), static$spec)
+    expect_identical(vapply(interactive, "[[", numeric(1), "x"), static$freq)
+  }
+  expect_error(plotSpectrum(obj, tsType = "residuals"), "does not supply")
+  dashboard <- as.character(dashboard_single(obj))
+  expect_true(grepl("Decomposition effects", dashboard, fixed = TRUE))
+  expect_true(grepl("Residual diagnostics are unavailable", dashboard, fixed = TRUE))
+  expect_false(grepl("Plot error:", dashboard, fixed = TRUE))
   if (identical(obj, automatic)) {
     outliers <- obj$getOutliers()
     expect_true(nrow(outliers) > 0L)
