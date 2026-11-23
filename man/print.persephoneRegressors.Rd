@@ -4,19 +4,26 @@
 \alias{print.persephoneRegressors}
 \title{Print method for the regression table of a Persephone object}
 \usage{
-\method{print}{persephoneRegressors}(x, ...)
+\method{print}{persephoneRegressors}(x, p_digits = 3, ...)
 }
 \arguments{
 \item{x}{A data frame of class \code{persephoneRegressors}, as returned by
 \code{\link[=getRegressors]{getRegressors()}}}
 
-\item{...}{further arguments passed to \code{\link[=print.data.frame]{print.data.frame()}}}
+\item{p_digits}{number of decimal places for the p-value (also sets the
+\code{"< 0.001"} lower bound); defaults to 3}
+
+\item{...}{further arguments passed to the aligned table printer,
+e.g. \code{width} (defaults to \code{getOption("width")})}
 }
 \value{
 \code{x}, invisibly
 }
 \description{
-Prints the data frame returned by \code{\link[=getRegressors]{getRegressors()}} with left aligned
-character columns; the standard print method of \code{\link[=print.data.frame]{print.data.frame()}}
-right aligns them.
+Prints the data frame returned by \code{\link[=getRegressors]{getRegressors()}} as an aligned table:
+text columns left aligned, numbers right aligned with fixed decimals so
+that the decimal points line up, plus a column of significance stars and,
+when the model has trading day regressors, their joint F test below the
+table. The standard print method of \code{\link[=print.data.frame]{print.data.frame()}} would left align
+the numbers and show them in full precision.
 }

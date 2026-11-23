@@ -42,19 +42,16 @@ Imports:
     htmlwidgets
 Suggests:
     RProtoBuf,
-    rjd3toolkit (>= 3.5.0),
-    rjd3x13 (>= 3.5.0),
-    rjd3tramoseats (>= 3.5.0),
+    rjd3toolkit (>= 3.9.1),
+    rjd3x13 (>= 3.9.0),
+    rjd3tramoseats (>= 3.9.0),
     knitr,
     rmarkdown,
     prettydoc,
     tinytest,
     bookdown
 Remotes:
-     github::statistikat/rkalos@00c3a884d4bbd845d778253209f7bdb3e915973f,
-     github::rjdverse/rjd3toolkit,
-     github::rjdverse/rjd3tramoseats,
-     github::rjdverse/rjd3x13
+     github::statistikat/rkalos@00c3a884d4bbd845d778253209f7bdb3e915973f
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.1.1

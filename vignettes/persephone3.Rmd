@@ -29,13 +29,8 @@ knitr::opts_chunk$set(
 Install `{persephone3}` and its dependencies from GitHub:
 
 ```r
-# Install the installation helper
-install.packages("remotes")
-
-# Install rjdverse dependencies first
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# Install rjdverse dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # Install persephone3
 remotes::install_github("statistikat/persephone3")
@@ -174,10 +169,9 @@ When you pass parameters to `updateParams()` or during object creation, `perseph
 Use `updateParams()` to modify seasonal adjustment settings. Parameters are passed directly and mapped to the corresponding `{rjd3*}` functions:
 
 ```{r update-params}
-# Disable log transformation and automatic model selection; set ARIMA orders
+# Disable log transformation and enable iterative estimation
 obj_x13$updateParams(
   transform.fun = "None",
-  automdl.enabled = FALSE,
   arima.p = 1,
   arima.d = 2,
   arima.q = 0,
@@ -223,7 +217,7 @@ Each spec-block corresponds to a specific function in `{rjd3toolkit}` or `{rjd3x
 For certain parameters (e.g., outliers), `persephone3` provides a simplified syntax.
 Instead of using `addout.type = c("AO","LS")` and `addout.date = c("1953-07-01","1954-06-01")`, you can write:
 
-```{r simplified-outliers}
+```{r simplified-outliers, eval = FALSE}
 obj_x13$updateParams(
   outliers = c("AO1953.7", "LS1954.6")
 )

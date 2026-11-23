@@ -23,7 +23,7 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v2
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -39,8 +39,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
-          restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
+          key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-3-${{ hashFiles('.github/depends.Rds') }}
+          restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-3-
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -81,11 +81,6 @@ jobs:
       - name: Install dependencies
         run: |
           install.packages(c("remotes", "covr", "tinytest"))
-          # Install rjd3 packages from GitHub first (pinned to the qualified
-          # rjd3 release tags, JVM 21 jars; see Java policy in README/NEWS)
-          remotes::install_github("rjdverse/rjd3toolkit@v3.9.1", upgrade = "never")
-          remotes::install_github("rjdverse/rjd3tramoseats@v3.9.0", upgrade = "never")
-          remotes::install_github("rjdverse/rjd3x13@v3.9.0", upgrade = "never")
           remotes::install_deps(dependencies = TRUE, upgrade = "never")
         shell: Rscript {0}
 

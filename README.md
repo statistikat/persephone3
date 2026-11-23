@@ -1,5 +1,9 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
 
 # persephone3
 
@@ -7,110 +11,31 @@
 [![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 [![](https://img.shields.io/github/languages/code-size/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3)
 [![](https://img.shields.io/github/last-commit/statistikat/persephone3.svg)](https://github.com/statistikat/persephone3/commits/master)
-[![Codecov test
-coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
+[![Codecov test coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
 
-Object oriented wrapper around the seasonal adjustment packages in the
-[rjdverse](https://github.com/rjdverse/). The package performs time
-series adjustments with the Java library
-[JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses
-on batch processing, hierarchical time series and analytic charts.
+
+Object oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/).
+The package performs time series adjustments with the java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses on batch processing,
+hierarchical time series and analytic charts.
 
 ## Installation
 
-The following commands install `persephone3` as well as the packages
-from the [rjdverse](https://github.com/rjdverse/) that talk with the
-Java interface.
+The following commands install `persephone3` as well as the packages from the [rjdverse](https://github.com/rjdverse/) that talk with the java interface.
 
 ``` r
-# install the installation helper
-install.packages("remotes")
-
-# install dependencies
-remotes::install_github("rjdverse/rjd3toolkit@*release")
-remotes::install_github("rjdverse/rjd3x13@*release")
-remotes::install_github("rjdverse/rjd3tramoseats@*release")
+# install dependencies (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 
 # install the package from GitHub
-remotes::install_github("statistikat/rkalos")
 remotes::install_github("statistikat/persephone3")
 ```
 
-Supported Java policy: the rjd3 reference backend needs a JVM 21 or
-newer because the rjd3 3.9.0 jars are compiled for Java 21 (class-file
-version 65). On Linux, make sure `JAVA_HOME` points at a Java 21 JDK
-before starting R if the default JVM is older (`java -version` reports
-the JVM that rJava will start). `persephone3` itself loads without
-Java; the requirement applies only when running `backend = "rjd3"`
-models.
-
-## Backend migration
-
-Seasonal-adjustment fits currently use `backend = "rjd3"` and still require
-its optional packages and Java runtime. The package itself can now load without
-them. `backend_capabilities("native")` reports the native implementation status.
-The native backend qualifies two fits without Java: the restricted
-fixed-coefficient X-13 fit, gated by rkalos'
-`capabilities()$native_x13_fit_restricted` contract, and the automatic X-13 fit
-for `template = "rsa3"`, gated by `capabilities()$native_x13_fit_automatic` —
-its specification is the pinned decode table of the JDemetra+ rsa3 module state
-(no specification data is accepted beyond the sigma policy).
-
-```r
-obj <- perX13(AirPassengers, template = "restricted",
-              speclist = list(seasonal = rep("s3x15", 12L),
-                              trend_length = 13L),
-              backend = "native")
-obj$run()
-obj$adjusted
-
-auto <- perX13(AirPassengers, "rsa3", backend = "native")
-auto$run()
-auto$adjusted
-```
-
-Their scope is explicit: the restricted fit takes fixed coefficients only,
-fixed seasonal and Henderson trend requests; the automatic fit reproduces the
-pinned rsa3 decisions (verified bit-exact against the reference implementation
-at the qualification tiers) and takes only the sigma policy as request data.
-Both default the sigma policy to "legacy" — the pinned JDemetra behavior
-(maintainer decision 2026-11-17; "accurate" is selectable) — run zero
-horizons on monthly series only, and the automatic fit defers calendar/Easter/
-trading-day detection. The remaining rsa templates refuse by name with the
-measured JDemetra+ jar facts evaluated against BOTH qualified routes: the
-automatic route refuses rsa0/rsa1/rsa2c (automodel disabled is a dead branch
-there; rsa2c/rsa4/rsa5c additionally carry calendar regressors) and the
-restricted route cannot represent them either — the decoded specifications
-state estimated (non-fixed) ARIMA/regression coefficients, request the
-SEASONAL_FILTER_MSR filters with the automatic Henderson 0 and 12 forecast
-months, which the qualified core refuses verbatim. The candidate fixed values
-are series-dependent run outputs, so no fixed-spec mapping is pinnable for
-these templates. Anything outside the qualified scope raises
-an explicit error naming the violated scope field(s) and never falls back
-silently to Java. Full native seasonal-adjustment fitting beyond this qualified
-scope remains unavailable.
-Persephone now requires [rkalos](https://github.com/statistikat/rkalos), which
-bundles a pinned [Kalos](https://github.com/statistikat/kalos) C++ engine and uses
-Rcpp only at its R boundary. Persephone contains no embedded numerical C++ code.
-Kalos is independent of R/Rcpp; standalone and minimal Python bindings use OpenBLAS.
-The full native numerical roadmap and contracts live in Kalos, with R interface
-status in rkalos.
-
-Each object records its backend at construction. An explicit `backend` argument
-overrides `options(persephone.backend = "rjd3")`; changing the option does not
-change existing objects. `$params` and `$output` retain the legacy representation.
-`$specification` and `$result` add versioned data envelopes, and `$is_stale`
-indicates whether settings changed after fitting. Rerun the model after updates.
-
-See [the implementation plan](IMPLEMENTATION_STATUS.md) for the C++/Rcpp migration
-and [the reference corpus](https://github.com/statistikat/kalos/blob/main/validation/reference/SCOPE.md) for pinned backend evidence.
-
 ## Usage
 
-Objects can be constructed with `perX13()` or `perTramo()`.
-Subsequently, the `run()` method runs the model and `output` gives
-access to the output object from `rjd3x13::x13_fast()` or
-`rjd3tramoseats::tramoseats_fast()`.
+Objects can be constructed with `perX13()` or `perTramo()`. Subsequently,
+the `run()` method runs the model and `output` gives access to the output object from
+`rjd3x13::x13_fast()` or `rjd3tramoseats::tramoseats_fast()`.
+
 
 ``` r
 library(persephone3)
@@ -137,6 +62,7 @@ obj$output$preprocessing
 #> For a more detailed output, use the 'summary()' function.
 ```
 
+
 ``` r
 # visualize the results
 obj$plot()
@@ -144,91 +70,19 @@ obj$plot()
 
 ![](man/figures/README-unnamed-chunk-1-1.png)
 
-## Batch and hierarchical series
-
-Use `perBatch()` for independent series and `perHts()` when components
-form an aggregate. Components must share the same time span and
-frequency.
-
-``` r
-batch <- perBatch(a = AirPassengers, b = AirPassengers, method = "x13")
-batch$run()
-
-hierarchy <- perHts(a = AirPassengers, b = AirPassengers, method = "x13")
-hierarchy$run()
-head(cbind(direct = hierarchy$adjustedDirect,
-           indirect = hierarchy$adjustedIndirect))
-#>            direct indirect
-#> Jan 1949 249.0933 249.0933
-#> Feb 1949 249.2524 249.2524
-#> Mar 1949 249.7829 249.7829
-#> Apr 1949 258.1414 258.1414
-#> May 1949 250.2574 250.2574
-#> Jun 1949 253.5105 253.5105
-```
-
-``` r
-# Forecasts and outliers refer to the aggregate's direct model.
-plot(hierarchy, forecasts = TRUE, showOutliers = TRUE)
-```
-
-## Diagnostics and dashboards
-
-``` r
-obj$diagnosticsTable()
-#>   component  run method   type seasonality normality independence QS_seas
-#> 1           TRUE    x13 single     Present      Good         Good    Good
-#>   F_seas combSA_all combSA_last combI_all combI_last fTestSA_td TD_Ftest
-#> 1   Good       Good        Good      Good       Good  Uncertain       NA
-#>   TD_status logTransform       arimaMdl nOutliers_Q nOutliers nAutoout
-#> 1 Undefined         TRUE (0 1 1)(0 1 1)        Good        NA       NA
-#>   nRecentout    Q   Q2 TotalQ
-#> 1         NA 0.26 0.29   Good
-```
-
-``` r
-# HTML dashboard for a fitted single series
-createDashboard(obj)
-
-# Compare two fitted single-series models
-alternative <- perTramo(AirPassengers)
-alternative$run()
-createDashboard(obj, alternative)
-
-# Launch the batch/hierarchy Shiny app in a background process
-app <- createDashboard(hierarchy)
-# Stop the app when finished
-app$kill()
-```
-
-Run each model before opening its dashboard. Single-series dashboards
-can also be saved with `createDashboard(obj, file = "dashboard.html")`.
-
-The batch/hierarchy app can be launched from any working directory,
-using an installed package or a source checkout loaded with
-`devtools::load_all()`. Use `launch.browser = FALSE` to start it without
-opening a browser; the local address is available as `attr(app, "url")`.
-
 ## Further reading
 
-The [persephone3
-documentation](https://statistikat.github.io/persephone3/) includes the
-following guides:
+This section still needs an update to persephone3.
 
-- [Quickstart](https://statistikat.github.io/persephone3/articles/persephone3.html):
-  model creation, templates, and parameter updates.
-- [Plotting](https://statistikat.github.io/persephone3/articles/persephone-plotting.html):
-  interactive plots for single series and hierarchies.
-- [Hierarchical
-  series](https://statistikat.github.io/persephone3/articles/persephone-hierarchical.html):
-  direct and indirect adjustment, nested components, and recursive
-  updates.
-- [Construction and
-  weights](https://statistikat.github.io/persephone3/articles/persephone-hierarchicalEU.html):
-  regional aggregation with fixed and time-varying weights.
-- [Diagnostics](https://statistikat.github.io/persephone3/articles/persephone-diagnostics.html):
-  diagnostic statistics and the overall quality summary.
+More information can be found on the [github-pages site] for persephone.
 
-The same guides are available through
-`vignette(package = "persephone3")` when the package is installed with
-vignettes built.
+* An overview of the package is available in the [useR!2019 slides].
+* The [plotting vignette] contains examples of interactive plots htat can be
+  created with `persephone`.
+* More information about hierarchical time series can be found in the
+  [hierarchical timeseries vignette].
+
+[rjdverse]: https://github.com/rjdverse
+[github-pages site]: https://statistikat.github.io/persephone3/
+[plotting vignette]: https://statistikat.github.io/persephone3/articles/persephone-plotting.html
+[hierarchical timeseries vignette]: https://statistikat.github.io/persephone3/articles/persephone-hierarchical.html
