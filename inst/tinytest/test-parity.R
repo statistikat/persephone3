@@ -990,7 +990,7 @@ if (has_rjd3) local({
   ref_dir <- normalizePath(ref_dir, mustWork = TRUE)
   read_bytes <- function(path) {
     con <- file(path, "rb"); on.exit(close(con))
-    readBin(path, what = "raw", n = file.size(path))
+    readBin(con, what = "raw", n = file.size(path))
   }
   g <- function(v) if (is.null(v) || !length(v)) "NULL" else
     paste(sprintf("%.17g", as.numeric(v)), collapse = ";")
@@ -1068,12 +1068,39 @@ if (has_rjd3) local({
   for (id in c("ao", "seas")) {
     ref_series[[id]] <- read_series_fixture(id)
   }
+  # Kalos captured complete records with native ARM and x86 JVMs. Disabling
+  # the six HotSpot math intrinsics on x86 independently reproduced ARM.
+  arch <- rJava::.jcall("java/lang/System", "S", "getProperty", "os.arch")
+  portable <- arch %in% c("aarch64", "arm64")
+  profile <- if (portable) "portable" else "x86_64-default"
+  profiles <- read.delim(file.path(ref_dir, "demand-jvm-profiles.tsv"),
+                         colClasses = "character")
   for (tpl in c("rsa0", "rsa1", "rsa2c")) {
     for (id in names(ref_series)) {
-      expect_identical(
-        read_bytes(write_tmp(demand_capture(tpl, id, ref_series[[id]]))),
-        read_bytes(file.path(ref_dir, sprintf("demand-%s-%s.txt", tpl, id))),
-        info = paste("demand run", tpl, id, "live vs pinned"))
+      live <- demand_capture(tpl, id, ref_series[[id]])
+      path <- file.path(ref_dir, sprintf("demand-%s-%s.txt", tpl, id))
+      expected <- read_bytes(path)
+      row <- profiles[profiles$profile == profile & profiles$template == tpl &
+                        profiles$series == id, , drop = FALSE]
+      stopifnot(nrow(row) == 1L)
+      if (portable) {
+        lines <- readLines(path, warn = FALSE)
+        for (field in c("theta", "btheta", "lsr_coef")) {
+          pos <- which(startsWith(lines, paste0(field, "=")))
+          stopifnot(length(pos) == 1L)
+          lines[pos] <- paste0(field, "=", row[[field]])
+        }
+        expected <- read_bytes(write_tmp(lines))
+      }
+      label <- paste("demand run", tpl, id, profile)
+      expect_identical(read_bytes(write_tmp(live)), expected, info = label)
+      # Hash canonical LF bytes so the same reference works on Windows.
+      sha <- rJava::.jcall("java/security/MessageDigest",
+                           "Ljava/security/MessageDigest;", "getInstance", "SHA-256")
+      bytes <- charToRaw(paste0(paste(live, collapse = "\n"), "\n"))
+      checksum <- rJava::.jcall(sha, "[B", "digest", bytes)
+      expect_identical(paste(sprintf("%02x", as.integer(checksum)), collapse = ""),
+                       row$record_sha256, info = label)
     }
   }
 })
