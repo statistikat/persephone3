@@ -958,6 +958,10 @@ The package check exposed an outdated expectation that constructing the default 
 
 The package check flagged the summary method's argument name. The method and its documentation now use the S3 generic's `object` argument. On installed native and rjd3 fits, `summary(object = fit)` printed the report and returned the original fit invisibly. [Summary method](R/summary.R)
 
+### Package verification for this M5 application checkpoint
+
+On macOS ARM64, R 4.5.2 built the source archive and five vignettes. The full `R CMD check` used the published rkalos pin, rjd3toolkit 3.9.1 and Temurin 21.0.11. It passed the examples, S3 methods, vignette rebuild and PDF manual checks. **1,867/1,875** tinytest assertions passed. The sole check error comprises eight previously recorded byte comparisons between direct `rjd3x13::x13_fast()` output and the frozen `rsa0`, `rsa1` and `rsa2c` demand files on this architecture. All eight failures are in `test-parity.R`. Platform parity remains open. The localhost Shiny suite passed **43/43**. The Java-free chart suite passed **68/68** on the isolated package library. [Parity harness](inst/tinytest/test-parity.R) · [Earlier reproduction](adaption_in_the_implemetation_needed.md)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.
