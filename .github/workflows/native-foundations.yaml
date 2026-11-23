@@ -13,33 +13,7 @@ jobs:
       JAVA_HOME: __PERSEPHONE_NO_JAVA__
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Build tools for the pinned OpenBLAS provider
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gfortran cmake ninja-build
-      - name: Build tools for the pinned OpenBLAS provider (macOS)
-        if: runner.os == 'macOS'
-        run: brew install gcc cmake ninja libomp
-      - name: Fetch the pinned provider tooling (kalos core pin, lockfile OpenBLAS 0.3.34)
-        if: runner.os != 'Windows'
-        uses: actions/checkout@v5
-        with:
-          repository: statistikat/kalos
-          # 2026-11-23 M5: bumped with the rkalos core pin f500162 -> 0e064dd
-          # (provider tooling and OpenBLAS lockfile byte-identical between the
-          # two refs; this keeps "provider == bundled core" doctrine).
-          ref: 0e064dd18eb45568fc35e1bed337161598ace36f
-          path: .kalos-provider
-      - name: Build pinned OpenBLAS provider
-        if: runner.os != 'Windows'
-        run: python .kalos-provider/tools/build-openblas.py --prefix "${{ runner.temp }}/openblas" --jobs 2
-      - name: Point the rkalos source build at the pinned provider
-        if: runner.os != 'Windows'
-        run: echo "KALOS_OPENBLAS_ROOT=${{ runner.temp }}/openblas" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/setup-kalos-provider
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true

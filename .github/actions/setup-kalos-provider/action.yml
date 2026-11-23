@@ -1,0 +1,38 @@
+name: Build the pinned Kalos OpenBLAS provider
+description: Install the LP64 CBLAS and LAPACKE provider used to build rkalos
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      if: runner.os != 'Windows'
+      with:
+        python-version: '3.12'
+    - uses: actions/checkout@v5
+      with:
+        repository: statistikat/kalos
+        ref: 0e064dd18eb45568fc35e1bed337161598ace36f
+        path: .github/.kalos-provider
+    - if: runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y gfortran cmake ninja-build
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: brew install gcc cmake ninja libomp
+    - if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        python .github/.kalos-provider/tools/build-openblas.py --prefix "$RUNNER_TEMP/openblas" --jobs 2
+        echo "KALOS_OPENBLAS_ROOT=$RUNNER_TEMP/openblas" >> "$GITHUB_ENV"
+    - uses: msys2/setup-msys2@v2
+      if: runner.os == 'Windows'
+      with:
+        msystem: UCRT64
+        install: make mingw-w64-ucrt-x86_64-gcc-fortran mingw-w64-ucrt-x86_64-python
+    - if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        prefix="$(cygpath -m "$RUNNER_TEMP")/openblas"
+        python .github/.kalos-provider/tools/build-openblas.py --prefix "$prefix" --jobs 2
+        test -f "$prefix/include/lapacke.h"
+        test -f "$prefix/lib/libopenblas.a"
+        echo "KALOS_OPENBLAS_ROOT=$prefix" >> "$(cygpath -u "$GITHUB_ENV")"

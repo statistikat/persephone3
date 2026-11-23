@@ -962,6 +962,10 @@ The package check flagged the summary method's argument name. The method and its
 
 On macOS ARM64, R 4.5.2 built the source archive and five vignettes. The full `R CMD check` used the published rkalos pin, rjd3toolkit 3.9.1 and Temurin 21.0.11. It passed the examples, S3 methods, vignette rebuild and PDF manual checks. **1,867/1,875** tinytest assertions passed. The sole check error comprises eight previously recorded byte comparisons between direct `rjd3x13::x13_fast()` output and the frozen `rsa0`, `rsa1` and `rsa2c` demand files on this architecture. All eight failures are in `test-parity.R`. Platform parity remains open. The localhost Shiny suite passed **43/43**. The Java-free chart suite passed **68/68** on the isolated package library. [Parity harness](inst/tinytest/test-parity.R) · [Earlier reproduction](adaption_in_the_implemetation_needed.md)
 
+### Platform qualification for the Windows provider
+
+In published native-foundations run 45261254113, Ubuntu and macOS passed. Windows failed during the rkalos source install because the compiler could not find the OpenBLAS C API. Both application workflows now invoke the same provider setup. It builds the checksum-locked LP64 library with UCRT64 on Windows, verifies the static archive and LAPACKE header, and sets the provider root before installing rkalos. GitHub Actions execution on the updated workflow remains a platform gate. [Windows failure](https://github.com/statistikat/persephone3/actions/runs/45261254113/job/137996279512) · [Provider setup](.github/actions/setup-kalos-provider/action.yml)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.
