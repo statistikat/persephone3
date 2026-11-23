@@ -19,44 +19,13 @@
 #' plotSiRatiosHc(x)
 #' @export
 plotSiRatiosHc <- function(x) {
-  if (inherits(x$output$decomposition, "JD3X11")) {
-    decomp <- x$output$decomposition
-    d8 <- decomp$d8 # Final unmodified SI Ratios
-    d9 <- decomp$d9 # Final replacement for SI
-    d10 <- decomp$d10 # Seasonal Factors
+  dat <- si_plot_data(x)
+  nyears <- length(unique(dat$year))
+  dat$x <- as.integer(dat$cycleName) + (dat$year - min(dat$year)) / nyears
+  dat <- dat[order(dat$x), ]
+  dat$myIndex <- seq_len(nrow(dat)) - 1L
 
-    d10_by <- by(d10, cycleName(d10), mean)
-    d10_mean <- data.frame(
-      cycleName = names(d10_by),
-      d10Mean = as.vector(d10_by)
-    )
-    dat <- merge(
-      data.frame(
-        year = floor(stats::time(d10)),
-        cycleName = cycleName(d10),
-        d8,
-        d9,
-        d10,
-        stringsAsFactors = FALSE
-      ),
-      d10_mean,
-      by = "cycleName",
-      sort = FALSE,
-      all.x = TRUE
-    )
-    colnames(dat) <- c(
-      "cycleName",
-      "year",
-      "SI-Ratio",
-      "Replaced SI-Ratio",
-      "Seasonal Factor",
-      "SF Mean"
-    )
-    nyears <- length(unique(dat$year))
-    dat$x <- as.integer(dat$cycleName) + (dat$year - min(dat$year)) / nyears
-    dat <- dat[order(dat$x), ]
-    dat$myIndex <- order(dat$x) - 1
-
+  if ("Seasonal Factor" %in% names(dat)) {
     hc <- highcharter::highchart()
 
     hc <- hc %>%
@@ -166,51 +135,7 @@ plotSiRatiosHc <- function(x) {
           )
         )
     }
-  }
-  if (inherits(x$output$decomposition, "JD3_SEATS")) {
-    # evt auch implementieren nachdem das anscheinend in JDemetra gewuenscht
-    #   ist:
-    # if(!missing(first_date)){
-    #   x$components <- window(x$components, start = first_date)
-    # }
-    # if(!missing(last_date)){
-    #   x$components <- window(x$components, end = last_date)
-    # }
-
-    sln <- x$output$user_defined$decomposition.s_cmp
-    iln <- x$output$user_defined$decomposition.i_cmp
-    mode <- x$output$user_defined$mode
-
-    siRatio <- if (mode == "Additive") {
-      sln + iln
-    } else {
-      sln * iln # SI-Ratio
-    }
-
-    siRatioBy <- by(siRatio, list(cycleName(siRatio)), mean)
-    siRatioMean <- data.frame(
-      cycleName = names(siRatioBy),
-      siRatioMean = as.vector(siRatioBy)
-    )
-
-    dat <- merge(
-      data.frame(
-        year = floor(time(siRatio)),
-        cycleName = cycleName(siRatio),
-        siRatio,
-        stringsAsFactors = FALSE
-      ),
-      siRatioMean,
-      by = "cycleName",
-      sort = FALSE,
-      all.x = TRUE
-    )
-    colnames(dat) <- c("cycleName", "year", "SI-Ratio", "Mean")
-    nyears <- length(unique(dat$year))
-    dat$x <- as.integer(dat$cycleName) + (dat$year - min(dat$year)) / nyears
-    dat <- dat[order(dat$x), ]
-    dat$myIndex <- order(dat$x) - 1
-
+  } else {
     hc <- highcharter::highchart()
 
     hc <- hc %>%

@@ -517,9 +517,8 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
         # 3) SI ratios
         if (native_fit) {
           card("Decomposition effects", render_persephone_plot(plotSeasIrrCal(x)))
-        } else {
-          card("SI ratios", si_plot())
         },
+        card("SI ratios", si_plot()),
 
         # 4) spectrum original
         card("Spectrum: original series", spec_orig_plot()),

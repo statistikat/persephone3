@@ -1014,6 +1014,14 @@ Both native X-13 routes now return the observed A1 series and the seasonal D16 s
 
 The installed package passed **83/83** chart checks with and without Java, including a seasonal regressor and a user-assigned calendar effect. The forecast suite passed **56/56** without Java and **72/72** with the JVM. All three observed fields matched the reference on the nonzero-horizon RSA3 fit within 1e-8 and exactly on the fixed additive fit. [Component normalization](R/backend_native.R) · [Chart regressions](inst/tinytest/test-native-charts.R) · [Fixed-model reference](inst/tinytest/test-parity.R)
 
+### Native seasonal–irregular plots (item 26)
+
+The public SI-ratio plot and single-series dashboard now show the fitted X-13 D8, D9 and D10 tables on their full calendar. The log-additive path restores D8 and D9 to ratio scale and uses the fitted, bias-corrected D10. RSA0 uses the final SEATS seasonal and irregular components on the observed calendar. Both plotting engines share these series and phase means.
+
+The installed package passed **89/89** Java-free SI-ratio assertions and **135/135** with the live JVM, including the D9 missing positions, four fixed decomposition modes, RSA3 with three backcasts and six forecasts, and RSA0. The maximum absolute X-13 difference across the compared X-13 chart series was 2.56e-15 or less. RSA0 matched exactly. The Java-free dashboard and chart suite passed **83/83** and the existing reference plotting suite passed **16/16**. [Plot inputs](R/plotSiRatios.R) · [Chart and reference checks](inst/tinytest/test-native-si-ratios.R)
+
+The earlier RSA0 application archive at rkalos 0.1.0.9004 completed its full macOS ARM64 package check with **Status OK** and **2,177/2,177** assertions, including vignette rebuilds and the PDF manual.
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.
