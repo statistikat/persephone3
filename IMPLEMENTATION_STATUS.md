@@ -1022,6 +1022,12 @@ The installed package passed **89/89** Java-free SI-ratio assertions and **135/1
 
 The earlier RSA0 application archive at rkalos 0.1.0.9004 completed its full macOS ARM64 package check with **Status OK** and **2,177/2,177** assertions, including vignette rebuilds and the PDF manual.
 
+### Preprocessing calendar effects on both native routes
+
+Fixed X-13 now combines the A6 trading-day and A7 moving-holiday effects on the fitted scale. This keeps user regressors assigned to the calendar component in D18 and out of the public preprocessing calendar effect. The six fixed weekday coefficients and an Easter effect matched the live reference to 1e-12 on both additive and multiplicative scales. The additive RSA0 calendar effect is zero on every observed and requested forecast month, including the explicit 24-month reference horizon.
+
+Chart and RSA0 regressions passed **84/84** and **187/187** without Java and **90/90** and **222/222** with the pinned JVM. The preceding observed-components change also passed the full **439/439** parity suite. [X-13 chart regressions](inst/tinytest/test-native-charts.R) · [SEATS calendar regressions](inst/tinytest/test-native-tramoseats.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

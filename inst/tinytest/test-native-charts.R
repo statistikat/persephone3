@@ -74,6 +74,38 @@ expect_identical(fixed$result$components$s, fixed$output$finals$tables$d16)
 fixed$updateParams(variables = list(list(class = "user", effect = "calendar_effect",
   coefficient = 10, columns = list(january = as.numeric(cycle(AirPassengers) == 1L)))))
 fixed$run()
-expect_null(fixed$result$components$cal)
+expect_identical(as.numeric(fixed$result$components$cal), rep(0, length(AirPassengers)))
+expect_false(identical(fixed$result$components$cal, fixed$output$finals$tables$d18))
 expect_identical(fixed$result$components$s, fixed$output$finals$tables$d16)
-expect_false("Calendar Effects" %in% plotSeasIrrCal(fixed, plotEngine = "dygraph")$x$attrs$labels)
+expect_true("Calendar Effects" %in% plotSeasIrrCal(fixed, plotEngine = "dygraph")$x$attrs$labels)
+
+# Fixed trading days and Easter are nonzero, independently of a user variable
+# allocated to the calendar component. Compare the typed preprocessing effect
+# to the reference on both the level and log scales.
+if (requireNamespace("rjd3x13", quietly = TRUE)) {
+  td <- rjd3toolkit::td(s = AirPassengers)
+  weights <- c(1, 2, -2, 1, -3, 2) / 50
+  easter <- rjd3toolkit::easter_variable(s = AirPassengers, duration = 6, correction = "PreComputed")
+  for (log in c(FALSE, TRUE)) {
+    mode <- if (log) "multiplicative" else "additive"
+    variables <- list(list(class = "days_related", effect = "calendar_effect", coefficient = weights,
+      columns = lapply(seq_along(weights), function(i) as.numeric(td[, i]))),
+      list(class = "moving_holiday", effect = "calendar_effect", coefficient = 0.1,
+        columns = list(as.numeric(easter))),
+      list(class = "user", effect = "calendar_effect", coefficient = 0.2,
+        columns = list(as.numeric(cycle(AirPassengers) == 1L))))
+    fixed$updateParams(log = log, mode = mode, variables = variables)
+    fixed$run()
+    spec <- rjd3toolkit::set_transform(rjd3x13::x13_spec("rsa0"), fun = if (log) "Log" else "None")
+    spec <- rjd3toolkit::set_tradingdays(spec, option = "TradingDays", automatic = "Unused",
+      test = "None", autoadjust = FALSE, leapyear = "None", coef = weights, coef.type = "Fixed")
+    spec <- rjd3toolkit::set_easter(spec, enabled = TRUE, type = "Standard", test = "None",
+      duration = 6, coef = 0.1, coef.type = "Fixed")
+    ref <- rjd3x13::x13_fast(AirPassengers, spec = spec, userdefined = "cal")$user_defined$cal
+    actual <- fixed$result$components$cal
+    expect_identical(c(start(actual), end(actual), length(actual)),
+                     c(start(ref), end(ref), length(ref)))
+    expect_true(max(abs(as.numeric(actual) - as.numeric(ref))) < 1e-12)
+    expect_true(max(abs(as.numeric(actual) - as.numeric(fixed$output$finals$tables$d18))) > 0.1)
+  }
+}

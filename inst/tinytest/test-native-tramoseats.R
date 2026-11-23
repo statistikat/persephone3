@@ -18,6 +18,8 @@ for (case in cases) {
   expect_identical(x$result$method, "tramoseats")
   expect_identical(x$forecasts$standard_errors$y, x$output$series_forecast_stdev, info = case[1L])
   expect_identical(x$forecasts$availability$standard_errors[1L], "available", info = case[1L])
+  expect_identical(x$result$components$cal, 0 * series)
+  expect_identical(x$forecasts$points$cal, 0 * x$forecasts$points$y)
   for (line in case[startsWith(case, "merged ")]) {
     row <- strsplit(line, " ", fixed = TRUE)[[1L]]
     key <- keys[[row[2L]]]
@@ -75,8 +77,11 @@ expect_equal(h$forecastsIndirect$points$y, 2 * saved$forecasts$points$y, toleran
 expect_true(all(vapply(h$forecastsIndirect$standard_errors, is.null, logical(1))))
 
 if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
-  reference <- perTramo(AirPassengers, "rsa0", backend = "rjd3", userdefined = "y_ef(24)")
+  reference <- perTramo(AirPassengers, "rsa0", backend = "rjd3", userdefined = c("y_ef(24)", "cal_f(24)"))
   reference$run()
+  expect_identical(as.numeric(saved$components$cal), as.numeric(reference$output$user_defined$cal))
+  expect_identical(domain(saved$components$cal), domain(reference$output$user_defined$cal))
+  expect_identical(saved$forecasts$points$cal, reference$output$user_defined[["cal_f(24)"]])
   target_se <- reference$output$user_defined[["y_ef(24)"]]
   expect_identical(domain(saved$forecasts$standard_errors$y), domain(target_se))
   expect_true(all(abs(saved$forecasts$standard_errors$y - target_se) <= 2e-8 * (1 + abs(target_se))))

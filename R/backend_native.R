@@ -629,17 +629,17 @@ backend_native_auto_fit <- function(ts, spec) {
 }
 
 native_x13_components <- function(fit, spec) {
-  # X13Extractor returns observed A1 for y and restored D16 for s. D18 can
-  # also contain user-assigned calendar effects outside the rjd3 cal field.
-  # The automatic RSA3 design contains only the selected outliers.
-  calendar_free <- inherits(spec, "persephone_native_auto_spec") ||
-    (inherits(spec, "persephone_native_spec") && !any(vapply(spec$variables, function(v) {
-      v$class %in% c("days_related", "moving_holiday") ||
-        (v$class == "user" && v$effect == "calendar_effect")
-    }, logical(1))))
-  list(y = fit$preadjustment$tables$a1, t = fit$finalTrend, sa = fit$finalSA,
-       s = fit$finals$tables$d16, i = fit$finalIrregular,
-       cal = if (calendar_free) fit$finals$tables$d18)
+  pre <- fit$preadjustment
+  cal <- fit$finals$tables$d18
+  if (inherits(spec, "persephone_native_spec")) {
+    # CalendarEffect selects days-related and moving-holiday variables; a
+    # user variable assigned to the calendar component only contributes to D18.
+    a6 <- pre$tables$a6
+    a7 <- pre$tables$a7
+    if (!is.null(a6) && !is.null(a7)) cal <- if (pre$log) a6 * a7 else a6 + a7
+  }
+  list(y = pre$tables$a1, t = fit$finalTrend, sa = fit$finalSA,
+       s = fit$finals$tables$d16, i = fit$finalIrregular, cal = cal)
 }
 
 # Versioned envelope for the native fit. Deliberately NOT an rjd3-shaped

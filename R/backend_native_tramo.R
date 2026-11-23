@@ -35,7 +35,7 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
   if (inherits(spec, "persephone_spec")) spec <- spec$parameters
   validate_native_tramo_spec(spec, ts)
   components <- list(y = fit$series, t = fit$finalTrend, sa = fit$finalSA,
-                     s = fit$finalSeasonal, i = fit$finalIrregular, cal = NULL)
+                     s = fit$finalSeasonal, i = fit$finalIrregular, cal = 0 * fit$series)
   fields <- c(y = "Series", t = "Trend", sa = "SeasonallyAdjusted", s = "Seasonal", i = "Irregular")
   rows <- function(table, information) {
     table <- table[table$information == information, , drop = FALSE]
@@ -53,9 +53,12 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
     errors$y <- NULL
     reason$y <- paste("TRAMO forecast uncertainty:", fit$series_forecast_stdev_status %||% "unavailable")
   }
-  forecasts <- new_forecast_contract(rows(fit$merged, "Forecast"), errors, observed = ts,
-    mode = "Additive", point_reasons = list(cal = "RSA0 has no calendar regressors."),
-    error_reasons = reason)
+  points <- rows(fit$merged, "Forecast")
+  # The additive RSA0 template has no calendar regressors. Its public calendar
+  # effect is zero on the observed span and on every requested forecast month.
+  if (length(points)) points$cal <- 0 * points$y
+  forecasts <- new_forecast_contract(points, errors, observed = ts,
+    mode = "Additive", error_reasons = reason)
   availability <- data.frame(
     field = c(names(components), paste0(names(components), "_f"), "y_ef"),
     state = c(vapply(components, forecast_state, character(1)),
