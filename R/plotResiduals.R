@@ -131,7 +131,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       geom_histogram(
         binwidth = 0.5, center = 0,
         aes(y = after_stat(density)), # nolint
-        fill = p3_series_colors[["Original"]]
+        fill = NA, color = p3_series_colors[["Original"]]
       ) +
       stat_function(fun = dnorm, color = "red", args = list(mean = 0, sd = 1)) +
       xlab("Standardized Residuals") +
@@ -147,7 +147,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     result <- qqnorm(as.numeric(result), plot.it = FALSE)
     result <- data.frame(x = result$x, y = result$y)
     ggplot(result, aes(x = x, y = y)) +
-      geom_point(color = p3_series_colors[["Original"]]) +
+      geom_point(shape = 1, color = p3_series_colors[["Original"]]) +
       geom_abline(slope = 1, intercept = 0, color = "red") +
       xlab("Theoretical Quantiles") +
       ylab("Standardized Residuals") +
