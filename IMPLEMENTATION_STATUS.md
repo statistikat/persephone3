@@ -1069,6 +1069,24 @@ and 29/29 with JDemetra. The adjacent RSA0 and independence tests passed
 207/207 Java-free and 246/246 with JDemetra.
 [Pinned R implementation](https://github.com/statistikat/rkalos/commit/b6fb5f9efd10aa48825988c984503744bb73661e)
 
+
+### Native RSA0 residual normality in dashboards and reports
+
+The product pins rkalos `0.1.0.9009` at `c8265a1`. For native RSA0
+fits the diagnostics table and dashboard use the public Doornik–Hansen
+statistic and upper-tail probability. The Eurostat report exposes the
+unrounded value in `Doornik.Hansen.p.value`. AirPassengers matched the
+live JVM statistic (7.770552141622452) and probability
+(0.020542156888630703) exactly. The dashboard displayed **0.0205 /
+Uncertain**. A 37-observation fit produced a defined normality test
+alongside an undefined Ljung–Box test.
+
+Product normality checks passed **18/18** without Java and **22/22**
+with JDemetra. Adjacent diagnostic, independence and reporting checks
+passed **231/231** without Java and **264/264** with JDemetra.
+[Product regression](inst/tinytest/test-native-residual-normality.R) ·
+[Pinned R binding](https://github.com/statistikat/rkalos/commit/c8265a17a35ae77907904844497017c6f51fc350)
+
 ### RSA3 observed calendar with nonzero horizons
 
 The fixed X-13 calendar allocation also matched RSA3 specifications through their common R class. On an extended fit that selected A6 and A7 from the extended calendar. The product now applies the fixed allocation only to the restricted template and uses the observed D18 table for RSA3. With three backcasts and six forecasts, all 144 observed calendar effects align with the original series and the six forecast effects keep their future dates. The forecast suite passed **58/58** assertions without Java and **74/74** with the reference. [Forecast domains](inst/tinytest/test-native-forecasts.R)

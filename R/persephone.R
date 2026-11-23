@@ -171,8 +171,9 @@ persephone <- R6::R6Class(
       res <- list(value = fun(self))
       private$convert_list(res, asTable, unnest)
     }, # TO DO: iterate anderen Namen geben, verwechselt man sonst mit Parameter iterate
-    #' @description Create the Eurostat quality report. Its Ljung.Box.p.value
-    #' column contains the residual independence test probability when available.
+    #' @description Create the Eurostat quality report. Its Ljung.Box.p.value and
+    #' Doornik.Hansen.p.value columns contain the residual independence and normality
+    #' test probabilities when available.
     generateQrTable = function() {
       self$iterate(generate_Qr_List, asTable = TRUE)
     },

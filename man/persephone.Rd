@@ -361,8 +361,9 @@ period
   display a persephone object in the console
 
 
-  Create the Eurostat quality report. Its Ljung.Box.p.value
-column contains the residual independence test probability when available.
+  Create the Eurostat quality report. Its Ljung.Box.p.value and
+Doornik.Hansen.p.value columns contain the residual independence and normality
+test probabilities when available.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{persephone$diagnosticsTable()}

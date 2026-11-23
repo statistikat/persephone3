@@ -113,6 +113,7 @@ generate_Qr_List <- function(x) {
     `Seasonal Filter` = seasonal_filter,
     Quality = metrics$quality$value,
     `Max-Adj` = if (is.na(max_adj)) NA_character_ else paste0(round(max_adj), "%"),
-    `Ljung-Box p-value` = metrics$independence$pvalue
+    `Ljung-Box p-value` = metrics$independence$pvalue,
+    `Doornik-Hansen p-value` = metrics$normality$pvalue
   )
 }

@@ -1,5 +1,8 @@
 # persephone3 (development version)
 
+* Native monthly RSA0 fits report the public Doornik–Hansen residual
+  normality test in the dashboard, diagnostics table and Eurostat report.
+
 * The automodel-OFF templates rsa0/rsa1/rsa2c were re-decoded live from the
   pinned JDemetra+ jars (double-JVM byte-identical captures) and evaluated
   against the restricted fixed-coefficient route in addition to the automatic

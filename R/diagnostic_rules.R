@@ -86,12 +86,14 @@ diagnostic_metrics <- function(x) {
   log <- diagnostic_at(output, c("preprocessing", "description", "log"))
   if (identical(x$result$backend, "native")) log <- x$result$model$log %||% x$result$provenance$log
   if (!is.logical(log) || length(log) != 1L) log <- NA
-  independence_sources <- list(c("user_defined", "residuals.lb"), c("preprocessing", "diagnostics", "lb"))
-  if (identical(x$result$backend, "native"))
-    independence_sources <- c(list(c("residuals", "lb")), independence_sources)
+  residual_test <- function(key) {
+    paths <- list(c("user_defined", paste0("residuals.", key)), c("preprocessing", "diagnostics", key))
+    if (identical(x$result$backend, "native")) paths <- c(list(c("residuals", key)), paths)
+    test(paths, "normality")
+  }
   list(
-    normality = metric("residuals.doornikhansen", c("preprocessing", "diagnostics", "doornikhansen"), "normality"),
-    independence = test(independence_sources, "normality"),
+    normality = residual_test("doornikhansen"),
+    independence = residual_test("lb"),
     seasonality = category(list(c("user_defined", "diagnostics.seas-si-combined"))),
     residual_qs = metric("diagnostics.seas-sa-qs", c("diagnostics", "seas.qstest.sa")),
     residual_f = metric("diagnostics.seas-sa-f", c("diagnostics", "seas.ftest.sa")),
