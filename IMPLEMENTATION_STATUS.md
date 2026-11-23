@@ -806,6 +806,134 @@ covers rkalos). Friction: the user library shadows rlib-m4 unless `R_LIBS`
 README.Rmd lacks the M4-era native paragraph that README.md carries
 (pre-existing drift, left untouched).
 
+## Linux M5 — core-pin advance f500162 -> 0e064dd, CI-leg forensics, requalification — 2026-11-23
+
+**Pin advance (mirrors here; rkalos advance owned by the parallel batch).**
+rkalos main moves locally `b90d367` -> `49e2b117033d522f9c3ac38e9d7109279ac3fc97`
+("Advance core pin to 0e064dd; CI-FDLIBM/CI-FIX-2 pinned transcendental surface
+vendored"): core `f500162a3be15…` -> `0e064dd18eb45568fc35e1bed337161598ace36f`
+(67 kalos commits: CI-FDLIBM transcendental routing with the
+PinnedLevenbergMarquardt landing machine, CI-FIX-2 vendored glibc-hostlineage
+kernels, items 23-A..F TRAMO machines including the new `kalos::tramo_fit`,
+21-I.1 calendar generation, 24-C WK extraction). **NOT YET PUSHED:** `49e2b11`
+is a LOCAL commit on rkalos main; every CI leg that installs rkalos via
+DESCRIPTION `Remotes:` (native-foundations `local::.` AND check-full
+`install_deps`) stays RED until the user pushes rkalos main, and this branch
+must be pushed for native-foundations to run at all. Remotes mirrors the SHA
+with a matching in-file warning; the provider checkouts in
+`native-foundations.yaml`/`check-full.yaml` bump `ref:` to the bundled core
+(`build-openblas.py` + `dependencies/openblas.lock.json` are byte-identical
+between `f500162` and `0e064dd`, OpenBLAS stays 0.3.34 -- doctrine sync, zero
+functional drift). Historical provenance comments naming f500162
+(`R/backend_native.R` header, `test-parity.R`) stay: they record WHERE the
+measured facts came from, and the JVM-free lane re-reproduces them at the new
+core (below).
+
+**tramo_fit surface exists, unconsumed.** The vendored core now carries
+`kalos::tramo_fit` (`src/tramo_fit.cpp`, `include/kalos/tramo_fit.hpp` plus 43
+TRAMO/SEATS/calendar units), all OUTSIDE the R package's compiled closure --
+uncompiled, unbound, no R entry point, no `backend_native.R` routing. Consumer
+routing is a later slice (24-D per the kalos roadmap).
+
+**Snapshot-identity cross-check (why this requalification transfers).** The
+qualified build was produced INDEPENDENTLY in SCRATCH (git-archive of
+rkalos@b90d367 + rkalos' own `tools/sync-core.py --revision 0e064dd`, Makevars
+OBJECTS += `hostlineage.o`, `hostlineage_tables.o`) and diffs byte-identical
+against the committed `49e2b11` tree in EVERY file except the two Makevars
+templates, where only the placement of the same two OBJECTS lines differs
+(OBJECTS has no link-order semantics; the sets are equal). Lock self-verified:
+186 core / 112 fixtures / 331 evidence entries.
+
+**Ubuntu-leg root cause (CI forensics; supersedes the stale-pin hypothesis).**
+The failing step in native-foundations runs #9 (d8b335c) and #10 (bf996ff) is
+`Rscript tools/verify-nojava.R --native` via the GitHub check annotation
+`identical(as.numeric(obj$adjusted)[142:144], c(499.376731443704, …) is not
+TRUE` -- the bit-exact final-SA triple of the automatic rsa3 fit (lines 91-92
+of the script), NOT a status/string assertion. The pinned core f500162 already
+answers every status the script quotes verbatim (`git grep` at the pinned
+refs: the restricted `unsupported:x13 fit …` strings live in `src/x13_fit.cpp`
+at f500162 and 0e064dd), rkalos@00c3a88 carries the same core, the script does
+not branch on `automatic_fit$schema_version` (00c3a88's schema-2L surface
+passes its reads), and the LOCAL reproduction at rkalos b90d367 (zero-horizon
+bits byte-identical to 00c3a88 per the b90d367 message) PASSES
+`--native` -- so this is a pre-CI-FIX-2 MACHINE-DEPENDENT Bfgs landing
+(the core records exactly this "CI run-#17 signature, machine-independent"
+basin flip), and the LM landing + vendored transcendental kernels delivered by
+`0e064dd` are the fix. Ubuntu is expected to go GREEN once rkalos 49e2b11 is
+pushed AND this branch is pushed; measured here, the bit-exact triple is
+reproduced by the advanced core on the qualification host (verify-nojava PASS
+below).
+
+**Requalification -- JVM-free lane (exact replay of the recorded counts).**
+Before (rkalos b90d367, core f500162, merged tree bf996ff) / after
+(49e2b11-equivalent snapshot, core 0e064dd): parity file **244/244 ->
+244/244** (0 failures, no Java namespace loaded); `tools/verify-nojava.R
+--native` **PASS -> PASS** including the bit-exact automatic final triple
+499.37673144370382/484.86271289531953/485.24840286656132 and the LIVE-core
+restricted-status checks, provider-bound `rkalos.so` both lanes. Pinned tier
+bands UNTOUCHED (no widening anywhere); measured worst rel-diffs before ->
+after: air theta 2.42e-05 -> 1.9e-08, btheta 1.12e-04 -> 4.02e-08, ll/aicc
+~1e-9 -> ~1e-12, finals stay 0.0; ao theta 4.11e-04 -> 6.84e-04 (band 1e-2),
+btheta 3.77e-05 -> 6.58e-05, ud_sa 2.87e-08 -> 4.85e-08 (band 1e-6), ud_t
+5.08e-08 -> 8.59e-08 (band 1e-5), ud_i 7.53e-08 -> 1.27e-07 (band 2e-4);
+seas lands BIT-EXACT on every family (theta/btheta/phi/ll/aicc/finals 0.0,
+ud_i 1.97e-04 -> 1.62e-15). All 13 decision lines stay BIT-identical on all
+three series. No band widened; counts identical; the only movements are
+inside-pinned-band re-measurements (the M4-recorded determinism note on the
+seas d13-class worst is superseded by this: the LM machine reaches it).
+
+**Requalification -- JVM lane (host-qualified: Temurin 21 + CRAN rjd3
+3.9.1/3.9.0/3.9.0 + pinned jars, per-file own Rscript).** Before (bf996ff at
+core f500162): **22 files, 1,766 assertions, 0 failures** -- the recorded
+M4-gap 1,753 EXACTLY reproduced file-by-file (backend.R 89, parity 422, …)
+plus the merge's upstream `test-outlier-cv.R` (13, first local run, green).
+After (core 0e064dd): **22 files, 1,766 assertions, 0 failures** -- the
+per-file tallies are IDENTICAL before/after (clean diff across all 22 files;
+parity 422 including its live-JVM stack-pin sections). No host kills this
+batch; both lanes sequential per isolation doctrine.
+
+**Merged upstream surface (bf996ff port) -- offline smoke, both cores.**
+An offline path EXISTS: the cached rjd3 result fixtures
+`inst/tinytest/fixtures/backend/` drive 18 combinations (x13/tramoseats x
+monthly/quarterly x automatic/fixed/manual) through `getOutliers()` (incl. the
+ported `crit.value` rule: explicit spec value wins, else `calcOutlierCrit`
+from the estimation domain), `getRegressors()` (incl. the `ftests` attribute
+channel -- none of the 18 fixtures carries joint-F TD data, so the attribute
+is absent, matching the merge's `attr <- NULL` semantics), the diagnostics
+row (`nSigRecentout`/`nMstatOutside` columns present; the public
+`diagnosticsTable()` wrapper needs the R6 `$iterate` and is JVM-lane-covered),
+and `summary.persephone` rendering -- **PASS without Java and without rjd3 on
+the library path, at both cores**; the jdplus threshold anchors of
+`calcOutlierCrit` re-verified. The live-TD `ftests` probe (rsa2c on
+AirPassengers, rjd3 lane, Temurin 21): **PASS on the advanced lane** --
+`getRegressors()` carries a 1-row `ftests` attribute
+(group/value/df1/df2/pvalue), `getOutliers()` reports `crit.value`
+3.88983776394041 (the computed n=144 threshold, equal to the
+`calcOutlierCrit` anchor), the public `diagnosticsTable()` R6 wrapper renders
+both new columns and `summary()` prints its full 35-line report.
+
+**macOS/Windows native-foundations legs -- dated verdict: platform-evidence
+work, owned by M6 (posture: informational-until-M6, mirroring the kalos macOS
+decision).** Both legs fail INSIDE `setup-r-dependencies` installing
+`local::.` -- the rkalos SOURCE BUILD fails (macOS: brew toolchain + provider
+build present and succeeds, pak build fails; Windows: no provider step runs at
+all, `KALOS_OPENBLAS_ROOT` absent). Identical failures pre- and post-merge
+(runs #9/#10), NOT merge-induced and outside this batch's cross-platform scope.
+Per PACKAGE_FAMILY_AND_AGENT_PLAN the M6 row owns "Linux/macOS/Windows (incl.
+standalone Windows) qualification" / "Windows/Linux CI green". Proposed
+NON-GATING change (deliberately NOT committed, maintainer call): add
+`continue-on-error: true` to the `integration` job of native-foundations.yaml
+with a dated comment pointing at this section until M6 delivers.
+
+**Friction (host, not product).** The site Rprofile hard-sets `.libPaths()` at
+startup, so scratch libraries only enter NON-vanilla sessions via profiles;
+`R CMD INSTALL`'s lazy-load child needs the scratch dep dir in `R_LIBS_SITE`
+(`R_LIBS`/`R_LIBS_USER` are overridden); the shinycssloaders machine gap
+persists and was carried into `rlib-m5-base`/`rlib-m5-adv` byte-identically
+(cp of the rlib-m4 copy, 1.1.0). Build lanes:
+`tmp_opencode/rlib-m5-base` (b90d367 + bf996ff) and `tmp_opencode/rlib-m5-adv`
+(49e2b11-tree snapshot + bf996ff), logs `m5-*.log`.
+
 ## Next application work
 
 1. Continue item 14: difficult-model and selection-boundary product compatibility,
