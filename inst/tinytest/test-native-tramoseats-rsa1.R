@@ -2,9 +2,13 @@ helper <- new.env(parent = baseenv())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 path <- system.file("tinytest/fixtures/native/tramo-seats-bridge/rsa1-x86_64.txt", package = "rkalos", mustWork = TRUE)
 cases <- helper$fixture_named_rsa0_cases(path)
-level_cases <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa1-level-effects-x86_64.txt"))
-names(level_cases) <- paste0("level_", names(level_cases))
-cases <- c(cases, level_cases)
+additional_cases <- function(file, prefix) {
+  x <- helper$fixture_named_rsa0_cases(file.path(dirname(path), file))
+  stats::setNames(x, paste0(prefix, names(x)))
+}
+cases <- c(cases, additional_cases("rsa1-level-effects-x86_64.txt", "level_"),
+           additional_cases("rsa1-level-tc-x86_64.txt", "level_tc_"),
+           additional_cases("rsa1-log-tc-x86_64.txt", "log_tc_"))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
@@ -84,7 +88,7 @@ for (id in names(cases)) {
     expect_true(all(obj$forecasts$points$cal == 1))
   }
 }
-expect_identical(c(length(cases), rows, points), c(8L, 80L, 5160L))
+expect_identical(c(length(cases), rows, points), c(12L, 120L, 7560L))
 zero <- perTramo(AirPassengers, "rsa1", backend = "native", speclist = list(forecast = 0L))
 zero$run()
 expect_null(zero$forecasts)

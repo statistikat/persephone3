@@ -1437,3 +1437,15 @@ items 16–27**. An interim release does not complete the backend migration.
 **Acceptance:** no open reproduced P1 finding, no unexplained numerical
 regression, clean package checks, successful supported CI matrix and browser
 flows, and an explicit release decision with documented scope.
+
+## Monthly transitory changes in native RSA1 (2026-11-24)
+
+Persephone now requires rkalos `0.1.0.9013` at `3ea923a`. The
+automatic RSA1 route restores TC effects with the stock monthly decay
+of 0.7 on the level and log scales. The twelve-case product test
+checks all 120 JVM component rows and 7,560 values bit-for-bit,
+including four transitory-change fits and their estimated outlier
+names, dates and coefficients. It passed **598/598** checks in an
+isolated Java-free library and **898/898** with the live rjd3 backend,
+including the calendar series, forecast domains and SI chart data.
+[RSA1 product replay](inst/tinytest/test-native-tramoseats-rsa1.R)

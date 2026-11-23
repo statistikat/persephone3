@@ -1,5 +1,8 @@
 # persephone3 (development version)
 
+* Native RSA1 now restores automatically estimated monthly transitory changes
+  on both model scales in components and forecasts.
+
 * Extended native RSA1 to level-scale AO and LS estimation and restoration.
 
 * Added native RSA1 adjustment for complete monthly series with automatic
