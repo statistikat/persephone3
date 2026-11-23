@@ -110,10 +110,24 @@ forecasts_from_output <- function(output, observed) {
                         mode = forecast_mode(output))
 }
 
+native_automatic_forecasts <- function(fit, observed) {
+  if (!identical(fit$status, "available") || !isTRUE(fit$effective_forecast > 0L)) return(NULL)
+  tables <- fit$finals$tables
+  points <- list(y = fit$preadjustment$tables$a1a, t = tables$d12a, sa = tables$d11a,
+                 s = tables$d16a, cal = tables$d18a)
+  if (any(lengths(points) != fit$effective_forecast))
+    stop("Incomplete automatic X-13 forecast tables.", call. = FALSE)
+  mode <- switch(fit$mode_effective, additive = "Additive", multiplicative = "Multiplicative")
+  fields <- forecast_component_names()
+  new_forecast_contract(points, observed = observed, mode = mode,
+                        point_reasons = list(i = "The fit supplies no final irregular forecast table."),
+                        error_reasons = stats::setNames(
+                          as.list(rep("The fit supplies no forecast standard errors.", length(fields))), fields))
+}
+
 forecasts_from_result <- function(result, output, observed) {
   if (inherits(result, c("persephone_native_restricted_fit",
-                         "persephone_native_automatic_fit"))) return(NULL)
-  # zero_horizon_only: the native restricted and automatic paths deliver no forecasts.
+                         "persephone_native_automatic_fit"))) return(result$forecasts)
   # Evaluating the observed domain also checks hierarchy aggregation inputs.
   force(observed)
   if (inherits(result$forecasts, "persephone_forecasts")) return(result$forecasts)

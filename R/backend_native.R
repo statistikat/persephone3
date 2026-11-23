@@ -19,9 +19,8 @@
 # automodel enabled + no calendar/Easter/user regressors) fits the qualified
 # envelope; rsa4/rsa5c detect trading days and Easter -- refused by name with
 # the measured template facts, mirroring the core's fail-closed matrix (21-I
-# deferral status quoted verbatim). Zero horizons are the only R-qualified
-# domain; a user can neither request horizons nor mutate the pinned module
-# state (only the sigma policy).
+# deferral status quoted verbatim). The default horizons are zero. The automatic route accepts
+# explicit forecast and backcast counts and the sigma policy.
 #
 # M4-gap slice (2026-11-21): the automodel-OFF templates rsa0/rsa1/rsa2c were
 # re-decoded LIVE from the pinned jars (X13Spec.fromString -> X13.toBuffer ->
@@ -284,6 +283,7 @@ backend_native_default_spec <- function(method, template, freq) {
     }
     return(structure(list(method = "x13", template = "rsa3",
                          frequency = af$frequency, sigma_policy = NULL,
+                         backcast = 0L, forecast = 0L,
                          lower_sigma = 1.5, upper_sigma = 2.5),
                      class = c("persephone_native_auto_spec",
                                "persephone_native_spec")))
@@ -302,18 +302,18 @@ backend_native_default_spec <- function(method, template, freq) {
 }
 
 # Native specification updates accept only the fields each lane qualifies:
-# the restricted fields, or -- for the automatic template -- nothing but the
-# sigma policy. The automatic module state is pinned decode data; anything
+# the restricted fields, or -- for the automatic template -- the horizon counts
+# and sigma policy. The automatic module state is pinned decode data; anything
 # else keeps the established refusal.
 backend_native_update_spec <- function(spec, spec_list, method) {
   if (inherits(spec, "persephone_native_auto_spec")) {
-    bad <- setdiff(names(spec_list), "sigma_policy")
+    bad <- setdiff(names(spec_list), c("sigma_policy", "backcast", "forecast"))
     if (length(bad)) {
       backend_native_refusal("specification updates", method,
                              c("automatic_spec_pinned", bad),
                              sprintf(paste0("field(s) '%s' are not part of the automatic native specification: ",
-                                            "the template's module state is pinned decode data (the only ",
-                                            "adjustable field is sigma_policy). "),
+                                            "the template's module state is pinned decode data (the ",
+                                            "adjustable fields are sigma_policy, backcast and forecast). "),
                                      paste(bad, collapse = "', '")))
     }
     for (name in names(spec_list)) spec[name] <- spec_list[name]
@@ -344,7 +344,7 @@ backend_validate_native_spec <- function(spec, method, ts, allow_unset_filters =
   if (!identical(spec$template, route))
     stop("Native specification template does not match its route.", call. = FALSE)
   shape <- backend_native_default_spec(method, route, spec$frequency)
-  optional <- c("sigma_policy", if (!automatic) c("trend_length", "seasonal"))
+  optional <- c("sigma_policy", if (automatic) c("backcast", "forecast") else c("trend_length", "seasonal"))
   if (anyDuplicated(names(spec)) || length(setdiff(names(spec), names(shape))) ||
       length(setdiff(setdiff(names(shape), optional), names(spec))))
     stop("Invalid fields in native specification.", call. = FALSE)
@@ -548,6 +548,22 @@ backend_native_auto_request <- function(spec, ts) {
   first_year <- if (is.null(span)) 1L else as.integer(floor(span[1L]))
   args <- backend_native_auto_decode(sigma, as.numeric(spec$lower_sigma),
                                      as.numeric(spec$upper_sigma))
+  # Older stored specifications predate horizon fields and use the original zero default.
+  for (key in c("backcast", "forecast")) {
+    value <- if (key %in% names(spec)) spec[[key]] else 0L
+    if (!is.numeric(value) || is.object(value) || !is.null(dim(value)) || length(value) != 1L ||
+        !is.finite(value) || value != trunc(value) || abs(value) > .Machine$integer.max)
+      stop(key, " must be a single whole number in the R integer range.", call. = FALSE)
+    args[[key]] <- as.integer(value)
+  }
+  counts <- as.double(c(args$backcast, args$forecast))
+  months <- ifelse(counts < 0, -counts * freq, counts)
+  if (length(ts) + sum(months) > .Machine$integer.max)
+    stop("Extended series exceeds the supported index range.", call. = FALSE)
+  if (any(months > 0) &&
+      !all(c("a1a", "a1b", "d11a", "d12a", "d16a", "d18a") %in% af$x11$horizon_tables))
+    backend_native_refusal("seasonal-adjustment fitting", "x13", "horizon_tables",
+                           "the installed rkalos must expose qualified split horizon tables; ")
   args <- c(list(series = ts), args,
             list(frequency = as.integer(freq), start_period = start_period,
                  first_year = first_year))
@@ -687,19 +703,16 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
   components <- list(y = NULL, t = fit$finalTrend, sa = fit$finalSA,
                      s = NULL, i = fit$finalIrregular, cal = NULL)
   component_names <- c("y", "t", "sa", "s", "i", "cal")
-  field_names <- c(component_names, paste0(component_names, "_f"), "y_ef")
+  forecasts <- native_automatic_forecasts(fit, ts)
+  state <- function(value) {
+    if (is.null(value)) "not_provided" else if (all(is.na(value))) "missing" else "available"
+  }
   availability <- data.frame(
-    field = field_names,
-    state = vapply(field_names, function(name) {
-      value <- components[[sub("_f$", "", name)]]
-      if (grepl("_f$|y_ef", name)) {
-        "not_provided"   # zero_horizon_only: the automatic path has no forecasts
-      } else if (is.null(value)) {
-        "not_provided"
-      } else if (length(value) && all(is.na(value))) {
-        "missing"
-      } else "available"
-    }, character(1)),
+    field = c(component_names, paste0(component_names, "_f"), "y_ef"),
+    state = c(vapply(components, state, character(1)),
+              if (is.null(forecasts)) rep("not_provided", length(component_names))
+              else forecasts$availability$points,
+              if (is.null(forecasts)) "not_provided" else forecasts$availability$standard_errors[1L]),
     stringsAsFactors = FALSE, row.names = NULL)
   code <- if (identical(fit$status, "available") && !is.null(fit$finalSA)) "success" else "incomplete"
   provenance <- c(
@@ -708,14 +721,15 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
          request_fingerprint = attr(fit, "persephone_request_fingerprint", exact = TRUE),
          core_commit = tryCatch(rkalos::core_version()$commit, error = function(e) NA_character_)),
     fit[c("type", "schema_version", "scope", "mode_requested", "mode_effective",
-          "sigma", "sigma_set", "sigma_provenance", "lower_sigma", "upper_sigma")],
+          "sigma", "sigma_set", "sigma_provenance", "lower_sigma", "upper_sigma",
+          "effective_backcast", "effective_forecast")],
     list(model = fit$model))
   structure(list(schema_version = 1L, method = "x13", backend = "native",
                  specification = spec,
                  status = list(code = code,
                                convergence = fit$model$estimation_status %||% "not_reported"),
                  domain = backend_domain(ts), components = components,
-                 forecasts = NULL, diagnostics = list(), availability = availability,
+                 forecasts = forecasts, diagnostics = list(), availability = availability,
                  provenance = provenance, results = fit$results,
                  preadjustment = fit$preadjustment, selection = fit$selection,
                  chain = fit$chain, model = fit$model,

@@ -936,7 +936,7 @@ persists and was carried into `rlib-m5-base`/`rlib-m5-adv` byte-identically
 
 ## M5 application work on the published rkalos interface
 
-The application pins rkalos `50eee9f`. Both restricted and automatic native X-13 fits are available. Native TRAMO-SEATS is waiting for the core assembly, its oracle and an exported R fit. Item 28 governs the fixed-structure templates. The product default remains rjd3.
+The application now pins rkalos `e15af7f` (0.1.0.9002). Both restricted and automatic native X-13 fits are available. Native TRAMO-SEATS is waiting for the core assembly, its oracle and an exported R fit. Item 28 governs the fixed-structure templates. The product default remains rjd3.
 
 ### Single-series fitted charts (application items 14 and 26)
 
@@ -965,6 +965,12 @@ On macOS ARM64, R 4.5.2 built the source archive and five vignettes. The full `R
 ### Platform qualification for the Windows provider
 
 In published native-foundations run 45261254113, Ubuntu and macOS passed. Windows failed during the rkalos source install because the compiler could not find the OpenBLAS C API. Both application workflows now invoke the same provider setup. It builds the checksum-locked LP64 library with UCRT64 on Windows, verifies the static archive and LAPACKE header, and sets the provider root before installing rkalos. GitHub Actions execution on the updated workflow remains a platform gate. [Windows failure](https://github.com/statistikat/persephone3/actions/runs/45261254113/job/137996279512) · [Provider setup](.github/actions/setup-kalos-provider/action.yml)
+
+### Automatic X-13 forecast delivery (application items 10 and 26)
+
+The rsa3 route accepts forecast and backcast months or negative whole years, with zero extensions by default for existing requests. Fit provenance records the requested fingerprint and effective horizons. Public point forecasts use the dated A1a and D11a/D12a/D16a/D18a tables. The irregular forecast and standard errors carry explicit unavailability. The calendar-effect series covers the native forecast window. The rjd3 `cal_f` series has its own domain.
+
+The installed application passed **48/48** assertions without Java and **58/58** with the live rjd3 reference on macOS ARM64. The five AirPassengers point series matched their corresponding reference periods within the existing application tolerance of 1e-8, with a maximum absolute difference of 4.21e-12. All **180/180** existing forecast assertions passed. The local rkalos dependency commit must be published before this revision can install from GitHub. [Forecast tests](inst/tinytest/test-native-forecasts.R) · [R dependency](DESCRIPTION)
 
 ## Next application work
 

@@ -35,3 +35,5 @@ jobs:
           stopifnot(all(as.logical(reports)))
           charts <- tinytest::run_test_file("inst/tinytest/test-native-charts.R")
           stopifnot(all(as.logical(charts)))
+          forecasts <- tinytest::run_test_file("inst/tinytest/test-native-forecasts.R")
+          stopifnot(all(as.logical(forecasts)))

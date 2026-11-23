@@ -168,7 +168,11 @@ x13Single <- R6::R6Class(
 #'   through `template = "rsa3"`, whose module state is a pinned decode table
 #'   of the JDemetra+ rsa3 specification
 #'   (`capabilities()$native_x13_fit_automatic`) -- never
-#'   `capabilities()$fit`. Every other native template fails explicitly with
+#'   `capabilities()$fit`. For the native rsa3 route, backcast and forecast default
+#'   to zero. Supply whole numbers through speclist or updateParams. Positive
+#'   counts specify months and negative counts specify years. The forecasts field
+#'   returns dated original, trend, adjusted, seasonal and calendar points.
+#'   Every other native template fails explicitly with
 #'   the violated scope field(s) named. See the examples in the README for a
 #'   restricted run.
 #' @export

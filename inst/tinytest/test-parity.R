@@ -672,8 +672,7 @@ local({
                          auto_fit_m4$result$provenance$request_fingerprint))
   expect_error(perX13(series_m, "rsa3", speclist = list(sigma_policy = "jdemetra"),
                       backend = "native"), "sigma_policy_default")
-  for (change in list(list(forecast = 6L), list(backcast = 6L),
-                      list(transform.fun = "Log"), list(arima.p = 1L),
+  for (change in list(list(transform.fun = "Log"), list(arima.p = 1L),
                       list(x11.henderson.filter = 13L), list(lower_sigma = 2),
                       list(mode = "multiplicative"))) {
     expect_match(tryCatch({perX13(series_m, "rsa3", speclist = change,
@@ -694,8 +693,8 @@ local({
 
 # Fail-closed matrix (verbatim core statuses through the product path): the
 # automatic lane answers the pinned unsupported: status for an incomplete
-# series, with the request fingerprint and no Java fallback. Zero-horizon
-# requests cannot be mutated into horizons (refused above at construction).
+# series, with the request fingerprint and no Java fallback. Default zero-horizon
+# requests retain the original observed calendar.
 local({
   broken <- series_m
   broken[5L] <- NA_real_
