@@ -1,7 +1,8 @@
 helper <- new.env(parent = baseenv())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 path <- system.file("tinytest/fixtures/native/tramo-seats-bridge/rsa3-x86_64.txt", package = "rkalos", mustWork = TRUE)
-cases <- helper$fixture_named_rsa0_cases(path)
+files <- c("rsa3-x86_64.txt", "rsa3-additional-x86_64.txt", "rsa3-mean-retry-x86_64.txt")
+cases <- do.call(c, lapply(files, function(file) helper$fixture_named_rsa0_cases(file.path(dirname(path), file))))
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
@@ -76,7 +77,7 @@ for (id in names(cases)) {
     expect_identical(length(obj$output$merged$values[[which(obj$output$merged$component == "Trend" & obj$output$merged$information == "Backcast")]]), 3L)
   }
 }
-expect_identical(c(length(cases), residuals, points), c(6L, 573L, 3960L))
+expect_identical(c(length(cases), residuals, points), c(13L, 1196L, 8340L))
 expect_error(perTramo(UKgas, "rsa3", backend = "native"), "monthly_only")
 i <- seq_len(36L)
 retry <- stats::ts(round(2000 + i^2 / 100 + 70 * sin(2 * pi * i / 12) + 10 * cos(i)), frequency = 12)

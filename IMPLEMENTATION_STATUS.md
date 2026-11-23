@@ -1504,3 +1504,17 @@ The updated RSA1 product suite passed **810/810** in a Java-free
 library and **1,182/1,182** against live JDemetra. The existing RSA0
 and RSA3 suites also passed in both environments.
 [RSA1 uncertainty and chart checks](inst/tinytest/test-native-tramoseats-rsa1.R)
+
+## Expanded monthly RSA3 model identification (2026-11-24)
+
+Persephone now pins rkalos `0.1.0.9017` at `e8724b4`. The stock monthly
+RSA3 route includes the observed seasonal-model restart, multiple-outlier
+fits and a fourth estimation pass after the fast regression test removes
+the mean. The 13-model product test checks **1,196 dated residuals and
+8,340 component and forecast values** against the frozen public JVM
+results bit-for-bit. It passed **639/639** assertions without Java and
+**964/964** with live JDemetra. All three raw monthly routes passed in
+both environments. The previous six-model RSA3 release `eff545e`
+completed the full source check with **4,057/4,057** tests, rebuilt
+vignettes, the PDF manual and **Status OK**.
+[Expanded RSA3 qualification](inst/tinytest/test-native-tramoseats-rsa3.R)

@@ -80,9 +80,10 @@ The original-series forecast intervals use its fitted TR1 standard errors.
 
 The native RSA3 route also identifies SARIMA orders. Fits accepted by the
 first reference comparison and the subsequent controller sweep produce
-components, point forecasts, dated residuals and estimated outliers. A
-further identification round, fast mean-test retry or seasonality restart
-raises its corresponding engine error.
+components, point forecasts, dated residuals and estimated outliers. The seasonal controller can
+restart identification and the fast mean test can trigger a fourth
+estimation pass. A rejected first reference comparison reports its
+engine error.
 
 For a complete monthly series, the native RSA0 route estimates the airline model
 and decomposes it with SEATS. It runs without Java and defaults to 24 forecast
