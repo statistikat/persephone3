@@ -51,7 +51,7 @@ Suggests:
     tinytest,
     bookdown
 Remotes:
-     github::statistikat/rkalos@00c3a884d4bbd845d778253209f7bdb3e915973f
+     github::statistikat/rkalos@49e2b117033d522f9c3ac38e9d7109279ac3fc97
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.1.1

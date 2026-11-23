@@ -29,7 +29,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: statistikat/kalos
-          ref: f500162a3be1539803566f9bc8f071e0deb4f66b
+          # 2026-11-23 M5: bumped with the rkalos core pin f500162 -> 0e064dd
+          # (provider tooling and OpenBLAS lockfile byte-identical between the
+          # two refs; this keeps "provider == bundled core" doctrine).
+          # NOTE: DESCRIPTION Remotes now pins rkalos 49e2b11 -- a LOCAL,
+          # NOT-YET-PUSHED rkalos commit; this leg stays red until rkalos main
+          # is pushed (and this branch). See IMPLEMENTATION_STATUS.md (M5).
+          ref: 0e064dd18eb45568fc35e1bed337161598ace36f
           path: .kalos-provider
       - name: Build pinned OpenBLAS provider
         if: runner.os != 'Windows'
