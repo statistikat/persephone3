@@ -361,7 +361,8 @@ period
   display a persephone object in the console
 
 
-  create a table for the eurostat quality report
+  Create the Eurostat quality report. Its Ljung.Box.p.value
+column contains the residual independence test probability when available.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{persephone$diagnosticsTable()}

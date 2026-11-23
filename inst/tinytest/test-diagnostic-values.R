@@ -223,3 +223,10 @@ if (all(vapply(c("rjd3x13", "rjd3tramoseats"), requireNamespace, logical(1), qui
   expect_identical(diagnostic_cards(ui, "Combined seasonality"),
                    list(c(value = "Present", status = ""), c(value = "Absent", status = "")))
 }
+
+local({
+  x <- perTramo(AirPassengers, "rsa0", backend = "native")
+  x$run()
+  expect_identical(diagnostic_cards(dashboard_single(x), "Independence"),
+                   list(c(value = "0.0083", status = "Bad")))
+})

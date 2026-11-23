@@ -112,6 +112,7 @@ generate_Qr_List <- function(x) {
     `Stage 2 Henderson Filter` = NA_character_,
     `Seasonal Filter` = seasonal_filter,
     Quality = metrics$quality$value,
-    `Max-Adj` = if (is.na(max_adj)) NA_character_ else paste0(round(max_adj), "%")
+    `Max-Adj` = if (is.na(max_adj)) NA_character_ else paste0(round(max_adj), "%"),
+    `Ljung-Box p-value` = metrics$independence$pvalue
   )
 }

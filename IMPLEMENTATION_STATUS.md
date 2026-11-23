@@ -1034,6 +1034,27 @@ The product exposes the TRAMO residual time series and its residual standard err
 
 The installed application passed **20/20** residual assertions without Java and **28/28** with rjd3. Adjacent RSA0 tests passed **187/187** and **222/222** respectively. The existing reference plot suite passed **16/16**. The pinned R binding separately qualified all 570 dated residuals and six standard errors across the public corpus. [Product regression](inst/tinytest/test-native-residuals.R) · [Pinned residual binding](https://github.com/statistikat/rkalos/commit/9e87b84f737b14cb4830e971098cc17a8350ed04)
 
+### Native RSA0 residual independence in dashboards and reports
+
+The application now requires rkalos `0.1.0.9007` at `472258e`.
+Native RSA0 diagnostics read the public Ljung–Box statistic and
+upper-tail probability from `$output$residuals$lb`. The dashboard and
+diagnostics table apply the existing independence classification. The
+Eurostat quality table includes the unrounded `Ljung.Box.p.value`.
+For AirPassengers the statistic is 40.99196917295244, the p-value is
+0.0082592271291273, and the Independence card displays **0.0083 / Bad**.
+A 37-observation fit yields an undefined test and a missing report value.
+
+The new product tests passed **20/20** in the isolated Java-free library
+and **24/24** with live JDemetra+ 3.9.0, including a bit-for-bit
+statistic and probability comparison. Adjacent residual and diagnostics
+tests passed **20/20** and **164/164** without Java, and **28/28** and
+**181/181** with Java. At the preceding application checkpoint
+`29fb9d3`, source-package checking finished **OK**, including all
+**2,452** test results, examples, rebuilt vignettes and the PDF manual.
+[Product regression](inst/tinytest/test-native-residual-independence.R) ·
+[Pinned R diagnostic](https://github.com/statistikat/rkalos/commit/472258e792e083af0b81b55939ad066ebb1af55b)
+
 ### RSA3 observed calendar with nonzero horizons
 
 The fixed X-13 calendar allocation also matched RSA3 specifications through their common R class. On an extended fit that selected A6 and A7 from the extended calendar. The product now applies the fixed allocation only to the restricted template and uses the observed D18 table for RSA3. With three backcasts and six forecasts, all 144 observed calendar effects align with the original series and the six forecast effects keep their future dates. The forecast suite passed **58/58** assertions without Java and **74/74** with the reference. [Forecast domains](inst/tinytest/test-native-forecasts.R)
