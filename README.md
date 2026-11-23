@@ -81,11 +81,12 @@ x <- perTramo(AirPassengers, "rsa0", backend = "native")
 x$run()
 x$adjusted
 x$forecasts$points$t
+x$forecasts$standard_errors$y
 x$result$seats_forecast_standard_errors$t
 ```
 
-The final field contains the conditional SEATS uncertainty. The original-series
-model forecast standard error has a separate availability entry.
+The original-series chart uses the TRAMO model forecast standard errors. The
+last field gives the conditional SEATS standard errors for the trend.
 
 ## Further reading
 

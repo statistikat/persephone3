@@ -46,10 +46,16 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
   }
   conditional <- rows(fit$final, "StdevForecast")
   errors <- conditional
-  errors$y <- NULL
+  reason <- list()
+  if (identical(fit$series_forecast_stdev_status, "available")) {
+    errors$y <- fit$series_forecast_stdev
+  } else {
+    errors$y <- NULL
+    reason$y <- paste("TRAMO forecast uncertainty:", fit$series_forecast_stdev_status %||% "unavailable")
+  }
   forecasts <- new_forecast_contract(rows(fit$merged, "Forecast"), errors, observed = ts,
     mode = "Additive", point_reasons = list(cal = "RSA0 has no calendar regressors."),
-    error_reasons = list(y = "The TRAMO original-series forecast standard error is unavailable."))
+    error_reasons = reason)
   availability <- data.frame(
     field = c(names(components), paste0(names(components), "_f"), "y_ef"),
     state = c(vapply(components, forecast_state, character(1)),

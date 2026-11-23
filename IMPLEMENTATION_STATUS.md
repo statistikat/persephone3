@@ -998,6 +998,10 @@ Across six frozen public JVM cases, all **3,960** fitted and forecast point valu
 
 The preceding JVM-profile application source archive passed a full macOS ARM64 `R CMD check` with status **OK**, including **1,948/1,948** assertions, five vignettes and the PDF manual. This completed the earlier eight-failure reference replay. A separate package check covers the RSA0 changes. [Cross-architecture parity regression](inst/tinytest/test-parity.R)
 
+### Original-series RSA0 forecast uncertainty
+
+With rkalos 0.1.0.9005 the public RSA0 forecast and its chart confidence interval use the TRAMO preprocessing model's standard errors. The conditional SEATS errors remain available for all five decomposition series. The installed package passed **175/175** assertions without Java and **207/207** with rjd3. All six corpus fits exposed the dated original-series uncertainty. The 24-month AirPassengers model errors matched the JVM's explicit `y_ef(24)` reference within the core tolerance, and both chart bounds matched the public model errors exactly. [Forecast qualification](inst/tinytest/test-native-tramoseats.R) · [Pinned binding](https://github.com/statistikat/rkalos/commit/e92f07604d2e95a678e479c784f28a50cc6c8d7a)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

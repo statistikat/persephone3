@@ -16,6 +16,8 @@ for (case in cases) {
   x$run()
   expect_identical(x$result$status$code, "success")
   expect_identical(x$result$method, "tramoseats")
+  expect_identical(x$forecasts$standard_errors$y, x$output$series_forecast_stdev, info = case[1L])
+  expect_identical(x$forecasts$availability$standard_errors[1L], "available", info = case[1L])
   for (line in case[startsWith(case, "merged ")]) {
     row <- strsplit(line, " ", fixed = TRUE)[[1L]]
     key <- keys[[row[2L]]]
@@ -36,9 +38,17 @@ expect_false(diagnosticsTable(x)$logTransform)
 expect_identical(x$getRegressors()$value, x$output$model$mean_coefficient)
 expect_identical(nrow(x$getOutliers()), 0L)
 expect_true(any(grepl("TRAMO / SEATS", capture.output(summary(x)), fixed = TRUE)))
-expect_null(x$forecasts$standard_errors$y)
-expect_identical(x$forecasts$availability$standard_errors[1L], "unavailable")
+expect_identical(x$forecasts$standard_errors$y, x$output$series_forecast_stdev)
+expect_identical(x$forecasts$availability$standard_errors[1L], "available")
 expect_identical(length(x$result$seats_forecast_standard_errors$y), 24L)
+expect_false(identical(x$forecasts$standard_errors$y, x$result$seats_forecast_standard_errors$y))
+# The original-series chart draws intervals from the fitted TRAMO model.
+series <- x$hchart()$x$hc_opts$series
+band <- series[[match("confidence interval", vapply(series, "[[", character(1), "name"))]]$data
+expect_identical(vapply(band, "[[", numeric(1), "low"),
+                 as.numeric(x$forecasts$points$y - 1.96 * x$forecasts$standard_errors$y))
+expect_identical(vapply(band, "[[", numeric(1), "high"),
+                 as.numeric(x$forecasts$points$y + 1.96 * x$forecasts$standard_errors$y))
 expect_identical(unserialize(serialize(x$result, NULL)), x$result)
 expect_error(x$updateParams(forecast = 1.25), "whole number")
 expect_error(x$updateParams(log = TRUE), "tramo_seats_fit.templates")
@@ -65,8 +75,11 @@ expect_equal(h$forecastsIndirect$points$y, 2 * saved$forecasts$points$y, toleran
 expect_true(all(vapply(h$forecastsIndirect$standard_errors, is.null, logical(1))))
 
 if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
-  reference <- perTramo(AirPassengers, "rsa0", backend = "rjd3")
+  reference <- perTramo(AirPassengers, "rsa0", backend = "rjd3", userdefined = "y_ef(24)")
   reference$run()
+  target_se <- reference$output$user_defined[["y_ef(24)"]]
+  expect_identical(domain(saved$forecasts$standard_errors$y), domain(target_se))
+  expect_true(all(abs(saved$forecasts$standard_errors$y - target_se) <= 2e-8 * (1 + abs(target_se))))
   for (key in unname(keys)) {
     expect_identical(as.numeric(saved$components[[key]]), as.numeric(reference$result$components[[key]]))
     # rjd3 reconstructs tsp from its start and length. The R input's end
