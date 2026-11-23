@@ -972,6 +972,8 @@ The rsa3 route accepts forecast and backcast months or negative whole years, wit
 
 The installed application passed **48/48** assertions without Java and **58/58** with the live rjd3 reference on macOS ARM64. The five AirPassengers point series matched their corresponding reference periods within the existing application tolerance of 1e-8, with a maximum absolute difference of 4.21e-12. All **180/180** existing forecast assertions passed. The local rkalos dependency commit must be published before this revision can install from GitHub. [Forecast tests](inst/tinytest/test-native-forecasts.R) · [R dependency](DESCRIPTION)
 
+The installed-package CI smoke test now fits the default zero-horizon request, updates the same object to six forecast months, and verifies the dated A1a values in the public result. It passed with the Java-related R packages absent and the JVM disabled on macOS ARM64. [Java-free smoke test](tools/verify-nojava.R)
+
 ### Native forecast presentation for single series and hierarchies
 
 Both single-series widgets and the aggregate dygraph plot the dated native forecast points. Confidence intervals use the periods for which the backend supplies standard errors. The indirect hierarchy returns level forecasts from its fitted children and records that their cross-covariance is unavailable. The Java-free forecast suite passed **56/56**, including point values read back from the widgets and a two-child aggregate. With rjd3 present the same file passed **66/66**. All **36/36** reference-backed hierarchy chart assertions also passed. [Single-series chart](R/plot_single.R) · [Hierarchy chart](R/plot_hierarchical.R) · [Forecast regressions](inst/tinytest/test-native-forecasts.R)

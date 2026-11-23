@@ -82,8 +82,8 @@ if (identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)) {
 # Automatic native fit (item M4): the qualified automatic-spec X-13 fit for
 # the pinned rsa3 decode table, gated by capabilities()$native_x13_fit_
 # automatic, runs through the product path WITHOUT Java; the remaining rsa
-# templates refuse naming the measured template facts, and the zero-horizon
-# module state is not adjustable.
+# templates refuse naming the measured template facts. Check both the
+# zero-horizon default and an explicit forecast window.
 if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
   stopifnot(identical(rkalos::capabilities()$automatic_fit$x11$sigma_policy_default,
                       "legacy"))
@@ -114,11 +114,11 @@ if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
   }, error = function(e) conditionMessage(e))
   stopifnot(grepl("automatic_fit.deferred", refused),
             grepl("No Java fallback", refused))
-  refused <- tryCatch({
-    perX13(AirPassengers, "rsa3", speclist = list(forecast = 6L), backend = "native")
-    "no error"
-  }, error = function(e) conditionMessage(e))
-  stopifnot(grepl("not part of the automatic native specification", refused))
+  obj$updateParams(forecast = 6L)
+  obj$run()
+  stopifnot(identical(obj$forecasts$points$y, obj$output$preadjustment$tables$a1a),
+            length(obj$forecasts$points$y) == 6L,
+            identical(as.numeric(start(obj$forecasts$points$y)), c(1961, 1)))
   cat("PASS: automatic native X-13 fit (rsa3 decode table) through the product path without Java\n")
 }
 if ("--native" %in% args) {
