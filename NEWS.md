@@ -1,4 +1,10 @@
 # persephone3 (development version)
+* In `summary()`, the joint F test of the trading day regressors is now
+  printed directly below the table of the trading day coefficients (before
+  the "Mean / Leap year" table); the joint F test of the user-defined
+  regressors keeps its section at the end. The residual diagnostics of
+  `plotResiduals()` use open circles in the normal Q-Q plot and unfilled
+  bars (frame only) in the histogram of the standardized residuals.
 * The single series dashboard (`createDashboard()` / `dashboard_single()`)
   is now organised in tabs (Overview, Plots, Trading days, Outliers,
   Quality); the plots use the plotly engine and omit their own titles

@@ -420,7 +420,8 @@ sumNum <- function(v) format(signif(v, 6), scientific = FALSE)
 #' parameters, the regression coefficients with their standard errors, t
 #' values and p-values in one table per group (outliers, trading day
 #' regressors, mean and leap year), the joint F test of the trading day
-#' regressors, the decomposition filters and, at the end, the M-statistics
+#' regressors directly below their table, the decomposition filters and, at
+#' the end, the M-statistics
 #' (Q and Q-M2) and the overall quality indicator.
 #'
 #' @details
@@ -524,6 +525,16 @@ summary.persephone <- function(x, ...) {
     }
   }
   sumPrintCoef(tdTab, "Trading day regressors")
+  if (n_td > 0) {
+    # the joint F test of the trading day regressors follows directly below
+    # their coefficient table
+    f_td <- sumWaldF(x, "TD")
+    if (!is.null(f_td)) {
+      cat("Trading days:            ",
+          sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
+          "  P =", format.pval(f_td$pvalue, digits = 3, eps = 1e-10), "\n\n")
+    }
+  }
   sumPrintCoef(
     sumCoefTable(x, c("MEAN", "LP"), labelFun, also = isUserLeapVar),
     "Mean / Leap year"
@@ -533,28 +544,16 @@ summary.persephone <- function(x, ...) {
     "User-defined regressors"
   )
 
-  # ---- joint F tests ----
-  f_user <- if (n_user > 0) {
-    sumWaldF(x, character(0), also = isUserVar)
-  } else {
-    NULL
-  }
-  if (n_td > 0 || !is.null(f_user)) {
-    cat("-- Joint F tests ", strrep("-", 44), "\n", sep = "")
-    if (n_td > 0) {
-      f_td <- sumWaldF(x, "TD")
-      if (!is.null(f_td)) {
-        cat("Trading days:            ",
-            sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
-            "  P =", format.pval(f_td$pvalue, digits = 3, eps = 1e-10), "\n")
-      }
-    }
+  # ---- joint F test of the user-defined regressors ----
+  if (n_user > 0) {
+    f_user <- sumWaldF(x, character(0), also = isUserVar)
     if (!is.null(f_user)) {
+      cat("-- Joint F tests ", strrep("-", 44), "\n", sep = "")
       cat("User regressors:         ",
           sprintf("F(%d, %d) = %.3f", f_user$df1, f_user$df2, f_user$value),
           "  P =", format.pval(f_user$pvalue, digits = 3, eps = 1e-10), "\n")
+      cat("\n")
     }
-    cat("\n")
   }
 
   # ---- SA decomposition ----

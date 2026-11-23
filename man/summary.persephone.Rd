@@ -23,7 +23,8 @@ Easter effect, number of outliers), the estimates of the ARIMA
 parameters, the regression coefficients with their standard errors, t
 values and p-values in one table per group (outliers, trading day
 regressors, mean and leap year), the joint F test of the trading day
-regressors, the decomposition filters and, at the end, the M-statistics
+regressors directly below their table, the decomposition filters and, at
+the end, the M-statistics
 (Q and Q-M2) and the overall quality indicator.
 }
 \details{
