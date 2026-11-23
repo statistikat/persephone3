@@ -3,6 +3,9 @@ sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWo
 path <- system.file("tinytest/fixtures/native/tramo-seats-bridge/rsa3-x86_64.txt", package = "rkalos", mustWork = TRUE)
 files <- c("rsa3-x86_64.txt", "rsa3-additional-x86_64.txt", "rsa3-mean-retry-x86_64.txt")
 cases <- do.call(c, lapply(files, function(file) helper$fixture_named_rsa0_cases(file.path(dirname(path), file))))
+diagnostics <- c(helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa3-residual-diagnostics-x86_64.txt")),
+                 helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa3-mean-retry-diagnostics-x86_64.txt")))
+expect_identical(sort(names(diagnostics)), sort(names(cases)))
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
@@ -26,9 +29,29 @@ for (id in names(cases)) {
   expect_identical(fit$forecasts$mode, if (fit$model$log) "Multiplicative" else "Additive", info = id)
   expect_null(fit$forecasts$standard_errors$y, info = id)
   expect_identical(obj$output$series_forecast_stdev_status, "not_qualified", info = id)
-  expect_identical(names(fit$diagnostics$residuals), "tsres", info = id)
-  expect_identical(obj$diagnosticsTable()$independence, "Undefined", info = id)
-  expect_identical(obj$diagnosticsTable()$normality, "Undefined", info = id)
+  reference_diagnostics <- diagnostics[[id]]
+  expected_test <- function(key, positions) {
+    row <- reference_diagnostics[startsWith(reference_diagnostics, paste0("residuals.", key, " "))]
+    helper$fixture_hex_doubles(tokens(row)[positions])
+  }
+  metrics <- persephone3:::diagnostic_metrics(obj)
+  residual_tests <- fit$diagnostics$residuals
+  expect_identical(residual_tests$ser, expected_test("ser", 2L), info = id)
+  expect_identical(residual_tests$lb$df, 24 - length(fit$model$parameters), info = id)
+  table <- obj$diagnosticsTable()
+  dashboard <- persephone3:::diagnostic_dashboard_values(obj)
+  report <- obj$generateQrTable()
+  for (name in c("normality", "independence")) {
+    key <- if (name == "normality") "doornikhansen" else "lb"
+    metric <- metrics[[name]]
+    expect_identical(c(metric$statistic, metric$pvalue), expected_test(key, 2:3), info = paste(id, key))
+    expect_identical(metric$source, paste0("residuals/", key), info = id)
+    expect_identical(table[[name]], metric$status, info = id)
+  }
+  expect_identical(c(report$Ljung.Box.p.value, report$Doornik.Hansen.p.value),
+                   c(metrics$independence$pvalue, metrics$normality$pvalue), info = id)
+  expect_identical(c(dashboard$p_indep, dashboard$p_norm),
+                   c(metrics$independence$pvalue, metrics$normality$pvalue), info = id)
   res <- field("residuals")
   tsres <- fit$diagnostics$residuals$tsres
   expect_identical(as.integer(start(tsres)), as.integer(res[2:3]), info = id)
@@ -55,6 +78,14 @@ for (id in names(cases)) {
   if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
     jd <- perTramo(series, "rsa3", backend = "rjd3", userdefined = "cal_f(24)")
     jd$run()
+    for (name in c("normality", "independence")) {
+      key <- if (name == "normality") "doornikhansen" else "lb"
+      metric <- metrics[[name]]
+      ref <- jd$output$user_defined[[paste0("residuals.", key)]]
+      expect_equal(c(metric$statistic, metric$pvalue), c(ref$value, ref$pvalue),
+                   tolerance = 2e-8, info = paste(id, key))
+      expect_identical(jd$diagnosticsTable()[[name]], table[[name]], info = id)
+    }
     expect_identical(jd$diagnosticsTable()$arimaMdl, obj$diagnosticsTable()$arimaMdl, info = id)
     for (key in c("y", "t", "sa", "s", "i", "cal")) {
       for (part in c("observed", "forecast")) {
@@ -84,3 +115,8 @@ retry <- stats::ts(round(2000 + i^2 / 100 + 70 * sin(2 * pi * i / 12) + 10 * cos
 obj <- perTramo(retry, "rsa3", backend = "native")
 expect_error(obj$run(), "requires another identification round")
 expect_null(obj$result)
+short <- perTramo(stats::ts(as.numeric(AirPassengers)[1:37], frequency = 12), "rsa3", backend = "native")
+short$run()
+expect_identical(short$diagnosticsTable()$independence, "Undefined")
+expect_identical(short$generateQrTable()$Ljung.Box.p.value, NA_real_)
+expect_true(is.finite(short$generateQrTable()$Doornik.Hansen.p.value))

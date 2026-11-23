@@ -1518,3 +1518,20 @@ both environments. The previous six-model RSA3 release `eff545e`
 completed the full source check with **4,057/4,057** tests, rebuilt
 vignettes, the PDF manual and **Status OK**.
 [Expanded RSA3 qualification](inst/tinytest/test-native-tramoseats-rsa3.R)
+
+## Selected-model residual tests in native RSA3 reports (2026-11-24)
+
+With rkalos `0.1.0.9018` at `6676740`, the normalized native RSA3 result
+includes the public residual standard error, Ljung–Box independence and
+Doornik–Hansen normality tests. The independence degrees of freedom follow
+the fitted AR and MA orders. The dashboard, diagnostic table and quality
+report were checked against all 13 selected models and **65 public JVM
+scalars**. A series with 24 residuals reports undefined independence and
+a finite normality probability.
+
+The RSA3 product test passed **734/734** assertions with Java hidden and
+**1,111/1,111** with the live rjd3 pipeline. The RSA1 and existing RSA0
+diagnostic tests also passed in both environments. The preceding RSA1
+forecast release `2ad393e` completed its full source check with
+**4,157/4,157** tests, rebuilt vignettes, PDF manual and **Status OK**.
+[Selected-model reporting tests](inst/tinytest/test-native-tramoseats-rsa3.R)

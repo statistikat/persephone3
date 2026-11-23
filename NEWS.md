@@ -3,6 +3,9 @@
 * Native monthly RSA3 now identifies SARIMA orders and returns dated SEATS
   components and forecasts for fits accepted at the first reference comparison.
 
+* Native monthly RSA3 reports the residual standard error, model-adjusted
+  Ljung–Box independence and Doornik–Hansen normality tests.
+
 * Native RSA3 now supports seasonal-controller restarts and the fourth
   estimation pass after the fast regression test removes a mean.
 
