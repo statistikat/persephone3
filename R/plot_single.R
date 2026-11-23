@@ -4,6 +4,11 @@ fitted_plot_series <- function(x) {
   if (identical(x$result$backend, "native")) {
     components <- x$result$components
     components$y <- x$ts
+    forecast <- x$result$forecasts
+    if (!is.null(forecast)) {
+      for (field in names(forecast$points)) components[[paste0(field, "_f")]] <- forecast$points[[field]]
+      components$y_ef <- forecast$standard_errors$y
+    }
     return(components)
   }
   x$output$user_defined
@@ -186,11 +191,7 @@ plot.persephoneSingle <- function(
         otlColors <- list(AO = "red", LS = "orange", TC = "dodgerblue")
         otlColor <- otlColors[[otlType]]
       }
-      if (NCOL(otl[[1]]) == 1L) {
-        seriesName <- "otl[[1]]"
-      } else {
-        seriesName <- paste0("otl[[1]].otl", otlType)
-      }
+      seriesName <- paste0("otl", otlType)
       graphObj <- graphObj %>%
         dySeries(
           seriesName,
@@ -227,103 +228,37 @@ plot.persephoneSingle <- function(
       main <- "Original, SA and Trend Series"
     }
 
-    y <- series$y
-    t <- series$t
-    sa <- series$sa
-    ppm_y_f <- series$y_f # nolint
-    ppm_y_ef <- series$y_ef # nolint
-    # forecasts currently only plotted for original series, maybe allow t and
-    # sa forecasts in some other setting??
-
-    otlTF <- FALSE
-    # Outliers
-    if (isTRUE(showOutliers) && nrow(getOutliers(x)) > 0L) {
-        otl <- gettsout(x)
-        otlTF <- !is.null(otl[[1]])
-      }
-
-    # Initialize Graph Object
-    # Back-/Forecasts
-    if (forecasts & !is.null(ppm_y_f) & !is.null(ppm_y_ef)) {
-      lowerci <- ppm_y_f - 1.96 * ppm_y_ef
-      upperci <- ppm_y_f + 1.96 * ppm_y_ef
-      if (!otlTF) {
-        ts <- cbind(y, t, sa, ppm_y_f, lowerci, upperci)
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend") %>%
-          dySeries(
-            c("lowerci", "ppm_y_f", "upperci"),
-            label = "Forecasts",
-            strokePattern = "dashed",
-            drawPoints = drawPoints
-          ) %>%
-          dyLegend(width = 400)
-      } else {
-        ts <- cbind(y, t, sa, otl[[1]], ppm_y_f, lowerci, upperci)
-
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend")
-        graphObj <- includeOutGraphically(
-          otlType = "AO",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- includeOutGraphically(
-          otlType = "LS",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- includeOutGraphically(
-          otlType = "TC",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- graphObj %>%
-          dySeries(
-            c("lowerci", "ppm_y_f", "upperci"),
-            label = "Forecasts",
-            strokePattern = "dashed",
-            drawPoints = drawPoints
-          ) %>%
-          dyLegend(width = 300) #300 bei nouttype=3
-      }
-    } else {
-      if (!otlTF) {
-        ts <- cbind(y, t, sa)
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend") %>%
-          dyLegend(width = 290)
-      } else {
-        ts <- cbind(y, t, sa, otl[[1]])
-        graphObj <- dygraph(ts, main = main) %>%
-          dySeries("y", label = "Original", drawPoints = drawPoints) %>%
-          dySeries("sa", label = "Seasonally Adjusted") %>%
-          dySeries("t", label = "Trend")
-        graphObj <- includeOutGraphically(
-          otlType = "AO",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- includeOutGraphically(
-          otlType = "LS",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- includeOutGraphically(
-          otlType = "TC",
-          otl = otl,
-          graphObj = graphObj
-        )
-        graphObj <- graphObj %>%
-          dyLegend(width = 290)
+    columns <- series[c("y", "t", "sa")]
+    types <- character()
+    if (isTRUE(showOutliers)) {
+      otl <- gettsout(x)
+      types <- intersect(c("AO", "LS", "TC"), names(otl[[2L]]))
+      for (k in seq_along(types)) {
+        points <- otl[[1L]]
+        columns[[paste0("otl", types[k])]] <- if (is.null(dim(points))) points else points[, k]
       }
     }
+
+    show_forecast <- isTRUE(forecasts) && length(series$y_f) > 0L
+    show_interval <- show_forecast && length(series$y_ef) > 0L
+    if (show_forecast) columns$y_f <- series$y_f
+    if (show_interval) {
+      columns$lowerci <- series$y_f - 1.96 * series$y_ef
+      columns$upperci <- series$y_f + 1.96 * series$y_ef
+    }
+    ts <- do.call(cbind, columns)
+    graphObj <- dygraph(ts, main = main) %>%
+      dySeries("y", label = "Original", drawPoints = drawPoints) %>%
+      dySeries("sa", label = "Seasonally Adjusted") %>%
+      dySeries("t", label = "Trend")
+    for (type in types) graphObj <- includeOutGraphically(type, otl = otl, graphObj = graphObj)
+    if (show_forecast) {
+      fields <- if (show_interval) c("lowerci", "y_f", "upperci") else "y_f"
+      graphObj <- dySeries(graphObj, fields, label = "Forecasts", strokePattern = "dashed",
+                           drawPoints = drawPoints)
+    }
+    legend_width <- if (!show_forecast) 290 else if (length(types)) 300 else 400
+    graphObj <- dyLegend(graphObj, width = legend_width)
 
     if (rangeSelector) {
       graphObj <- graphObj %>%

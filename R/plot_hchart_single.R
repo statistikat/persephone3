@@ -88,7 +88,7 @@ hchart.persephoneSingle <- function(object, ...) {
   }
 
   # Add forecast
-  hc <- hc_add_forecast(hc, output)
+  hc <- hc_add_forecast(hc, output, ud)
 
   return(hc)
 }
@@ -116,21 +116,18 @@ hchart.persephoneSingle <- function(object, ...) {
 #'
 #' @param hc A highchart object
 #' @param x Output object from seasonal adjustment
+#' @param series Chart series, including any point forecasts and standard errors.
 #' @return A highchart object with forecast added
 #' @keywords internal
-hc_add_forecast <- function(hc, x) {
-  forecast <- x$user_defined$y_f
-  forecast_sd <- x$user_defined$y_ef
+hc_add_forecast <- function(hc, x, series = x$user_defined) {
+  forecast <- series$y_f
+  forecast_sd <- series$y_ef
 
   if (is.null(forecast) || length(forecast) == 0) {
     return(hc)
   }
 
-  forecast_lower <- forecast - 1.96 * forecast_sd
-  forecast_upper <- forecast + 1.96 * forecast_sd
-  forecast_x <- zoo::as.Date(forecast) %>% highcharter::datetime_to_timestamp()
-
-  hc %>%
+  hc <- hc %>%
     highcharter::hc_add_series(
       forecast,
       type = "spline",
@@ -138,8 +135,13 @@ hc_add_forecast <- function(hc, x) {
       dashStyle = "shortdash",
       color = "grey",
       id = "forecast"
-    ) %>%
-    highcharter::hc_add_series(
+    )
+  if (!length(forecast_sd)) return(hc)
+  forecast_lower <- forecast - 1.96 * forecast_sd
+  forecast_upper <- forecast + 1.96 * forecast_sd
+  forecast_x <- highcharter::datetime_to_timestamp(zoo::as.Date(forecast_lower))
+
+  hc %>% highcharter::hc_add_series(
       type = "areasplinerange",
       opacity = 0.15,
       color = "blue",

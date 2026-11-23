@@ -135,8 +135,8 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     sa_indir <- x$adjustedIndirect
 
     series <- cbind(y, sa_dir, sa_indir)
-    forecast <- x$output$user_defined$y_f
-    forecast_se <- x$output$user_defined$y_ef
+    forecast <- chart_series$y_f
+    forecast_se <- chart_series$y_ef
     has_forecast <- isTRUE(forecasts) && !is.null(forecast) &&
       length(forecast) > 0L && any(is.finite(forecast))
     has_interval <- has_forecast && !is.null(forecast_se) &&
@@ -229,7 +229,8 @@ plot.hierarchicalTimeSeries <- function(x, main=NULL,
     graphObj
   }
 
-  if (!is.null(x$output$user_defined)) {
+  chart_series <- fitted_plot_series(x)
+  if (!is.null(chart_series)) {
 
     graphObj <- postRunPlot(
       main = main, rangeSelector = rangeSelector, drawPoints = drawPoints,

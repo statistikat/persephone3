@@ -4,12 +4,14 @@
 \alias{hc_add_forecast}
 \title{Add forecast to highchart (internal helper)}
 \usage{
-hc_add_forecast(hc, x)
+hc_add_forecast(hc, x, series = x$user_defined)
 }
 \arguments{
 \item{hc}{A highchart object}
 
 \item{x}{Output object from seasonal adjustment}
+
+\item{series}{Chart series, including any point forecasts and standard errors.}
 }
 \value{
 A highchart object with forecast added

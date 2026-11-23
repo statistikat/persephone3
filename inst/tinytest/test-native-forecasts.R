@@ -34,6 +34,30 @@ x$run()
 expect_identical(length(x$forecasts$points$y), 12L)
 expect_false(identical(old$provenance$request_fingerprint, x$result$provenance$request_fingerprint))
 
+# Both chart engines show the points, with no currency or scale conversion.
+points <- x$forecasts$points$y
+hc <- x$hchart()$x$hc_opts$series
+hc_names <- vapply(hc, "[[", character(1), "name")
+expect_false("confidence interval" %in% hc_names)
+expect_identical(vapply(hc[[match("forecast", hc_names)]]$data, "[[", numeric(1), 2L),
+                 as.numeric(points))
+dy <- x$plot()
+index <- match("Forecasts", dy$x$attrs$labels)
+expect_identical(as.numeric(tail(dy$x$data[[index]], length(points))), as.numeric(points))
+expect_false("Forecasts" %in% x$plot(forecasts = FALSE)$x$attrs$labels)
+
+# Two fitted components retain their selected forecasts in a hierarchy.
+h <- perHts(a = x, b = x, method = "x13", template = "rsa3", iterate = FALSE,
+            speclist = list(forecast = -1L), backend = "native")
+h$run()
+expect_equal(h$forecastsIndirect$points$y, 2 * points, tolerance = 0)
+expect_identical(h$forecastsIndirect$standard_errors$y, NULL)
+direct <- h$forecastsDirect$points$y
+graph <- plot(h, showOutliers = FALSE)
+index <- match("Forecasts", graph$x$attrs$labels)
+expect_identical(as.numeric(tail(graph$x$data[[index]], length(direct))), as.numeric(direct))
+expect_true(all(c("Direct SA", "Indirect SA") %in% graph$x$attrs$labels))
+
 # The independent reference exposes cal_f and y_ef on its own horizon;
 # compare matching calendar periods on each delivered point series.
 if (requireNamespace("rjd3x13", quietly = TRUE)) {
