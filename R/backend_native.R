@@ -628,6 +628,20 @@ backend_native_auto_fit <- function(ts, spec) {
   fit
 }
 
+native_x13_components <- function(fit, spec) {
+  # X13Extractor returns observed A1 for y and restored D16 for s. D18 can
+  # also contain user-assigned calendar effects outside the rjd3 cal field.
+  # The automatic RSA3 design contains only the selected outliers.
+  calendar_free <- inherits(spec, "persephone_native_auto_spec") ||
+    (inherits(spec, "persephone_native_spec") && !any(vapply(spec$variables, function(v) {
+      v$class %in% c("days_related", "moving_holiday") ||
+        (v$class == "user" && v$effect == "calendar_effect")
+    }, logical(1))))
+  list(y = fit$preadjustment$tables$a1, t = fit$finalTrend, sa = fit$finalSA,
+       s = fit$finals$tables$d16, i = fit$finalIrregular,
+       cal = if (calendar_free) fit$finals$tables$d18)
+}
+
 # Versioned envelope for the native fit. Deliberately NOT an rjd3-shaped
 # result and not classed "persephone_result": it is a distinct honest type.
 normalize_native_result <- function(fit, spec, ts) {
@@ -641,8 +655,7 @@ normalize_native_result <- function(fit, spec, ts) {
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts)))) {
     stop("Specification frequency does not match the result's observed series.", call. = FALSE)
   }
-  components <- list(y = NULL, t = fit$finalTrend, sa = fit$finalSA,
-                     s = NULL, i = fit$finalIrregular, cal = NULL)
+  components <- native_x13_components(fit, spec)
   component_names <- c("y", "t", "sa", "s", "i", "cal")
   field_names <- c(component_names, paste0(component_names, "_f"), "y_ef")
   availability <- data.frame(
@@ -686,10 +699,8 @@ normalize_native_result <- function(fit, spec, ts) {
 
 # Versioned envelope for the automatic fit: the honest sibling of the
 # restricted envelope. Deliberately NOT an rjd3-shaped result and not classed
-# "persephone_result"; the component set is the delivered X-11 finals only
-# (y/s/cal and all forecast outputs are not_provided on the zero-horizon
-# automatic surface), and the decision chain (rkalos $chain/$selection) is
-# carried as provenance evidence, not reinterpreted.
+# "persephone_result". Components and forecasts retain the dated rkalos
+# tables; the preprocessing decision chain is carried as provenance.
 normalize_native_automatic_result <- function(fit, spec, ts) {
   if (inherits(spec, "persephone_spec") &&
       inherits(spec$parameters, "persephone_native_auto_spec")) {
@@ -699,8 +710,7 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts)))) {
     stop("Specification frequency does not match the result's observed series.", call. = FALSE)
   }
-  components <- list(y = NULL, t = fit$finalTrend, sa = fit$finalSA,
-                     s = NULL, i = fit$finalIrregular, cal = NULL)
+  components <- native_x13_components(fit, spec)
   component_names <- c("y", "t", "sa", "s", "i", "cal")
   forecasts <- native_automatic_forecasts(fit, ts)
   state <- function(value) {

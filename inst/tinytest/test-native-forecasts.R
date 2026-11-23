@@ -63,7 +63,14 @@ expect_true(all(c("Direct SA", "Indirect SA") %in% graph$x$attrs$labels))
 if (requireNamespace("rjd3x13", quietly = TRUE)) {
   ref <- rjd3x13::x13_fast(AirPassengers,
     spec = rjd3x13::set_x11(rjd3x13::x13_spec("rsa3"), fcasts = 6, bcasts = 3),
-    userdefined = paste0(names(expected), "_f"))
+    userdefined = c("y", "s", "cal", paste0(names(expected), "_f")))
+  for (key in c("y", "s", "cal")) {
+    observed <- old$components[[key]]
+    reference <- ref$user_defined[[key]]
+    expect_identical(c(start(observed), end(observed), frequency(observed)),
+                     c(start(reference), end(reference), frequency(reference)))
+    expect_true(max(abs(as.numeric(observed) - as.numeric(reference))) <= 1e-8)
+  }
   for (key in names(expected)) {
     target <- window(ref$user_defined[[paste0(key, "_f")]], start = start(expected[[key]]),
                      end = end(expected[[key]]))

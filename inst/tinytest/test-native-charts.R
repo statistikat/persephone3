@@ -28,13 +28,17 @@ for (obj in list(fixed, automatic)) {
     expect_identical(vapply(points, "[[", numeric(1), 2L), as.numeric(expected[[name]]))
   }
   effects <- plotSeasIrrCal(obj, plotEngine = "dygraph", annualComparison = 1L)
-  expect_identical(effects$x$attrs$labels[-1L], "Irregular Component")
+  labels <- c("Seasonal Component", "Irregular Component", "Calendar Effects")
+  expect_identical(effects$x$attrs$labels[-1L], labels)
   expect_identical(as.Date(effects$x$data[[1L]]), dates)
-  expect_identical(as.numeric(effects$x$data[[2L]]), as.numeric(obj$result$components$i))
   hc_effects <- obj$plotSeasIrrCal()$x$hc_opts$series
-  expect_identical(vapply(hc_effects, "[[", character(1), "name"), "Irregular Component")
-  expect_identical(vapply(hc_effects[[1L]]$data, "[[", numeric(1), 2L),
-                   as.numeric(obj$result$components$i))
+  expect_identical(vapply(hc_effects, "[[", character(1), "name"), labels)
+  fields <- list(obj$output$finals$tables$d16, obj$output$finalIrregular, obj$output$finals$tables$d18)
+  for (i in seq_along(fields)) {
+    expect_identical(as.numeric(effects$x$data[[i + 1L]]), as.numeric(fields[[i]]))
+    expect_identical(vapply(hc_effects[[i]]$data, "[[", numeric(1), 2L), as.numeric(fields[[i]]))
+  }
+  expect_identical(obj$result$components$y, obj$output$preadjustment$tables$a1)
   for (type in c("original", "sa", "irregular")) {
     signal <- switch(type, original = diff(obj$ts), sa = diff(obj$result$components$sa),
                      irregular = obj$result$components$i)
@@ -60,3 +64,16 @@ for (obj in list(fixed, automatic)) {
                  as.numeric(outliers$date) * 86400000, tolerance = 0)
   }
 }
+
+# A deterministic seasonal regressor is restored after the X-11 pass.
+fixed$updateParams(variables = list(list(class = "user", effect = "seasonal",
+  coefficient = 10, columns = list(january = as.numeric(cycle(AirPassengers) == 1L)))))
+fixed$run()
+expect_false(identical(fixed$output$results$d10, fixed$output$finals$tables$d16))
+expect_identical(fixed$result$components$s, fixed$output$finals$tables$d16)
+fixed$updateParams(variables = list(list(class = "user", effect = "calendar_effect",
+  coefficient = 10, columns = list(january = as.numeric(cycle(AirPassengers) == 1L)))))
+fixed$run()
+expect_null(fixed$result$components$cal)
+expect_identical(fixed$result$components$s, fixed$output$finals$tables$d16)
+expect_false("Calendar Effects" %in% plotSeasIrrCal(fixed, plotEngine = "dygraph")$x$attrs$labels)

@@ -1008,6 +1008,12 @@ Native X-13 reports now show the final Henderson length and seasonal filters sel
 
 The reporting suite passed **46/46** assertions without Java and **58/58** with rjd3. For AirPassengers, all six compared quality-report columns agreed between backends for both RSA3 and RSA0. The reference diagnostics suite passed **180/180**. [Report implementation](R/generate_Qr_List.R) · [Product checks](inst/tinytest/test-native-reporting.R)
 
+### Observed X-13 components in the public result
+
+Both native X-13 routes now return the observed A1 series and the seasonal D16 series, including restored deterministic seasonal effects. Calendar-free designs also expose the neutral calendar effect. The restricted route leaves the public calendar field unavailable for manually classified calendar regressors because their allocation in D18 can differ from the reference preprocessing calendar effect. The raw D18 table remains accessible.
+
+The installed package passed **83/83** chart checks with and without Java, including a seasonal regressor and a user-assigned calendar effect. The forecast suite passed **56/56** without Java and **72/72** with the JVM. All three observed fields matched the reference on the nonzero-horizon RSA3 fit within 1e-8 and exactly on the fixed additive fit. [Component normalization](R/backend_native.R) · [Chart regressions](inst/tinytest/test-native-charts.R) · [Fixed-model reference](inst/tinytest/test-parity.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

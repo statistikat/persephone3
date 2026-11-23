@@ -625,8 +625,8 @@ local({
   expect_null(res$forecasts)                 # zero_horizon_only
   expect_null(auto_fit_m4$forecasts)
   avail <- stats::setNames(res$availability$state, res$availability$field)
-  expect_true(all(avail[c("t", "sa", "i")] == "available"))
-  expect_true(all(avail[c("y", "s", "cal", "y_f", "t_f", "sa_f", "s_f",
+  expect_true(all(avail[c("y", "t", "sa", "i", "s", "cal")] == "available"))
+  expect_true(all(avail[c("y_f", "t_f", "sa_f", "s_f",
                            "i_f", "cal_f", "y_ef")] == "not_provided"))
   sa <- res$components$sa
   expect_identical(as.integer(stats::frequency(sa)), 12L)
@@ -894,13 +894,17 @@ dual_lane <- local({
                            mode = "Additive", fcasts = 0, bcasts = 0,
                            lsigma = 1.5, usigma = 2.5)
   ud <- rjd3x13::x13_fast(series_m, spec = spec,
-                          userdefined = c("sa", "t", "i"))$user_defined
+                          userdefined = c("sa", "t", "i", "y", "s", "cal"))$user_defined
   keys <- c("sa", "t", "i")
   product <- perX13(series_m, "rsa0", backend = "rjd3")
   product$updateParams(spec = spec)
   product$run()
   expect_null(product$forecasts)
   for (key in keys) expect_identical(product$result$components[[key]], ud[[key]])
+  for (key in c("y", "s", "cal")) {
+    expect_identical(as.numeric(native_fit$result$components[[key]]), as.numeric(ud[[key]]))
+    expect_identical(time_domain(tsp(native_fit$result$components[[key]])), time_domain(tsp(ud[[key]])))
+  }
   reference <- parity_build(stats::setNames(lapply(keys, function(k) ud[[k]]), keys),
                             forecast_n = length(ud$y_f))
   candidate <- parity_native_fit("x13", "restricted", 12L)

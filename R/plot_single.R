@@ -1,9 +1,8 @@
-# Native fits store trend and SA in the normalized result and retain the
-# observed input on the series object. Older rjd3 fits have raw outputs only.
+# Older native fits keep the observed series on the object only.
 fitted_plot_series <- function(x) {
   if (identical(x$result$backend, "native")) {
     components <- x$result$components
-    components$y <- x$ts
+    if (is.null(components$y)) components$y <- x$ts
     forecast <- x$result$forecasts
     if (!is.null(forecast)) {
       for (field in names(forecast$points)) components[[paste0(field, "_f")]] <- forecast$points[[field]]
