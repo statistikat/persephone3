@@ -1034,6 +1034,10 @@ The product exposes the TRAMO residual time series and its residual standard err
 
 The installed application passed **20/20** residual assertions without Java and **28/28** with rjd3. Adjacent RSA0 tests passed **187/187** and **222/222** respectively. The existing reference plot suite passed **16/16**. The pinned R binding separately qualified all 570 dated residuals and six standard errors across the public corpus. [Product regression](inst/tinytest/test-native-residuals.R) · [Pinned residual binding](https://github.com/statistikat/rkalos/commit/9e87b84f737b14cb4830e971098cc17a8350ed04)
 
+### RSA3 observed calendar with nonzero horizons
+
+The fixed X-13 calendar allocation also matched RSA3 specifications through their common R class. On an extended fit that selected A6 and A7 from the extended calendar. The product now applies the fixed allocation only to the restricted template and uses the observed D18 table for RSA3. With three backcasts and six forecasts, all 144 observed calendar effects align with the original series and the six forecast effects keep their future dates. The forecast suite passed **58/58** assertions without Java and **74/74** with the reference. [Forecast domains](inst/tinytest/test-native-forecasts.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

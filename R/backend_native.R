@@ -631,7 +631,7 @@ backend_native_auto_fit <- function(ts, spec) {
 native_x13_components <- function(fit, spec) {
   pre <- fit$preadjustment
   cal <- fit$finals$tables$d18
-  if (inherits(spec, "persephone_native_spec")) {
+  if (identical(spec$template, "restricted")) {
     # CalendarEffect selects days-related and moving-holiday variables; a
     # user variable assigned to the calendar component only contributes to D18.
     a6 <- pre$tables$a6

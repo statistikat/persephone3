@@ -22,6 +22,8 @@ expect_identical(unserialize(serialize(fc, NULL)), fc)
 expect_identical(as.numeric(start(raw$preadjustment$tables$a1b)), c(1948, 10))
 expect_identical(tsp(x$result$components$t), tsp(AirPassengers))
 old <- x$result
+expect_identical(tsp(old$components$cal), tsp(old$components$y))
+expect_identical(length(old$components$cal), length(AirPassengers))
 for (bad in list(NA_integer_, -2147483647, 0.9, TRUE, c(1L, 2L), "6", Inf)) {
   expect_error(x$updateParams(forecast = bad), "forecast|index range")
   expect_identical(x$result, old)
