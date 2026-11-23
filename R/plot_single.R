@@ -1,3 +1,14 @@
+# Native fits store trend and SA in the normalized result and retain the
+# observed input on the series object. Older rjd3 fits have raw outputs only.
+fitted_plot_series <- function(x) {
+  if (identical(x$result$backend, "native")) {
+    components <- x$result$components
+    components$y <- x$ts
+    return(components)
+  }
+  x$output$user_defined
+}
+
 #' @name plot
 #' @examples
 #' # Plotting persephoneSingle objects
@@ -175,7 +186,7 @@ plot.persephoneSingle <- function(
         otlColors <- list(AO = "red", LS = "orange", TC = "dodgerblue")
         otlColor <- otlColors[[otlType]]
       }
-      if (is.null(dim(otl[[1]]))) {
+      if (NCOL(otl[[1]]) == 1L) {
         seriesName <- "otl[[1]]"
       } else {
         seriesName <- paste0("otl[[1]].otl", otlType)
@@ -216,11 +227,11 @@ plot.persephoneSingle <- function(
       main <- "Original, SA and Trend Series"
     }
 
-    y <- x$output$user_defined$y
-    t <- x$output$user_defined$t
-    sa <- x$output$user_defined$sa
-    ppm_y_f <- x$output$user_defined$y_f # nolint
-    ppm_y_ef <- x$output$user_defined$y_ef # nolint
+    y <- series$y
+    t <- series$t
+    sa <- series$sa
+    ppm_y_f <- series$y_f # nolint
+    ppm_y_ef <- series$y_ef # nolint
     # forecasts currently only plotted for original series, maybe allow t and
     # sa forecasts in some other setting??
 
@@ -342,7 +353,8 @@ plot.persephoneSingle <- function(
     graphObj
   }
 
-  if (!is.null(x$output$user_defined)) {
+  series <- fitted_plot_series(x)
+  if (!is.null(series)) {
     graphObj <- postRunPlot(
       main = main,
       forecasts = forecasts,

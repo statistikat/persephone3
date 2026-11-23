@@ -39,7 +39,7 @@ hchart.persephoneSingle <- function(object, ...) {
     stop("Model has not been run yet. Please run object$run() first.", call. = FALSE)
   }
 
-  ud <- object$output$user_defined
+  ud <- fitted_plot_series(object)
 
   outliers <- tryCatch({getOutliers(object)$date},
                        error = function(e) { NULL })
@@ -77,7 +77,7 @@ hchart.persephoneSingle <- function(object, ...) {
   # Add outlier markers if available
   if (!is.null(outliers) && length(outliers) > 0) {
     hc <- hc %>%
-      highcharter::hc_xAxis(plotLines = lapply(outliers, function(o) {
+      highcharter::hc_xAxis(plotLines = lapply(outliers[!is.na(outliers)], function(o) {
         list(
           value = highcharter::datetime_to_timestamp(o),
           color = "#FF83FA",

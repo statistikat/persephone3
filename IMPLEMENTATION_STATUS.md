@@ -934,19 +934,17 @@ persists and was carried into `rlib-m5-base`/`rlib-m5-adv` byte-identically
 `tmp_opencode/rlib-m5-base` (b90d367 + bf996ff) and `tmp_opencode/rlib-m5-adv`
 (49e2b11-tree snapshot + bf996ff), logs `m5-*.log`.
 
+## M5 application work on the published rkalos interface
+
+The application pins rkalos `50eee9f`. Both restricted and automatic native X-13 fits are available. Native TRAMO-SEATS is waiting for the core assembly, its oracle and an exported R fit. Item 28 governs the fixed-structure templates. The product default remains rjd3.
+
+### Single-series fitted charts (application items 14 and 26)
+
+Implemented and checked on macOS ARM64 on 2026-11-23. The dygraph and Highchart use the observed input and the fitted native trend and seasonally adjusted components. Previously the dygraph showed an original-only preview after a native fit and the Highchart failed. A restricted fit and an automatic fit with a detected outlier passed **26/26** Java-free assertions on serialized values, calendar dates, markers, and the before-fit preview. The rjd3 plot suites passed **11/11** single-series and **36/36** hierarchy assertions on Temurin 21.0.11. The native-foundations workflow runs the new chart checks. [Chart regressions](inst/tinytest/test-native-charts.R)
+
 ## Next application work
 
-1. Continue item 14: difficult-model and selection-boundary product compatibility,
-   platform CI and presentation/reporting parity, using Kalos-owned evidence.
-2. Connect a restricted native fit only when Kalos completes its qualified X-11
-   path (items 22b/22c). Delegate engine calls through rkalos; keep R6 workflows here.
-3. Complete product parity item 26, then review item 27's default-backend cutover.
-   Full Java removal remains gated by delivered features and independent evidence.
-
-The next numerical item is 22b.3a in Kalos. Its existing sigma-weight default
-decision is documented there and is not part of this repository-split decision.
-Accurate covariance/residual defaults, Java-free legacy comparison options and
-the selected JDemetra MSR default are unchanged.
+Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Connect native TRAMO-SEATS after its qualified R entry point is available. Item 27 requires the product-parity evidence and a separate default-backend review.
 
 ## Application correctness record
 
