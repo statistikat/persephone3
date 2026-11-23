@@ -23,9 +23,19 @@ generate_Qr_List <- function(x) {
   final_henderson <- seasonal_filter <- NA_character_
   q_stat <- NA_real_
   if (x$method == "x13") {
-    filter <- diagnostic_number(diagnostic_at(x$output, c("decomposition", "final_henderson")))
-    if (!is.na(filter) && filter > 0 && filter == floor(filter)) final_henderson <- paste0("H", filter)
-    filter <- diagnostic_at(x$output, c("decomposition", "final_seasonal"))
+    if (identical(x$result$backend, "native")) {
+      stage <- x$result$selection$d
+      henderson <- diagnostic_number(stage$final_henderson_length)
+      codes <- stage$seas_filter
+      filter <- if (length(codes) && all(codes %in% c(0, 1, 3, 5, 9, 15))) {
+        ifelse(codes == 0, "FILTER_STABLE", paste0("FILTER_S3X", codes))
+      }
+    } else {
+      henderson <- diagnostic_number(diagnostic_at(x$output, c("decomposition", "final_henderson")))
+      filter <- diagnostic_at(x$output, c("decomposition", "final_seasonal"))
+    }
+    if (!is.na(henderson) && henderson > 0 && henderson == floor(henderson))
+      final_henderson <- paste0("H", henderson)
     if (is.character(filter) && length(filter) && all(!is.na(filter))) {
       seasonal_filter <- paste(unique(filter), collapse = ", ")
     }
@@ -50,16 +60,39 @@ generate_Qr_List <- function(x) {
   }
   ntd <- diagnostic_number(user$regression.ntd)
   if (!is.na(ntd) && (ntd < 0 || ntd != floor(ntd))) ntd <- NA_real_
+  if (inherits(x$result, "persephone_native_restricted_fit") ||
+      (identical(x$result$backend, "native") &&
+       identical(x$result$specification$template,
+                 if (x$method == "x13") "rsa3" else "rsa0"))) {
+    # Automatic RSA3 and TRAMO RSA0 admit no calendar regressors. The fixed
+    # X-13 route can carry user-supplied effects without a calendar subtype.
+    variables <- x$result$specification$variables
+    classes <- vapply(variables, "[[", character(1), "class")
+    custom_calendar <- any(vapply(variables, function(v) {
+      identical(v$class, "user") && identical(v$effect, "calendar_effect")
+    }, logical(1)))
+    if (!custom_calendar && !"days_related" %in% classes) {
+      leap_year <- FALSE
+      ntd <- 0
+    }
+    if ("moving_holiday" %in% classes) moving_holiday <- TRUE
+    else if (!custom_calendar) moving_holiday <- FALSE
+  }
 
   original <- x$ts
   adjusted <- x$adjustedDirect
   max_adj <- NA_real_
-  if (length(original) == length(adjusted) && length(original) &&
-      identical(stats::tsp(original), stats::tsp(adjusted))) {
-    valid <- is.finite(original) & is.finite(adjusted)
+  if (length(original) && length(original) == length(adjusted) &&
+      stats::is.ts(original) && stats::is.ts(adjusted) &&
+      identical(stats::frequency(original), stats::frequency(adjusted)) &&
+      identical(stats::start(original), stats::start(adjusted)) &&
+      identical(stats::end(original), stats::end(adjusted))) {
+    original_values <- as.numeric(original)
+    adjusted_values <- as.numeric(adjusted)
+    valid <- is.finite(original_values) & is.finite(adjusted_values)
     # Relative adjustment is undefined at a zero original; never print Inf%.
-    if (all(valid) && !any(original == 0)) {
-      max_adj <- 100 * max(abs((original - adjusted) / original))
+    if (all(valid) && !any(original_values == 0)) {
+      max_adj <- 100 * max(abs((original_values - adjusted_values) / original_values))
     }
   }
   list(

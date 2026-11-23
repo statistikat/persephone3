@@ -1002,6 +1002,12 @@ The preceding JVM-profile application source archive passed a full macOS ARM64 `
 
 With rkalos 0.1.0.9005 the public RSA0 forecast and its chart confidence interval use the TRAMO preprocessing model's standard errors. The conditional SEATS errors remain available for all five decomposition series. The installed package passed **175/175** assertions without Java and **207/207** with rjd3. All six corpus fits exposed the dated original-series uncertainty. The 24-month AirPassengers model errors matched the JVM's explicit `y_ef(24)` reference within the core tolerance, and both chart bounds matched the public model errors exactly. [Forecast qualification](inst/tinytest/test-native-tramoseats.R) · [Pinned binding](https://github.com/statistikat/rkalos/commit/e92f07604d2e95a678e479c784f28a50cc6c8d7a)
 
+### Native EUROSTAT quality reports (item 26)
+
+Native X-13 reports now show the final Henderson length and seasonal filters selected by the D pass, including mixed per-month filters. The qualified RSA3 and TRAMO RSA0 reports show zero trading-day regressors and identify the absent leap-year and moving-holiday terms. Fixed X-13 designs preserve unknown calendar subtypes. Maximum relative adjustment now accepts matching monthly or quarterly calendars when R stores their endpoints one floating-point unit apart.
+
+The reporting suite passed **46/46** assertions without Java and **58/58** with rjd3. For AirPassengers, all six compared quality-report columns agreed between backends for both RSA3 and RSA0. The reference diagnostics suite passed **180/180**. [Report implementation](R/generate_Qr_List.R) · [Product checks](inst/tinytest/test-native-reporting.R)
+
 ## Next application work
 
 Continue item 14 for difficult models, selection boundaries and supported platforms. Item 26 also covers dashboards, quality reports and forecasts. Qualify further TRAMO templates as their core routes become available. Item 27 requires the product-parity evidence and a separate default-backend review.

@@ -54,3 +54,53 @@ local({
   expect_identical(list(h$paramsDirect, h$components$a$params, h$components$b$params),
                    previous)
 })
+
+local({
+  filters <- list(seasonal = rep(c("s3x3", "s3x5"), 6L), trend_length = 13L)
+  fixed <- perX13(AirPassengers, "restricted", speclist = filters, backend = "native")
+  fixed$run()
+  qr <- fixed$generateQrTable()
+  expect_identical(qr$Final.Henderson.Filter, "H13")
+  expect_identical(qr$Seasonal.Filter, "FILTER_S3X3, FILTER_S3X5")
+  expect_identical(qr$MovingHoliday, FALSE)
+  expect_identical(qr$LeapYear, FALSE)
+  expect_equal(qr$NbTD, 0)
+
+  var <- function(class, effect) {
+    list(class = class, effect = effect, coefficient = 1,
+         columns = list(effect = as.numeric(seq_along(AirPassengers) == 50L)))
+  }
+  fixed$updateParams(variables = list(var("days_related", "calendar_effect"),
+                                      var("moving_holiday", "calendar_effect")))
+  fixed$run()
+  qr <- fixed$generateQrTable()
+  expect_true(qr$MovingHoliday)
+  expect_true(is.na(qr$LeapYear) && is.na(qr$NbTD))
+  fixed$updateParams(variables = list(var("user", "calendar_effect")))
+  fixed$run()
+  qr <- fixed$generateQrTable()
+  expect_true(is.na(qr$MovingHoliday) && is.na(qr$LeapYear) && is.na(qr$NbTD))
+
+  for (method in c("x13", "tramoseats")) {
+    constructor <- if (method == "x13") perX13 else perTramo
+    tpl <- if (method == "x13") "rsa3" else "rsa0"
+    model <- constructor(AirPassengers, tpl, backend = "native")
+    model$run()
+    qr <- model$generateQrTable()
+    expect_identical(qr$LeapYear, FALSE)
+    expect_identical(qr$MovingHoliday, FALSE)
+    expect_equal(qr$NbTD, 0)
+    measure <- function(adjusted) paste0(round(100 * max(abs(
+      as.numeric(AirPassengers) - as.numeric(adjusted)) / as.numeric(AirPassengers))), "%")
+    expect_identical(qr$Max.Adj, measure(model$adjusted))
+    if (requireNamespace(paste0("rjd3", method), quietly = TRUE)) {
+      spec <- if (method == "x13") list(x11.fcasts = 0L) else NULL
+      reference <- constructor(AirPassengers, tpl, speclist = spec, backend = "rjd3")
+      reference$run()
+      ref <- reference$generateQrTable()
+      for (key in c("Final.Henderson.Filter", "Seasonal.Filter", "LeapYear",
+                    "MovingHoliday", "NbTD", "Max.Adj"))
+        expect_equal(qr[[key]], ref[[key]], info = paste(method, key))
+    }
+  }
+})
