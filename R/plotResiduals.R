@@ -1,3 +1,9 @@
+fitted_residuals <- function(x) {
+  if (identical(x$result$backend, "native")) return(x$result$diagnostics$residuals)
+  ud <- x$output$user_defined
+  list(tsres = ud$residuals.tsres, ser = ud$residuals.ser)
+}
+
 #' Several interactive plots in connection with residuals for a persephone
 #' object
 #'
@@ -53,7 +59,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
 
   y <- NULL # nolint
 
-  if (is.null(x$output$user_defined)) {
+  if (is.null(x$output)) {
     stop("No results from run available.\n")
   }
 
@@ -62,6 +68,13 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
   }else{
     which <- match.arg(which)
   }
+
+  residuals <- fitted_residuals(x)
+  if (!stats::is.ts(residuals$tsres))
+    stop("The fit does not supply dated preprocessing residuals.", call. = FALSE)
+  if (which %in% c("sreshist", "nqq") &&
+      (length(residuals$ser) != 1L || !is.finite(residuals$ser) || residuals$ser <= 0))
+    stop("Standardized residual plots require a positive residual standard error.", call. = FALSE)
 
   if (which == "res") {
     if (is.null(main)) {
@@ -74,7 +87,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
                 path = system.file("plotters/barchart.js",
                                    package = "dygraphs"))
     }
-    p <- dygraph(x$output$user_defined$residuals.tsres, main = main) %>%
+    p <- dygraph(residuals$tsres, main = main) %>%
       dySeries("V1", label = "Residual value") %>%
       dyBarChart()
 
@@ -90,7 +103,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Histogram of Standardized Residuals and Normal Curve"
     }
 
-    result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
+    result <- residuals$tsres / residuals$ser
 
     result <- data.frame(
       date = paste0(c(floor(time(result) + .01)), "-",
@@ -115,7 +128,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Normal Q-Q Plot"
     }
 
-    # result <- x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser
+    # result <- residuals$tsres / residuals$ser
     # result <- data.frame(date = paste0(
     #   c(floor(time(result) + .01)), "-",
     #   stringfix(c(cycle(result)), 2, "0"), "-01"),
@@ -129,7 +142,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
     #   ggtitle(main) +
     #   theme_bw()
 
-    result <- as.numeric(x$output$user_defined$residuals.tsres / x$output$user_defined$residuals.ser)
+    result <- as.numeric(residuals$tsres / residuals$ser)
     result <- qqnorm(result, plot.it = FALSE)
 
     result <- data.frame(
@@ -152,7 +165,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Autocorrelations of the Residuals"
     }
 
-    result <- acf(x$output$user_defined$residuals.tsres, plot = FALSE)
+    result <- acf(residuals$tsres, plot = FALSE)
 
     # confidence interval as in R package forecast
     ci <- 0.95 #coverage probability for confidence interval
@@ -165,7 +178,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
 
 
     # require(forecast)
-    # ggAcf(x$output$user_defined$residuals.tsres, lag.max = NULL,
+    # ggAcf(residuals$tsres, lag.max = NULL,
     #       type = c("correlation", "covariance", "partial"),
     #       plot = TRUE, na.action = na.contiguous, demean=TRUE)
     #
@@ -187,7 +200,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Autocorrelations of the Squared Residuals"
     }
 
-    result <- acf(x$output$user_defined$residuals.tsres ^ 2, plot = FALSE)
+    result <- acf(residuals$tsres ^ 2, plot = FALSE)
 
     # confidence interval as in R package forecast
     ci <- 0.95 #coverage probability for confidence interval
@@ -213,7 +226,7 @@ plotResiduals <-   function(x, which = c("res", "acf", "acf2", "pacf",
       main <- "Partial Autocorrelations of the Residuals"
     }
 
-    result <- pacf(x$output$user_defined$residuals.tsres, plot = FALSE)
+    result <- pacf(residuals$tsres, plot = FALSE)
 
     # confidence interval as in R package forecast
     ci <- 0.95 #coverage probability for confidence interval

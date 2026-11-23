@@ -1,6 +1,6 @@
 # Persephone implementation status and next-work plan
 
-Updated: **2026-11-15**. The repository split is integrated on
+Updated: **2026-11-23**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
 ## Repository ownership
@@ -1027,6 +1027,12 @@ The earlier RSA0 application archive at rkalos 0.1.0.9004 completed its full mac
 Fixed X-13 now combines the A6 trading-day and A7 moving-holiday effects on the fitted scale. This keeps user regressors assigned to the calendar component in D18 and out of the public preprocessing calendar effect. The six fixed weekday coefficients and an Easter effect matched the live reference to 1e-12 on both additive and multiplicative scales. The additive RSA0 calendar effect is zero on every observed and requested forecast month, including the explicit 24-month reference horizon.
 
 Chart and RSA0 regressions passed **84/84** and **187/187** without Java and **90/90** and **222/222** with the pinned JVM. The preceding observed-components change also passed the full **439/439** parity suite. [X-13 chart regressions](inst/tinytest/test-native-charts.R) · [SEATS calendar regressions](inst/tinytest/test-native-tramoseats.R)
+
+### Native RSA0 preprocessing residuals in the dashboard
+
+The product exposes the TRAMO residual time series and its residual standard error through `$result$diagnostics$residuals`. All six residual plots, the residual spectrum and the single-series dashboard use the same fields. The AirPassengers residuals cover February 1950 through December 1960. All 131 values, the scalar standard error and the five static plot data sets matched the live JVM reference exactly.
+
+The installed application passed **20/20** residual assertions without Java and **28/28** with rjd3. Adjacent RSA0 tests passed **187/187** and **222/222** respectively. The existing reference plot suite passed **16/16**. The pinned R binding separately qualified all 570 dated residuals and six standard errors across the public corpus. [Product regression](inst/tinytest/test-native-residuals.R) · [Pinned residual binding](https://github.com/statistikat/rkalos/commit/9e87b84f737b14cb4830e971098cc17a8350ed04)
 
 ## Next application work
 

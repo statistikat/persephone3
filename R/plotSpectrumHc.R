@@ -228,7 +228,7 @@ plotSpectrum_series <- function(
 
   fitted <- fitted_plot_series(x)
   tsobj <- switch(tsType, original = x$ts, sa = fitted$sa, irregular = fitted$i,
-                  residuals = fitted$residuals.tsres %||% x$output$regarima$residuals)
+                  residuals = fitted_residuals(x)$tsres %||% x$output$regarima$residuals)
   if (!stats::is.ts(tsobj)) {
     stop("The fit does not supply a time series for the ", tsType, " spectrum.",
          call. = FALSE)

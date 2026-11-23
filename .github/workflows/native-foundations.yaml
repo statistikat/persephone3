@@ -41,5 +41,7 @@ jobs:
           stopifnot(all(as.logical(forecasts)))
           dashboard <- tinytest::run_test_file("inst/tinytest/test-native-dashboard.R")
           stopifnot(all(as.logical(dashboard)))
+          residuals <- tinytest::run_test_file("inst/tinytest/test-native-residuals.R")
+          stopifnot(all(as.logical(residuals)))
           tramo <- tinytest::run_test_file("inst/tinytest/test-native-tramoseats.R")
           stopifnot(all(as.logical(tramo)))

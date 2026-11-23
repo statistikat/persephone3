@@ -202,7 +202,7 @@ dashboard_single <- function(x, file = NULL, title = "Diagnostics") {
 
   # All surfaces use the same typed values and classification rules.
   metrics <- diagnostic_dashboard_values(x)
-  resids <- diagnostic_at(x$output, c("preprocessing", "estimation", "res"))
+  resids <- fitted_residuals(x)$tsres
   out <- tryCatch(diagnostic_outliers(x), error = function(e) NULL)
   n_out <- if (is.null(out)) NA_integer_ else nrow(out)
   q1 <- metrics$q1

@@ -81,6 +81,9 @@ x$result$seats_forecast_standard_errors$t
 
 The original-series chart uses the TRAMO model forecast standard errors. The
 last field gives the conditional SEATS standard errors for the trend.
+The dated preprocessing residuals and their standard error are available in
+`x$result$diagnostics$residuals`. Use `x$plotResiduals("acf")` to inspect their
+autocorrelation.
 
 ## Further reading
 
