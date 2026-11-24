@@ -19,3 +19,6 @@ Meta
 *.tar.gz.asc
 *.Rout
 AGENTS.md
+
+/.quarto/
+**/*.quarto_ipynb
