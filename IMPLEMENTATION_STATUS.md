@@ -3,6 +3,16 @@
 Updated: **2026-11-23**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Full source verification for the family M5 checkpoint (2026-11-24)
+
+With the published rkalos `0.1.0.9021` dependency at `45cf058`,
+Persephone `21f09f3cf41a32d10aab0dbfda251736d49f7d60` passed
+**7,488/7,488** tinytest results in its full source check. Examples,
+rebuilt vignettes and the PDF manual passed; `R CMD check` reported
+`Status: OK`. The pinned rkalos source passed **308,774/308,774**
+serial and **308,778/308,778** OpenMP checks. The family M5 report is
+committed in the development repository at `77f6b98`.
+
 ## Repository ownership
 
 | Repository | Responsibility and implementation information |
