@@ -16,6 +16,15 @@ Dependency graph: `persephone3 → rkalos → kalos`, with `pykalos → kalos`.
 The four sibling checkouts live under `~/git/seasonaladjustment`.
 Each contains its own implementation status.
 
+## M5 RSAfull backend capability inventory (2026-11-24)
+
+The public backend inventory test now checks all four monthly stock TRAMO
+templates, including RSAfull. This resolves the sole failed assertion
+in the initial 7,488-result source check at `65ed210`. The corrected
+backend file passed **94/94** live and **41/41** Java-free assertions.
+The full rkalos `0.1.0.9021` package suites passed **308,774/308,774**
+serial and **308,778/308,778** OpenMP.
+
 ## M5 ordinary native RSAfull with calendar-adjusted products (2026-11-24)
 
 `perTramo(series, "rsafull", backend = "native")` uses published rkalos
