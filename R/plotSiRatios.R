@@ -28,15 +28,21 @@ si_plot_data <- function(x) {
   if (native && identical(x$result$method, "tramoseats")) {
     # The dashboard uses SEATS components before restoring AO and LS effects.
     table <- x$output$final
-    component <- function(key) table$values[[which(table$component == key & table$information == "Value")]]
+    component <- function(key) {
+      row <- which(table$component == key & table$information == "Value")
+      if (length(row)) table$values[[row]]
+    }
     s <- component("Seasonal")
     i <- component("Irregular")
-    si <- if (identical(x$output$mode, "multiplicative")) s * i else s + i
+    additive <- identical(x$output$mode, "additive")
   } else if (inherits(x$output$decomposition, "JD3_SEATS")) {
     ud <- x$output$user_defined
-    si <- if (ud$mode == "Additive") ud$decomposition.s_cmp + ud$decomposition.i_cmp else
-      ud$decomposition.s_cmp * ud$decomposition.i_cmp
+    s <- ud$decomposition.s_cmp
+    i <- ud$decomposition.i_cmp
+    additive <- ud$mode == "Additive"
   } else stop("The fit supplies no SI-ratio decomposition.", call. = FALSE)
+  if (!length(s)) stop("The fitted SEATS model has no stochastic seasonal component for an SI-ratio plot.", call. = FALSE)
+  si <- if (additive) s + i else s * i
   phase <- cycleName(si)
   data.frame(cycleName = phase, year = floor(as.numeric(stats::time(si))),
     `SI-Ratio` = as.numeric(si), Mean = stats::ave(as.numeric(si), phase, FUN = mean),

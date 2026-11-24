@@ -16,6 +16,23 @@ Dependency graph: `persephone3 → rkalos → kalos`, with `pykalos → kalos`.
 The four sibling checkouts live under `~/git/seasonaladjustment`.
 Each contains its own implementation status.
 
+## Twenty monthly native RSA3 products and missing seasonal uncertainty (2026-11-24)
+
+Persephone pins rkalos `0.1.0.9020` at `c3170b14bc9d2e8570389556f9d4cbf6e176435d`.
+Twenty stock RSA3 inputs cover reference retries in addition to seasonal
+restarts and fast-mean refits. The native result has 13,980 exact merged
+component and forecast observations, 2,105 dated innovations and the
+original-series forecast errors from all twenty fitted models.
+
+Two models have a neutral final seasonal factor and no stochastic seasonal
+component. Their conditional seasonal forecast uncertainty carries an
+explicit unavailable reason. The remaining point and error series retain
+their domains, and the SI plot explains the missing seasonal component on
+both backends. The installed application passed **1,311/1,311** Java-free
+and **1,933/1,933** live-reference checks. A separate full source check of
+`e356743` passed **4,823/4,823** tests, examples, rebuilt vignettes and the
+PDF manual with `Status: OK`.
+
 ## Completed integration changes
 
 - Declared required rkalos Imports and pinned its development source in Remotes.

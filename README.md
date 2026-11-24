@@ -78,12 +78,12 @@ detects outliers before SEATS decomposition. Use
 Its `$result$model$outliers` lists the fitted coefficients and positions.
 The original-series forecast intervals use its fitted TR1 standard errors.
 
-The native RSA3 route also identifies SARIMA orders. Fits accepted by the
-first reference comparison and the subsequent controller sweep produce
-components, point forecasts, dated original-series forecast errors, residuals and estimated outliers. The seasonal controller can
-restart identification and the fast mean test can trigger a fourth
-estimation pass. A rejected first reference comparison reports its
-engine error.
+The native RSA3 route identifies SARIMA orders and returns components, point
+forecasts, dated original-series forecast errors, residuals and estimated
+outliers. Identification supports seasonal restarts, fourth-pass mean
+refits, reduced outlier thresholds and repeated reference comparisons.
+When the fitted model has no stochastic seasonal component, its final
+seasonal factor is neutral and conditional seasonal uncertainty is unavailable.
 
 For a complete monthly series, the native RSA0 route estimates the airline model
 and decomposes it with SEATS. It runs without Java and defaults to 24 forecast

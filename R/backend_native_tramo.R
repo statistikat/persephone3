@@ -40,16 +40,19 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
   components <- list(y = fit$series, t = fit$finalTrend, sa = fit$finalSA,
                      s = fit$finalSeasonal, i = fit$finalIrregular, cal = neutral_calendar(fit$series))
   fields <- c(y = "Series", t = "Trend", sa = "SeasonallyAdjusted", s = "Seasonal", i = "Irregular")
-  rows <- function(table, information) {
+  rows <- function(table, information, optional = character()) {
     table <- table[table$information == information, , drop = FALSE]
     if (!nrow(table)) return(list())
     index <- match(fields, table$component)
-    if (anyNA(index) || anyDuplicated(table$component)) stop("Incomplete TRAMO-SEATS component rows.")
-    stats::setNames(as.list(table$values[index]), names(fields))
+    present <- !is.na(index)
+    if (anyDuplicated(table$component) || any(!names(fields)[!present] %in% optional))
+      stop("Incomplete TRAMO-SEATS component rows.")
+    stats::setNames(as.list(table$values[index[present]]), names(fields)[present])
   }
-  conditional <- rows(fit$final, "StdevForecast")
+  absent_seasonal <- !"Seasonal" %in% fit$final$component
+  conditional <- rows(fit$final, "StdevForecast", optional = if (absent_seasonal) "s" else character())
   errors <- conditional
-  reason <- list()
+  reason <- if (absent_seasonal) list(s = "The fitted SEATS model has no stochastic seasonal component.") else list()
   if (identical(fit$series_forecast_stdev_status, "available")) {
     errors$y <- fit$series_forecast_stdev
   } else {

@@ -163,7 +163,7 @@ tramoseatsSingle <- R6::R6Class(
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
 #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
 #'   Native TRAMO-SEATS supports the monthly RSA0, RSA1 and RSA3 templates on complete finite
-#'   series with a decomposable fitted model. RSA3 fits automatic orders after an accepted first reference comparison, including seasonal-controller restarts and fourth-pass mean refits. Set forecast and backcast via
+#'   series with a decomposable fitted model. RSA3 fits automatic orders with seasonal-controller restarts, fourth-pass mean refits and subsequent identification rounds after a rejected reference comparison. Set forecast and backcast via
 #'   speclist or updateParams. Positive counts specify months and negative counts
 #'   specify years. The defaults are two years of forecasts and zero backcasts.
 #'   The result includes fitted components, point forecasts and conditional
