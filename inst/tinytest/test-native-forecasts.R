@@ -1,5 +1,13 @@
 # Item 26 product boundary: preserve the public ts domains of the core's
 # final forecast windows, including their original scale and calendar.
+# Capture domain: bridge (PORTABLE). The live-JVM block below compares the
+# qualified native rsa3 products against live rjd3 fits; that comparison is
+# qualified on a JVM with HotSpot _dexp/_dlog intrinsics disabled (the capture
+# profile of kalos/docs/contracts/tramo-seats-bridge-contract.md; the ledger
+# tmp_opencode/m6-c-verify/rebaseline-ledger-2026-11-24.md, scratch, shows the
+# failures vanish under exactly those flags). On x86-64 it runs in the bridge
+# pass (see R/helpers.R); the guard defers it with a documented message or
+# refuses a mismatched single pass. On aarch64 the domains coincide.
 x <- perX13(AirPassengers, "rsa3", backend = "native",
             speclist = list(backcast = 3L, forecast = 6L))
 x$run()
@@ -62,7 +70,8 @@ expect_true(all(c("Direct SA", "Indirect SA") %in% graph$x$attrs$labels))
 
 # The independent reference exposes cal_f and y_ef on its own horizon;
 # compare matching calendar periods on each delivered point series.
-if (requireNamespace("rjd3x13", quietly = TRUE)) {
+if (requireNamespace("rjd3x13", quietly = TRUE) &&
+    persephone3:::oracle_domain_allows("bridge", "test-native-forecasts.R")) {
   ref <- rjd3x13::x13_fast(AirPassengers,
     spec = rjd3x13::set_x11(rjd3x13::x13_spec("rsa3"), fcasts = 6, bcasts = 3),
     userdefined = c("y", "s", "cal", paste0(names(expected), "_f")))

@@ -3,6 +3,73 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Oracle lane partitioned by JVM math-flag capture domain (2026-11-24)
+
+The M6 re-baseline investigation root-caused the x86_64 oracle-lane reds
+(118 of 8,444: test-native-forecasts 3, test-native-tramoseats-rsa1 42,
+rsa3 42, rsafull 11, test-native-x13-estimated 20 -- every one an
+in-session native vs live-JVM parity comparison with no stored reference
+behind it). The five bridge-parity files' live-JVM comparisons are only
+qualified on a JVM whose HotSpot `_dexp`/`_dlog` intrinsics are disabled
+(the tramo-seats-bridge capture profile: macOS ARM64, Temurin 21.0.11+10,
+`-XX:+UnlockDiagnosticVMOptions -XX:DisableIntrinsic=_dexp,_dlog`), while
+test-parity.R's demand-profile fixtures pin the opposite,
+x86_64-default (intrinsics enabled) JVM bytes on this architecture.
+Measured on this host: default JVM -> exactly those 118 failures and
+test-parity 403/403; capture-flag JVM -> all 118 green and 16
+`demand run ... x86_64-default` failures in test-parity (16 of the 18
+demand-run expectations; one pair is byte-identical under both codegen
+domains). No single JVM configuration greens the suite on x86-64, and
+the native products bit-reproduce their frozen captures in both
+domains. The M5b record of 8,244/8,244 came from the capture host,
+where the two configurations coincide because aarch64 HotSpot has no
+such intrinsics (default == portable). Nothing in the expectations,
+tolerances, fixtures or native code moved; this is a lane partition,
+not a re-baseline.
+
+The oracle lane now runs as two JVM math-flag passes on x86-64. The
+capture-domain guard (`oracle_domain_allows()` in R/helpers.R) inspects
+the running JVM's runtime input arguments via rJava's ManagementFactory
+RuntimeMXBean plus the JVM `os.arch`. Pass A
+(`PERSEPHONE_ORACLE_PASS=default`, default JVM -- the R CMD check
+tinytest phase) runs every file; the five bridge-parity files print one
+documented `SKIP (documented deferral)` message each and defer their
+live-JVM parity blocks. Pass B (`tools/run-oracle-bridge-pass.R`, a
+required CI step on x86-64 under
+`JAVA_TOOL_OPTIONS="-XX:+UnlockDiagnosticVMOptions -XX:DisableIntrinsic=_dexp,_dlog"`)
+runs exactly those five files; the x86_64-default demand dispatch of
+test-parity.R carries the symmetric guard and defers itself out of
+pass B. With `PERSEPHONE_ORACLE_PASS` unset and a live JVM domain
+different from a file's capture domain the guard STOPS the file, so a
+naive single-pass run cannot become a silent false green; a pass
+environment variable that contradicts the live JVM declares the pass
+misconfigured and stops. On aarch64 the guards are inert and the lane
+stays single-pass. Final counts on this host: pass A ran **6,312/6,312**
+expectations (test-parity.R 403/403; the five bridge-parity files ran
+their 3,649 non-parity expectations), pass B ran **5,781/5,781**;
+together the two passes cover all **8,444** expectations with zero
+failures and no skips beyond the documented deferrals; the Java-free
+contract lane stayed 563/563. Full transcripts:
+`tmp_opencode/m6-c-verify/rebaseline-ledger-2026-11-24.md` plus
+`passA-split.log`/`passB-bridge.log` -- scratch evidence of the
+qualification farm, not vendored (this repository keeps no evidence
+tree).
+
+## nojava probe tracks the stock RSA0 native construction (2026-11-24)
+
+`tools/verify-nojava.R --native` demanded the pre-775ce9d refusal of a
+stock `rsa0` native construction and therefore contradicted the
+repository's own green `test-backend.R` (which constructs the rsa0
+native spec and refuses only rsa4/rsa5c). The probe now follows that
+contract: the rsa0 native spec must construct through the internal spec
+builder and through the product path as a
+`persephone_native_estimated_spec`; the rsa4 refusal must cite both
+qualified envelopes, the `automatic_fit.deferred` scope field, "No Java
+fallback" and the pinned core status verbatim; the restricted-route
+fixed-seasonal core status is asserted directly against the installed
+core, unchanged. It passes without Java on rkalos 0.1.0.9026 (`eb64ba3`)
+and on the CI-pinned 0.1.0.9025 (`0aaa37b`).
+
 ## Family M5b full source verification (2026-11-24)
 
 The stock X-13 item 28 checkpoint in rkalos `f53ee8f` passed all 66

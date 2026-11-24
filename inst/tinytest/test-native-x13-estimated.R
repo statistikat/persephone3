@@ -1,3 +1,11 @@
+# Capture domain: bridge (PORTABLE). The live-JVM parity block below compares
+# against rjd3 fits whose native counterpart is pinned by the x13-estimated
+# JVM captures, qualified on macOS ARM64 with HotSpot _dexp/_dlog intrinsics
+# disabled (kalos/docs/contracts/tramo-seats-bridge-contract.md; evidence
+# tmp_opencode/m6-c-verify/rebaseline-ledger-2026-11-24.md, scratch). On x86-64
+# it runs in the bridge pass (see R/helpers.R); the guard defers it with a
+# documented message or refuses a mismatched single pass. On aarch64 the
+# domains coincide.
 helper <- new.env(parent = environment())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 directory <- system.file("tinytest/fixtures/native", package = "rkalos", mustWork = TRUE)
@@ -83,7 +91,8 @@ for (header in names(cases)) {
     expect_true(near(regs$value, coefs), info = header)
     expect_identical(regs$type, ifelse(labels == "AO", "outlier", toupper(labels)), info = header)
   }
-  if (requireNamespace("rjd3x13", quietly = TRUE)) {
+  if (requireNamespace("rjd3x13", quietly = TRUE) &&
+      persephone3:::oracle_domain_allows("bridge", "test-native-x13-estimated.R")) {
     jd <- perX13(series, parts[1L], backend = "rjd3", userdefined = c("cal_f(12)", "y_f(12)", "y_ef(12)"))
     jd$run()
     for (name in c("y", "sa", "t", "s", "i", "cal")) {

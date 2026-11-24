@@ -16,6 +16,9 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       PERSEPHONE_REQUIRE_ORACLE: 'true'
+      # Oracle lane pass A for the coverage run (x86-64 domain partition:
+      # R/helpers.R); the bridge-domain files run in the required step below.
+      PERSEPHONE_ORACLE_PASS: 'default'
     steps:
       - uses: actions/checkout@v5
 
@@ -91,3 +94,12 @@ jobs:
             quiet = FALSE
           )
         shell: Rscript {0}
+
+      - name: Oracle bridge-domain pass (x86-64)
+        if: runner.arch == 'X64'
+        env:
+          JAVA_TOOL_OPTIONS: "-XX:+UnlockDiagnosticVMOptions -XX:DisableIntrinsic=_dexp,_dlog"
+        run: |
+          Rscript -e 'remotes::install_local(".", upgrade = "never", force = TRUE, dependencies = FALSE)'
+          Rscript tools/run-oracle-bridge-pass.R
+        shell: bash

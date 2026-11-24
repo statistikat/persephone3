@@ -72,6 +72,15 @@
 #   - fit fails with the pinned message -> documented current state (green);
 #   - other failures must fail the check in every locale. Generate the
 #     interpreter's exact missing-condition message in the active R session.
+#
+# Capture domain: default (x86_64-default). The demand-run dispatch against
+# fixtures/native/refusals-m4gap/demand-jvm-profiles.tsv pins THIS host's
+# default-intrinsics JVM captures; the JVM-agnostic proto/spec walks and the
+# native fixtures are domain-independent. On x86-64 the demand dispatch runs
+# in the default pass (see R/helpers.R); the same guard that defers the five
+# bridge-parity files defers these checks out of the bridge pass, and a naive
+# single-pass JVM mismatch fails loudly (evidence tmp_opencode/m6-c-verify/
+# rebaseline-ledger-2026-11-24.md, scratch). On aarch64 the domains coincide.
 has_rjd3 <- all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
                        requireNamespace, logical(1), quietly = TRUE))
 
@@ -1031,6 +1040,11 @@ if (has_rjd3) local({
   profile <- if (portable) "portable" else "x86_64-default"
   profiles <- read.delim(file.path(ref_dir, "demand-jvm-profiles.tsv"),
                          colClasses = "character")
+  # Capture-domain guard (see file header): on x86-64 this dispatch belongs to
+  # the default JVM math-flag pass and is deferred out of the bridge pass with
+  # a documented message; a mismatched single pass fails loudly. The guard is
+  # inert on aarch64, where the demand captures run the portable rows.
+  if (persephone3:::oracle_domain_allows("default", "test-parity.R (x86_64-default demand dispatch)"))
   for (tpl in c("rsa0", "rsa1", "rsa2c")) {
     for (id in names(ref_series)) {
       live <- demand_capture(tpl, id, ref_series[[id]])

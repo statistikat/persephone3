@@ -1,3 +1,10 @@
+# Capture domain: bridge (PORTABLE). The live-JVM parity block below compares
+# against rjd3 fits whose native counterpart is pinned by the tramo-seats-bridge
+# captures, qualified on macOS ARM64 with HotSpot _dexp/_dlog intrinsics disabled
+# (kalos/docs/contracts/tramo-seats-bridge-contract.md; evidence tmp_opencode/
+# m6-c-verify/rebaseline-ledger-2026-11-24.md, scratch). On x86-64 it runs in the
+# bridge pass (see R/helpers.R); the guard defers it with a documented message
+# or refuses a mismatched single pass. On aarch64 the domains coincide.
 helper <- new.env(parent = baseenv())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 path <- system.file("tinytest/fixtures/native/tramo-seats-bridge/rsa3-x86_64.txt", package = "rkalos", mustWork = TRUE)
@@ -118,7 +125,8 @@ for (id in names(cases)) {
     expect_identical(writeBin(as.numeric(actual), raw()), writeBin(helper$fixture_hex_doubles(row[-seq_len(6L)]), raw()), info = id)
     points <- points + length(actual)
   }
-  if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
+  if (requireNamespace("rjd3tramoseats", quietly = TRUE) &&
+      persephone3:::oracle_domain_allows("bridge", "test-native-tramoseats-rsa3.R")) {
     jd <- perTramo(series, "rsa3", backend = "rjd3", userdefined = c("cal_f(24)", "y_ef(24)"))
     jd$run()
     if (id %in% names(wk_cases) && !any(startsWith(wk_cases[[id]], "wk Seasonal Value ")))

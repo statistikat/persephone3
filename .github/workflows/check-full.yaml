@@ -38,6 +38,11 @@ jobs:
       RSPM: ${{ matrix.config.rspm }}
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       PERSEPHONE_REQUIRE_ORACLE: 'true'
+      # Oracle lane pass A (default JVM math-flag domain). On x86-64 the five
+      # bridge-parity files defer their live-JVM blocks to the required
+      # bridge-domain step below (capture domains: R/helpers.R); on aarch64
+      # the domains coincide and the guards are inert.
+      PERSEPHONE_ORACLE_PASS: 'default'
 
     steps:
       - uses: actions/checkout@v5
@@ -127,6 +132,15 @@ jobs:
           pkgs <- installed.packages()[, "Package"]
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
+
+      - name: Oracle bridge-domain pass (x86-64)
+        if: runner.arch == 'X64'
+        env:
+          JAVA_TOOL_OPTIONS: "-XX:+UnlockDiagnosticVMOptions -XX:DisableIntrinsic=_dexp,_dlog"
+        run: |
+          Rscript -e 'remotes::install_local(".", upgrade = "never", force = TRUE, dependencies = FALSE)'
+          Rscript tools/run-oracle-bridge-pass.R
+        shell: bash
 
       - name: Check
         env:

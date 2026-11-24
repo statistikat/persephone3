@@ -1,4 +1,11 @@
 # Current native and live products are both fed the original dated observations.
+# Capture domain: bridge (PORTABLE). The live-JVM parity block below compares
+# against rjd3 fits whose native counterpart is pinned by the tramo-seats-bridge
+# captures, qualified on macOS ARM64 with HotSpot _dexp/_dlog intrinsics disabled
+# (kalos/docs/contracts/tramo-seats-bridge-contract.md; evidence tmp_opencode/
+# m6-c-verify/rebaseline-ledger-2026-11-24.md, scratch). On x86-64 it runs in the
+# bridge pass (see R/helpers.R); the guard defers it with a documented message
+# or refuses a mismatched single pass. On aarch64 the domains coincide.
 helper <- new.env(parent = environment())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 directory <- system.file("tinytest/fixtures/native/tramo-seats-bridge", package = "rkalos", mustWork = TRUE)
@@ -69,7 +76,8 @@ for (id in names(cases)) {
     expected <- vapply(vars[selected], function(r) tail(r, 1L), character(1L), USE.NAMES = FALSE)
     expect_identical(native$value, helper$fixture_hex_doubles(expected), info = id)
   }
-  if (reference) {
+  if (reference &&
+      persephone3:::oracle_domain_allows("bridge", "test-native-tramoseats-rsafull.R")) {
     jd <- perTramo(series, "rsafull", backend = "rjd3", userdefined = c("cal_f(24)", "y_ef(24)"))
     jd$run()
     expected_summary <- jd$output$user_defined[["diagnostics.seas-si-combined"]]
