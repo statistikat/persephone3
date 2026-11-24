@@ -1535,3 +1535,17 @@ diagnostic tests also passed in both environments. The preceding RSA1
 forecast release `2ad393e` completed its full source check with
 **4,157/4,157** tests, rebuilt vignettes, PDF manual and **Status OK**.
 [Selected-model reporting tests](inst/tinytest/test-native-tramoseats-rsa3.R)
+
+## Original-series forecast intervals for native RSA3 (2026-11-24)
+
+The rkalos `0.1.0.9019` dependency at `c471ab2` supplies dated
+original-series forecast standard errors from the selected TR3 model.
+Persephone uses them in the forecast contract and chart confidence band.
+For all 13 raw RSA3 fits, the **312 model forecast errors** matched the
+public JVM within `2e-8 * (1 + abs(reference))`. All **312 conditional
+SEATS series errors** remained separately available and matched exactly.
+Tests also checked both chart bounds and a custom six-month forecast.
+
+The RSA3 suite passed **816/816** assertions without Java and
+**1,219/1,219** with live JDemetra. RSA0 and RSA1 product suites also
+passed in both environments. [RSA3 forecasts and intervals](inst/tinytest/test-native-tramoseats-rsa3.R)

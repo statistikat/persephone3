@@ -8,6 +8,8 @@ diagnostics <- c(helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa3-
 expect_identical(sort(names(diagnostics)), sort(names(cases)))
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 domain <- function(x) c(start(x), end(x), frequency(x))
+forecast_errors <- helper$fixture_named_rsa0_cases(file.path(dirname(path), "rsa3-forecast-errors-x86_64.txt"))
+expect_identical(sort(names(forecast_errors)), sort(names(cases)))
 keys <- c(Series = "y", Trend = "t", SeasonallyAdjusted = "sa", Seasonal = "s", Irregular = "i")
 points <- residuals <- 0L
 for (id in names(cases)) {
@@ -27,8 +29,24 @@ for (id in names(cases)) {
   coefficients <- unlist(fit$model$coefficients[c("ar", "sar", "ma", "sma")], use.names = FALSE)
   expect_identical(coefficients, helper$fixture_hex_doubles(field("parameters")[-1L]), info = id)
   expect_identical(fit$forecasts$mode, if (fit$model$log) "Multiplicative" else "Additive", info = id)
-  expect_null(fit$forecasts$standard_errors$y, info = id)
-  expect_identical(obj$output$series_forecast_stdev_status, "not_qualified", info = id)
+  errors <- forecast_errors[[id]]
+  expected <- tokens(errors[startsWith(errors, "y_ef ")])
+  reference_errors <- helper$fixture_hex_doubles(expected[-seq_len(4L)])
+  actual_errors <- fit$forecasts$standard_errors$y
+  expect_identical(actual_errors, obj$output$series_forecast_stdev, info = id)
+  expect_identical(obj$output$series_forecast_stdev_status, "available", info = id)
+  expect_identical(fit$forecasts$availability$standard_errors[1L], "available", info = id)
+  expect_identical(domain(actual_errors), domain(fit$forecasts$points$y), info = id)
+  expect_true(all(abs(as.numeric(actual_errors) - reference_errors) <= 2e-8 * (1 + abs(reference_errors))), info = id)
+  wk <- tokens(errors[startsWith(errors, "wk_series_stdev_forecast ")])
+  expect_identical(as.numeric(fit$seats_forecast_standard_errors$y),
+                   helper$fixture_hex_doubles(wk[-seq_len(4L)]), info = id)
+  chart <- obj$hchart()$x$hc_opts$series
+  interval <- chart[[match("confidence interval", vapply(chart, "[[", character(1), "name"))]]$data
+  expect_identical(vapply(interval, "[[", numeric(1), "low"),
+                   as.numeric(fit$forecasts$points$y - 1.96 * actual_errors), info = id)
+  expect_identical(vapply(interval, "[[", numeric(1), "high"),
+                   as.numeric(fit$forecasts$points$y + 1.96 * actual_errors), info = id)
   reference_diagnostics <- diagnostics[[id]]
   expected_test <- function(key, positions) {
     row <- reference_diagnostics[startsWith(reference_diagnostics, paste0("residuals.", key, " "))]
@@ -76,8 +94,11 @@ for (id in names(cases)) {
     points <- points + length(actual)
   }
   if (requireNamespace("rjd3tramoseats", quietly = TRUE)) {
-    jd <- perTramo(series, "rsa3", backend = "rjd3", userdefined = "cal_f(24)")
+    jd <- perTramo(series, "rsa3", backend = "rjd3", userdefined = c("cal_f(24)", "y_ef(24)"))
     jd$run()
+    jd_errors <- jd$output$user_defined[["y_ef(24)"]]
+    expect_identical(domain(actual_errors), domain(jd_errors), info = id)
+    expect_true(all(abs(actual_errors - jd_errors) <= 2e-8 * (1 + abs(jd_errors))), info = id)
     for (name in c("normality", "independence")) {
       key <- if (name == "normality") "doornikhansen" else "lb"
       metric <- metrics[[name]]
@@ -105,6 +126,10 @@ for (id in names(cases)) {
     expect_true(obj$is_stale)
     obj$run()
     expect_identical(length(obj$forecasts$points$sa), 6L)
+    expect_identical(length(obj$forecasts$standard_errors$y), 6L)
+    expect_identical(domain(obj$forecasts$standard_errors$y), domain(obj$forecasts$points$y))
+    expect_true(all(abs(as.numeric(obj$forecasts$standard_errors$y) - head(reference_errors, 6L)) <=
+                    2e-8 * (1 + abs(head(reference_errors, 6L)))))
     expect_identical(length(obj$output$merged$values[[which(obj$output$merged$component == "Trend" & obj$output$merged$information == "Backcast")]]), 3L)
   }
 }

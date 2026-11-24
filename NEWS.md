@@ -3,6 +3,9 @@
 * Native monthly RSA3 now identifies SARIMA orders and returns dated SEATS
   components and forecasts for fits accepted at the first reference comparison.
 
+* Native RSA3 original-series forecast intervals now use the selected monthly
+  TR3 model on both level and log scales.
+
 * Native monthly RSA3 reports the residual standard error, model-adjusted
   Ljung–Box independence and Doornik–Hansen normality tests.
 

@@ -18,7 +18,7 @@ LazyData: true
 Depends: R (>= 4.1.0)
 Imports:
     R6,
-    rkalos (>= 0.1.0.9018),
+    rkalos (>= 0.1.0.9019),
     highcharter,
     dygraphs,
     plotly,
@@ -51,7 +51,7 @@ Suggests:
     tinytest,
     bookdown
 Remotes:
-     github::statistikat/rkalos@667674068de1c35ce3e4d0bc0c9b06068db89ce0
+     github::statistikat/rkalos@c471ab24c89c36fd3496a9e6ae1277da649de2c6
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.1.1
