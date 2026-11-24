@@ -290,8 +290,8 @@ user_context <- function(ts, user, group = "r") {
 #'   \item{speclist}{a list of spec arguments (`td.option`, `td.uservariable`,
 #'     `td.test`) to be passed to [perX13()] or [perTramo()] via `speclist`}
 #'
-#' @seealso [genTd()], [rjd3toolkit::calendar_td()]
-#' @keywords internal
+#' @seealso [genTd()], [rjd3toolkit::calendar_td()], [perX13()]
+#' @export
 td_context <- function(ts,
                        calendar = NULL,
                        td = NULL,
