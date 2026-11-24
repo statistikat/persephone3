@@ -44,3 +44,25 @@ short <- perTramo(stats::ts(as.numeric(AirPassengers)[1:35], frequency = 12), "r
 short$run()
 expect_identical(persephone3:::diagnostic_metrics(short)$seasonality$availability, "missing")
 expect_identical(short$diagnosticsTable()$seasonality, NA_character_)
+
+# The product's RSA3 decoder fixes its preprocessing settings and accepts
+# explicit forecast counts. Compare both observed-domain verdicts to JD+.
+for (id in c("air", "ao", "seas")) {
+  rows <- readLines(file.path(directory, "x13-refusal-jvm-profiles", paste0(id, ".csv")))
+  series <- stats::ts(helper$fixture_doubles(rows[-1L]),
+                      start = as.integer(strsplit(rows[1L], ",", fixed = TRUE)[[1L]]), frequency = 12)
+  for (horizon in c(0L, 12L)) {
+    obj <- perX13(series, "rsa3", backend = "native", speclist = list(forecast = horizon))
+    obj$run()
+    expect_identical(obj$result$diagnostics$combined_seasonality$summary, "Present", info = id)
+    expect_identical(obj$diagnosticsTable()$seasonality, "Present", info = id)
+    expect_identical(obj$generateQrTable()$CombinedTest_SI, "Present", info = id)
+    expect_identical(persephone3:::diagnostic_dashboard_values(obj)$seasonality, "Present", info = id)
+    if (requireNamespace("rjd3x13", quietly = TRUE)) {
+      jd <- perX13(series, "rsa3", backend = "rjd3", speclist = list(x11.fcasts = horizon))
+      jd$run()
+      expect_identical(jd$output$user_defined[["diagnostics.seas-si-combined"]],
+                       obj$result$diagnostics$combined_seasonality$summary, info = id)
+    }
+  }
+}

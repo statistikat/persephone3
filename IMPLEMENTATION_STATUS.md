@@ -3,6 +3,19 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## M6 automatic and stock X-13 dashboard seasonality (2026-11-24)
+
+Persephone uses the published rkalos `0.1.0.9024` at `71c882b` to display
+the fitted combined SI verdict for decoded RSA3 and stock RSA0, RSA1 and
+RSA2c in the diagnostic table, quality report and dashboard. All nine
+stock fits and six public RSA3 model/horizon combinations reproduce the
+live JDemetra+ verdict.
+
+The installed stock suite passed **351/351** Java-free and **594/594**
+with the reference engine. The combined diagnostic suite, including
+both zero and twelve forecasts for three decoded RSA3 inputs, passed
+**195/195** Java-free and **241/241** with the reference engine.
+
 ## Stock X-13 backend contract checks (2026-11-24)
 
 The method-filtered capability now lists stock estimated templates for X-13

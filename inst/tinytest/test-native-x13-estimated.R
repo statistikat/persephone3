@@ -2,6 +2,8 @@ helper <- new.env(parent = environment())
 sys.source(system.file("tinytest/helpers/fixtures.R", package = "rkalos", mustWork = TRUE), helper)
 directory <- system.file("tinytest/fixtures/native", package = "rkalos", mustWork = TRUE)
 cases <- helper$fixture_named_rsa0_cases(file.path(directory, "x13-estimated-templates/templates-x86_64.txt"))
+si_panel <- c(helper$fixture_named_rsa0_cases(file.path(directory, "combined-seasonality/stock-x86_64.txt")),
+              helper$fixture_named_rsa0_cases(file.path(directory, "combined-seasonality/stock-rsa2c-x86_64.txt")))
 tokens <- function(line) strsplit(line, " ", fixed = TRUE)[[1L]]
 near <- function(actual, reference) all(abs(as.numeric(actual) - as.numeric(reference)) <= 1e-8 * pmax(1, abs(as.numeric(reference))))
 domain <- function(x) c(start(x), end(x), frequency(x))
@@ -43,7 +45,14 @@ for (header in names(cases)) {
   } else {
     expect_identical(obj$fixOutlier(timespan = 0L), obj, info = header)
   }
+  si_id <- paste("x13", parts[1L], parts[2L], sep = "_")
+  si_case <- si_panel[[which(startsWith(names(si_panel), paste0(si_id, " ")))]]
+  verdict <- sub("^summary ", "", si_case[startsWith(si_case, "summary ")])
   qr <- obj$generateQrTable()
+  expect_identical(result$diagnostics$combined_seasonality$summary, verdict, info = header)
+  expect_identical(obj$diagnosticsTable()$seasonality, verdict, info = header)
+  expect_identical(qr$CombinedTest_SI, verdict, info = header)
+  expect_identical(persephone3:::diagnostic_dashboard_values(obj)$seasonality, verdict, info = header)
   expect_equal(qr$NbTD, sum(labels == "td"), info = header)
   expect_identical(qr$LeapYear, "lp" %in% labels, info = header)
   expect_identical(qr$MovingHoliday, "easter" %in% labels, info = header)
@@ -67,6 +76,7 @@ for (header in names(cases)) {
       expect_identical(domain(result$forecasts$points[[name]]), domain(expected), info = paste(header, name, "forecast"))
       expect_true(near(result$forecasts$points[[name]], expected), info = paste(header, name, "forecast"))
     }
+    expect_identical(jd$output$user_defined[["diagnostics.seas-si-combined"]], verdict, info = header)
     expected <- jd$generateQrTable()
     for (key in c("NbTD", "LeapYear", "MovingHoliday", "Noutliers"))
       expect_equal(qr[[key]], expected[[key]], info = paste(header, key))

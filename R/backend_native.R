@@ -700,7 +700,7 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
                  status = list(code = code,
                                convergence = fit$model$estimation_status %||% "not_reported"),
                  domain = backend_domain(ts), components = components,
-                 forecasts = forecasts, diagnostics = list(), availability = availability,
+                 forecasts = forecasts, diagnostics = fit$diagnostics %||% list(), availability = availability,
                  provenance = provenance, results = fit$results,
                  preadjustment = fit$preadjustment, selection = fit$selection,
                  chain = fit$chain, model = fit$model, raw = fit),
