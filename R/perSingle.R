@@ -35,11 +35,19 @@ persephoneSingle <- R6::R6Class(
     #'   [tramoseats_fast()]
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+    #' @param spec an existing model specification (class `JD3_X13_SPEC` or
+    #'   `JD3_TRAMOSEATS_SPEC`, e.g. the `params` of a run object or an
+    #'   [fixModel()]/[fixOutlier()] result): it replaces the template and is
+    #'   still updated by `speclist`/`...`
     #' @param ... passed to [x13_spec()] or [tramoseats_spec()] if no speclist parameter is set.
-    initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL,
-                          speclist = NULL, td = NULL, user = NULL, ...) {
+    initialize = function(ts, template = "rsa3", context = NULL,
+                          userdefined = NULL, speclist = NULL, td = NULL,
+                          user = NULL, spec = NULL, ...) {
       private$ts_internal <- ts
       private$tsp_internal <- tsp(ts)
+      if (!is.null(spec)) {
+        private$params_internal <- spec
+      }
       dots <- list(...)
       if (!is.null(td)) {
         td_obj <- resolve_td_input(ts, td, private$.method)

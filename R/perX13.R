@@ -101,6 +101,9 @@ x13Single <- R6::R6Class(
 #' passed as the `userdefined` argument to [rjd3x13::x13_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+#' @param spec an existing model specification (`JD3_X13_SPEC`, e.g. the
+#' `params` of a run object or the result of [fixModel()]/[fixOutlier()]): it
+#' replaces the `template` and is still updated by `speclist`/`...`.
 #' @param ... additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally.
 #'
@@ -207,8 +210,10 @@ perX13 <- function(ts,
                    speclist = NULL,
                    td = NULL,
                    user = NULL,
+                   spec = NULL,
                    ...) {
   x13Single$new(
-    ts, match.arg(template), context, userdefined, speclist, td, user, ...
+    ts, match.arg(template), context, userdefined, speclist, td, user,
+    spec = spec, ...
   )
 }
