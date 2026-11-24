@@ -245,7 +245,11 @@ user_context <- function(ts, user, group = "r") {
 #'   6) or the output of [rjd3toolkit::calendar_td()]. The full output of
 #'   [genTd()] (a list of 3 regressor sets) is also accepted, its centered
 #'   day regressors (`[[3]][, 1:6]`) are then used. Exactly one of `calendar`
-#'   and `td` must be provided.
+#'   and `td` must be provided. A single regressor (e.g. the grouping
+#'   `c(1, 1, 1, 1, 1, 0, 0)` of [rjd3toolkit::calendar_td()] for weekdays
+#'   versus weekend and holidays) is supported; note that trading day
+#'   regressors that are not significant are dropped by the estimation, see
+#'   [perX13()].
 #' @param groups integer vector passed to [rjd3toolkit::calendar_td()], the
 #'   group of each day of the week (Monday to Saturday, then the holiday).
 #'   Only used if `calendar` is given.
@@ -362,12 +366,31 @@ td_context <- function(ts,
     colnames(td) <- td_labels
   }
 
+  # a single regressor appears in the estimation under the name the context
+  # gives its variable, which is `name` and not its column (see below); the
+  # column name (a day name or td_labels) is the better label, so it becomes
+  # the default name of a single regressor
+  if (ncol(td) == 1L && name == "REGS_TD" && !is.null(colnames(td))) {
+    name <- colnames(td)[[1L]]
+  }
   context <- rjd3toolkit::modelling_context(
     variables = stats::setNames(list(td), name)
   )
+  # the specification has to address the regressors under the names the
+  # context really assigned them to: modelling_context() stores a multi-column
+  # regressor under the variable `name`, one named regressor per column, but a
+  # single regressor (a ts or a single-column mts) under the group "r", named
+  # by `name` and not by its column. A td.uservariable that does not resolve
+  # is not rejected by rjd3 - the regressors are silently dropped from the
+  # model and the residual trading day diagnostics end in a java
+  # NullPointerException (upstream issue)
+  vars <- context$variables[[1L]]
   speclist <- list(
     td.option = "UserDefined",
-    td.uservariable = paste0(name, ".", colnames(td)),
+    td.uservariable = paste0(
+      names(context$variables)[[1L]], ".",
+      if (is.list(vars)) names(vars) else colnames(td)
+    ),
     td.test = test
   )
   list(td = td, context = context, speclist = speclist)
@@ -428,6 +451,28 @@ resolve_td_input <- function(ts, td, method) {
   )
 }
 
+# warn when the trading day regressors requested through `td` did not
+# survive the estimation - rjd3 drops user-defined trading day regressors
+# that are not significant without a word
+check_td_output <- function(output, requested = TRUE) {
+  if (isTRUE(requested)) {
+    v <- output$preprocessing$description$variables
+    kept <- length(v) > 0 && any(vapply(v, function(x) {
+      identical(as.character(x$type), "TD") &&
+        !is.null(x$coef$type) && any(as.character(x$coef$type) == "ESTIMATED")
+    }, TRUE))
+    if (!kept) {
+      warning(
+        "the trading day regressors of 'td' are not part of the estimated ",
+        "model - rjd3 removes user-defined trading day regressors that are ",
+        "not significant; the adjustment is free of trading day effects",
+        call. = FALSE
+      )
+    }
+  }
+  output
+}
+
 #' Seasonal adjustment with user-defined trading day regressors
 #'
 #' @description
@@ -450,7 +495,8 @@ resolve_td_input <- function(ts, td, method) {
 #'   `genTd()[[3]][, 1:6]` (the centered day regressors) or the output of
 #'   [rjd3toolkit::calendar_td()], or the full output of [genTd()] (its
 #'   centered day regressors `[[3]][, 1:6]` are then used). It must have the
-#'   same frequency as `ts` and cover its full span.
+#'   same frequency as `ts` and cover its full span; a single regressor is
+#'   supported, see [td_context()].
 #' @param method the seasonal adjustment method, i.e. "x13" or
 #'   "tramoseats".
 #' @param template the name of the predefined specification template, passed

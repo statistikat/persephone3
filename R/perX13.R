@@ -82,7 +82,10 @@ x13Single <- R6::R6Class(
 #' registered in
 #' `context` and the trading days spec block is set to `option =
 #' "UserDefined"`, see [perTd()]. Arguments `td.*` given in `...` or `speclist`
-#' override the automatically generated ones.
+#' override the automatically generated ones. Regressors that are not
+#' significant under the residual trading day test (`td.test = "Add"`, the
+#' default) are removed from the estimated model; `run()` warns when this
+#' affects all regressors of `td`.
 #' @param user further user-defined regressors for the regression model, e.g.
 #' the leap year regressor `genTd()[[3]][, "lpYear", drop = FALSE]`. A
 #' `ts`/`mts` object with one regressor per column or a named list of such
