@@ -1755,3 +1755,60 @@ an undefined test helper reached by the hosted Windows check and keeps the
 assertion active in translated R sessions. All 440 live-reference parity
 checks passed with English messages and all 440 passed with German messages.
 The hosted Windows rerun remains part of platform qualification.
+
+## M7 — Java-free product lifecycle (item 27) (2026-11-24)
+
+`tools/verify-lifecycle.R` runs the verbatim item 27 acceptance chain —
+install → load → construct → fit → forecast → diagnose → plot → dashboard →
+serialize/reload/rerun — for both methods without Java or rjd3 on the
+deliberate `persephone.backend = "native"` option. The install gate ran
+`R CMD INSTALL` of the source tree at `d5ee808` into a fresh isolated library
+(a farm view minus the six Java-related packages `rJava`, `rjd3toolkit`,
+`rjd3x13`, `rjd3tramoseats`, `rjd3jars` and `RProtoBuf`, plus base and
+recommended symlinks, with rkalos `0.1.0.9026` core `a7d4b12` from the OMP
+lane). Install byte-compiled and loaded with **zero Java packages findable**;
+the six stay absent from the 469-entry library (`system.file`) and unloaded
+(`loadedNamespaces`) at every stage of the run, which the tool re-checks
+after every lane. `R_LIBS_USER`/`R_LIBS_SITE` point to an empty directory and
+`JAVA_HOME` points nowhere, so callr children inherit the same guarantee.
+
+**Lanes and results (33 steps, all pass, one recorded gap).** On
+`AirPassengers`: `perX13` `rsa0` (constructed through the option alone) and
+`rsa3` (`backcast = 0`, `forecast = 6`), `perTramo` `rsa0` and `rsa1`. Each
+lane fits with `status = success` and `backend = native`; forecast points
+match the qualified domains (12/6/24/24 from 1961-1); where the fit claims
+standard errors the chart interval is asserted `identical()` to
+`points ± 1.96 * SE` in both engines (dygraph `(lowerci, y_f, upperci)`
+triple and highcharter band), and `rsa3` is checked to honestly report
+`standard_errors = unavailable` and draw no band. Diagnostics assert
+`obj$diagnosticsTable()` identical to the exported `diagnosticsTable(obj)`
+(27 columns) plus dated residuals (`n = 131`) and a residual acf chart where
+the backend supplies them. Plots: `plot()` dygraph carries the Forecasts
+series (tail identical to the forecast points; dropped by
+`forecasts = FALSE`), `autoplot()` returns a ggplot and `hchart()` a
+highchart for every lane. **The single cutover gap:** the automatic X-13
+`rsa3` fit supplies no dated preprocessing residuals — residual plots refuse
+with "The fit does not supply dated preprocessing residuals." and the
+dashboard shows its honest unavailable note; the diagnostics table itself
+works (`normality`/`independence` = `Undefined`).
+
+**Serialize → reload → rerun identity.** Per lane, `saveRDS(obj)`/`readRDS`
+of the full R6 object must give `identical()` `adjusted`, `forecasts`,
+`result` and `output`, the reloaded object's `diagnosticsTable()` must be
+`identical()` to the original, and `$run()` after reload must reproduce
+`identical()` `adjusted` and `forecasts` (bit-identical rerun). All four
+lanes pass all three.
+
+**Dashboard in a Java-free child process.** A `callr` child re-isolates to
+the same library, builds the single-series dashboard through
+`createDashboard()` (≈157 KB HTML with rendered charts, diagnostics table and
+no plot-error markers), then serves the batch dashboard through the package's
+own launcher `createDashboard()` → `callr::r_bg(shiny::runApp(...))` on an
+httpuv random port. The fetched root HTML contains the title and the series
+registry, the grandchild's `/proc` environ shows `R_LIBS` at the isolated
+library and clean user/site directories, and the server is dead after
+`$kill()`. Cutover note for the default-backend review: `resolve_backend()`
+still defaults to `"rjd3"` when the option is unset, so the harness sets the
+option deliberately; the option-free default path still refuses construction
+naming the optional rjd3 packages. Harness, isolated-library build and
+transcripts: `tmp_opencode/m7-c-verify/`.
