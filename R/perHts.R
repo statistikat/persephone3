@@ -543,6 +543,10 @@ hierarchicalTimeSeries <- R6::R6Class(
     #' @param component character scalar name of the component to change; if empty, operate on aggregate
     #' @param iterate logical: if TRUE, apply parameter changes to all components recursively
     #' @param speclist list with named arguments to be changed
+    #' @param spec an existing model specification (class `JD3_X13_SPEC` or
+    #'   `JD3_TRAMOSEATS_SPEC`, e.g. the `params` of a run of this object):
+    #'   it replaces the current specification, still updated by
+    #'   `speclist`/`...`
     #' @param td trading day regressors, see the `td` argument of [perHts()]
     #' @param user further user-defined regressors, see the `user` argument of
     #'   [perHts()]
@@ -551,6 +555,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       component = "",
       iterate = TRUE,
       speclist = NULL,
+      spec = NULL,
       td = NULL,
       user = NULL,
       ...
@@ -563,6 +568,7 @@ hierarchicalTimeSeries <- R6::R6Class(
         root$updateParams(
           iterate = iterate,
           speclist = speclist,
+          spec = spec,
           td = td,
           user = user,
           ...
@@ -594,7 +600,7 @@ hierarchicalTimeSeries <- R6::R6Class(
         # speclist (both are combined by the nodes' own updateParams()), for
         # all series or - with iterate = FALSE - for the aggregates only
         dots <- list(...)
-        if (length(speclist) > 0 || length(dots) > 0) {
+        if (length(speclist) > 0 || length(dots) > 0 || !is.null(spec)) {
           targets <- if (isTRUE(iterate)) {
             private$nodes
           } else {
@@ -603,7 +609,12 @@ hierarchicalTimeSeries <- R6::R6Class(
           lapply(targets, function(node) {
             do.call(
               node$updateParams,
-              c(list(iterate = iterate, speclist = speclist), dots)
+              c(
+                list(
+                  iterate = iterate, speclist = speclist, spec = spec
+                ),
+                dots
+              )
             )
             invisible(NULL)
           })
@@ -626,7 +637,7 @@ hierarchicalTimeSeries <- R6::R6Class(
       private$updateFun(
         name = private$template,
         freq = frequency(private$ts_internal),
-        init_spec = private$params_internal,
+        init_spec = if (is.null(spec)) private$params_internal else spec,
         spec_list = speclist,
         ...
       )
@@ -640,7 +651,8 @@ hierarchicalTimeSeries <- R6::R6Class(
       # If requested, apply the same changes to all components recursively
       if (isTRUE(iterate)) {
         lapply(self$components, function(node) {
-          node$updateParams(iterate = TRUE, speclist = speclist, ...)
+          node$updateParams(iterate = TRUE, speclist = speclist,
+                            spec = spec, ...)
           invisible(NULL)
         })
       }
