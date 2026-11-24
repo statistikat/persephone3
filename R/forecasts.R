@@ -128,10 +128,19 @@ native_automatic_forecasts <- function(fit, observed) {
     stop("Incomplete automatic X-13 forecast tables.", call. = FALSE)
   mode <- switch(fit$mode_effective, additive = "Additive", multiplicative = "Multiplicative")
   fields <- forecast_component_names()
-  new_forecast_contract(points, observed = observed, mode = mode,
+  reasons <- stats::setNames(as.list(rep("The fit supplies no forecast standard errors.", length(fields))), fields)
+  errors <- list()
+  if (identical(fit$series_forecast_stdev_status, "available")) {
+    if (length(fit$series_forecast_stdev) != fit$effective_forecast)
+      stop("Incomplete stock X-13 original-series forecast standard errors.", call. = FALSE)
+    errors$y <- fit$series_forecast_stdev
+    reasons$y <- NULL
+  } else if (!is.null(fit$series_forecast_stdev_status)) {
+    reasons$y <- paste("X-13 forecast uncertainty:", fit$series_forecast_stdev_status)
+  }
+  new_forecast_contract(points, standard_errors = errors, observed = observed, mode = mode,
                         point_reasons = list(i = "The fit supplies no final irregular forecast table."),
-                        error_reasons = stats::setNames(
-                          as.list(rep("The fit supplies no forecast standard errors.", length(fields))), fields))
+                        error_reasons = reasons)
 }
 
 forecasts_from_result <- function(result, output, observed) {

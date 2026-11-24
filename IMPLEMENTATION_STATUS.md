@@ -3,6 +3,19 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## M6 stock X-13 forecast intervals and residual tests (2026-11-24)
+
+With rkalos `0.1.0.9025` at `0aaa37b`, the native stock X-13 templates
+return original-series standard errors for their twelve point forecasts.
+The residual standard error and the fitted independence and normality
+tests populate the diagnostic table, dashboard and quality report.
+
+Across nine fits the stock suite passed **441/441** Java-free and
+**720/720** against live JDemetra+. It covers the frozen diagnostic
+statistics, original-scale uncertainty, calendars and both public
+report p-values. Forecast, residual normality and residual independence
+regressions also passed (58/18/20 Java-free and 74/22/24 live).
+
 ## M6 automatic and stock X-13 dashboard seasonality (2026-11-24)
 
 Persephone uses the published rkalos `0.1.0.9024` at `71c882b` to display
