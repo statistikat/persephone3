@@ -3,7 +3,10 @@ source("R/persephone.R")
 source("tests/perHtsCL.R")
 
 # Zeitreihen für Testung
-ki_unverkettet <- fread(file = paste0(mlauf, "/J2026/COSA/KI_unlinked.csv"))
+ki_unverkettet <- fread(file = paste0(mlauf, "/J2026/COSA/PI_unlinked.csv"))
+ki_unverkettet <- ki_unverkettet[, -1]
+kett <- fread(file = paste0(mlauf, "/J2026/COSA/PI_verkettet.csv"))
+kett <- kett[, -1]
 linkFakt <- fread(file = paste0(mlauf, "/J2026/COSA/linkFaktoren.csv"))
 gew_F <- fread(file = paste0(mlauf, "/J2026/COSA/w_F.csv"))
 gew_20_21 <- fread(file = paste0(mlauf, "/J2026/COSA/w20_21.csv"))
@@ -23,7 +26,7 @@ ts21 <- kett[, 74]
 ts20_21 <- kett[, 73]
 
 # ---- 1. Create a persephone object ------------------------------------------
-objX13_x <- perX13(ts20, "rsa5c")
+objX13_x <- perX13(ts20, "rsa5c", td = tdAT)
 objX13_y <- perX13(ts21, "rsa5c")
 objX13_x$run()
 objX13 <- perX13(AirPassengers, "rsa3")
@@ -72,9 +75,9 @@ legend(
 ##########################################
 
 # chain-linking Faktoren der einzelnen Reihen
-lf_20  <- ts(linkFakt[,55], start = c(2000, 1), freq = 12)   
-lf_21  <- ts(linkFakt[,56], start = c(2000, 1), freq = 12)   
-lf_20_21 <- ts(linkFakt[,33], start = c(2000, 1), freq = 12)  
+lf_20  <- ts(linkFakt[,55], start = c(2000, 1), freq = 12)
+lf_21  <- ts(linkFakt[,56], start = c(2000, 1), freq = 12)
+lf_20_21 <- ts(linkFakt[,33], start = c(2000, 1), freq = 12)
 
 lf_41 <- ts(linkFakt[, 74], start = c(2000, 1), freq = 12)
 lf_42 <- ts(linkFakt[, 75], start = c(2000, 1), freq = 12)
@@ -84,7 +87,7 @@ lf_F <- ts(linkFakt[, 28], start = c(2000, 1), freq = 12)
 lf_all <- cbind(lf_20, lf_21, lf_20_21, lf_41, lf_42, lf_43, lf_F)
 colnames(lf_all) <- c("ts20", "ts21", "ts20_21", "ts41", "ts42", "ts43", "tsF")
 
-# Originalreihen 
+# Originalreihen
 ts20 <- kett[, 66]
 ts21 <- kett[, 74]
 ts20_21 <- kett[, 73]
@@ -109,7 +112,7 @@ colnames(gew_mts) <- c("ts20", "ts21", "ts41", "ts42", "ts43")
 htcl <- perHtsCL(
   series     = ts_all,          # mts: columns ts20-tsF
   weights    = gew_mts,         # mts: columns ts20, ts21, ts41, ts42, ts43
-  cl_weights = lf_all,          # mts: columns ts20-tsF 
+  cl_weights = lf_all,          # mts: columns ts20-tsF
   cl_groups  = list(
     ts20_21 = c("ts20", "ts21"),
     tsF = c("ts41", "ts42", "ts43")
