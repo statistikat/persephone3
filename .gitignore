@@ -22,3 +22,7 @@ AGENTS.md
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Vortrag-Folien mit Plots confidenzpflichtiger Reihen
+/Paris2026.*
+/presentation/
