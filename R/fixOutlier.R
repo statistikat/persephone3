@@ -1,107 +1,89 @@
 #' Fix outliers in the model
 #'
-#' @description Fixes detected outliers to prevent re-detection
+#' @description Fixes the outliers of a run to prevent their re-detection in
+#'   the next run: they become pre-specified outliers of the specification and
+#'   the automatic outlier detection is restricted to the last observations of
+#'   the series. This is the production pattern for the monthly re-estimation:
+#'   the outliers found so far are kept as they are, only the end of the
+#'   series is checked for new ones.
 #'
-#' @param x a persephone object
-#' @param timespan number of months from the end of the time series where outliers are not fixed
+#' @details
+#' Every outlier of the estimated model (an automatically detected one as well
+#' as one that was already fixed in an earlier call or given to the `outliers`
+#' argument) is written to the specification as a pre-specified outlier
+#' (`addout.type`/`addout.date`); such outliers are part of the regression
+#' model of every later run and are never dropped by the outlier test. The
+#' automatic detection is then restricted to the last `timespan` observations
+#' (`setout.span.type = "From"` and `setout.d0`); pre-specified outliers
+#' outside this span are not affected. Called again after a run with new data,
+#' the function fixes exactly the outliers of that run - the historical ones
+#' (which are pre-specified) together with the new ones found at the end.
+#'
+#' `fixModel()` fixes the ARIMA model in the same spirit, see [fixModel()].
+#'
+#' @param x a persephone object; for an [perHts()] object every component
+#'   that has been adjusted (the sub-series as well as the directly adjusted
+#'   aggregates) is fixed on its own
+#' @param timespan number of months from the end of the time series where
+#'   outliers are not fixed (they are searched again in the next run)
 #' @param verbose if TRUE the changed parameters will be reported
 #'
 #' @export
 fixOutlier = function(x, timespan = 12, verbose = FALSE) {
-  # xxx <<- x
-  if(is.null(x$output)){
+  if (is.null(x$output)) {
     warning("not run yet.")
     return(invisible(NULL))
   }
-  from <- time(x$ts)[length(x$ts)-timespan+1]
-  y <- floor(from)
-  m <- as.character(round((from-floor(from))*x$tsp[3]+1))
-  if(frequency(x$ts)==4){
-    m <- c("01","04","07","10")[as.numeric(m)]
+  if (inherits(x, "hierarchicalTimeSeries")) {
+    # every node that was adjusted itself (sub-series, directly adjusted
+    # aggregates, nested objects) is fixed on its own; the aggregates that
+    # are only built indirectly have no output and are skipped
+    for (nm in x$getSeries()) {
+      component <- x$getComponent(nm)
+      if (!is.null(component$output)) {
+        fixOutlier(component, timespan = timespan, verbose = verbose)
+      }
+    }
+    return(invisible(NULL))
   }
-  if(nchar(m)==1){
-    m <- paste0("0",m)
+  otl <- getOutliers(x)
+  from <- detection_from(x$ts, timespan)
+  if (is.data.frame(otl) && nrow(otl) > 0) {
+    if (verbose) {
+      for (i in seq_len(nrow(otl))) {
+        message(otl$type[i], " outlier saved at ", format(otl$date[i]), ".")
+      }
+    }
+    x$updateParams(
+      addout.type = otl$type,
+      addout.date = otl$date,
+      setout.span.type = "From",
+      setout.d0 = from
+    )
+  } else {
+    if (verbose) {
+      message("No automatic outliers found.")
+    }
+    x$updateParams(setout.span.type = "From", setout.d0 = from)
   }
-  from <- paste0(y,"-",m,"-01")
-  if(x$output$regarima$specification$outliers$enabled){
-    possibleOutliers <- row.names(x$output$regarima$regression.coefficients)
-    possibleOutliers <- possibleOutliers[substring(possibleOutliers,1,2)%in%
-                                           c("AO","LS","TC")]
-    if(x$tsp[3]==12){
-      outliers <- lapply(possibleOutliers, function(x){
-        x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[[1]]
-        x2[1] <- ifelse(nchar(x2[1])==1,paste0("0",x2[1]),x2[1])
-        data.frame(type=substr(x,1,2),date=paste0(x2[2],"-",x2[1],"-01"))
-      })
-    }else if(x$tsp[3]==4){
-      outliers <- lapply(possibleOutliers, function(x){
-        x2 <- strsplit(x = substring(x,5,nchar(x)-1), split ="-")[[1]]
-        x2[1] <- c(I="01",II="04",III="07",IV="10")[x2[1]]
-        data.frame(type=substr(x,1,2),date=paste0(x2[2],"-",x2[1],"-01"))
-      })
-    }
-    if(!is.na(x$output$regarima$specification$regression$userdef$outliers[1])){
-      if(x$tsp[3]==12){
-        outliers <- outliers[sapply(outliers,
-                                    userdefOut = x$output$regarima$specification$regression$userdef$outliers[,1:2],
-                                    function(x,userdefOut){
-                                      m <- merge(x, userdefOut, by = c("type","date"))
-                                      return(nrow(m)==0)
-                                    })]
-
-      }else if(x$tsp[3]==4){
-        outliers <- outliers[sapply(outliers,
-                                    userdefOut = x$output$regarima$specification$regression$userdef$outliers[,1:2],
-                                    function(x,userdefOut){
-                                      m <- merge(x, userdefOut, by = c("type","date"))
-                                      return(nrow(m)==0)
-                                    })]
-      }
-      oldType <- x$output$regarima$specification$regression$userdef$outliers$type
-      oldDate <- x$output$regarima$specification$regression$userdef$outliers$date
-    }else{
-      oldType <- NULL
-      oldDate <- NULL
-    }
-    if(length(outliers)>0){
-      if(verbose){
-        for(i in seq_along(outliers)){
-          message(outliers[[i]]$type," outlier saved at ",outliers[[i]]$date,".")
-        }
-      }
-      df <- data.frame(type=c(oldType,
-                              sapply(outliers, function(x)x$type)),
-                       date=c(oldDate,
-                              sapply(outliers, function(x)x$date)))
-      df <- unique(df)
-      if(class(x)[1]=="hierarchicalTimeSeries"){
-        private$updateParamsDirect(usrdef.outliersEnabled = TRUE,
-                                   usrdef.outliersType = df$type,
-                                   usrdef.outliersDate = df$date)
-      }else{
-        x$updateParams(usrdef.outliersEnabled = TRUE,
-                       usrdef.outliersType = df$type,
-                       usrdef.outliersDate = df$date)
-      }
-
-    }else{
-      if(verbose){
-        message("No automatic outliers found.")
-      }
-    }
-    if(verbose){
-      message("Updating parameter outlier.from to '",from,"'")
-    }
-    if(class(x)[1]=="hierarchicalTimeSeries"){
-      private$updateParamsDirect(outlier.from = from)
-    }else{
-      x$updateParams(outlier.from = from)
-    }
-
-  }else if(verbose){
-    message("Automatic outliers not enabled.")
-  }
+  invisible(NULL)
 }
 
-# noch an rjd3 anpassen, bzw. überhaupt anders aufziehen, Logik ist jetzt etwas anders.
-
+# the date the automatic outlier detection starts at: the observation
+# timespan periods before the end of the series (the last timespan
+# observations stay open for re-detection)
+detection_from = function(ts, timespan) {
+  tt <- stats::time(ts)
+  freq <- stats::frequency(ts)
+  from <- tt[max(1L, length(tt) - timespan + 1L)]
+  year <- floor(from)
+  period <- round((from - year) * freq) + 1  # 1 .. freq
+  month <- if (freq == 12) {
+    period
+  } else if (freq == 4) {
+    3 * (period - 1) + 1
+  } else {
+    1
+  }
+  as.Date(sprintf("%04d-%02d-01", year, month), format = "%Y-%m-%d")
+}
