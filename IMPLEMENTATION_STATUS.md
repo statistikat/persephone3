@@ -3,6 +3,15 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Family M5b full source verification (2026-11-24)
+
+The stock X-13 item 28 checkpoint in rkalos `f53ee8f` passed all 66
+files with **309,527/309,527** serial and **309,531/309,531** OpenMP
+assertions. Its OpenMP source check passed the examples and retained the
+two documented compiler warnings. Persephone `975c771` passed
+**8,244/8,244** assertions and its full source check with `Status: OK`,
+including examples, rebuilt vignettes and the PDF manual.
+
 ## M6 stock X-13 forecast intervals and residual tests (2026-11-24)
 
 With rkalos `0.1.0.9025` at `0aaa37b`, the native stock X-13 templates
