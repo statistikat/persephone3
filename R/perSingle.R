@@ -43,6 +43,7 @@ persephoneSingle <- R6::R6Class(
       dots <- list(...)
       if (!is.null(td)) {
         td_obj <- resolve_td_input(ts, td, private$.method)
+        private$td_requested_internal <- TRUE
         # merge the trading day regressors into an existing context, if any
         context <- context_add(context, td_obj$context$variables)
         # user td.* arguments (speclist and dots) override the generated ones;
@@ -84,10 +85,11 @@ persephoneSingle <- R6::R6Class(
         private$updateFun,
         c(update_args, dots)
       )
-      if (!is.null(user_obj)) {
+      add_vars <- user_obj$vars
+      if (!is.null(add_vars)) {
         private$params_internal <- spec_add_usrdefvars(
           private$params_internal,
-          user_obj$vars
+          add_vars
         )
       }
     },
@@ -98,6 +100,7 @@ persephoneSingle <- R6::R6Class(
                                spec = private$params_internal,
                                context = private$context_internal,
                                userdefined = private$userdefined)
+      output <- check_td_output(output, private$td_requested_internal)
       private$output_internal <- output
       if (!verbose)
         invisible(output)

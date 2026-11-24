@@ -91,6 +91,7 @@ persephone <- R6::R6Class(
       dots <- list(...)
       if (!is.null(td)) {
         td_obj <- resolve_td_input(private$ts_internal, td, private$.method)
+        private$td_requested_internal <- TRUE
         private$context_internal <- context_add(
           private$context_internal,
           td_obj$context$variables
@@ -140,7 +141,7 @@ persephone <- R6::R6Class(
           dots
         )
       )
-      if (!is.null(user_obj)) {
+      if (!is.null(user_obj$vars)) {
         private$params_internal <- spec_add_usrdefvars(
           private$params_internal,
           user_obj$vars
@@ -294,6 +295,9 @@ persephone <- R6::R6Class(
     output_internal = NULL,
     context_internal = NULL,
     userdefined = NULL,
+    # whether the trading day spec block was set (for the warning in
+    # check_td_output())
+    td_requested_internal = FALSE,
     # spec_internal = NULL,
     printTable = function(prefix) {
       # cbind(

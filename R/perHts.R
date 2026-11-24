@@ -590,9 +590,21 @@ hierarchicalTimeSeries <- R6::R6Class(
           private$user_list(user, names(private$nodes)),
           names(private$nodes)
         )
-        if (isTRUE(iterate) && !is.null(speclist) && length(speclist) > 0) {
-          lapply(private$nodes, function(node) {
-            do.call(node$updateParams, c(list(iterate = TRUE), speclist))
+        # the spec updates: the plain block.param arguments as well as the
+        # speclist (both are combined by the nodes' own updateParams()), for
+        # all series or - with iterate = FALSE - for the aggregates only
+        dots <- list(...)
+        if (length(speclist) > 0 || length(dots) > 0) {
+          targets <- if (isTRUE(iterate)) {
+            private$nodes
+          } else {
+            private$nodes[private$root_aggregates()]
+          }
+          lapply(targets, function(node) {
+            do.call(
+              node$updateParams,
+              c(list(iterate = iterate, speclist = speclist), dots)
+            )
             invisible(NULL)
           })
         }
@@ -1609,11 +1621,14 @@ hierarchicalTimeSeries <- R6::R6Class(
         private$td_internal$context$variables
       )
 
-      private$output_internal <- methodFunction(
-        ts = private$ts_internal,
-        spec = private$params_internal,
-        userdefined = private$userdefined,
-        context = context
+      private$output_internal <- check_td_output(
+        methodFunction(
+          ts = private$ts_internal,
+          spec = private$params_internal,
+          userdefined = private$userdefined,
+          context = context
+        ),
+        !is.null(private$td_internal)
       )
     }
   )
