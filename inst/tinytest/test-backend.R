@@ -29,7 +29,11 @@ local({
   expect_identical(capability$runtime_checked, FALSE)
   expect_identical(sort(intersect(loadedNamespaces(), java_packages)), before)
   expect_error(backend_capabilities("native", "x1"), "exactly")
-  expect_error(persephone3:::backend_default_spec("x13", "rsa0", 12, "native"),
+  expect_identical(capability$estimated_x13_fit$templates, c("RSA0", "RSA1", "RSA2c"))
+  expect_null(tramo$estimated_x13_fit)
+  stock <- persephone3:::backend_default_spec("x13", "rsa0", 12, "native")
+  expect_true(inherits(stock, "persephone_native_estimated_spec"))
+  expect_error(persephone3:::backend_default_spec("x13", "rsa4", 12, "native"),
                "does not yet implement specification construction")
   # rsa3 is the qualified automatic template; its native spec is the pinned
   # automatic constructor (capabilities()$native_x13_fit_automatic gate).

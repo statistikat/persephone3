@@ -29,7 +29,8 @@ backend_block_registry <- function() {
 #'
 #' Reports the explicitly selected backend's implementation status without
 #' initializing Java. The native backend reports its qualified X-13 fits in
-#' `capabilities()$restricted_fit` and `capabilities()$automatic_fit`, and its
+#' `capabilities()$restricted_fit`, `capabilities()$automatic_fit` and
+#' `capabilities()$estimated_x13_fit`, and its
 #' monthly TRAMO-SEATS templates in `capabilities()$tramo_seats_fit`.
 #' `capabilities()$fit` describes unrestricted fitting. Requests outside the qualified domains raise an
 #' explicit error naming the violated scope field(s) and never fall back to
@@ -53,7 +54,7 @@ backend_capabilities <- function(backend = NULL, method = NULL) {
     cap$methods <- intersect(methods, c("x13", if (isTRUE(tramo$available)) "tramoseats"))
     if (!"x13" %in% methods) {
       cap$native_x13_fit_restricted <- cap$native_x13_fit_automatic <- FALSE
-      cap$restricted_fit <- cap$automatic_fit <- NULL
+      cap$restricted_fit <- cap$automatic_fit <- cap$estimated_x13_fit <- NULL
       cap$primitives <- cap$primitives[grepl("^(tramo|seats)", cap$primitives)]
     }
     if (!"tramoseats" %in% methods) cap$tramo_seats_fit <- NULL

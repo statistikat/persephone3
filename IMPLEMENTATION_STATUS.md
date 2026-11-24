@@ -3,6 +3,14 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Stock X-13 backend contract checks (2026-11-24)
+
+The method-filtered capability now lists stock estimated templates for X-13
+and omits that field for TRAMO-SEATS. The complete source check exposed two
+older tests that expected RSA0 construction to fail. They now verify native
+RSA0 construction, RSA4 refusal and Java's lazy initialization. The installed
+backend and reinitialization tests passed **97/97** and **16/16**.
+
 ## M5b stock estimated X-13 in Persephone (2026-11-24)
 
 `perX13(series, template, backend = "native")` supports the original monthly

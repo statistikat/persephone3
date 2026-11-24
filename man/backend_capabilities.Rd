@@ -22,7 +22,8 @@ is deliberately not probed here because probing would initialize Java.
 \description{
 Reports the explicitly selected backend's implementation status without
 initializing Java. The native backend reports its qualified X-13 fits in
-\code{capabilities()$restricted_fit} and \code{capabilities()$automatic_fit}, and its
+\code{capabilities()$restricted_fit}, \code{capabilities()$automatic_fit} and
+\code{capabilities()$estimated_x13_fit}, and its
 monthly TRAMO-SEATS templates in \code{capabilities()$tramo_seats_fit}.
 \code{capabilities()$fit} describes unrestricted fitting. Requests outside the qualified domains raise an
 explicit error naming the violated scope field(s) and never fall back to
