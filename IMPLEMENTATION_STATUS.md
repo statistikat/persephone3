@@ -16,6 +16,26 @@ Dependency graph: `persephone3 → rkalos → kalos`, with `pykalos → kalos`.
 The four sibling checkouts live under `~/git/seasonaladjustment`.
 Each contains its own implementation status.
 
+## M5 ordinary native RSAfull with calendar-adjusted products (2026-11-24)
+
+`perTramo(series, "rsafull", backend = "native")` uses published rkalos
+`0.1.0.9021` at `45cf058c46f225005ce73ebe04e1b96b6587d907`. All 29
+public stock fits select calendar regressors, orders, transformations and
+outliers from the original monthly observations. Working-day and individual
+weekday contrasts, leap year and Easter appear in the regression table;
+the quality report records the selected count and effects. Observed and
+forecast calendars are dated and use the original series scale. Custom
+fixed-order and manual-outlier changes retain the ordinary stock restrictions.
+
+The panel matched all 26,160 merged component values and 5,232 calendar
+effects bit-for-bit against the frozen public reference. The live reference
+additionally checked report labels, coefficients, point forecasts and
+original-series forecast uncertainty. RSAfull passed **1,029/1,029**
+Java-free and **1,843/1,843** live checks. Including the other three TRAMO
+templates and reporting gives **3,383/3,383** Java-free and **5,238/5,238**
+live results. The earlier `67db3fa` full source check passed **5,645/5,645**
+with examples and rebuilt vignettes; the separate PDF manual has 58 pages.
+
 ## Twenty monthly native RSA3 products and missing seasonal uncertainty (2026-11-24)
 
 Persephone pins rkalos `0.1.0.9020` at `c3170b14bc9d2e8570389556f9d4cbf6e176435d`.

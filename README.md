@@ -85,6 +85,12 @@ refits, reduced outlier thresholds and repeated reference comparisons.
 When the fitted model has no stochastic seasonal component, its final
 seasonal factor is neutral and conditional seasonal uncertainty is unavailable.
 
+Use `perTramo(series, "rsafull", backend = "native")` to select trading days,
+leap year and Easter effects alongside the SARIMA model and outliers.
+The fitted object’s `$getRegressors()` method reports the calendar coefficients. The result
+contains the observed and forecast calendar effects on the original
+series scale, and the quality report identifies the selected calendar terms.
+
 For a complete monthly series, the native RSA0 route estimates the airline model
 and decomposes it with SEATS. It runs without Java and defaults to 24 forecast
 months.

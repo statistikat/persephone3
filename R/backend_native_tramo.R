@@ -1,7 +1,7 @@
-# Monthly RSA0 and RSA1 fit the airline orders. RSA3 identifies the orders.
+# Monthly RSA0 and RSA1 fit the airline orders. RSA3 identifies the orders. RSAfull also selects calendar regressors.
 validate_native_tramo_spec <- function(spec, ts) {
   if (!inherits(spec, "persephone_native_tramo_spec") || !identical(spec$method, "tramoseats") ||
-      length(spec$template) != 1L || !spec$template %in% c("rsa0", "rsa1", "rsa3") || !identical(spec$frequency, 12L) ||
+      length(spec$template) != 1L || !spec$template %in% c("rsa0", "rsa1", "rsa3", "rsafull") || !identical(spec$frequency, 12L) ||
       anyDuplicated(names(spec)) ||
       !setequal(names(spec), c("method", "template", "frequency", "backcast", "forecast")))
     stop("Invalid native TRAMO-SEATS specification.", call. = FALSE)
@@ -37,8 +37,9 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
   validate_native_tramo_spec(spec, ts)
   multiplicative <- identical(fit$mode, "multiplicative")
   neutral_calendar <- function(series) 0 * series + as.integer(multiplicative)
+  stock_calendar <- identical(spec$template, "rsafull")
   components <- list(y = fit$series, t = fit$finalTrend, sa = fit$finalSA,
-                     s = fit$finalSeasonal, i = fit$finalIrregular, cal = neutral_calendar(fit$series))
+                     s = fit$finalSeasonal, i = fit$finalIrregular, cal = if (stock_calendar) fit$calendar_effect else neutral_calendar(fit$series))
   fields <- c(y = "Series", t = "Trend", sa = "SeasonallyAdjusted", s = "Seasonal", i = "Irregular")
   rows <- function(table, information, optional = character()) {
     table <- table[table$information == information, , drop = FALSE]
@@ -60,7 +61,7 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
     reason$y <- paste("TRAMO forecast uncertainty:", fit$series_forecast_stdev_status %||% "unavailable")
   }
   points <- rows(fit$merged, "Forecast")
-  if (length(points)) points$cal <- neutral_calendar(points$y)
+  if (length(points)) points$cal <- if (stock_calendar) fit$calendar_effect_forecast else neutral_calendar(points$y)
   forecasts <- new_forecast_contract(points, errors, observed = ts,
     mode = if (multiplicative) "Multiplicative" else "Additive", error_reasons = reason)
   availability <- data.frame(

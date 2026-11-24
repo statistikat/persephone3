@@ -88,6 +88,15 @@ native_regression_records <- function(result) {
     mean <- data.frame(name = "const", type = "MEAN", value = result$model$mean_coefficient,
                        subtype = NA_character_, position = NA_integer_)
     if (identical(result$model$mean_correction, FALSE)) mean <- mean[FALSE, , drop = FALSE]
+    calendar <- result$model$calendar$coefficients
+    if (length(calendar)) {
+      labels <- names(calendar)
+      type <- ifelse(startsWith(labels, "td"), "TD", toupper(labels))
+      if (identical(result$model$calendar$trading_days, "trading_days"))
+        labels[type == "TD"] <- c("mon", "tue", "wed", "thu", "fri", "sat")
+      mean <- rbind(mean, data.frame(name = labels, type = type, value = unname(calendar),
+                                     subtype = NA_character_, position = NA_integer_))
+    }
     v <- result$model$outliers
     if (is.null(v) || !nrow(v)) return(mean)
   } else if (inherits(result, "persephone_native_automatic_fit")) {

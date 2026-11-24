@@ -5,7 +5,7 @@
 #'   re-estimated on the next run. Existing fixed-coefficient constraints remain.
 #'
 #' @details Native TRAMO-SEATS RSA0 and RSA1 fix the airline orders when the model is
-#' constructed. Native RSA3 requires automatic order selection. The restricted
+#' constructed. Native RSA3 and RSAfull require automatic order selection. The restricted
 #' X-13 decomposition receives its preprocessing inputs from the caller.
 #'
 #' @param x a persephone object
@@ -26,7 +26,7 @@ fixModel <- function(x, verbose = FALSE) {
     if (inherits(x$result, "persephone_native_restricted_fit"))
       stop("The restricted X-13 fit has no estimated ARIMA orders to fix.", call. = FALSE)
     backend_native_refusal("fixing estimated ARIMA orders", x$method, "automatic_spec_pinned",
-                           "the RSA3 route requires automatic order selection;")
+                           paste0("the ", x$result$specification$template, " route requires automatic order selection;"))
   }
   orders <- x$output$user_defined
   if (verbose) {

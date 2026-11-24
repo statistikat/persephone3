@@ -60,10 +60,15 @@ generate_Qr_List <- function(x) {
   }
   ntd <- diagnostic_number(user$regression.ntd)
   if (!is.na(ntd) && (ntd < 0 || ntd != floor(ntd))) ntd <- NA_real_
-  if (inherits(x$result, "persephone_native_restricted_fit") ||
-      (identical(x$result$backend, "native") &&
-       x$result$specification$template %in% (if (x$method == "x13") "rsa3" else c("rsa0", "rsa1")))) {
-    # Automatic X-13 RSA3 and TRAMO RSA0/RSA1/RSA3 admit no calendar regressors. The fixed
+  if (inherits(x$result, "persephone_native_tramo_fit")) {
+    calendar <- x$result$model$calendar
+    ntd <- sum(startsWith(names(calendar$coefficients) %||% character(), "td"))
+    leap_year <- isTRUE(calendar$leap_year)
+    moving_holiday <- isTRUE(calendar$easter)
+  } else if (inherits(x$result, "persephone_native_restricted_fit") ||
+      (identical(x$result$backend, "native") && x$method == "x13" &&
+       identical(x$result$specification$template, "rsa3"))) {
+    # Automatic X-13 RSA3 uses no calendar regressors. The fixed
     # X-13 route can carry user-supplied effects without a calendar subtype.
     variables <- x$result$specification$variables
     classes <- vapply(variables, "[[", character(1), "class")

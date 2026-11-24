@@ -18,6 +18,6 @@ re-estimated on the next run. Existing fixed-coefficient constraints remain.
 }
 \details{
 Native TRAMO-SEATS RSA0 and RSA1 fix the airline orders when the model is
-constructed. Native RSA3 requires automatic order selection. The restricted
+constructed. Native RSA3 and RSAfull require automatic order selection. The restricted
 X-13 decomposition receives its preprocessing inputs from the caller.
 }

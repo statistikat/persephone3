@@ -169,10 +169,10 @@ backend_native_auto_refusals <- list(
 backend_native_check_template <- function(template, method = "x13") {
   if (identical(method, "tramoseats")) {
     scope <- rkalos::capabilities()$tramo_seats_fit
-    if (length(template) != 1L || !template %in% c("rsa0", "rsa1", "rsa3") ||
-        !isTRUE(scope$available) || !toupper(template) %in% scope$templates)
+    if (length(template) != 1L || !template %in% c("rsa0", "rsa1", "rsa3", "rsafull") ||
+        !isTRUE(scope$available) || !template %in% tolower(scope$templates))
       backend_native_refusal("specification construction", method, "tramo_seats_fit.templates",
-                             "the qualified monthly TRAMO-SEATS templates are rsa0, rsa1 and rsa3; ")
+                             "the qualified monthly TRAMO-SEATS templates are rsa0, rsa1, rsa3 and rsafull; ")
     return(invisible(TRUE))
   }
   if (identical(template, "restricted") || identical(template, "rsa3")) return(invisible(TRUE))
