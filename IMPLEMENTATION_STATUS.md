@@ -1566,3 +1566,12 @@ Tests also checked both chart bounds and a custom six-month forecast.
 The RSA3 suite passed **816/816** assertions without Java and
 **1,219/1,219** with live JDemetra. RSA0 and RSA1 product suites also
 passed in both environments. [RSA3 forecasts and intervals](inst/tinytest/test-native-tramoseats-rsa3.R)
+
+### Windows package checks and localized R errors
+
+The degenerate X-13 regression now compares its error with the message
+produced by the running R interpreter for a missing condition. This removed
+an undefined test helper reached by the hosted Windows check and keeps the
+assertion active in translated R sessions. All 440 live-reference parity
+checks passed with English messages and all 440 passed with German messages.
+The hosted Windows rerun remains part of platform qualification.

@@ -70,11 +70,8 @@
 #   - fit succeeds  -> upstream fixed the conversion: assert the fit is sane
 #     (green, known issue retires itself);
 #   - fit fails with the pinned message -> documented current state (green);
-#   - fit fails with a DIFFERENT message on an English/C message locale ->
-#     RED on purpose, because the failure contract changed and this file's
-#     header must be revisited;
-#   - non-English LC_MESSAGES -> skip, because the pinned signature is an R
-#     interpreter string and would be falsely localized.
+#   - other failures must fail the check in every locale. Generate the
+#     interpreter's exact missing-condition message in the active R session.
 has_rjd3 <- all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
                        requireNamespace, logical(1), quietly = TRUE))
 
@@ -1128,9 +1125,6 @@ expect_true(max(abs(hts_ref$direct - hts_ref$indirect)) > TOL_HTS)
 
 # Known issue: degenerate series, rjd3toolkit NA test-statistic conversion
 # (policy and rationale in the file header).
-lc_messages <- suppressWarnings(Sys.getlocale("LC_MESSAGES"))
-english_locale <- isTRUE(lc_messages %in% c("C", "C.UTF-8")) ||
-  grepl("^en", if (is.na(lc_messages)) "" else lc_messages)
 degenerate <- ts(10 + 0.5 * seq_len(48) + rep(c(0, 1, 5), 16),
                  start = c(2016, 1), frequency = 12)
 outcome <- tryCatch({
@@ -1142,10 +1136,9 @@ if (is.persephone(outcome)) {
   # Upstream fixed the conversion: require a sane fit, retiring the pin.
   expect_false(is.null(outcome$adjusted))
   expect_true(all(is.finite(stats::na.omit(as.numeric(outcome$adjusted)))))
-} else if (!english_locale) {
-  skip("Known-issue signature is locale-sensitive; LC_MESSAGES is not English")
 } else {
-  expect_match(outcome, "missing value where TRUE/FALSE needed")
+  missing_condition <- tryCatch(if (NA) TRUE, error = conditionMessage)
+  expect_match(outcome, missing_condition, fixed = TRUE)
 }
 
 }
