@@ -22,17 +22,30 @@ stopifnot(!any(forbidden %in% loadedNamespaces()))
 cap <- backend_capabilities("native")
 stopifnot(identical(cap$fit, FALSE), identical(cap$status, "unimplemented"))
 options(persephone.backend = "native")
-err <- tryCatch(perX13(AirPassengers, "rsa0"), error = identity)
-stopifnot(inherits(err, "error"), grepl("native backend does not yet implement", conditionMessage(err)))
-# M4-gap (2026-11-21): the automodel-OFF refusals cite BOTH qualified envelopes
-# with measured jar facts; the restricted-route part must name the fixed-
-# coefficient violations and quote the pinned core statuses verbatim -- and
-# those statuses must be what the installed core actually answers right now.
+# 775ce9d (2026-11-24): stock monthly X-13 RSA0/RSA1/RSA2c native specification
+# construction became real (the estimated-fit route), and inst/tinytest/test-
+# backend.R (975c771) states the contract the product follows: the rsa0 native
+# spec CONSTRUCTS as a persephone_native_estimated_spec and only rsa4/rsa5c
+# still refuse construction. Probe both routes the test pins -- the internal
+# spec builder and the product path.
+stock <- persephone3:::backend_default_spec("x13", "rsa0", 12, "native")
+stopifnot(inherits(stock, "persephone_native_estimated_spec"))
+stopifnot(inherits(perX13(AirPassengers, "rsa0")$specification$parameters,
+                   "persephone_native_estimated_spec"))
+err <- tryCatch(perX13(AirPassengers, "rsa4"), error = identity)
+stopifnot(inherits(err, "error"),
+          grepl("does not yet implement specification construction", conditionMessage(err)))
+# M4-gap (2026-11-21), re-attached to the rsa4 refusal when rsa0 construction
+# landed: the automodel-template refusal still cites BOTH qualified envelopes
+# and quotes the pinned core status verbatim; the restricted-route part must
+# name the fixed-coefficient violation, and that core status must be what the
+# installed core actually answers right now.
 msg0 <- conditionMessage(err)
 stopifnot(grepl("envelopes \\(automatic and restricted\\)", msg0),
-          grepl("fixed_seasonal_requests_only", msg0, fixed = TRUE),
-          grepl("zero_horizon_only", msg0, fixed = TRUE),
-          grepl("unsupported:x13 fit requires zero horizons", msg0, fixed = TRUE))
+          grepl("automatic_fit.deferred", msg0, fixed = TRUE),
+          grepl("No Java fallback", msg0, fixed = TRUE),
+          grepl("unsupported:x13 automatic fit defers calendar/easter/TD/user detection (21-I)",
+                msg0, fixed = TRUE))
 fit_fun <- rkalos::native_x13_fit
 st <- fit_fun(as.numeric(AirPassengers), seasonal = rep("msr", 12L), trend_length = 13L,
               frequency = 12L, start_period = 1L)
