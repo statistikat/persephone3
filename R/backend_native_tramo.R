@@ -79,7 +79,7 @@ normalize_native_tramo_result <- function(fit, spec, ts) {
   structure(list(schema_version = 1L, method = "tramoseats", backend = "native",
                  specification = spec, status = list(code = "success", convergence = "not_reported"),
                  domain = backend_domain(ts), components = components, forecasts = forecasts,
-                 diagnostics = list(residuals = fit$residuals), availability = availability,
+                 diagnostics = c(list(residuals = fit$residuals), fit$diagnostics), availability = availability,
                  model = model, likelihood = fit$likelihood,
                  seats_forecast_standard_errors = conditional,
                  provenance = list(template = spec$template, mode_effective = fit$mode,

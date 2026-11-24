@@ -91,10 +91,15 @@ diagnostic_metrics <- function(x) {
     if (identical(x$result$backend, "native")) paths <- c(list(c("residuals", key)), paths)
     test(paths, "normality")
   }
+  seasonality_path <- if (identical(x$result$backend, "native")) {
+    c("diagnostics", "combined_seasonality", "summary")
+  } else {
+    c("user_defined", "diagnostics.seas-si-combined")
+  }
   list(
     normality = residual_test("doornikhansen"),
     independence = residual_test("lb"),
-    seasonality = category(list(c("user_defined", "diagnostics.seas-si-combined"))),
+    seasonality = category(list(seasonality_path)),
     residual_qs = metric("diagnostics.seas-sa-qs", c("diagnostics", "seas.qstest.sa")),
     residual_f = metric("diagnostics.seas-sa-f", c("diagnostics", "seas.ftest.sa")),
     td_regression = metric("regression.td-ftest", rule = "regression_td"),

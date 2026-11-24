@@ -16,6 +16,21 @@ Dependency graph: `persephone3 → rkalos → kalos`, with `pykalos → kalos`.
 The four sibling checkouts live under `~/git/seasonaladjustment`.
 Each contains its own implementation status.
 
+## M6 native combined SI in tables, dashboards and quality reports (2026-11-24)
+
+Persephone pins rkalos `0.1.0.9022` at
+`c52aba9846f84275df9ac2d72f30dafc39a4ff05`. The normalized results for
+TRAMO-SEATS and fixed X-13 carry the combined SI diagnostic, and the table,
+dashboard and quality report show its public categorical result. A short
+series reports missing. The two RSA3 fits with a missing stochastic seasonal
+component correctly report `None` from their irregular series.
+
+The 24-product fixture panel passed **171/171** Java-free and **211/211**
+with live JDemetra. A separate live regression checked the public combined
+SI category on all 29 calendar-adjusted RSAfull products (**1,872/1,872**
+assertions across that file). Existing diagnostic and reporting checks passed
+in both installations. The automatic X-13 decoder has its own qualification.
+
 ## M5 RSAfull backend capability inventory (2026-11-24)
 
 The public backend inventory test now checks all four monthly stock TRAMO

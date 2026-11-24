@@ -691,7 +691,7 @@ normalize_native_result <- function(fit, spec, ts) {
   structure(list(schema_version = 1L, method = "x13", backend = "native",
                  specification = spec, status = list(code = code, convergence = "not_reported"),
                  domain = backend_domain(ts), components = components,
-                 forecasts = NULL, diagnostics = list(), availability = availability,
+                 forecasts = NULL, diagnostics = fit$diagnostics %||% list(), availability = availability,
                  provenance = provenance, results = fit$results,
                  preadjustment = fit$preadjustment, selection = fit$selection,
                  raw = fit),

@@ -72,6 +72,8 @@ for (id in names(cases)) {
   if (reference) {
     jd <- perTramo(series, "rsafull", backend = "rjd3", userdefined = c("cal_f(24)", "y_ef(24)"))
     jd$run()
+    expected_summary <- jd$output$user_defined[["diagnostics.seas-si-combined"]]
+    expect_identical(report$CombinedTest_SI, expected_summary, info = id)
     for (key in c(unname(keys), "cal")) {
       for (forecast in c(FALSE, TRUE)) {
         actual <- if (forecast) fit$forecasts$points[[key]] else fit$components[[key]]
