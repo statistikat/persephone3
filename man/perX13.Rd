@@ -77,7 +77,7 @@ of the JDemetra+ rsa3 specification
 to zero. Supply whole numbers through speclist or updateParams. Positive
 counts specify months and negative counts specify years. The forecasts field
 returns dated original, trend, adjusted, seasonal and calendar points.
-Every other native template fails explicitly with
+Monthly stock RSA0, RSA1 and RSA2c estimate the airline coefficients and select the X-11 filters, with twelve forecasts. Other native templates fail explicitly with
 the violated scope field(s) named. See the examples in the README for a
 restricted run.}
 }

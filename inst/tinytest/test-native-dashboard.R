@@ -5,8 +5,8 @@ local({
   first <- as.persephone(AirPassengers, method = "x13", template = "restricted",
                          backend = "native")
   expect_identical(first$backend, "native")
-  expect_error(as.persephone(AirPassengers, "x13", "rsa0", backend = "native"),
-               "fixed_coefficients_only")
+  expect_true(inherits(as.persephone(AirPassengers, "x13", "rsa0", backend = "native")$params,
+                       "persephone_native_estimated_spec"))
   expect_error(as.persephone(AirPassengers, "x13", "restricted", backend = "rjd3"),
                "Invalid template")
 

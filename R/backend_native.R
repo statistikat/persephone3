@@ -22,33 +22,9 @@
 # deferral status quoted verbatim). The default horizons are zero. The automatic route accepts
 # explicit forecast and backcast counts and the sigma policy.
 #
-# M4-gap slice (2026-11-21): the automodel-OFF templates rsa0/rsa1/rsa2c were
-# re-decoded LIVE from the pinned jars (X13Spec.fromString -> X13.toBuffer ->
-# Spec.parseFrom().toString() proto TextFormat plus the fully expanded rjd3
-# x13_spec walk; probe m4gap-templates-probe.R sha256
-# d3525549f06d5add59b290a8a8604fd139020b91364dfe825c8f5171b4b54104, two JVM
-# processes, 12/12 files byte-identical) and evaluated against BOTH qualified
-# routes. They stay refused on both, with measured facts (nothing adapted):
-# the AUTOMATIC route refuses them as before (automodel disabled is a dead
-# branch; rsa2c additionally carries the 21-I calendar facts), and the
-# RESTRICTED fixed-coefficient route cannot represent them either: every one
-# of the three states ARIMA coefficients PARAMETER_UNDEFINED (ESTIMATED at
-# run time -- landing bits measured in the pinned demand captures), requests
-# x11 sfilters SEASONAL_FILTER_MSR (core: "unsupported:x13 fit fixed seasonal
-# requests only"), the automatic Henderson 0 (core: "unsupported:x13 fit
-# fixed Henderson trend length") and nfcasts -1 = 12 forecast months (core:
-# "unsupported:x13 fit requires zero horizons"; measured 12 forecasts in all
-# nine demand runs); rsa1/rsa2c additionally request the FN_AUTO log test and
-# AO/LS/TC detection, and rsa2c carries the ESTIMATED leap-year/easter
-# regressors (TD2 columns removed by TEST_REMOVE, leap-year kept -- measured).
-# No fixed-spec mapping is pinnable from template data: the candidate fixed
-# values (final Henderson 9 vs 13, S3X3/S3X5/S3X9, log TRUE/FALSE) are
-# series-dependent RUN OUTPUTS of estimation the restricted route never
-# performs, so pinning them would be mapping fudge. The refusals below carry
-# both envelopes' violated fields; the pinned captures live under
-# inst/tinytest/fixtures/native/refusals-m4gap/ (decode + demand lines,
-# double-JVM byte-identical) and the JVM lane re-verifies them against the
-# live stack. Notes: tmp_opencode/persephone-m4gap-pinning.md.
+# The stock fixed-structure templates RSA0, RSA1 and RSA2c estimate the
+# airline coefficients from the original series. Their native stock entry
+# selects the X-11 filters and returns the one-year forecast.
 #
 # Sigma policy (maintainer decision 2026-11-17): the X-11 sigma-rule product
 # default is "legacy" (bit-exact against the pinned DefaultExtremeValuesCorrector
@@ -60,7 +36,7 @@
 # always wins; any other stated value is refused.
 
 native_backend_entry <- paste("native_x13_fit(), native_x13_preadjust(), native_x13_restore(),",
-                              "native_x13_fit_automatic()")
+                              "native_x13_fit_automatic(), native_x13_estimated_fit()")
 
 # Refusal carrying the violated scope field(s); wording keeps the established
 # "does not yet implement"/"No Java fallback" contract of backend_unimplemented().
@@ -95,64 +71,8 @@ backend_native_gate <- function(context = "the restricted fit", method = "x13") 
   rf
 }
 
-# The templates the native backend can construct: the restricted fixed
-# specification and the automatic rsa3 template (pinned decode table, see
-# below). Every other automatic template is refused naming the measured
-# JDemetra+ template facts that put it outside the qualified envelope(s).
-# The restricted-route facts below are MEASURED, not derived: the pinned core
-# statuses are the live answers of rkalos 0.1.0 / core f500162 to the decoded
-# requests (m4gap-envelope-probe.R sha256
-# 2e59fe75312bef3d55d1775c859fea83db4f74654591f629607e3e575cbf0d1e), and the
-# template facts come from the double-JVM captures
-# inst/tinytest/fixtures/native/refusals-m4gap/ (probe sha256
-# d3525549f06d5add59b290a8a8604fd139020b91364dfe825c8f5171b4b54104 and
-# 77ea273a6a32db948026ec016cca5b2cfdfafc547ec931fdc214496d4840bee0).
-backend_native_restricted_refusal <- paste0(
-  "the pinned JDemetra+ specification states the ARIMA coefficients ",
-  "PARAMETER_UNDEFINED (ESTIMATED at run time) and requests the X-11 filters ",
-  "SEASONAL_FILTER_MSR with the automatic Henderson 0 and nfcasts = -1 (12 ",
-  "forecast months; measured in the pinned demand captures), which the ",
-  "restricted fixed-coefficient route refuses verbatim with ",
-  "'unsupported:x13 fit fixed seasonal requests only', 'unsupported:x13 fit ",
-  "fixed Henderson trend length' and 'unsupported:x13 fit requires zero ",
-  "horizons' (nothing is estimated there: fixed_coefficients_only); ")
-
+# Remaining automatic templates require selection of calendar regressors.
 backend_native_auto_refusals <- list(
-  rsa0 = list(violated = c("transform.auto_log_test", "automodel",
-                           "fixed_coefficients_only",
-                           "fixed_seasonal_requests_only",
-                           "fixed_trend_length_only", "zero_horizon_only"),
-              detail = paste0("the pinned JDemetra+ rsa0 specification fixes ",
-                              "transform.fn = Level (the automatic log test is ",
-                              "the only wired transform branch) and runs with ",
-                              "automodel.enabled = FALSE; ",
-                              backend_native_restricted_refusal)),
-  rsa1 = list(violated = c("automodel", "fixed_coefficients_only",
-                           "fixed_seasonal_requests_only",
-                           "fixed_trend_length_only", "zero_horizon_only"),
-              detail = paste0("the pinned JDemetra+ rsa1 specification runs ",
-                              "with automodel.enabled = FALSE; the qualified ",
-                              "automatic pipeline is the automatic-modeling ",
-                              "route; it additionally requests the FN_AUTO log ",
-                              "test and AO/LS/TC outlier detection (measured ",
-                              "ESTIMATED AO variables in the pinned demand ",
-                              "captures), and ",
-                              backend_native_restricted_refusal)),
-  rsa2c = list(violated = c("automodel", "automatic_fit.deferred",
-                            "fixed_coefficients_only",
-                            "fixed_seasonal_requests_only",
-                            "fixed_trend_length_only", "zero_horizon_only"),
-               detail = paste0("the pinned JDemetra+ rsa2c specification runs with ",
-                               "automodel.enabled = FALSE and carries the TD2/leap-year ",
-                               "(test REMOVE) and Easter (test ADD) regressors; ",
-                               "calendar detection is deferred (21-I): the core ",
-                               "answers 'unsupported:x13 automatic fit defers ",
-                               "calendar/easter/TD/user detection (21-I)'; it ",
-                               "additionally requests the FN_AUTO log test and ",
-                               "AO/LS/TC outlier detection, and TEST_REMOVE ",
-                               "measurably keeps the ESTIMATED leap-year and ",
-                               "easter coefficients, and ",
-                               backend_native_restricted_refusal)),
   rsa4 = list(violated = "automatic_fit.deferred",
               detail = paste0("the pinned JDemetra+ rsa4 specification carries the ",
                               "TD2/leap-year (test REMOVE) and Easter (test ADD) ",
@@ -175,6 +95,13 @@ backend_native_check_template <- function(template, method = "x13") {
                              "the qualified monthly TRAMO-SEATS templates are rsa0, rsa1, rsa3 and rsafull; ")
     return(invisible(TRUE))
   }
+  if (length(template) == 1L && template %in% c("rsa0", "rsa1", "rsa2c")) {
+    capability <- rkalos::capabilities()$estimated_x13_fit
+    if (!isTRUE(capability$available) || !template %in% tolower(capability$templates))
+      backend_native_refusal("specification construction", method, "estimated_x13_fit.templates",
+                             "the installed rkalos package must support this stock X-13 template; ")
+    return(invisible(TRUE))
+  }
   if (identical(template, "restricted") || identical(template, "rsa3")) return(invisible(TRUE))
   name <- if (length(template) == 1L && is.character(template)) template else NULL
   refusal <- if (!is.null(name)) backend_native_auto_refusals[[name]] else NULL
@@ -185,9 +112,8 @@ backend_native_check_template <- function(template, method = "x13") {
   }
   backend_native_refusal("specification construction", method,
                          "fixed_coefficients_only",
-                         sprintf(paste0("template '%s' is neither the restricted fixed specification nor a qualified ",
-                                        "automatic template (only 'restricted' and 'rsa3' are qualified ",
-                                        "natively).%s "),
+                         sprintf(paste0("template '%s' is outside the qualified X-13 routes ",
+                                        "'restricted', 'rsa0', 'rsa1', 'rsa2c' and 'rsa3'. %s"),
                                  paste(template, collapse = ", "),
                                  if (method != "x13")
                                    paste0("The native entry points are ", native_backend_entry, ". ")
@@ -267,6 +193,12 @@ backend_native_default_spec <- function(method, template, freq) {
                           backcast = 0L, forecast = -2L),
                      class = c("persephone_native_tramo_spec", "persephone_native_spec")))
   }
+  if (template %in% c("rsa0", "rsa1", "rsa2c")) {
+    if (freq != 12L) backend_native_refusal("specification construction", method, "monthly_only",
+                                            "stock estimated X-13 templates require monthly observations; ")
+    return(structure(list(method = "x13", template = template, frequency = 12L, forecast = -1L, backcast = 0L),
+                     class = c("persephone_native_estimated_spec", "persephone_native_spec")))
+  }
   if (identical(template, "rsa3")) {
     af <- backend_native_auto_gate("specification construction", method)
     if (as.numeric(freq) != af$frequency) {
@@ -305,6 +237,13 @@ backend_native_update_spec <- function(spec, spec_list, method) {
     spec[names(spec_list)] <- spec_list
     return(spec)
   }
+  if (inherits(spec, "persephone_native_estimated_spec")) {
+    if (length(setdiff(names(spec_list), c("forecast", "backcast"))))
+      backend_native_refusal("specification updates", method, "estimated_x13_fit.templates",
+                             "the stock estimated template fixes its preprocessing and X-11 configuration; ")
+    spec[names(spec_list)] <- spec_list
+    return(spec)
+  }
   if (inherits(spec, "persephone_native_auto_spec")) {
     bad <- setdiff(names(spec_list), c("sigma_policy", "backcast", "forecast"))
     if (length(bad)) {
@@ -339,6 +278,19 @@ backend_validate_native_spec <- function(spec, method, ts, allow_unset_filters =
       !identical(method, "x13") || !is.numeric(spec$frequency) ||
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts))))
     stop("Native specification class, method or frequency does not match this series.", call. = FALSE)
+  if (inherits(spec, "persephone_native_estimated_spec")) {
+    if (!spec$template %in% c("rsa0", "rsa1", "rsa2c") || anyDuplicated(names(spec)) ||
+        !setequal(names(spec), c("method", "template", "frequency", "forecast", "backcast")))
+      stop("Invalid stock estimated X-13 specification.", call. = FALSE)
+    valid_count <- function(value, allowed) is.numeric(value) && is.null(dim(value)) &&
+      length(value) == 1L && !is.na(value) && value %in% allowed
+    if (!valid_count(spec$forecast, c(-1, 12)) || !valid_count(spec$backcast, 0))
+      backend_native_refusal("specification updates", method, "estimated_x13_fit.forecast",
+                             "the stock estimated X-13 template fixes twelve forecasts and zero backcasts; ")
+    if (stats::frequency(ts) != 12 || any(!is.finite(ts)))
+      stop("Stock estimated X-13 requires complete finite monthly observations.", call. = FALSE)
+    return(invisible(spec))
+  }
   automatic <- inherits(spec, "persephone_native_auto_spec")
   route <- if (automatic) "rsa3" else "restricted"
   if (!identical(spec$template, route))
@@ -590,6 +542,14 @@ backend_native_fit <- function(ts, spec, context, userdefined) {
     backend_native_refusal("seasonal-adjustment fitting", "x13", "userdefined",
       "user-defined output variables are an rjd3 descriptor-pool feature; ")
   }
+  if (inherits(spec, "persephone_native_estimated_spec")) {
+    backend_validate_native_spec(spec, "x13", ts)
+    fit <- rkalos::native_x13_estimated_fit(ts, spec$template)
+    if (!identical(fit$status, "available")) stop("Stock estimated X-13 fit: ", fit$status, call. = FALSE)
+    attr(fit, "persephone_request_fingerprint") <- native_text_fingerprint(
+      paste(c("x13", spec$template, stats::start(ts), spec$forecast, spec$backcast), collapse = "/"))
+    return(fit)
+  }
   if (inherits(spec, "persephone_native_auto_spec")) {
     return(backend_native_auto_fit(ts, spec))
   }
@@ -703,11 +663,12 @@ normalize_native_result <- function(fit, spec, ts) {
 # "persephone_result". Components and forecasts retain the dated rkalos
 # tables; the preprocessing decision chain is carried as provenance.
 normalize_native_automatic_result <- function(fit, spec, ts) {
-  if (inherits(spec, "persephone_spec") &&
-      inherits(spec$parameters, "persephone_native_auto_spec")) {
+  stock <- inherits(fit, "native_x13_estimated_fit")
+  classes <- c("persephone_native_auto_spec", "persephone_native_estimated_spec")
+  if (inherits(spec, "persephone_spec") && inherits(spec$parameters, classes)) {
     spec <- spec$parameters
   }
-  if (inherits(spec, "persephone_native_auto_spec") &&
+  if (inherits(spec, classes) &&
       !identical(as.numeric(spec$frequency), as.numeric(stats::frequency(ts)))) {
     stop("Specification frequency does not match the result's observed series.", call. = FALSE)
   }
@@ -726,15 +687,15 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
     stringsAsFactors = FALSE, row.names = NULL)
   code <- if (identical(fit$status, "available") && !is.null(fit$finalSA)) "success" else "incomplete"
   provenance <- c(
-    list(backend = "native", automatic = TRUE,
-         decode_template = "rsa3",
+    list(backend = "native", automatic = !stock,
+         decode_template = if (stock) tolower(fit$template) else "rsa3",
          request_fingerprint = attr(fit, "persephone_request_fingerprint", exact = TRUE),
          core_commit = tryCatch(rkalos::core_version()$commit, error = function(e) NA_character_)),
     fit[c("type", "schema_version", "scope", "mode_requested", "mode_effective",
           "sigma", "sigma_set", "sigma_provenance", "lower_sigma", "upper_sigma",
           "effective_backcast", "effective_forecast")],
     list(model = fit$model))
-  structure(list(schema_version = 1L, method = "x13", backend = "native",
+  envelope <- structure(list(schema_version = 1L, method = "x13", backend = "native",
                  specification = spec,
                  status = list(code = code,
                                convergence = fit$model$estimation_status %||% "not_reported"),
@@ -742,14 +703,20 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
                  forecasts = forecasts, diagnostics = list(), availability = availability,
                  provenance = provenance, results = fit$results,
                  preadjustment = fit$preadjustment, selection = fit$selection,
-                 chain = fit$chain, model = fit$model,
-                 raw = fit),
-            class = "persephone_native_automatic_fit")
+                 chain = fit$chain, model = fit$model, raw = fit),
+            class = if (stock) c("persephone_native_estimated_fit", "persephone_native_automatic_fit")
+                    else "persephone_native_automatic_fit")
+  if (stock) {
+    envelope$likelihood <- fit$likelihood
+    envelope$diagnostics$residuals <- fit$residuals
+  }
+  envelope
 }
 
 #' @export
 print.persephone_native_automatic_fit <- function(x, ...) {
-  cat("Automatic native X-13 fit (rkalos/Kalos core, template rsa3)\n")
+  cat(if (inherits(x, "persephone_native_estimated_fit")) "Stock estimated" else "Automatic",
+      "native X-13 fit (rkalos/Kalos core), template", x$specification$template, "\n")
   cat("  status:", x$status$code, "| convergence:", x$status$convergence,
       "| scope:", x$provenance$scope, "\n")
   cat("  mode requested:", x$provenance$mode_requested,

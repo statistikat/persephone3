@@ -60,11 +60,11 @@ generate_Qr_List <- function(x) {
   }
   ntd <- diagnostic_number(user$regression.ntd)
   if (!is.na(ntd) && (ntd < 0 || ntd != floor(ntd))) ntd <- NA_real_
-  if (inherits(x$result, "persephone_native_tramo_fit")) {
+  if (inherits(x$result, c("persephone_native_tramo_fit", "persephone_native_estimated_fit"))) {
     calendar <- x$result$model$calendar
     ntd <- sum(startsWith(names(calendar$coefficients) %||% character(), "td"))
-    leap_year <- isTRUE(calendar$leap_year)
-    moving_holiday <- isTRUE(calendar$easter)
+    leap_year <- isTRUE(calendar$leap_year) || "lp" %in% names(calendar$coefficients)
+    moving_holiday <- isTRUE(calendar$easter) || "easter" %in% names(calendar$coefficients)
   } else if (inherits(x$result, "persephone_native_restricted_fit") ||
       (identical(x$result$backend, "native") && x$method == "x13" &&
        identical(x$result$specification$template, "rsa3"))) {

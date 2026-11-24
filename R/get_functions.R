@@ -80,6 +80,17 @@ outlier_variable_dates <- function(variables, manual) {
   as.Date(value, origin = "1970-01-01")
 }
 
+native_calendar_records <- function(calendar) {
+  coefficients <- calendar$coefficients
+  if (!length(coefficients)) return(NULL)
+  labels <- names(coefficients)
+  type <- ifelse(startsWith(labels, "td"), "TD", toupper(labels))
+  if (identical(calendar$trading_days, "trading_days"))
+    labels[type == "TD"] <- c("mon", "tue", "wed", "thu", "fri", "sat")
+  data.frame(name = labels, type = type, value = unname(coefficients),
+             subtype = NA_character_, position = NA_integer_)
+}
+
 # Native automatic variables carry positions and estimated coefficients.
 # Restricted variables carry supplied columns and fixed coefficients, without
 # outlier subtypes, dates or coefficient inference.
@@ -88,19 +99,11 @@ native_regression_records <- function(result) {
     mean <- data.frame(name = "const", type = "MEAN", value = result$model$mean_coefficient,
                        subtype = NA_character_, position = NA_integer_)
     if (identical(result$model$mean_correction, FALSE)) mean <- mean[FALSE, , drop = FALSE]
-    calendar <- result$model$calendar$coefficients
-    if (length(calendar)) {
-      labels <- names(calendar)
-      type <- ifelse(startsWith(labels, "td"), "TD", toupper(labels))
-      if (identical(result$model$calendar$trading_days, "trading_days"))
-        labels[type == "TD"] <- c("mon", "tue", "wed", "thu", "fri", "sat")
-      mean <- rbind(mean, data.frame(name = labels, type = type, value = unname(calendar),
-                                     subtype = NA_character_, position = NA_integer_))
-    }
+    mean <- rbind(mean, native_calendar_records(result$model$calendar))
     v <- result$model$outliers
     if (is.null(v) || !nrow(v)) return(mean)
   } else if (inherits(result, "persephone_native_automatic_fit")) {
-    mean <- NULL
+    mean <- native_calendar_records(result$model$calendar)
     v <- result$model$variables
   } else v <- NULL
   if (!is.null(v)) {

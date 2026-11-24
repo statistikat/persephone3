@@ -254,9 +254,7 @@ local({
                     "pseudo_additive") %in% rf$modes))
 })
 
-# Native template routing matrix: rsa3 (automatic decode table) and
-# 'restricted' construct; every other template refuses naming the violated
-# scope field(s) and the measured template facts, no Java fallback.
+# The stock and decoded templates have distinct native specification classes.
 local({
   constructed <- perX13(series_m, "rsa3", backend = "native")
   expect_true(inherits(constructed$specification$parameters,
@@ -269,16 +267,12 @@ local({
       "no error"
     }, error = function(e) conditionMessage(e))
   }
-  e0 <- refuse_tpl("rsa0")
-  expect_match(e0, "does not yet implement specification construction")
-  expect_match(e0, "transform.auto_log_test")
-  expect_match(e0, "automodel")
-  expect_match(e0, "No Java fallback")
-  expect_match(refuse_tpl("rsa1"), "automodel")
-  e2 <- refuse_tpl("rsa2c")
-  expect_match(e2, "automodel")
-  expect_match(e2, "automatic_fit.deferred")
-  expect_match(e2, "unsupported:x13 automatic fit defers calendar/easter/TD/user detection \\(21-I\\)")
+  for (template in c("rsa0", "rsa1", "rsa2c")) {
+    expect_identical(refuse_tpl(template), "no error")
+    stock <- perX13(series_m, template, backend = "native")
+    expect_true(inherits(stock$specification$parameters, "persephone_native_estimated_spec"))
+    expect_identical(stock$specification$parameters$forecast, -1L)
+  }
   e4 <- refuse_tpl("rsa4")
   expect_match(e4, "automatic_fit.deferred")
   expect_match(e4, "TD2")
@@ -302,50 +296,12 @@ spec_matrix <- expand.grid(method = c("x13", "tramoseats"),
                            freq = c(12L, 4L),
                            stringsAsFactors = FALSE)
 
-# M4-gap (2026-11-21): the automodel-OFF templates refuse naming the measured
-# facts of BOTH qualified envelopes. The AUTOMATIC facts are asserted above;
-# below, each refusal must name the restricted fixed-coefficient violations
-# AND quote the pinned core status verbatim -- and those statuses must be the
-# LIVE rkalos answers to the decoded requests (fail-closed matrix: aspects
-# measured through the namespace entries the product path calls; no Java).
+# The caller-supplied fixed-coefficient entry retains its own scope checks.
 local({
-  restricted_fields <- c("fixed_coefficients_only", "fixed_seasonal_requests_only",
-                         "fixed_trend_length_only", "zero_horizon_only")
   core_statuses <- c(
     msr = "unsupported:x13 fit fixed seasonal requests only",
     henderson = "unsupported:x13 fit fixed Henderson trend length",
     horizon = "unsupported:x13 fit requires zero horizons")
-  refuse_tpl <- function(template) {
-    tryCatch({perX13(series_m, template, backend = "native"); "no error"},
-             error = function(e) conditionMessage(e))
-  }
-  for (tpl in c("rsa0", "rsa1", "rsa2c")) {
-    msg <- refuse_tpl(tpl)
-    expect_match(msg, "outside the qualified native envelopes \\(automatic and restricted\\)",
-                 fixed = FALSE, info = paste(tpl, "dual-envelope framing"))
-    for (field in restricted_fields) {
-      expect_match(msg, field, fixed = TRUE, info = paste(tpl, field))
-    }
-    for (cs in core_statuses) {
-      expect_match(msg, cs, fixed = TRUE, info = paste(tpl, cs))
-    }
-    expect_match(msg, "PARAMETER_UNDEFINED", fixed = TRUE, info = paste(tpl, "estimation fact"))
-    expect_match(msg, "SEASONAL_FILTER_MSR", fixed = TRUE, info = paste(tpl, "msr fact"))
-    expect_match(msg, "nfcasts = -1", fixed = TRUE, info = paste(tpl, "horizon fact"))
-  }
-  # rsa1/rsa2c extra measured facts; rsa0 has NEITHER (measured: LEVEL fixed,
-  # outlier types empty -- rsa0's text must not claim log-test or detection).
-  expect_match(refuse_tpl("rsa1"), "FN_AUTO log test and AO/LS/TC outlier detection",
-               fixed = TRUE)
-  expect_match(refuse_tpl("rsa2c"), "FN_AUTO log test and AO/LS/TC outlier detection",
-               fixed = TRUE)
-  expect_match(refuse_tpl("rsa2c"), "keeps the ESTIMATED leap-year and easter coefficients",
-               fixed = TRUE)
-  m0 <- refuse_tpl("rsa0")
-  expect_false(grepl("FN_AUTO", m0, fixed = TRUE))
-  expect_match(m0, "transform.fn = Level", fixed = TRUE)
-  # Live core answers for the decoded aspects (rkalos 0.1.0, core f500162):
-  # verbatim equality with the statuses quoted in the refusals above.
   fit_fun <- rkalos::native_x13_fit
   raw_fun <- get0(".native_x13_fit", envir = asNamespace("rkalos"))
   expect_true(is.function(fit_fun) && is.function(raw_fun))
@@ -388,7 +344,7 @@ for (i in seq_len(nrow(spec_matrix))) {
     else perTramo(native_series, spec$template, backend = "native")
     "no error"
   }, error = function(e) conditionMessage(e))
-  qualified <- spec$freq == 12L && (spec$method == "tramoseats" || spec$template == "rsa3")
+  qualified <- spec$freq == 12L && (spec$method == "tramoseats" || spec$template %in% c("rsa0", "rsa1", "rsa2c", "rsa3"))
   if (qualified) expect_identical(err, "no error")
   else expect_match(err, "native backend does not yet implement|No Java fallback", fixed = FALSE)
 }

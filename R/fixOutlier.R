@@ -25,8 +25,8 @@
 #' manually specified outliers, names and fixed coefficients are preserved.
 #'
 #' Native RSA3 requires automatic detection over the full span. Requesting a
-#' shorter detection window raises an error during preflight. Native TRAMO RSA1 and RSAfull
-#' also require their full span when eligible outliers are present. Native RSA0 and
+#' shorter detection window raises an error during preflight. Native X-13 RSA1 and RSA2c and
+#' TRAMO RSA1 and RSAfull also require their full span when eligible outliers are present. Native RSA0 and
 #' restricted X-13 use specifications with automatic detection disabled.
 #'
 #' Results remain the results of the previous fit and become stale after a
@@ -96,6 +96,10 @@ prepare_fixed_outliers <- function(x, timespan) {
       any(x$result$model$outliers$position <= length(periods) - protected))
     backend_native_refusal("fixing detected outlier locations", x$method, "automatic_spec_pinned",
                            paste0(toupper(current$template), " fits its outliers from the full input span; "))
+  if (inherits(current, "persephone_native_estimated_spec") &&
+      any(x$result$model$variables$position <= length(periods) - protected))
+    backend_native_refusal("fixing detected outlier locations", x$method, "estimated_x13_fit.templates",
+                           "the stock X-13 template selects its outliers over the full span; ")
   if (inherits(current, "persephone_native_spec")) return(unchanged)
   regression_spec <- if (x$method == "x13") current$regarima else current$tramo
   detection <- regression_spec$outlier

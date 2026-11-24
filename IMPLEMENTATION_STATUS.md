@@ -1,7 +1,23 @@
 # Persephone implementation status and next-work plan
 
-Updated: **2026-11-23**. The repository split is integrated on
+Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
+
+## M5b stock estimated X-13 in Persephone (2026-11-24)
+
+`perX13(series, template, backend = "native")` supports the original monthly
+RSA0, RSA1 and RSA2c templates with rkalos `0.1.0.9023` at `f53ee8f`.
+The fitted object exposes the estimated model, likelihood, dated residuals,
+observed components and twelve point forecasts. RSA2c exposes its fitted
+calendar regressors and their coefficients in the quality report and
+regressor table. The stock model retains the fixed airline orders.
+
+Across nine published fits, the isolated Java-free suite passed **315/315**
+and the live JDemetra+ suite passed **549/549**. The live checks include
+all six observed components, five available forecast series and selected
+calendar and outlier report fields. The general parity suite passed
+206 Java-free and 403 live checks, reporting passed 46 and 58 respectively,
+and all 19 dashboard checks passed.
 
 ## Full source verification for the family M5 checkpoint (2026-11-24)
 

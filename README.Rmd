@@ -64,6 +64,15 @@ obj$plot()
 
 ![](man/figures/README-unnamed-chunk-1-1.png)
 
+## Native X-13
+
+For stock monthly X-13 estimation, use
+`perX13(series, template, backend = "native")` with `"rsa0"`, `"rsa1"`
+or `"rsa2c"` and call `$run()`. All three estimate the airline coefficients and select X-11 filters.
+RSA1 also selects the transformation and outliers. RSA2c additionally tests working days, leap year and Easter. The fitted object
+returns its likelihood, dated residuals, final components and the stock
+twelve-month forecasts.
+
 ## Native TRAMO-SEATS
 
 For a complete monthly series, the native RSA0 route estimates the airline model
