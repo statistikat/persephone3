@@ -132,8 +132,18 @@ x13Single <- R6::R6Class(
 #' - `x11`          → [`rjd3x13::set_x11`] (x13 only)
 #' - `benchmarking` → [`rjd3toolkit::set_benchmarking`]
 #'
-#' The package offers convenient options for setting certain parameters to improve usability.
-#' Documentation pending.
+#' The package offers two convenient shorthands among these arguments:
+#'
+#' - `outliers` takes the outliers as a character vector of type and date,
+#'   `c("AO1953.7", "LS1954.6")`, and is converted to `addout.type` and
+#'   `addout.date`.
+#' - `arima` takes the six orders as a vector, `c(0, 1, 1, 0, 1, 1)`, or as a
+#'   string, `"(0 1 1)(0 1 1)"` — the format in which [summary()] prints the
+#'   model, so that it can be copied back directly. It stands for `arima.p`,
+#'   `arima.d`, `arima.q`, `arima.bp`, `arima.bd` and `arima.bq` (which must
+#'   not be used as well) and disables `automdl` unless `automdl.enabled` is
+#'   given explicitly, since the automatic model selection overrides fixed
+#'   orders.
 #'
 #' @details
 #' The function initializes an x13 model with the given time series and
@@ -168,6 +178,11 @@ x13Single <- R6::R6Class(
 #'               arima.bp = 1, arima.bd = 1, arima.bq = 0)
 #' obj$run()
 #' obj$output
+#'
+#' # the same ARIMA model in one argument, in the format of the summary()
+#' # output (the explicit arima.* arguments and the shortcut must not be mixed)
+#' obj <- perX13(AirPassengers, "rsa3", arima = "(1 2 0)(1 1 0)")
+#' obj$run()
 #'
 #' # set some additional parameters when initializing the object
 #' # by using the rjd3 parameters for setting outliers

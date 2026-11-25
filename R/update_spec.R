@@ -1,3 +1,35 @@
+#' Parse the arima shortcut into the six order arguments
+#'
+#' Accepts the orders as a numeric vector `c(p, d, q, bp, bd, bq)` or as a
+#' string, so that the model of a `summary()` output can be copied back
+#' directly: `"(0 1 1)(0 1 1)"` (also `"0 1 1 0 1 1"` or `"0,1,1,0,1,1"`).
+#'
+#' @keywords internal
+#' @param x numeric vector of length 6 or character scalar
+#' @return A named integer vector with the elements p, d, q, bp, bd and bq.
+parse_arima_orders <- function(x) {
+  nm <- c("p", "d", "q", "bp", "bd", "bq")
+  if (is.character(x) && length(x) == 1) {
+    if (!grepl("^[0-9, ()]+$", x)) {
+      stop("'arima' must be the orders as a vector (e.g. c(0, 1, 1, 0, 1, 1)) ",
+           "or as a string (e.g. \"(0 1 1)(0 1 1)\")", call. = FALSE)
+    }
+    orders <- as.integer(regmatches(x, gregexpr("[0-9]+", x))[[1]])
+  } else {
+    if (!is.numeric(x) || !all(x == as.integer(x))) {
+      stop("'arima' must be the orders as a vector (e.g. c(0, 1, 1, 0, 1, 1)) ",
+           "or as a string (e.g. \"(0 1 1)(0 1 1)\")", call. = FALSE)
+    }
+    orders <- as.integer(x)
+  }
+  if (length(orders) != 6 || any(orders < 0)) {
+    stop("'arima' must hold exactly the six non-negative orders ",
+         "p, d, q, bp, bd and bq (e.g. \"(0 1 1)(0 1 1)\")", call. = FALSE)
+  }
+  # numeric, like the literals of the explicit arima.* arguments
+  stats::setNames(as.numeric(orders), nm)
+}
+
 #' Update rjd3-spec object for seasonal adjustment
 #'
 #' Internal specification dispatching for rjd3x13/rjd3tramoseats.
@@ -41,6 +73,34 @@ update_spec <- function(spec = NULL, method = c("x13","tramoseats"), freq, spec_
     }
   }
 
+  # the ARIMA orders as one shortcut: a vector or the "(0 1 1)(0 1 1)" string
+  # of the summary output (see parse_arima_orders()); the explicit arima.*
+  # arguments are kept as an alternative, but not mixed with the shortcut
+  if("arima" %in% names(spec_list)) {
+    if(!is.null(spec_list[["arima"]])) {
+      orders <- parse_arima_orders(spec_list[["arima"]])
+      spec_list[["arima"]] <- NULL
+      individual <- paste0("arima.", names(orders))
+      if(any(individual %in% names(spec_list))) {
+        stop("specify the ARIMA orders either through 'arima' or through the ",
+             "individual 'arima.p' ... 'arima.bq' arguments, not both",
+             call. = FALSE)
+      }
+      if(isTRUE(spec_list[["automdl.enabled"]])) {
+        warning("arima orders have no effect while automdl.enabled is TRUE",
+                call. = FALSE)
+      } else if(is.null(spec_list[["automdl.enabled"]])) {
+        # explicit orders only win over the automatic model selection when
+        # it is disabled (rjd3 drops them silently otherwise); automdl is
+        # put first, so that its block is dispatched before the arima one
+        spec_list <- c(list(automdl.enabled = FALSE), spec_list)
+      }
+      spec_list[individual] <- as.list(orders)
+    } else {
+      spec_list[["arima"]] <- NULL
+    }
+  }
+
   # # spec-blocks and their corresponding functions
   # specfun_list <- list(arima = rjd3toolkit::set_arima,
   #                      automdl = rjd3toolkit::set_automodel,
@@ -79,7 +139,8 @@ update_spec <- function(spec = NULL, method = c("x13","tramoseats"), freq, spec_
 # das will ich nicht jedes Mal alles hinschreiben müssen,
 # da wollen wir wieder sowas wie outliers.enabled = TRUE/FALSE
 #
-# 2)Arima Model als Vektor c(0,1,1,0,1,1) oder so.
+# (2) Arima Model als Vektor c(0,1,1,0,1,1) oder so.  -  erledigt: das
+#     'arima'-Argument von update_spec(), siehe parse_arima_orders()
 #
 # Anm.: wobei die rjd3toolkit Parameter selbst schon auch alle funktionieren sollen,
 # da diese dokumentiert sind -> unsere nur ergänzend

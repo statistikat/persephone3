@@ -28,6 +28,8 @@
 #' [rjd3tramoseats::tramoseats_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+#' The shorthands `outliers` and `arima` described in [perX13()] are accepted
+#' as well and reach all components.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #' @examples
 #' \dontrun{
@@ -352,6 +354,8 @@ multipleTimeSeries <- R6::R6Class(
 #' [rjd3tramoseats::tramoseats_fast()].
 #' @param speclist a list of additional arguments for customizing the model specifications,
 #' passed to the rjd3 specification functions internally. As alternative input to `...`.
+#' The shorthands `outliers` and `arima` described in [perX13()] are accepted
+#' as well and reach all components.
 #' @param spec a model specification object of class JD3_X13_SPEC or JD3_TRAMOSEATS_SPEC
 #' @export
 perBatch <- function(

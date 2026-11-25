@@ -131,7 +131,7 @@ specfun_list <- list(
 )
 
 # persephone3 internal spec names
-p3_spec_names <- c("outliers")
+p3_spec_names <- c("outliers", "arima")
 
 # the blue of the plots: a dark blue (dodgerblue3), used for the original
 # series, the confidence band and everything else that is plotted in blue
