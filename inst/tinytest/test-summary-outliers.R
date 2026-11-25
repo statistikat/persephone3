@@ -27,6 +27,15 @@ g <- persephone3:::getOutliers(obj)
 expect_identical(sum(grepl("FALSE\\s*$", rows)), sum(!g$autoout))
 expect_identical(sum(grepl("TRUE\\s*$", rows)), sum(g$autoout))
 
+# the joint F test line drops the equals sign below the threshold:
+# "P < 0.0001" instead of "P = < 0.0001"
+td_obj <- perTd(datasets::AirPassengers, calendar = rjd3toolkit::national_calendar(
+  list(rjd3toolkit::special_day("NEWYEAR"), rjd3toolkit::fixed_day(1, 6),
+       rjd3toolkit::special_day("EASTERMONDAY"))), method = "x13")
+td_obj$run()
+s_td <- capture.output(summary(td_obj))
+expect_true(any(grepl("Trading days:.*P < 0\\.0001", s_td)))
+
 # a run without outliers has no table and no column (AirPassengers with the
 # default rsa3 settings detects none; a too short series would break the
 # rjd3 diagnostics)

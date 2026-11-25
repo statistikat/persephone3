@@ -443,6 +443,12 @@ sumPval <- function(p) {
   out
 }
 
+# the P part of the joint F test lines: "P = 0.012", but "P < 0.0001" without
+# the equals sign, which the column style of sumPval() would not provide
+sumPTest <- function(p) {
+  if (!is.na(p) && p < 0.0001) "  P < 0.0001" else paste0("  P = ", sumPval(p))
+}
+
 #' Summary of a Seasonal Adjustment
 #'
 #' Prints a summary of a run of a single series: the frequency, span and
@@ -572,7 +578,7 @@ summary.persephone <- function(x, ...) {
     if (!is.null(f_td)) {
       cat("Trading days:            ",
           sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
-          "  P =", sumPval(f_td$pvalue), "\n\n")
+          sumPTest(f_td$pvalue), "\n\n")
     }
   }
   sumPrintCoef(
@@ -591,7 +597,7 @@ summary.persephone <- function(x, ...) {
       cat("-- Joint F tests ", strrep("-", 44), "\n", sep = "")
       cat("User regressors:         ",
           sprintf("F(%d, %d) = %.3f", f_user$df1, f_user$df2, f_user$value),
-          "  P =", sumPval(f_user$pvalue), "\n")
+          sumPTest(f_user$pvalue), "\n")
       cat("\n")
     }
   }
