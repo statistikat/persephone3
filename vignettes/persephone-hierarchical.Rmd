@@ -102,15 +102,16 @@ hts_nested$iterate(asTable = TRUE, function(obj) {
 
 ## Setting Options Recursively
 
-When creating a `perHts` object, you can pass specification parameters that will be applied to the aggregate series. With `iterate = TRUE` (the default), these parameters are also applied to all components recursively:
+When creating a `perHts` object, you can pass specification parameters that will be applied to the aggregate series. With `iterate = TRUE` (the default), these parameters are also applied to all components recursively. Spec-block parameters such as `automdl.enabled` drive the rjd3 specification functions, so this example selects the reference backend `backend = "rjd3"` explicitly:
 
 ```{r, warning=FALSE}
 # Create hierarchical object with custom parameters applied to all nodes
 hts_custom <- perHts(
-  a = perX13(AirPassengers),
-  b = perTramo(AirPassengers),
+  a = perX13(AirPassengers, backend = "rjd3"),
+  b = perTramo(AirPassengers, backend = "rjd3"),
   template = "rsa1",
-  automdl.enabled = FALSE
+  automdl.enabled = FALSE,
+  backend = "rjd3"
 )
 
 hts_custom$run()

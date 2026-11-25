@@ -1,9 +1,11 @@
 # Test plotting functions
+# M7 default-backend cutover (item 27, decision 397cfe8): rjd3 reference
+# output drives the charts; the rjd3 backend is pinned at every construction.
 
 message("Test plot - single series before run")
 
 data(AirPassengers, package = "datasets")
-obj <- perX13(AirPassengers, "rsa1")
+obj <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 
 # Plot before run should work (shows original series)
 expect_silent(plot(obj, drawPoints = TRUE))
@@ -21,13 +23,13 @@ message("Test plot - quarterly data")
 
 jj <- JohnsonJohnson
 jj[7] <- 100
-obj_q <- perX13(jj, "rsa1")
+obj_q <- perX13(jj, "rsa1", backend = "rjd3")
 obj_q$run()
 expect_silent(plot(obj_q, annualComparison = 1))
 
 message("Test plotSeasIrrCal")
 
-obj_seas <- perX13(AirPassengers, "rsa1")
+obj_seas <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 obj_seas$run()
 
 expect_silent(obj_seas$plotSeasIrrCal())
@@ -49,18 +51,18 @@ expect_identical(vapply(hc[[3L]]$data, "[[", numeric(1), 2L), as.numeric(ud$s_f)
 
 message("Test plotResiduals")
 
-obj_res <- perX13(AirPassengers, "rsa1")
+obj_res <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 obj_res$run()
 expect_silent(obj_res$plotResiduals())
 
 message("Test plotSiRatios")
 
-obj_si <- perX13(AirPassengers, "rsa1")
+obj_si <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 obj_si$run()
 expect_silent(obj_si$plotSiRatios())
 
 message("Test plotSpectrum")
 
-obj_spec <- perX13(AirPassengers, "rsa1")
+obj_spec <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 obj_spec$run()
 expect_silent(obj_spec$plotSpectrum())

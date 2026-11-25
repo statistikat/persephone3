@@ -1,6 +1,8 @@
 # HTML dashboards must preserve content, titles, and export behavior.
-x <- perX13(AirPassengers, "rsa3")
-y <- perTramo(AirPassengers, "rsa3")
+# M7 default-backend cutover (item 27, decision 397cfe8): this file compares
+# rjd3 reference output, so the rjd3 backend is pinned at every construction.
+x <- perX13(AirPassengers, "rsa3", backend = "rjd3")
+y <- perTramo(AirPassengers, "rsa3", backend = "rjd3")
 expect_error(createDashboard(x), "Run the model")
 expect_error(dashboard_single(1), "Expected an x13Single")
 x$run()
@@ -8,7 +10,7 @@ y$run()
 expect_error(createDashboard(1), "Unsupported object class")
 expect_error(createDashboard(1, y), "First object")
 expect_error(createDashboard(x, 1), "Second object")
-expect_error(dashboard_compare(x, perX13(AirPassengers)), "Run the model")
+expect_error(dashboard_compare(x, perX13(AirPassengers, backend = "rjd3")), "Run the model")
 
 local({
   output_dir <- tempfile("dashboard-html-")
@@ -37,7 +39,7 @@ local({
 })
 
 # The Shiny aggregate panel uses dashboard_single directly.
-hierarchy <- perHts(a = AirPassengers, b = AirPassengers, method = "x13")
+hierarchy <- perHts(a = AirPassengers, b = AirPassengers, method = "x13", backend = "rjd3")
 hierarchy$run()
 aggregate_html <- as.character(dashboard_single(hierarchy))
 expect_true(grepl("Directly and Indirectly", aggregate_html, fixed = TRUE))
@@ -50,7 +52,8 @@ local({
   setwd(tempdir())
   on.exit(setwd(previous_dir), add = TRUE)
   for (constructor in list(perBatch, perHts)) {
-    obj <- constructor(a = AirPassengers, b = AirPassengers, method = "x13")
+    obj <- constructor(a = AirPassengers, b = AirPassengers, method = "x13",
+                       backend = "rjd3")
     obj$run()
     expect_error(createDashboard(obj, launch.browser = NA), "launch.browser")
     expect_error(createDashboard(obj, startup.timeout = 0), "startup.timeout")

@@ -1,14 +1,19 @@
 Package: persephone3
 Type: Package
-Title: Object-Oriented Wrappers for the Seasonal Adjustment Functionality of the JDemetra+ R Ecosystem rjdverse
+Title: Object-Oriented Seasonal Adjustment with a Native Engine and the
+    JDemetra+ Reference Backend
 Version: 0.1.0
 Authors@R: c(
   person("Angelika", "Meraner", email = "angelika.meraner@statistik.gv.at", role = c("aut","cre")),
   person("Alexander", "Kowarik", email = "alexander.kowarik@statistik.gv.at", role = c("ctb")),
   person("Markus", "Fröhlich", email = "markus.foehlich@statistik.gv.at", role = "ctb")
   )
-Description: This package is an object oriented wrapper around the R Packages rjd3x13 and rjd3tramoseats,
-  which performs time series adjustments with the java library JDemetra+.
+Description: An object-oriented interface to seasonal adjustment. The default
+  backend is the native engine provided by 'rkalos', which runs without Java;
+  the reference backend built on the 'rjd3' packages ('rjd3x13',
+  'rjd3tramoseats') and the Java library 'JDemetra+' remains fully supported
+  through explicit selection with 'backend = "rjd3"'. The package focuses on
+  batch processing, hierarchical time series and interactive visualizations.
 License: GPL (>= 3)
 URL: https://github.com/statistikat/persephone3, https://statistikat.github.io/persephone3
 BugReports: https://github.com/statistikat/persephone3/issues

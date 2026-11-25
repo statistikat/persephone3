@@ -133,7 +133,7 @@ tramoseatsSingle <- R6::R6Class(
 #'
 #' # set some additional parameters when initializing the object
 #' # by using the persephone3 parameters for setting outliers
-#' obj <- perTramo(AirPassengers, "rsa3",
+#' obj <- perTramo(AirPassengers, "rsa3", backend = "rjd3",
 #'               transform.fun = "Log", transform.adjust = NA,
 #'               easter.enabled = TRUE,
 #'               outliers = c("AO1953.7", "LS1954.6"),
@@ -145,7 +145,7 @@ tramoseatsSingle <- R6::R6Class(
 #'
 #' # set some additional parameters when initializing the object
 #' # by using the rjd3 parameters for setting outliers
-#' obj2 <- perTramo(AirPassengers, "rsa3",
+#' obj2 <- perTramo(AirPassengers, "rsa3", backend = "rjd3",
 #'                transform.fun = "Log", transform.adjust = NA,
 #'                easter.enabled = TRUE,
 #'                addout.type = c("AO","LS"),
@@ -161,7 +161,9 @@ tramoseatsSingle <- R6::R6Class(
 #' For more details on tramoseats specifications and the underlying implementation,
 #' see the rjd3tramoseats documentation:
 #' \url{https://rjdverse.github.io/rjd3tramoseats/}
-#' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
+#' @param backend Backend name, or NULL to use option persephone.backend
+#'   (defaulting to native when unset; rjd3 remains fully supported through
+#'   explicit selection, Java optional).
 #'   Native TRAMO-SEATS supports the monthly RSA0, RSA1, RSA3 and RSAfull templates on complete finite
 #'   series with a decomposable fitted model. RSA3 fits automatic orders with seasonal-controller restarts, fourth-pass mean refits and subsequent identification rounds after a rejected reference comparison. RSAfull also selects stock trading-day, leap-year and Easter regressors. Set forecast and backcast via
 #'   speclist or updateParams. Positive counts specify months and negative counts

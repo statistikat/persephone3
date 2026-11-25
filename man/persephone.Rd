@@ -86,7 +86,11 @@ unavailable. Before fitting or with no available horizon, the result is NULL.
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
   \describe{
-    \item{\code{backend}}{Effective computation backend, fixed at construction.}
+    \item{\code{backend}}{Effective computation backend, fixed at construction.
+    Migration (M7 cutover, decision 397cfe8): every constructor since the
+    backend feature records the engine, so the \code{rjd3} fallback below is
+    reached only by objects serialized before any engine was recorded; those
+    were built in the rjd3-only era and therefore keep \code{rjd3}.}
 
     \item{\code{specification}}{Versioned specification envelope; raw params remain available.}
 

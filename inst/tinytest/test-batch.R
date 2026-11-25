@@ -1,11 +1,13 @@
 # Test batch/multipleTimeSeries functionality
+# M7 default-backend cutover (item 27, decision 397cfe8): this file compares
+# rjd3 reference behavior, so the rjd3 backend is pinned at every construction.
 
 message("Test batch - basic functionality")
 
 # Create batch object
-objX13 <- perX13(AirPassengers, "rsa3")
+objX13 <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 
-bt <- perBatch(a = objX13, b = objX13)
+bt <- perBatch(a = objX13, b = objX13, backend = "rjd3")
 
 # Before run, adjusted should be NULL
 expect_true(is.null(bt$components$a$adjusted))
@@ -25,13 +27,13 @@ expect_identical(bt$components$a$adjusted, bt$components$b$adjusted)
 message("Test batch - different series with same time instances")
 
 # Use two different series from the same time period
-obj1 <- perX13(AirPassengers, "rsa3")
+obj1 <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 # Create a modified version of AirPassengers
 AirPassengers2 <- AirPassengers * 1.1
 
-obj2 <- perX13(AirPassengers2, "rsa3")
+obj2 <- perX13(AirPassengers2, "rsa3", backend = "rjd3")
 
-bt2 <- perBatch(series1 = obj1, series2 = obj2)
+bt2 <- perBatch(series1 = obj1, series2 = obj2, backend = "rjd3")
 bt2$run()
 
 expect_true(!is.null(bt2$components$series1$adjusted))

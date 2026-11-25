@@ -1,15 +1,18 @@
 # Test miscellaneous functions
+# M7 default-backend cutover (item 27, decision 397cfe8): this file exercises
+# rjd3 reference output (including the JD3_X13_RSLTS contract), so the rjd3
+# backend is pinned at every construction.
 
 message("Test is.persephone")
 
-obj <- perX13(AirPassengers, "rsa3")
+obj <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 expect_true(is.persephone(obj))
 expect_false(is.persephone(1L))
 expect_false(is.persephone("not an object"))
 
 message("Test print method")
 
-obj_print <- perX13(AirPassengers, "rsa3")
+obj_print <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 # Print before run should work
 expect_silent(print(obj_print))
 
@@ -19,7 +22,7 @@ expect_silent(print(obj_print))
 
 message("Test generateQrTable")
 
-obj_qr <- perX13(AirPassengers, "rsa3")
+obj_qr <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 
 # Before run should fail gracefully
 expect_error(generateQrTable(obj_qr), "No results|not run")
@@ -31,7 +34,7 @@ expect_true(!is.null(qr_table))
 
 message("Test summary method (known issue)")
 
-obj_sum <- perX13(AirPassengers, "rsa3")
+obj_sum <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 obj_sum$run()
 
 # summary may have issues, just check object is valid
@@ -39,7 +42,7 @@ expect_true(!is.null(obj_sum$output))
 
 message("Test diagnosticsTable")
 
-obj_diag <- perX13(AirPassengers, "rsa3")
+obj_diag <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 obj_diag$run()
 
 # diagnosticsTable should work
@@ -48,7 +51,7 @@ expect_true(!is.null(diag_table))
 
 # with trading day regressors: getOutliers() must handle variables that carry
 # several coefficients, and the td F-test columns must be present
-obj_diag_td <- perX13(AirPassengers, "rsa3", td.option = "TradingDays")
+obj_diag_td <- perX13(AirPassengers, "rsa3", td.option = "TradingDays", backend = "rjd3")
 expect_true(inherits(obj_diag_td$run(), "JD3_X13_RSLTS"))
 diag_table_td <- obj_diag_td$diagnosticsTable()
 expect_true("TD_status" %in% names(diag_table_td))

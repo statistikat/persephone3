@@ -7,8 +7,10 @@
 backend_capabilities(backend = NULL, method = NULL)
 }
 \arguments{
-\item{backend}{Either \code{"rjd3"} or \code{"native"}. If \code{NULL}, use the deliberate
-\code{persephone.backend} option, defaulting to \code{"rjd3"} when unset.}
+\item{backend}{Either \code{"rjd3"} or \code{"native"}. If \code{NULL}, use the
+\code{persephone.backend} option, defaulting to \code{"native"} when unset
+(M7 cutover, decision 397cfe8). The rjd3 backend stays fully available
+through explicit selection; Java remains optional.}
 
 \item{method}{Optional method, exactly \code{"x13"} or \code{"tramoseats"}.}
 }

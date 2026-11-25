@@ -54,9 +54,9 @@
 #'
 #' # Quarterly data
 #' data(UKgas, package = "datasets")
-#' tsUKgas1 <- perTramo(UKgas, "rsa3")
-#' tsUKgas2 <- perTramo(UKgas, "rsa3")
-#' htUKgas <- perHts(tsUKgas1=tsUKgas1, tsUKgas2=tsUKgas2)
+#' tsUKgas1 <- perTramo(UKgas, "rsa3", backend = "rjd3")
+#' tsUKgas2 <- perTramo(UKgas, "rsa3", backend = "rjd3")
+#' htUKgas <- perHts(tsUKgas1=tsUKgas1, tsUKgas2=tsUKgas2, backend = "rjd3")
 #' plot(htUKgas)
 #' htUKgas$run()
 #' plot(htUKgas)

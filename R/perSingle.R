@@ -24,7 +24,9 @@ persephoneSingle <- R6::R6Class(
     #' @param speclist a list of additional arguments for customizing the model specifications,
     #' passed to the rjd3 specification functions internally. As alternative input to `...`.
     #' @param ... passed to [rjd3x13::x13_spec()] or [rjd3tramoseats::tramoseats_spec()] if no speclist parameter is set.
-    #' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
+    #' @param backend Backend name, or NULL to use option persephone.backend
+    #'   (defaulting to native when unset; rjd3 remains fully supported through
+    #'   explicit selection, Java optional).
     initialize = function(ts, template = "rsa3", context = NULL, userdefined = NULL, speclist = NULL, ..., backend = NULL) {
       private$backend_internal <- resolve_backend(backend)
       private$template_internal <- template

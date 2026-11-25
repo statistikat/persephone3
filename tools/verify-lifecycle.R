@@ -1,6 +1,11 @@
 # Item 27 (M7) product lifecycle acceptance: install -> load -> construct ->
 # fit -> forecast -> diagnose -> plot -> dashboard -> serialize/reload/rerun
-# for both methods WITHOUT Java or rjd3, on the deliberate native backend.
+# for both methods WITHOUT Java or rjd3, on ORDINARY defaults: after the
+# M7 default-backend cutover (item 27, decision 397cfe8, 2026-11-25) the
+# default backend is native, so this harness sets no backend option at all
+# (that is precisely the item-27 contract "final item 15 tests ordinary
+# defaults after 27"). A final section asserts the default-resolution contract
+# itself: unset resolves to native, rjd3 still resolves explicitly.
 # Usage: Rscript tools/verify-lifecycle.R --library=/isolated/library
 # --library isolates this R process only; it never edits the user's libraries.
 # Launch environment (asserted below, never relaxed): R_LIBS_USER and
@@ -70,9 +75,9 @@ nojava_ok(!any(forbidden %in% loadedNamespaces()),
 step("package", "install-load", TRUE,
      paste("persephone3", as.character(utils::packageVersion("persephone3")),
            "loaded with zero Java packages findable or loaded"))
-# The deliberate native backend: lane x13-rsa0 below constructs WITHOUT an
-# explicit backend argument, so the option is the only native decision point.
-options(persephone.backend = "native")
+# Ordinary defaults: no options(persephone.backend = ...) is set anywhere in
+# this harness. Lane x13-rsa0 below constructs WITHOUT an explicit backend
+# argument, so the post-cutover default itself is the native decision point.
 cap <- backend_capabilities("native")
 nojava_ok(identical(cap$methods, c("x13", "tramoseats")),
           "native backend does not advertise both methods")
@@ -108,7 +113,7 @@ for (lane in lanes) {
                                               paste("backend is", obj$backend))
   step(id, "construct", TRUE,
        paste("class(obj$params)[[1]] =", class(obj$params)[[1]], "; obj$backend = native",
-             if (id == "x13-rsa0") " (via the persephone.backend option alone)" else ""))
+             if (id == "x13-rsa0") " (via the default backend, option unset)" else ""))
   # fit
   ran <- attempt(obj$run())
   if (inherits(ran, "lifecycle_error")) fail(id, "fit", as.character(ran))
@@ -339,7 +344,6 @@ dash <- callr::r(function(lib, forbidden, title) {
                         logical(1))),
             !any(forbidden %in% loadedNamespaces()))
   suppressPackageStartupMessages(library(persephone3))
-  options(persephone.backend = "native")
   obj <- perX13(AirPassengers, "rsa0", backend = "native")
   obj$run()
   file <- tempfile(fileext = ".html")
@@ -406,6 +410,22 @@ step("dashboard", "shiny-launcher", TRUE,
 nojava_ok(!dash$served$alive_after_kill, "dashboard server survived kill")
 nojava_ok(!any(forbidden %in% loadedNamespaces()),
           "a forbidden namespace was loaded during the run")
+# Default-resolution contract after the M7 cutover (item 27, decision 397cfe8),
+# asserted in this same Java-free ordinary-defaults process: with the option
+# unset the default backend IS native (the harness above never set the option,
+# so its native lanes ran on that default), an explicit backend = "rjd3" still
+# resolves (the reference backend remains fully supported), and an invalid
+# value still refuses.
+nojava_ok(identical(persephone3:::resolve_backend(), "native"),
+          "unset default backend must resolve to 'native' after the cutover")
+nojava_ok(identical(persephone3:::resolve_backend("rjd3"), "rjd3"),
+          "explicit backend = 'rjd3' must still resolve after the cutover")
+nojava_ok(identical(persephone3:::resolve_backend("native"), "native"),
+          "explicit backend = 'native' must resolve after the cutover")
+nojava_ok(inherits(try(persephone3:::resolve_backend("rjd"), silent = TRUE), "try-error"),
+          "an invalid backend value must still refuse after the cutover")
+cat(paste0("DEFAULT-RESOLUTION: unset -> native (cutover default); explicit rjd3 and ",
+           "native resolve; invalid refuses (asserted in the ordinary-defaults run)\n"))
 gaps <- grep("|GAP|", steps, value = TRUE, fixed = TRUE)
 cat(sprintf("LIFECYCLE STEPS=%d GAPS=%d\n", length(steps), length(gaps)))
 for (g in gaps) cat(g, "\n")

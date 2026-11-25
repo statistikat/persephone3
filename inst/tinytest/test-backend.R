@@ -5,10 +5,15 @@ local({
   old <- options(persephone.backend = NULL)
   on.exit(options(old))
   resolve <- persephone3:::resolve_backend
-  expect_identical(resolve(), "rjd3")
-  options(persephone.backend = "native")
+  # M7 default-backend cutover (item 27, decision 397cfe8, 2026-11-25): the
+  # unset default is "native"; both engines still resolve explicitly.
   expect_identical(resolve(), "native")
   expect_identical(resolve("rjd3"), "rjd3")
+  expect_identical(resolve("native"), "native")
+  options(persephone.backend = "native")
+  expect_identical(resolve(), "native")
+  options(persephone.backend = "rjd3")
+  expect_identical(resolve(), "rjd3")
   expect_error(resolve("r"), "exactly")
   expect_error(resolve(c("rjd3", "native")), "exactly")
   expect_error(resolve(NA_character_), "exactly")
@@ -117,6 +122,9 @@ if (all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
 
   message("Test R6 backend provenance, stale state and hierarchy dispatch")
   local({
+    # Option-mechanism probe (M7 cutover decision 397cfe8): construction below
+    # is driven by the explicitly set option in this scope, never by the unset
+    # default, so the cutover does not change this block.
     old <- options(persephone.backend = "rjd3")
     on.exit(options(old))
     object <- perX13(AirPassengers, "rsa0")

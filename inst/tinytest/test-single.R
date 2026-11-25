@@ -1,9 +1,11 @@
 # Test single series (x13Single) functionality
+# M7 default-backend cutover (item 27, decision 397cfe8): rjd3 reference
+# behavior; the rjd3 backend is pinned at every construction.
 
 message("Test single series - basic functionality")
 
 # Create single series object
-objX13 <- perX13(AirPassengers, "rsa3")
+objX13 <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 objX13$run()
 
 # Test that run() worked
@@ -20,18 +22,18 @@ expect_equal(objX13$method, "x13")
 message("Test single series - different templates")
 
 # Test with different templates
-obj_rsa1 <- perX13(AirPassengers, "rsa1")
+obj_rsa1 <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 obj_rsa1$run()
 expect_true(!is.null(obj_rsa1$output))
 
-obj_rsa0 <- perX13(AirPassengers, "rsa0")
+obj_rsa0 <- perX13(AirPassengers, "rsa0", backend = "rjd3")
 obj_rsa0$run()
 expect_true(!is.null(obj_rsa0$output))
 
 message("Test single series - fixModel")
 
 # Test fixModel
-objX13_test <- perX13(AirPassengers, "rsa3")
+objX13_test <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 expect_warning(objX13_test$fixModel(), "not run yet")
 
 objX13_test$run()

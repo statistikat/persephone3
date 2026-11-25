@@ -92,9 +92,9 @@ plot(htAir, drawPoints=TRUE)
 
 # Quarterly data
 data(UKgas, package = "datasets")
-tsUKgas1 <- perTramo(UKgas, "rsa3")
-tsUKgas2 <- perTramo(UKgas, "rsa3")
-htUKgas <- perHts(tsUKgas1=tsUKgas1, tsUKgas2=tsUKgas2)
+tsUKgas1 <- perTramo(UKgas, "rsa3", backend = "rjd3")
+tsUKgas2 <- perTramo(UKgas, "rsa3", backend = "rjd3")
+htUKgas <- perHts(tsUKgas1=tsUKgas1, tsUKgas2=tsUKgas2, backend = "rjd3")
 plot(htUKgas)
 htUKgas$run()
 plot(htUKgas)
@@ -104,7 +104,9 @@ plot(htUKgas)
 # Monthly data
 data(AirPassengers, package = "datasets")
 # Generate a persephoneSingle object, in this case an x13Single object
-obj <- perX13(AirPassengers, "rsa1")
+# The addout.* spec-block updates below drive rjd3 specification functions,
+# so this example selects the reference backend explicitly
+obj <- perX13(AirPassengers, "rsa1", backend = "rjd3")
 # Plot before run of persephoneSingle object
 plot(obj, drawPoints = TRUE)
 obj$run()
@@ -120,13 +122,13 @@ plot(obj)
 
 # Quarterly data
 data(UKgas, package = "datasets")
-obj2 <- perX13(UKgas, "rsa3")
+obj2 <- perX13(UKgas, "rsa3", backend = "rjd3")
 plot(obj2)
 obj2$run()
 plot(obj2)
 
 # Generate a persephoneSingle object, in this case a tramoseatsSingle object
-obj3 <- perTramo(UKgas, "rsa3")
+obj3 <- perTramo(UKgas, "rsa3", backend = "rjd3")
 plot(obj3)
 obj3$run()
 plot(obj3)

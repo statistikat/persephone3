@@ -1,6 +1,8 @@
 # Test the crit.value column of getOutliers() and the internal
 # calcOutlierCrit() formula (verified against jdplus X13Utility/TramoUtility
 # .calcCv via rJava)
+# M7 default-backend cutover (item 27, decision 397cfe8): rjd3 reference
+# behavior; the rjd3 backend is pinned at every construction.
 
 message("Test outlier critical values")
 
@@ -14,7 +16,7 @@ expect_equal(persephone3:::calcOutlierCrit(50, "tramoseats"), 3.3)
 expect_equal(persephone3:::calcOutlierCrit(450, "tramoseats"), 4.3)
 
 # explicit critical value is reported unchanged (x13 writes defva only)
-obj_fix <- perX13(AirPassengers, "rsa3", setout.critical.value = 3.4)
+obj_fix <- perX13(AirPassengers, "rsa3", setout.critical.value = 3.4, backend = "rjd3")
 obj_fix$run()
 o <- obj_fix$getOutliers()
 expect_false(all(is.na(o)))
@@ -22,7 +24,7 @@ expect_true("crit.value" %in% names(o))
 expect_true(all(o$crit.value == 3.4))
 
 # tramoseats reads the same value from its own outlier block
-obj_t <- perTramo(AirPassengers, "rsa3", setout.critical.value = 3.5)
+obj_t <- perTramo(AirPassengers, "rsa3", setout.critical.value = 3.5, backend = "rjd3")
 obj_t$run()
 ot <- obj_t$getOutliers()
 expect_false(all(is.na(ot)))
@@ -30,6 +32,6 @@ expect_true(all(ot$crit.value == 3.5))
 
 # the tramo "rsa3" template detects no outlier in AirPassengers, so the
 # table stays empty (NA) rather than carrying an unused threshold
-obj_auto <- perTramo(AirPassengers, "rsa3")
+obj_auto <- perTramo(AirPassengers, "rsa3", backend = "rjd3")
 obj_auto$run()
 expect_true(all(is.na(obj_auto$getOutliers())))

@@ -43,7 +43,7 @@ plotSiRatiosGgplot(obj)
 
 data(UKgas, package = "datasets")
 # Generate a persephone object, in this case a tramoseatsSingle object
-obj2 <- perTramo(UKgas, "rsa3")
+obj2 <- perTramo(UKgas, "rsa3", backend = "rjd3")
 obj2$run()
 plotSiRatiosGgplot(obj2)
 

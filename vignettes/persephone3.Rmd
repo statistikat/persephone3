@@ -22,41 +22,52 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-`{persephone3}` provides an object-oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/), specifically `{rjd3x13}` and `{rjd3tramoseats}`. The package performs time series adjustments using the Java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/) with a focus on batch processing, hierarchical time series, and interactive visualizations.
+`{persephone3}` provides an object-oriented interface to seasonal adjustment.
+Its default backend is the compiled native engine from `{rkalos}`, which runs
+without Java. The reference backend built on the seasonal adjustment packages
+of the [rjdverse](https://github.com/rjdverse/), specifically `{rjd3x13}` and
+`{rjd3tramoseats}` (Java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/)),
+remains fully supported through `backend = "rjd3"`. The package focuses on
+batch processing, hierarchical time series, and interactive visualizations.
 
 ## Installation
 
 Install `{persephone3}` and its dependencies from GitHub:
 
 ```r
-# Install rjdverse dependencies (all on CRAN)
-install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
-
 # Install persephone3
 remotes::install_github("statistikat/persephone3")
+
+# Only needed for the reference backend (backend = "rjd3"), all on CRAN:
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 ```
 
 # Basic Workflow
 
 ## Creating a Seasonal Adjustment Object
 
-The first step is to create a seasonal adjustment object using either `perX13()` for X-13ARIMA-SEATS or `perTramo()` for TRAMO/SEATS:
+The first step is to create a seasonal adjustment object using either `perX13()` for X-13ARIMA-SEATS or `perTramo()` for TRAMO/SEATS. Without a `backend` argument both use the default native backend; the rjd3 reference backend is selected with `backend = "rjd3"`:
 
 ```{r setup}
 library(persephone3)
 ```
 
 ```{r create-object}
-# X-13ARIMA-SEATS with default rsa3 template
+# X-13ARIMA-SEATS with default rsa3 template (native backend)
 obj_x13 <- perX13(AirPassengers)
 obj_x13
 
-# TRAMO/SEATS with default template
+# TRAMO/SEATS with default template (native backend)
 obj_tramo <- perTramo(AirPassengers)
 obj_tramo
 ```
 
-The `template` argument determines the default specification. Available templates differ between X-13 and TRAMO/SEATS:
+The `template` argument determines the default specification. The native
+backend qualifies a subset of the templates listed below — for X-13: `rsa0`,
+`rsa1`, `rsa2c` and `rsa3`; for monthly TRAMO/SEATS: `rsa0`, `rsa1`, `rsa3`
+and `rsafull` (see `backend_capabilities()`) — while the reference backend
+`backend = "rjd3"` supports the full template sets. The native backend also
+qualifies a fixed-coefficient X-13 fit through `template = "restricted"`:
 
 ### X-13ARIMA-SEATS Templates (`perX13()`)
 
@@ -107,13 +118,14 @@ After running, you can access the results through various methods.
 
 ## Inspecting Results
 
-### Print and rjd3 SA-Output
+### Print and SA-Output
 
 ```{r inspect-results}
 # Print object information
 obj_x13
 
-# Access the rjd3 output object
+# Access the output object of the native backend; with backend = "rjd3"
+# this slot holds the rjd3 output object instead
 obj_x13$output
 ```
 
@@ -151,7 +163,7 @@ For detailed documentation on all plotting options, see `vignette("persephone-pl
 
 ## Parameter Structure
 
-`persephone3` provides a unified interface to the underlying `{rjd3toolkit}` and `{rjd3x13}` specification functions. Parameters are organized into **spec-blocks**, where each block corresponds to a specific `{rjd3*}` function.
+`persephone3` provides a unified interface to the underlying `{rjd3toolkit}` and `{rjd3x13}` specification functions of the reference backend (the native backend accepts the subset of settings documented for its qualified routes). Parameters are organized into **spec-blocks**, where each block corresponds to a specific `{rjd3*}` function.
 
 The parameter name format is:
 
@@ -166,11 +178,17 @@ When you pass parameters to `updateParams()` or during object creation, `perseph
 
 ## Updating Parameters
 
-Use `updateParams()` to modify seasonal adjustment settings. Parameters are passed directly and mapped to the corresponding `{rjd3*}` functions:
+Use `updateParams()` to modify seasonal adjustment settings. The spec-block
+notation below maps to the `{rjd3*}` functions of the reference backend, so
+this example selects `backend = "rjd3"` explicitly:
 
 ```{r update-params}
+# Reference-backend object for the spec-block example
+obj_rjd3 <- perX13(AirPassengers, backend = "rjd3")
+obj_rjd3$run()
+
 # Disable log transformation and enable iterative estimation
-obj_x13$updateParams(
+obj_rjd3$updateParams(
   transform.fun = "None",
   arima.p = 1,
   arima.d = 2,
@@ -181,10 +199,10 @@ obj_x13$updateParams(
 )
 
 # Re-run with new parameters
-obj_x13$run()
+obj_rjd3$run()
 
 # Check updated diagnostics
-obj_x13$diagnosticsTable()
+obj_rjd3$diagnosticsTable()
 ```
 
 ## Available Spec-Blocks
@@ -231,8 +249,8 @@ This combines the outlier type and date into a single, more intuitive format.
 ## Preprocessing Results
 
 ```{r preprocessing}
-# Access preprocessing output
-obj_x13$output$preprocessing
+# Access preprocessing output of the reference backend output object
+obj_rjd3$output$preprocessing
 ```
 
 ## Original Series
@@ -255,11 +273,11 @@ head(sa_series)
 
 ```{r rjd3-user_defined}
 # Original series
-head(obj_x13$output$user_defined$y)
+head(obj_rjd3$output$user_defined$y)
 # Seasonally adjusted
-head(obj_x13$output$user_defined$sa)
+head(obj_rjd3$output$user_defined$sa)
 # Trend
-head(obj_x13$output$user_defined$t)
+head(obj_rjd3$output$user_defined$t)
 ```
 
 # Next Steps
@@ -273,7 +291,9 @@ head(obj_x13$output$user_defined$t)
 
 ## Java not found
 
-If you encounter Java-related errors, ensure Java 17+ is installed:
+The default native backend does not need Java. Java is only required for the
+reference backend (`backend = "rjd3"`); ensure a JVM 21 or newer is installed
+(rjd3 3.9.0 requirement):
 
 ```r
 # Check Java installation

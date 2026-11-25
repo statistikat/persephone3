@@ -9,7 +9,10 @@ backend_method <- function(method) {
 }
 
 resolve_backend <- function(backend = NULL) {
-  if (is.null(backend)) backend <- getOption("persephone.backend", "rjd3")
+  # M7 default-backend cutover (item 27, decision 397cfe8, 2026-11-25): the
+  # native engine is the default; rjd3 remains fully supported and must be
+  # selected explicitly (backend = "rjd3" or the persephone.backend option).
+  if (is.null(backend)) backend <- getOption("persephone.backend", "native")
   if (!is.character(backend) || length(backend) != 1L || is.na(backend) ||
       !backend %in% c("rjd3", "native")) {
     stop("'backend' must be exactly 'rjd3' or 'native'.", call. = FALSE)
@@ -36,8 +39,10 @@ backend_block_registry <- function() {
 #' explicit error naming the violated scope field(s) and never fall back to
 #' rjd3.
 #'
-#' @param backend Either `"rjd3"` or `"native"`. If `NULL`, use the deliberate
-#'   `persephone.backend` option, defaulting to `"rjd3"` when unset.
+#' @param backend Either `"rjd3"` or `"native"`. If `NULL`, use the
+#'   `persephone.backend` option, defaulting to `"native"` when unset
+#'   (M7 cutover, decision 397cfe8). The rjd3 backend stays fully available
+#'   through explicit selection; Java remains optional.
 #' @param method Optional method, exactly `"x13"` or `"tramoseats"`.
 #' @return A list describing implementation status, methods, specification
 #'   blocks and package availability. Package presence does not prove that a

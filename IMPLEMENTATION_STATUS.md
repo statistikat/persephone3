@@ -2030,3 +2030,93 @@ re-certification: `R CMD build` (vignettes rebuilt) + `R CMD check
 `PERSEPHONE_ORACLE_PASS=default`: **Status: OK**, exit 0, tests lane 379 s
 with the same five deferrals. Transcripts: `tmp_opencode/m7-c-persephone/`
 (`*-m7e.log`).
+## M7 — default-backend cutover executed (item 27) (2026-11-25)
+
+Maintainer authorization of the decision package (`M7_CUTOVER_DECISION.md` §8,
+root commit `397cfe8`, 2026-11-25) is executed here: `resolve_backend()` now
+resolves the unset default to **"native"** (`getOption("persephone.backend",
+"native")`). The rjd3 reference backend is retained unchanged — explicit
+`backend = "rjd3"` (or the option) behaves exactly as before, never removed,
+and every constructor still records the engine per fit. The `%||% "rjd3"`
+fallback in the `persephone$backend` active binding deliberately did NOT flip:
+it is reachable only by objects serialized before any engine was recorded,
+which were built in the rjd3-only era and honestly keep rjd3 (migration note
+recorded in the field documentation and in `NEWS.md`).
+
+**Engine-explicitness audit (rule: a backend change invalidates, never
+relabels).** Every consumer of the former implicit default was enumerated
+with a paren-balanced source scan of `inst/tinytest/`, `R/`, `tools/` and
+`vignettes/`; each file was then re-audited to zero implicit constructions or
+classified as deliberately option-driven. Classification (Java-free lane runs
+ONLY the 17 `test-native-*` files, so no legacy file is newly skipped — the
+five documented deferrals are unchanged old→new in every lane):
+
+| class | files | disposition |
+|---|---|---|
+| live-rjd3 reference, implicit default → pinned | test-batch, test-dashboard, test-hierarchical, test-misc, test-outlier-cv, test-plot, test-single, test-specification-updates, test_fix (9 files, 176 expectations) | every construction (`perX13`/`perTramo`/`perBatch`/`perHts`) pinned `backend = "rjd3"` with the decision cited in the file header; all nine fit live or inspect rjd3 spec objects, so none is structure-only and none may run Java-free — unchanged oracle-lane counts |
+| already explicit (no change) | test-backend-integration, test-backend-reinitialization, test-diagnostic-values, test-extraction, test-fix-outliers, test-forecasts, test-hierarchy-values, test-parity | constructions and gates already explicit |
+| default-resolution expectations (legitimately change) | test-backend.R | `resolve()` unset now asserted `"native"` with the decision citation; explicit `"rjd3"`/`"native"` resolution and the invalid-value refusal kept and extended (+2 expectations, 97 → 99) |
+| option-mechanism constructions (kept, commented) | test-backend-integration.R L24, test-backend.R L130/L134 | driven by an explicitly set option in scope, never by the unset default |
+| backend-free structure/unit (kept running) | test-dashboard-identities, test-dashboard-probe, test-genTd, test-hierarchical-plot + the non-rjd3 blocks of the value-contract files | no constructor at all or synthetic inputs; untouched |
+| native product tests | all 17 `test-native-*` | already explicit; untouched |
+
+**Roxygen/examples/docs.** `R/backend.R`, `R/perSingle.R`, `R/perTramo.R`,
+`R/perX13.R` default-statements now read "defaulting to native when unset"
+with Java-optional wording; roxygen 8.1.1 on this host crashes in its
+validate step (`pkg_is_installed` gets a NULL package), so the seven affected
+Rd files (`backend_capabilities`, `perTramo`, `perX13`, `persephone`, `plot`,
+`plotSiRatiosGgplot`, `plotSpectrumGgplot`) were synced by hand to the
+roxygen sources. `@examples` stay on the new default wherever the native
+backend qualifies the route and are pinned `backend = "rjd3"` exactly where
+the demonstrated feature is reference-only (spec-block updates, `rsa5c`,
+quarterly fits) — `plot.Rd` carries both classes. A Java-free run of every
+extractable example (31 examples, `tmp_opencode/m7-cutover/run-examples.R`):
+26 pass on native defaults; the 5 "failures" are precisely the rjd3-pinned
+examples refusing without Java ("Install them before using backend =
+\"rjd3\""), and all 31 pass in the oracle-lane check. DESCRIPTION title/
+description no longer call the package an rjd3 wrapper (native engine
+primary, rjd3 reference backend); `NEWS.md` carries the dated cutover entry
+with the per-fit engine-recording migration note; README (both files, kept
+in sync manually — the rendered artifact is committed) and the vignettes were
+rewritten honestly: the intro vignette now defaults to native and pins
+backend = "rjd3" only for the spec-block/`user_defined` demonstrations;
+`persephone-diagnostics.Rmd` documents the reference pass-through and pins
+its example; `persephone-hierarchical.Rmd` pins only the `automdl` demo; the
+EU construction/weights vignette runs its aggregate on native defaults. The
+roadmap item-19 transitional-default wording (§8.1) lives in
+`kalos/docs/NUMERICAL_ROADMAP.md`, outside the persephone3 slice scope — left
+for the maintainer with the other §9 pushes.
+
+**Tools run ORDINARY DEFAULTS (the item-27 contract "final item 15 tests
+ordinary defaults after 27").** `tools/verify-lifecycle.R` deleted its
+deliberate `options(persephone.backend = \"native\")` (harness and dashboard
+child): the x13-rsa0 lane's option-free construction now passes "via the
+default backend, option unset", and a final assertion block (hard gates,
+step count untouched) pins unset → native, explicit rjd3/native resolution
+and the invalid refusal. `tools/verify-nojava.R` likewise no longer sets the
+option — its rsa0/rsa4/restricted probes now exercise the default path —
+with the same three-way resolution `stopifnot` added and every rjd3-refusal
+("optional package") and `capabilities()` assertion unchanged.
+
+**Verification (R 4.5.1, rkalos 0.1.0.9029 / core `20e6063dea6f97d2957a7a3057313812c6f5d2f0`,
+all on the final tree; transcripts `tmp_opencode/m7-cutover/*-m7cut.log`).**
+Java-free lane, fresh restaged `nojava-iso` (entries=470, all six Java
+packages absent) + fresh `R CMD INSTALL`: `* DONE (persephone3)`, default
+`perX13()` constructs native with the option unset; native suite **17 files,
+4451 expectations, 0 failing** (per-file identical to the m7e baseline; zero
+new skips); `tools/verify-nojava.R --native`: exit 0;
+`tools/verify-lifecycle.R` with ordinary defaults:
+**`LIFECYCLE STEPS=41 GAPS=0`**, exit 0 — the default path IS native end to
+end without Java. Oracle lane: pass A **39 files, 6473 expectations (+2,
+exclusively the cited default-resolution assertions in `test-backend.R`),
+0 fails**, exactly the five documented deferrals; pass B **5 files, 5781
+expectations, 0 fails** — bridge touch-list empty. Java remains optional but
+fully working: the explicit rjd3 path re-ran live through pass A (all
+pinned legacy files) and the oracle-lane check examples. Artifact
+certification: `R CMD build` (vignettes rebuilt OK on native defaults) +
+`R CMD check --no-manual` with vignettes in the oracle lane:
+**Status: OK**, exit 0, examples OK, tests lane with the same five
+deferrals — this artifact now defaults to native. Item 15 re-run pointer:
+§9.3's full pass on the pushed artifact (with the hosted platform matrix)
+remains maintainer-side; the local ordinary-defaults chain above is the
+stand-in certified here.

@@ -22,10 +22,14 @@ knitr::opts_chunk$set(
 
 `diagnosticsTable()` collects the most important diagnostic statistics of a
 seasonal adjustment object (created with `perX13()` or `perTramo()`) into a
-single data frame. Most of its columns are passed through directly from the
+single data frame. This vignette documents the JDemetra+ (rjd3) reference
+backend, for which most columns are passed through directly from the
 JDemetra+ output — `persephone3` requests a fixed set of user-defined items
 (see `userdefined_default` in the package code) and reads them from the Java
-result object.
+result object. Since the M7 cutover the package default is the native engine,
+whose `diagnosticsTable()` fills the same columns from the native result
+envelope; the `TotalQ` pass-through semantics documented below describe the
+rjd3 reference backend.
 
 This vignette documents how individual fields of that table are computed.
 Currently it covers the overall quality summary (`TotalQ`); further fields
@@ -113,7 +117,8 @@ trading day effect) is enough to make the overall summary `Severe`.
 ```{r example}
 library(persephone3)
 
-obj <- perX13(AirPassengers, "rsa3")
+# The documented pass-through behavior belongs to the rjd3 reference backend.
+obj <- perX13(AirPassengers, "rsa3", backend = "rjd3")
 obj$run()
 
 diagnosticsTable(obj)[, c("Q", "Q2", "TotalQ")]

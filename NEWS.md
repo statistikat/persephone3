@@ -1,5 +1,17 @@
 # persephone3 (development version)
 
+* 2026-11-25 (item 27, decision 397cfe8): the default backend is now `native`.
+  `perX13()`, `perTramo()`, `perBatch()`, `perHts()` and `as.persephone()`
+  construct on the native engine when neither a `backend` argument nor the
+  `persephone.backend` option is set; objects run without Java or any rjd3
+  package by default. The rjd3 reference backend is retained and unchanged —
+  it stays fully supported through explicit `backend = "rjd3"` (or the option)
+  and is never removed. Migration: every fit records its engine, so objects
+  created before this cutover keep their recorded `rjd3` engine after
+  serialization and reload; only objects from before the engine was ever
+  recorded (which were rjd3-only) fall back to `rjd3` when their engine is
+  read. `backend_capabilities()` reports the same contracts for both backends.
+
 * Native monthly RSA3 now identifies SARIMA orders and returns dated SEATS
   components and forecasts for fits accepted at the first reference comparison.
 
@@ -51,7 +63,9 @@
   only; the other rsa templates refuse by name (automodel disabled, or
   calendar/Easter/trading-day detection deferred). Decisions are bit-exact
   against the reference implementation at the qualification tiers.
-* The native backend (`backend = "rjd3"` remains the default) now provides the
+* The native backend (at the time `backend = "rjd3"` was still the default;
+  the default moved to `native` on 2026-11-25, see the cutover entry above)
+  now provides the
   restricted fixed-coefficient X-13 fit without Java through
   `perX13(ts, template = "restricted", speclist = ..., backend = "native")`:
   fixed coefficients, fixed seasonal/Henderson requests, zero horizons,

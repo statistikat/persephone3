@@ -21,7 +21,14 @@ library(persephone3)
 stopifnot(!any(forbidden %in% loadedNamespaces()))
 cap <- backend_capabilities("native")
 stopifnot(identical(cap$fit, FALSE), identical(cap$status, "unimplemented"))
-options(persephone.backend = "native")
+# M7 default-backend cutover (item 27, decision 397cfe8, 2026-11-25): no
+# options(persephone.backend = ...) is set anymore. The constructions below
+# run on ORDINARY defaults, so they double as the proof that the unset default
+# resolves to native without Java; rjd3 remains explicitly selectable and the
+# rjd3 refusal without the optional packages stays asserted further down.
+stopifnot(identical(persephone3:::resolve_backend(), "native"),
+          identical(persephone3:::resolve_backend("native"), "native"),
+          identical(persephone3:::resolve_backend("rjd3"), "rjd3"))
 # 775ce9d (2026-11-24): stock monthly X-13 RSA0/RSA1/RSA2c native specification
 # construction became real (the estimated-fit route), and inst/tinytest/test-
 # backend.R (975c771) states the contract the product follows: the rsa0 native

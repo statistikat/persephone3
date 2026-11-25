@@ -18,6 +18,8 @@ expect_identical(x$result$backend, "rjd3")
 expect_false(x$is_stale)
 
 options(persephone.backend = "native")
+# Constructed through the explicitly set option above (option-mechanism test,
+# not the unset default; M7 cutover decision 397cfe8 leaves this path unchanged).
 expect_identical(perX13(AirPassengers)$params$template, "rsa3")
 # Existing objects, explicit selection and cloned children retain their engine.
 x$run()

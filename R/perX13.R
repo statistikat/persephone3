@@ -133,7 +133,7 @@ x13Single <- R6::R6Class(
 #'
 #' # set some additional parameters when initializing the object
 #' # by using the persephone3 parameters for setting outliers
-#' obj <- perX13(AirPassengers, "rsa3",
+#' obj <- perX13(AirPassengers, "rsa3", backend = "rjd3",
 #'               transform.fun = "Log", transform.adjust = NA,
 #'               easter.enabled = TRUE,
 #'               outliers = c("AO1953.7", "LS1954.6"),
@@ -145,7 +145,7 @@ x13Single <- R6::R6Class(
 #'
 #' # set some additional parameters when initializing the object
 #' # by using the rjd3 parameters for setting outliers
-#' obj2 <- perX13(AirPassengers, "rsa3",
+#' obj2 <- perX13(AirPassengers, "rsa3", backend = "rjd3",
 #'                transform.fun = "Log", transform.adjust = NA,
 #'                easter.enabled = TRUE,
 #'                addout.type = c("AO","LS"),
@@ -161,7 +161,9 @@ x13Single <- R6::R6Class(
 #' For more details on x13 specifications and the underlying implementation,
 #' see the rjd3x13 documentation:
 #' \url{https://rjdverse.github.io/rjd3x13/}
-#' @param backend Backend name, or NULL to use option persephone.backend (default rjd3).
+#' @param backend Backend name, or NULL to use option persephone.backend
+#'   (defaulting to native when unset; rjd3 remains fully supported through
+#'   explicit selection, Java optional).
 #'   The native backend qualifies the restricted fixed-coefficient X-13 fit
 #'   through `template = "restricted"` (rkalos gating contract
 #'   `capabilities()$native_x13_fit_restricted`) and the automatic X-13 fit

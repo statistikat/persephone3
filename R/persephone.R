@@ -208,6 +208,10 @@ persephone <- R6::R6Class(
   ## read-only access to params, ts, and output
   active = list(
     #' @field backend Effective computation backend, fixed at construction.
+    #'   Migration (M7 cutover, decision 397cfe8): every constructor since the
+    #'   backend feature records the engine, so the `rjd3` fallback below is
+    #'   reached only by objects serialized before any engine was recorded;
+    #'   those were built in the rjd3-only era and therefore keep `rjd3`.
     backend = function() private$backend_internal %||% "rjd3",
     #' @field specification Versioned specification envelope; raw params remain available.
     specification = function() {

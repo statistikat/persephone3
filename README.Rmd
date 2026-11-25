@@ -21,34 +21,43 @@ knitr::opts_chunk$set(
 [![Codecov test coverage](https://codecov.io/gh/statistikat/persephone3/branch/master/graph/badge.svg)](https://app.codecov.io/gh/statistikat/persephone3?branch=master)
 
 
-Object oriented wrapper around the seasonal adjustment packages in the [rjdverse](https://github.com/rjdverse/).
-The package performs time series adjustments with the java library [JDemetra+](https://jdemetra-new-documentation.netlify.app/) and focuses on batch processing,
-hierarchical time series and analytic charts.
+Object oriented seasonal adjustment with two engines: the default backend is
+the compiled native engine provided by `rkalos` (no Java required); the reference backend built on the
+[rjdverse](https://github.com/rjdverse/) packages `rjd3x13` and `rjd3tramoseats` (java library
+[JDemetra+](https://jdemetra-new-documentation.netlify.app/)) remains fully supported through explicit
+`backend = "rjd3"`. The package focuses on batch processing, hierarchical time series and analytic charts.
+
+As of 2026-11-25 (item 27, decision 397cfe8) `native` is the default backend: objects constructed
+without a `backend` argument run without Java. Every fit records its engine, so objects created before
+the cutover keep their recorded `rjd3` engine.
 
 ## Installation
 
-The following commands install `persephone3` as well as the packages from the [rjdverse](https://github.com/rjdverse/) that talk with the java interface.
+The following commands install `persephone3`; the default native backend needs no Java.
+The [rjdverse](https://github.com/rjdverse/) packages that talk with the java interface are optional
+and only needed for the reference backend (`backend = "rjd3"`).
 
 ``` r
-# install dependencies (all on CRAN)
-install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
-
 # install the package from GitHub
 remotes::install_github("statistikat/persephone3")
+
+# optional, only for the reference backend backend = "rjd3" (all on CRAN)
+install.packages(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"))
 ```
 
 ## Usage
 
-Objects can be constructed with `perX13()` or `perTramo()`. Subsequently,
-the `run()` method runs the model and `output` gives access to the output object from
+Objects can be constructed with `perX13()` or `perTramo()`; without a `backend`
+argument they use the default native backend. Subsequently, the `run()` method runs the
+model. With `backend = "rjd3"` the `output` field gives access to the output object from
 `rjd3x13::x13_fast()` or `rjd3tramoseats::tramoseats_fast()`.
 
 ```{r, message = FALSE}
 library(persephone3)
 ```
 ```{r}
-# construct a seasonal adjustment object for the AirPassengers dataset
-obj <- perX13(AirPassengers)
+# reference-backend object: the example below prints the rjd3 output slots
+obj <- perX13(AirPassengers, backend = "rjd3")
 
 # run the model
 obj$run()
@@ -65,6 +74,9 @@ obj$plot()
 ![](man/figures/README-unnamed-chunk-1-1.png)
 
 ## Native X-13
+
+The native backend is the default since 2026-11-25, so the `backend = "native"`
+argument in the examples below is optional.
 
 For stock monthly X-13 estimation, use
 `perX13(series, template, backend = "native")` with `"rsa0"`, `"rsa1"`
