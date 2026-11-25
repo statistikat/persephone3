@@ -1812,3 +1812,156 @@ still defaults to `"rjd3"` when the option is unset, so the harness sets the
 option deliberately; the option-free default path still refuses construction
 naming the optional rjd3 packages. Harness, isolated-library build and
 transcripts: `tmp_opencode/m7-c-verify/`.
+
+### Automatic residuals and residual trading-day F-tests (2026-11-24)
+
+Closes the one recorded gap above and wires up the two rkalos surfaces that
+core `20e6063` (rkalos `0.1.0.9028`) added: the dated preprocessing residual
+bundle on the automatic fit (`capabilities()$automatic_fit$residuals`) and the
+residual trading-day F-test pair `td.ftest.sa`/`td.ftest.i` on all four routes
+(`capabilities()$td_tests`).
+
+**The ungate.** `normalize_native_automatic_result()` had served the residual
+bundle only on the stock/estimated branch. One `else if
+(!is.null(fit$residuals))` arm now copies `fit$residuals` to the same envelope
+field, `result$diagnostics$residuals`, for the automatic route — so
+`plotResiduals()`, the residual spectrum, the diagnostics table and the
+dashboard panels consume it with no other change (`fitted_residuals()` reads
+that one field). The estimated branch is untouched and no value is ever
+synthesized: a fit whose automatic route lacks residuals keeps the previous
+refusal, "The fit does not supply dated preprocessing residuals.", which the
+new test pins on a restricted native fit. With the ungate, `rsa3` serves
+`res` (dygraph over the dated `tsres`, `n = 131`, 1950-2 … 1960-12), `acf`,
+`acf2`, `pacf`, `sreshist` and `nqq`, and its `normality`/`independence` cells
+carry the bundle's own Doornik-Hansen and Ljung-Box instead of `Undefined`.
+
+**Envelope flow, per route (no whitelist anywhere).** The `x13` builders pass
+`diagnostics = fit$diagnostics %||% list()` and the `tramo_seats` builder passes
+`c(list(residuals = fit$residuals), fit$diagnostics)`, so `td.ftest.sa`/
+`td.ftest.i` arrive in `result$diagnostics` verbatim on
+`x13-rsa0`/`x13-rsa3`/`tramo-rsa0`/`tramo-rsa1` and resolve through
+`diagnostic_rules.R` as `source = "diagnostics/td.ftest.sa"`.
+`diagnosticsTable()` classifies `fTestSA_td`, `combSA_all`, `combI_all`;
+`generateQrTable()` fills `Residual.TD.Effect`; the dashboard card reports the
+same p-value object (`diagnostic_dashboard_values()$p_residual_td`). The
+`-last` variants stay honestly `Undefined`: the primitive publishes its one
+shared value under the `-all` keys (rjd3 publishes `-all` and `-last`
+separately and they coincide for these specifications).
+
+**Fail-soft edge.** The primitive is documented to leave the `td` fields absent
+for a degenerate zero composition (the quick/noout `pseudo_additive` D8
+request). A `perX13(..., "restricted", speclist = list(mode = "pseudo_additive",
+...))` fit reproduces it: the fields are absent from raw fit and envelope,
+the metric reports `availability = "missing"`/`status = "Undefined"`, the
+`fTestSA_td` column stays `Undefined` while the quality-report cell and the
+dashboard card stay `NA`, and nothing crashes or is invented.
+`tools/verify-lifecycle.R` pins this as a `fail-soft|td-absent` step.
+
+**New test.** `inst/tinytest/test-native-td-parity.R` asserts the envelope
+flow, the metric sources, the table/QR/dashboard consumption, the residual
+serve path (including the chart data rebuilt from `stats::acf`/`pacf`/`qqnorm`
+of the bundle) and the fail-soft/refusal edges, plus the attach's own
+definition bit-for-bit against `native_residual_trading_days_tests()` on each
+route's delivered components: **101 expectations** with Java absent. Its live
+block (guarded by `requireNamespace("rjd3x13")` and
+`oracle_domain_allows("default", ...)`, capture domain `default`, so it is
+deferred — with the documented `SKIP` message — from the bridge pass) compares
+in-session native fits with in-session `backend = "rjd3"` fits at the scaled
+`2e-8 * (1 + |ref|)` tolerance and pins the definitional bridges at rel 1e-12 /
+1e-10: **146 expectations** in the default pass.
+`test-native-charts.R` previously pinned the gap itself (`plotSpectrum(
+tsType = "residuals")` must error, the dashboard must say "Residual
+diagnostics are unavailable"); those two expectations now branch on whether the
+fit supplies residuals, so the restricted route keeps the refusal pins and the
+automatic route pins the residual periodogram against
+`stats::spec.pgram(tsres)` (`identical()` `spec` and `freq`) and a populated
+panel — 84 → 86 expectations.
+
+**Live parity on the default JVM (`AirPassengers`, `tmp_opencode/m7-c-persephone/
+probe-parity-m7c.log`).** X-13 `rsa0`: `td_sa_all` 4.344562 (Δ 1.69e-08),
+p 0.0004813458 (Δ 1.76e-11), `td_i_all` 3.50908 (Δ 3.55e-15), residual `ser`
+11.72705, `lb` 40.62718/0.009124236 and `doornikhansen` 7.850661/0.01973561 all
+Δ = 0, `tsres` maxabs 0, `acf`/`acf2`/`pacf` chart data `identical()`. X-13
+`rsa3` (JVM asked for `x11.fcasts = 0`, where the components are bit-identical):
+`ser` Δ 6.24e-11, `lb` Δ 8.46e-09/4.48e-10, `doornikhansen` Δ 2.23e-08/1.89e-09,
+`tsres` maxabs 3.02e-09, `acf` maxabs 1.95e-08, and both classifications plus
+`Residual.TD.Effect = Yes` agree. TRAMO-SEATS `rsa0` (`probe-tramo0.R`, the
+additive case where the two TD definitions below provably share their input):
+`td_sa_all` 2.46174217905 and p 0.027215848471 identical to the live field (rel
+0.0e+00), `td_i_all` 3.67652125203 (rel 1.3e-13), with the delivered SA
+bit-identical to the live one.
+
+**Definition of the TD scalars (root-caused 2026-11-24; dossier
+`tmp_opencode/m7-c-persephone/td-ftest-classification-2026-11-24.md`).** The
+earlier "not asserted numerically" note for the automatic route is resolved: the
+gap is a *definitional* difference in the input representation, not a numerical
+disagreement. Both sides run the same machine — `TradingDaysTest.maTest(data,
+false)`: the six `GenericTradingDays` TD7 contrast columns without a mean column
+over ARIMA(0,1,1)[12], the pinned `JointTest F(6, n-7)`, capture option
+`flast = 0` — and that machine replays its 24-case/192-double dashboard oracle
+with every word bit-identical (re-verified independently here). What differs is
+the series handed to it. rjd3's `diagnostics.td-*` come through
+`GenericSaTestsExtractor` → `GenericSaTests.residualTradingDaysTests()`, whose
+`.sa()/.irr()` are the `lsa`/`lirr` fields: `X13Diagnostics.of()` wires
+`TsData.fitToDomain(X11Results.getD11()/getD13(), x11.getActualDomain())` and
+`TramoSeatsDiagnostics.of()` wires `SeatsResults.getInitialComponents()
+.getSeries(SeasonallyAdjusted|Irregular, Value)` — both on the model's **working
+(estimation) scale**, never back-transformed (verified against the pinned
+jdplus 3.9.0 bytecode). The rkalos attach by design uses the fit's decorated
+`finalSA`/`finalIrregular` on the **reported** scale. `maTest` estimates a
+RegSarima model internally, so its F is invariant to a linear rescaling but not
+to a log transform: with no transform in force the two definitions coincide (x13
+`rsa0` Δ 3.9e-09; tramo `rsa0` rel 0.0e+00 / 1.3e-13 with bit-identical
+components) and with `log` in force they do not (`rsa3` 21.9%, tramo `rsafull`
+57.5%). The bridge is now asserted rather than documented: the live
+`diagnostics.td-sa-all`/`td-i-all` equal `native_residual_trading_days_tests()`
+applied to the live fit's own components on the working scale — `log()` of the
+components for X-11 (rel 0.0e+00, p ≤ 8.9e-16) and
+`output$decomposition$stochastics` for SEATS (≤ 2.8e-14) — while the shipped
+attach equals the same primitive on the levels components bit-for-bit, and the
+divergence itself is pinned so neither convention can drift silently. The frozen
+oracle panel was captured on the working-scale convention (its
+`x13_rsa3_air`/`tramo_rsafull_air` cases sit 4.7e-08 and 3.1e-08 from the live
+field, 23% and 136% from the attach), so it pins the primitive, not the attach's
+input choice. Follow-up, rkalos-side rather than product-layer:
+`diagnostic_rules.R` maps `diagnostics.td-sa-all` and `diagnostics/td.ftest.sa`
+onto one metric, so for log-transformed templates that metric is
+backend-dependent by definition; reference parity is reachable from the
+delivered envelope alone (`output$preadjustment$log`, and the working-scale
+`output$initial` block at rel 3.05e-08), which makes it a change to
+`.attach_td_tests()` plus a pin bump.
+
+**Lifecycle.** `tools/verify-lifecycle.R` grows `x13-rsa3` to `residuals =
+TRUE` (the residual PASS path: dated series identical to the raw bundle, `res`
+dygraph + `acf`, dashboard panel populated, residual tests classified), adds a
+per-lane `diagnose-td` step (finite p-value, `fTestSA_td` equal to the metric
+status, `combSA_all`/`combI_all` classified, `Residual.TD.Effect` Yes/No,
+identical dashboard card) and the `fail-soft` step above:
+**`LIFECYCLE STEPS=41 GAPS=0`** — the cutover gap in item 27 is gone.
+
+**Verification (R 4.5.1, rkalos 0.1.0.9028 / core `20e6063dea6f97d2957a7a3057313812c6f5d2f0`).**
+Fresh Java-free library and `R CMD INSTALL`: `ISOLATED LIBRARY
+tmp_opencode/m7-c-persephone/nojava-iso entries=469`, all six of `rJava`,
+`rjd3toolkit`, `rjd3x13`, `rjd3tramoseats`, `rjd3jars`, `RProtoBuf` absent,
+`* DONE (persephone3)`. Java-free native lane (17 `test-native-*.R` files,
+`JAVA_HOME` nowhere, rjd3 not findable): **4451 expectations, 0 failing**.
+`tools/verify-nojava.R --native`: exit 0. Oracle pass A
+(`PERSEPHONE_ORACLE_PASS=default`, live JVM): **39 files, 6460 expectations,
+6460 passes, 0 fails**, exactly the five documented bridge deferrals. Oracle
+pass B (`tools/run-oracle-bridge-pass.R` under
+`-XX:+UnlockDiagnosticVMOptions -XX:DisableIntrinsic=_dexp,_dlog`): **5 files,
+5781 expectations, 0 fails** — unchanged, and unaffected by the TD test rewrite
+because its five bridge files do not include `test-native-td-parity.R`.
+`R CMD build` (vignettes rebuilt) + `R CMD check --no-manual` on the source
+archive with the oracle lane, i.e. no `--ignore-vignettes`: **Status: OK**, exit
+0, `* checking re-building of vignette outputs ... OK`, tests lane 373 s with
+the same five deferrals and no NOTE or WARNING. Transcripts:
+`tmp_opencode/m7-c-persephone/`.
+
+**Pins.** `DESCRIPTION` requires `rkalos (>= 0.1.0.9028)` and pins
+`Remotes: github::statistikat/rkalos@5e1ddca1e601217f5461d5e69a219312362cc995`
+("Re-pin the core to `20e6063` and surface residual trading-day F-tests in R").
+That commit is **not yet pushed** upstream: the pin resolves only once the
+rkalos maintainer pushes it, and `rJava` was added to `Suggests` because the
+M6-c capture-domain guard in `R/helpers.R` calls `requireNamespace("rJava")`
+(it was the one remaining `'::' import not declared` check WARNING).

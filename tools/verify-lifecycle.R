@@ -84,7 +84,7 @@ lanes <- list(
   list(id = "x13-rsa3",
        construct = function() perX13(AirPassengers, "rsa3", backend = "native",
                                      speclist = list(backcast = 0L, forecast = 6L)),
-       n_fc = 6L, se = "unavailable", residuals = FALSE),
+       n_fc = 6L, se = "unavailable", residuals = TRUE),
   list(id = "tramo-rsa0", construct = function() perTramo(AirPassengers, "rsa0",
                                                           backend = "native"),
        n_fc = 24L, se = "available", residuals = TRUE),
@@ -162,12 +162,29 @@ for (lane in lanes) {
     rs <- attempt(persephone3:::fitted_residuals(obj)$tsres)
     if (inherits(rs, "lifecycle_error")) fail(id, "diagnose", paste("residual series:", rs))
     if (is.null(rs) || length(rs) < 12L) fail(id, "diagnose", "residual series missing")
+    if (!identical(persephone3:::fitted_residuals(obj)$tsres, obj$output$residuals$tsres))
+      fail(id, "diagnose", "envelope residuals differ from the raw fit residual bundle")
+    res_chart <- attempt(obj$plotResiduals(which = "res"))
+    if (inherits(res_chart, "lifecycle_error") || !inherits(res_chart, "dygraphs"))
+      fail(id, "diagnose", paste("residual series chart:", as.character(res_chart)))
     acf_chart <- attempt(obj$plotResiduals(which = "acf", interactive = FALSE))
     if (inherits(acf_chart, "lifecycle_error"))
       fail(id, "diagnose", paste("residual acf chart:", as.character(acf_chart)))
-    paste0("residuals n = ", length(rs),
-           "; residual acf chart served; normality=", tbl$normality,
-           " independence=", tbl$independence)
+    panel <- attempt(as.character(dashboard_single(obj)))
+    if (inherits(panel, "lifecycle_error")) fail(id, "diagnose", paste("dashboard:", panel))
+    if (grepl("Residual diagnostics are unavailable", panel, fixed = TRUE))
+      fail(id, "diagnose", "dashboard residual panel empty despite served residuals")
+    if (grepl("Plot error:", panel, fixed = TRUE))
+      fail(id, "diagnose", "dashboard residual panel plot error")
+    if (!tbl$normality %in% c("Severe", "Bad", "Uncertain", "Good") ||
+        !tbl$independence %in% c("Severe", "Bad", "Uncertain", "Good"))
+      fail(id, "diagnose", "residual test columns not classified")
+    step(id, "diagnose-residuals", TRUE,
+         paste0("residuals n = ", length(rs), "; plotResiduals serves res (dygraph) + acf;",
+                " diagnosticsTable normality=", tbl$normality, " independence=", tbl$independence,
+                "; dashboard residual panel populated"))
+    paste0("residuals n = ", length(rs), "; residual charts and dashboard panel served; normality=",
+           tbl$normality, " independence=", tbl$independence)
   } else {
     err <- attempt(obj$plotResiduals(which = "acf", interactive = FALSE))
     if (!inherits(err, "lifecycle_error"))
@@ -179,6 +196,26 @@ for (lane in lanes) {
   step(id, "diagnose", TRUE,
        paste0("obj$diagnosticsTable() 1x", ncol(tbl),
               " identical to diagnosticsTable(obj); ", resid_note))
+  # TD F-test consumption: the rkalos td.ftest.sa/td.ftest.i surface (item M7)
+  # reaches the diagnostics table, the quality report and the dashboard card;
+  # a fit legitimately lacking the fields is covered by the fail-soft step.
+  td <- attempt({
+    m <- persephone3:::diagnostic_metrics(obj)
+    dv <- persephone3:::diagnostic_dashboard_values(obj)
+    list(p = m$td_sa_f$pvalue, status = m$td_sa_f$status, col = tbl$fTestSA_td,
+         comb_sa = tbl$combSA_all, comb_i = tbl$combI_all,
+         qr = obj$generateQrTable()[["Residual.TD.Effect"]], card = dv$p_residual_td)
+  })
+  if (inherits(td, "lifecycle_error")) fail(id, "diagnose-td", as.character(td))
+  finite_class <- c("Severe", "Bad", "Uncertain", "Good")
+  if (!td$col %in% finite_class || !identical(td$col, td$status) ||
+      !td$comb_sa %in% finite_class || !td$comb_i %in% finite_class ||
+      !is.finite(td$p) || !td$qr %in% c("Yes", "No") || !identical(td$card, td$p))
+    fail(id, "diagnose-td", paste(capture.output(str(td)), collapse = " "))
+  step(id, "diagnose-td", TRUE,
+       paste0("fTestSA_td=", td$col, " (p=", format(td$p, digits = 4),
+              ") combSA_all=", td$comb_sa, " combI_all=", td$comb_i,
+              " QR Residual.TD.Effect=", td$qr, "; dashboard card identical p-value"))
   # plot: fit and forecast charts from both engines
   dy <- attempt(plot(obj))
   if (inherits(dy, "lifecycle_error") || !inherits(dy, "htmlwidget") ||
@@ -250,6 +287,38 @@ for (lane in lanes) {
   nojava_ok(!any(forbidden %in% loadedNamespaces()),
             paste("lane", id, "loaded a forbidden namespace"))
 }
+
+# Fail-soft edges, asserted once at cut level (all four routes share the same
+# reference-class envelope and presentation layer): a fit whose preprocessing
+# legitimately lacks the residual TD F-test keeps those columns Undefined
+# instead of fabricating a value, and a fit without the dated residual bundle
+# keeps the honest plotResiduals() refusal. rkalos documents the quick/noout
+# pseudo_additive D8 request as the case with a degenerate zero composition;
+# the restricted mode = "pseudo_additive" spec below drives it.
+deg <- attempt({
+  obj <- perX13(AirPassengers, "restricted", backend = "native",
+                speclist = list(mode = "pseudo_additive", log = FALSE,
+                                seasonal = rep("s3x3", 12L), trend_length = 13L))
+  obj$run()
+  list(raw_td = "td.ftest.sa" %in% names(obj$output$diagnostics),
+       envelope_td = "td.ftest.sa" %in% names(obj$result$diagnostics),
+       availability = persephone3:::diagnostic_metrics(obj)$td_sa_f$availability,
+       status = persephone3:::diagnostic_metrics(obj)$td_sa_f$status,
+       column = obj$diagnosticsTable()$fTestSA_td,
+       qr = obj$generateQrTable()[["Residual.TD.Effect"]],
+       card = persephone3:::diagnostic_dashboard_values(obj)$p_residual_td,
+       refusal = attempt(obj$plotResiduals(which = "acf", interactive = FALSE)))
+})
+if (inherits(deg, "lifecycle_error")) fail("fail-soft", "td-absent", as.character(deg))
+if (deg$raw_td || deg$envelope_td || !identical(deg$availability, "missing") ||
+    !identical(deg$status, "Undefined") || !identical(deg$column, "Undefined") ||
+    !is.na(deg$qr) || !is.na(deg$card) || !inherits(deg$refusal, "lifecycle_error"))
+  fail("fail-soft", "td-absent", paste(capture.output(str(deg)), collapse = " "))
+step("fail-soft", "td-absent", TRUE,
+     paste0("restricted mode = pseudo_additive fit: td.ftest.sa absent from the raw fit and",
+            " the envelope; fTestSA_td stays Undefined, QR Residual.TD.Effect and the",
+            " dashboard card stay NA; plotResiduals still refuses (",
+            as.character(deg$refusal), ")"))
 
 # Dashboard acceptance in a separate callr child process: the child re-isolates
 # to the same Java-free library, builds the single-series dashboard through

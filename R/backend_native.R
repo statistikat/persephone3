@@ -709,6 +709,15 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
   if (stock) {
     envelope$likelihood <- fit$likelihood
     envelope$diagnostics$residuals <- fit$residuals
+  } else if (!is.null(fit$residuals)) {
+    # The qualified automatic route carries the preprocessing residual bundle
+    # (rkalos >= 0.1.0.9028, capabilities()$automatic_fit$residuals: dated
+    # tsres per the estimated-route convention plus ser, lb, doornikhansen).
+    # It lands on the same envelope field the estimated route uses so
+    # plotResiduals() and the dashboard residual panels serve it. A build
+    # whose automatic fit lacks residuals keeps the honest refusal in
+    # plotResiduals(); nothing is synthesized here.
+    envelope$diagnostics$residuals <- fit$residuals
   }
   envelope
 }

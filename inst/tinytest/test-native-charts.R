@@ -50,10 +50,27 @@ for (obj in list(fixed, automatic)) {
     expect_identical(vapply(interactive, "[[", numeric(1), "y"), static$spec)
     expect_identical(vapply(interactive, "[[", numeric(1), "x"), static$freq)
   }
-  expect_error(plotSpectrum(obj, tsType = "residuals"), "does not supply")
   dashboard <- as.character(dashboard_single(obj))
   expect_true(grepl("Decomposition effects", dashboard, fixed = TRUE))
-  expect_true(grepl("Residual diagnostics are unavailable", dashboard, fixed = TRUE))
+  # The residual spectrum and the dashboard residual panel follow the fit. The
+  # automatic route carries the dated preprocessing residual bundle that rkalos
+  # 0.1.0.9028 attaches to the automatic fit, so its residual spectrum is the
+  # periodogram of those residuals and the dashboard panel is populated; a
+  # restricted fit supplies no residuals and keeps the honest refusal plus the
+  # "unavailable" note (plotSpectrum_series falls back to the RegARIMA block,
+  # which the native fixed-specification route does not have).
+  if (!is.null(obj$result$diagnostics$residuals)) {
+    resid <- obj$result$diagnostics$residuals$tsres
+    resid_ref <- stats::spec.pgram(resid, plot = FALSE)
+    resid_static <- plotSpectrum(obj, "ggplot", "residuals", "periodogram")$data
+    expect_identical(resid_static$spec, as.numeric(resid_ref$spec))
+    expect_identical(resid_static$freq, as.numeric(resid_ref$freq) / frequency(resid))
+    expect_true(grepl("Residual diagnostics", dashboard, fixed = TRUE))
+    expect_false(grepl("Residual diagnostics are unavailable", dashboard, fixed = TRUE))
+  } else {
+    expect_error(plotSpectrum(obj, tsType = "residuals"), "does not supply")
+    expect_true(grepl("Residual diagnostics are unavailable", dashboard, fixed = TRUE))
+  }
   expect_false(grepl("Plot error:", dashboard, fixed = TRUE))
   if (identical(obj, automatic)) {
     outliers <- obj$getOutliers()
