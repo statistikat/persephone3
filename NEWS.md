@@ -1,4 +1,13 @@
 # persephone3 (development version)
+* `genTd()` accepts the holidays in the notation of rjd3toolkit: the `hd`
+  list can contain the names of the pre-specified holidays of
+  `rjd3toolkit::special_day()` (such as `"ASCENSION"`, equivalently to
+  `"easter+39"`) and its holiday objects (`special_day()`, `fixed_day()`,
+  `easter_day()`, with their offsets, weights and validity periods), and
+  `hd` can be a `rjd3toolkit::national_calendar()` itself, so that the
+  trading day regressors and the calendar correction of the estimation can
+  share one and the same calendar definition. The effective weight of a
+  holiday is the `weight` argument times the weight of the holiday object.
 * In `summary()`, the joint F test of the trading day regressors is now
   printed directly below the table of the trading day coefficients (before
   the "Mean / Leap year" table); the joint F test of the user-defined

@@ -133,6 +133,21 @@ specfun_list <- list(
 # persephone3 internal spec names
 p3_spec_names <- c("outliers", "arima")
 
+# the pre-specified holidays of rjd3toolkit::special_day() with the
+# definitions documented in ?rjd3toolkit::special_day: an exact date, an
+# easter relation or NA for the events that follow neither rule (resolved
+# through rjd3toolkit then); the tinytests verify the definitions against
+# rjd3toolkit's dates, so a drift becomes a test failure, not a surprise
+p3_specialdays <- list(
+  NEWYEAR = "01-01", SHROVEMONDAY = "easter-48", SHROVETUESDAY = "easter-47",
+  ASHWEDNESDAY = "easter-46", MAUNDYTHURSDAY = "easter-3",
+  GOODFRIDAY = "easter-2", EASTER = "easter", EASTERMONDAY = "easter+1",
+  ASCENSION = "easter+39", PENTECOST = "easter+49", WHITMONDAY = "easter+50",
+  CORPUSCHRISTI = "easter+60", MAYDAY = "05-01", ASSUMPTION = "08-15",
+  ALLSAINTSDAY = "11-01", ARMISTICE = "11-11", CHRISTMAS = "12-25",
+  HALLOWEEN = "10-31", LABORDAY = NA_character_, JULIANEASTER = NA_character_
+)
+
 # the blue of the plots: a dark blue (dodgerblue3), used for the original
 # series, the confidence band and everything else that is plotted in blue
 p3_blue <- "#1874CD"
