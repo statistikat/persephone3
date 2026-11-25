@@ -66,8 +66,9 @@ expect_true(all(is.na(qt[2, c(
   "seasonality", "logTransform", "arimaMdl",
   "Q", "Q2", "TotalQ"
 )])))
-# ... its nOutliers is the number of the unique outliers of the sub-series
-expect_true(is.numeric(qt$nOutliers[2]) && !is.na(qt$nOutliers[2]))
+# ... its outlier counts are NA (an indirect aggregate has no model of its
+# own, the outliers of the sub-series are not attributed to it)
+expect_true(is.na(qt$nOutliers[2]))
 # ... but it is tested on residual seasonality and trading day effects
 expect_true(all(is.numeric(qt$seasTest)) && all(is.numeric(qt$tdTest)))
 
@@ -131,8 +132,8 @@ expect_identical(
 
 message("Test qualityTable - outliers of the indirect adjustment")
 
-# the indirect row shows the number of the unique outliers of the
-# sub-series the aggregate is built from
+# an indirect aggregate has no model of its own: the outlier counts of the
+# indirect row are NA, they are not collected from the sub-series
 oa <- perX13(AirPassengers, "rsa0")
 oa$updateParams(outliers = c("AO1951.1", "LS1955.4", "AO1952.3"))
 ob <- perX13(AirPassengers, "rsa0")
@@ -142,13 +143,13 @@ hto <- perHts(S1 = oa, S2 = ob, AG = og, method = "x13",
               groups = list(AG = c("S1", "S2")))
 hto$run()
 to <- hto$qualityTable()
-# S1 has 3 outliers, S2 has 2; the shared AO1951.1 is counted only once
+# S1 has 3 outliers, S2 has 2; the indirect row counts nothing of that
 expect_equal(to$nOutliers[to$component == "S1"], 3)
 expect_equal(to$nOutliers[to$component == "S2"], 2)
-expect_equal(to$nOutliers[to$agg == "indirect"], 4)
+expect_true(all(is.na(to$nOutliers[to$agg == "indirect"])))
 
 # the same in the classic mode
 htc <- perHts(a = oa, b = ob, method = "x13")
 htc$run()
 tc <- htc$qualityTable()
-expect_equal(tc$nOutliers[tc$agg == "indirect"], 4)
+expect_true(all(is.na(tc$nOutliers[tc$agg == "indirect"])))

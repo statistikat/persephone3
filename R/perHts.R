@@ -1383,8 +1383,6 @@ hierarchicalTimeSeries <- R6::R6Class(
       }
       ind_series <- indirectSeriesMap(self)
       jdx <- match(tbl$component, names(ind_series))
-      ind_out <- indirectOutlierMap(self)
-      odx <- match(tbl$component, names(ind_out))
       rows <- lapply(seq_len(nrow(tbl)), function(i) {
         row <- tbl[i, , drop = FALSE]
         s <- if (is.na(jdx[i])) NULL else ind_series[[jdx[i]]]
@@ -1393,8 +1391,7 @@ hierarchicalTimeSeries <- R6::R6Class(
           # run yet): keep the direct row
           return(row)
         }
-        outl <- if (is.na(odx[i])) character(0) else ind_out[[odx[i]]]
-        ind <- indirectAggDiagnostics(tbl$component[i], s, outl)
+        ind <- indirectAggDiagnostics(tbl$component[i], s)
         if (only_indirect) {
           return(ind)
         }

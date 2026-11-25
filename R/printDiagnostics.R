@@ -26,12 +26,10 @@ adjustedTests <- function(x) {
 
 # one row of the quality overview for the indirectly adjusted aggregate
 # `component` with the adjusted series `series`. The indicators of a model fit
-# are not available for the indirect adjustment, but the series is tested on
-# residual seasonality and trading day effects. The number of outliers is the
-# number of the unique outliers (`outlierNames`, e.g. "AO1985.03") of the
-# sub-series the aggregate is built from.
-indirectAggDiagnostics <- function(component, series,
-                                   outlierNames = character(0)) {
+# are not available for the indirect adjustment (an indirect aggregate has no
+# model of its own, so its outlier counts are NA as well), but the series is
+# tested on residual seasonality and trading day effects.
+indirectAggDiagnostics <- function(component, series) {
   tests <- adjustedTests(series)
   data.frame(
     component = component,
@@ -42,7 +40,7 @@ indirectAggDiagnostics <- function(component, series,
     seasonality = NA_real_,
     logTransform = NA,
     arimaMdl = NA_character_,
-    nOutliers = length(unique(outlierNames)),
+    nOutliers = NA_real_,
     nAutoout = NA,
     nRecentout = NA,
     Q = NA_real_,
@@ -52,73 +50,6 @@ indirectAggDiagnostics <- function(component, series,
     tdTest = unname(tests[["tdTest"]]),
     stringsAsFactors = FALSE
   )
-}
-
-# the outlier names (e.g. "AO1985.03") of a single series, character(0) if it
-# is not run yet or has no outliers
-seriesOutlierNames <- function(node) {
-  tryCatch({
-    out <- getOutliers(node)
-    if (is.null(out)) character(0) else as.character(out$name)
-  }, error = function(e) character(0))
-}
-
-# the unique outlier names of all leaf series that build the indirect
-# aggregate of `node`: the leaf components of the object in the classic mode,
-# the leaf series under the root aggregates in `groups` mode (the aggregates
-# of a `groups` structure are not run in "indirect" mode and do not contribute
-# their own outliers)
-leafOutlierNames <- function(node) {
-  if (!inherits(node, "hierarchicalTimeSeries")) {
-    return(seriesOutlierNames(node))
-  }
-  if (!is.null(node$groups)) {
-    aggs <- names(node$groups)
-    collect <- function(nm) {
-      if (nm %in% aggs) {
-        unique(unlist(lapply(node$groups[[nm]], collect)))
-      } else {
-        seriesOutlierNames(node$getComponent(nm))
-      }
-    }
-    roots <- cl_groups_roots(node$groups)
-    return(unique(unlist(lapply(roots, collect))))
-  }
-  unique(unlist(lapply(node$components, leafOutlierNames)))
-}
-
-# the unique outlier names of the sub-series of every aggregate row of the
-# quality overview of a hierarchical object, named by the component id of the
-# row (in the same way as indirectSeriesMap())
-indirectOutlierMap <- function(node, prefix = "") {
-  if (!inherits(node, "hierarchicalTimeSeries")) {
-    return(NULL)
-  }
-  if (!is.null(node$groups)) {
-    aggs <- node$getSeries(aggregates = TRUE)
-    groupNames <- names(node$groups)
-    collect <- function(nm) {
-      if (nm %in% groupNames) {
-        unique(unlist(lapply(node$groups[[nm]], collect)))
-      } else {
-        seriesOutlierNames(node$getComponent(nm))
-      }
-    }
-    out <- lapply(
-      aggs,
-      function(agg) unique(unlist(lapply(node$groups[[agg]], collect)))
-    )
-    names(out) <- vapply(aggs, aggPath, "", prefix = prefix)
-    return(out)
-  }
-  out <- list(leafOutlierNames(node))
-  names(out) <- prefix
-  for (nm in names(node$components)) {
-    out <- c(out, indirectOutlierMap(
-      node$components[[nm]], aggPath(prefix, nm)
-    ))
-  }
-  out
 }
 
 # the adjusted series that is directly computed for every row of the quality

@@ -1,4 +1,8 @@
 # persephone3 (development version)
+* The quality overview of a hierarchical object (`$qualityTable()` of
+  `perHts()`): the `agg = "indirect"` rows no longer report the number of
+  unique outliers of the sub-series in `nOutliers`; an indirect aggregate
+  has no model of its own, so the outlier counts of these rows are `NA`.
 * `genTd()` accepts the holidays in the notation of rjd3toolkit: the `hd`
   list can contain the names of the pre-specified holidays of
   `rjd3toolkit::special_day()` (such as `"ASCENSION"`, equivalently to
