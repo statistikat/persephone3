@@ -1,5 +1,5 @@
 # Product consumption of the rkalos residual + residual trading-day F-test
-# surfaces (M7 cutover gates, item 27). rkalos >= 0.1.0.9028 attaches a dated
+# surfaces (M7 cutover gates, item 27). rkalos >= 0.1.0.9029 attaches a dated
 # preprocessing residual bundle to the automatic fit
 # (capabilities()$automatic_fit$residuals) and a td.ftest.sa / td.ftest.i pair
 # to all four product fit routes via native_residual_trading_days_tests
@@ -28,16 +28,19 @@
 # demand-dispatch convention. On aarch64 the domains coincide and the guard is
 # inert.
 #
-# Definition note (root-caused 2026-11-24; dossier
+# Definition note (input convention switched to the JVM reference on
+# 2026-11-25; root cause and history: dossier
 # tmp_opencode/m7-c-persephone/td-ftest-classification-2026-11-24.md). Both
 # sides run the SAME machine -- TradingDaysTest.maTest(data, false): the six
 # GenericTradingDays TD7 contrast columns without a mean column over an
 # ARIMA(0,1,1)[12], the pinned JointTest F(6, n-7), capture option flast = 0
 # (so -all and -last share one fit). That machine is bit-exact against its
 # 24-case/192-double dashboard oracle (rkalos
-# fixtures/native/residual-trading-days/public-x86_64.txt; replayed in the
-# rkalos suite and independently here: every word bit-identical). What
-# differs is the INPUT SERIES the machine is handed:
+# fixtures/native/residual-trading-days/public-x86_64.txt; replayed
+# bit-identical in the rkalos suite, whose four SEATS cases the shipped
+# attach now reproduces exactly). What used to differ -- and no longer does
+# from rkalos 0.1.0.9029 (a0c17fb) on -- is the INPUT SERIES the machine is
+# handed:
 #   * rjd3 diagnostics.td-sa-all/-last and td-i-all/-last are extracted by
 #     GenericSaTestsExtractor from GenericSaTests.residualTradingDaysTests(),
 #     which reads the lsa/lirr fields -- the SA and irregularity ON THE
@@ -46,28 +49,34 @@
 #     and TramoSeatsDiagnostics.of() wires SeatsResults.getInitialComponents()
 #     .getSeries(SeasonallyAdjusted|Irregular, Value), neither of them
 #     back-transformed (verified against the pinned jdplus 3.9.0 bytecode);
-#   * the rkalos attach (.attach_td_tests, by design -- see its header
-#     comment) computes the test from the fit's OWN decorated finalSA /
-#     finalIrregular on their published observed domain, i.e. on the REPORTED
-#     scale.
+#   * the attach (.attach_td_tests) now feeds that SAME working-scale
+#     representation: the X-13 routes pass the fit's preadjustment log flag
+#     (the delivered envelope's output$preadjustment$log) and the attach
+#     tests log(finalSA/finalIrregular) when it is set -- a no-op for
+#     additive fits, whose delivered components are already on the working
+#     scale; the SEATS route tests the working-scale initial decomposition
+#     the envelope publishes as output$initial (SeasonallyAdjusted /
+#     Irregular, information = "Value"), the counterpart of lsa/lirr.
 # Because maTest estimates a RegSarima model internally, its F statistic is
-# invariant to a linear rescaling but NOT to a nonlinear change of scale. So
-# the two definitions coincide whenever the model is estimated on the
-# reported scale -- measured here at rel 3.9e-09 (x13 rsa0) and rel 0.0e+00 /
-# 1.3e-13 (tramo rsa0) -- and differ for every log-transformed template:
-# rsa3 by 21.9% (x11.fcasts = 0; 29.8% plain) and tramo rsafull by 57.5%.
-# That is a definitional difference in the input representation, not a
-# formula or test difference, and this file pins all three layers of it: the
-# attach's own definition bit-for-bit (ungated), the reference field's input
+# invariant to a linear rescaling but NOT to a nonlinear change of scale, so
+# the switch IS the reference-parity statement, measured live in this file:
+# the additive x13 rsa0 fit stays at rel 3.9e-09, the log rsa3 template
+# (x11.fcasts = 0 on the JVM side) reaches the live triple 2.91929946792 /
+# p 0.0103902093362 / i 2.61868801941 at rel 0.0e+00 to 8.9e-16, and tramo
+# rsafull reaches 1.57867658409 / 1.93578513503 at |dF| 4.8e-08 / 1.3e-09 --
+# the SEATS residual is by construction: the TD machine amplifies the
+# tolerance-banded initial SEATS components (~1e-11 in the series) ~1000x to
+# ~3e-08 relative in F, inside the 2e-8 * (1 + |ref|) convention but not
+# bit-exact. This file pins all three layers: the attach's own definition
+# bit-for-bit against the primitive on the working-scale components derived
+# from the same delivered envelope (ungated), the reference field's input
 # convention through an exact bridge on the live fit's own published series
-# (rel 1e-10), and the tolerance parity of the non-transformed fits
-# cross-backend. The divergence itself is pinned too, so neither convention
-# can drift silently. Note that R/diagnostic_rules.R maps
-# "diagnostics.td-sa-all" and "diagnostics/td.ftest.sa" onto one metric, so
-# for log-transformed templates the metric value is backend-dependent by
-# definition; reference parity for those routes is a follow-up item (the
-# native envelope already carries the pieces: output$preadjustment$log and
-# the working-scale output$initial block).
+# (rel 1e-12 X-11 / 1e-10 SEATS), and genuine cross-backend numeric parity at
+# 2e-8 * (1 + |ref|) on rsa0, rsa3 and rsafull, with the additive tramo rsa0
+# control and the levels-divergence guard keeping both claims non-vacuous.
+# R/diagnostic_rules.R maps "diagnostics.td-sa-all" and
+# "diagnostics/td.ftest.sa" onto one metric; the convention switch makes that
+# metric backend-consistent on every route.
 rel <- function(actual, reference) abs(actual / reference - 1)
 near <- function(actual, reference) {
   ok <- is.finite(actual) && is.finite(reference) &&
@@ -93,17 +102,39 @@ expect_identical(tramo$result$diagnostics[c("td.ftest.sa", "td.ftest.i")],
 expect_identical(tramo$result$diagnostics$residuals, tramo$output$residuals)
 
 # --- the attach's own definition, pinned bit-for-bit on the native side ------
-# The product's td scalars are exactly the primitive applied to the delivered
-# decorated finalSA / finalIrregular on their published domain (the rkalos
-# convention, quoted in the header): no JVM, no tolerance, no restatement.
-for (obj in list(auto, stock, tramo)) {
+# The product's td scalars are exactly the primitive applied to the fit's own
+# components ON THE MODEL'S WORKING (ESTIMATION) SCALE, derived from the SAME
+# delivered envelope the attach reads (the rkalos GenericSaTests input
+# convention, quoted in the header): log() of the decorated components when
+# the envelope's preadjustment$log is set (X-13), the output$initial
+# working-scale SA/irregularity Value rows (SEATS). No JVM, no tolerance, no
+# restatement -- the working-scale inputs are themselves derived bit-exactly,
+# so the bit-for-bit identity survives the scale change.
+x13_working_tests <- function(obj) {
   sa <- obj$result$components$sa
   ir <- obj$result$components$i
-  ref <- rkalos::native_residual_trading_days_tests(sa, ir,
-          as.integer(stats::start(sa)[1L]), as.integer(stats::start(sa)[2L]))
+  log_fit <- isTRUE(obj$output$preadjustment$log)
+  rkalos::native_residual_trading_days_tests(
+    if (log_fit) log(as.numeric(sa)) else as.numeric(sa),
+    if (log_fit) log(as.numeric(ir)) else as.numeric(ir),
+    as.integer(stats::start(sa)[1L]), as.integer(stats::start(sa)[2L]))
+}
+seats_initial_tests <- function(obj) {
+  row <- function(cmp) obj$output$initial[obj$output$initial$information == "Value" &
+                                            obj$output$initial$component == cmp, , drop = FALSE]
+  sa <- row("SeasonallyAdjusted")
+  ir <- row("Irregular")
+  rkalos::native_residual_trading_days_tests(sa$values[[1L]], ir$values[[1L]],
+    as.integer(sa$start_year[1L]), as.integer(sa$start_month[1L]))
+}
+for (obj in list(auto, stock)) {
+  ref <- x13_working_tests(obj)
   expect_identical(obj$output$diagnostics$td.ftest.sa, ref[["td-sa-all"]])
   expect_identical(obj$output$diagnostics$td.ftest.i, ref[["td-i-all"]])
 }
+ref_t <- seats_initial_tests(tramo)
+expect_identical(tramo$output$diagnostics$td.ftest.sa, ref_t[["td-sa-all"]])
+expect_identical(tramo$output$diagnostics$td.ftest.i, ref_t[["td-i-all"]])
 
 # --- metric resolution and presentation for the published td fields -------
 for (obj in list(auto, stock, tramo)) {
@@ -202,9 +233,8 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
     persephone3:::oracle_domain_allows("default", "test-native-td-parity.R")) {
   # rsa0: the estimated-route TD tests and the dated residual scalars match the
   # live JVM within the scaled tolerance. This is the non-transformed case: the
-  # attach's reported-scale definition and the reference field's working-scale
-  # definition are the same representation here (measured rel 3.9e-09), so the
-  # parity is numerical, not just classificatory.
+  # attach's working-scale input is a no-op log here, so the parity is
+  # numerical, not just classificatory (measured rel 3.9e-09 on the F values).
   jd <- perX13(AirPassengers, "rsa0", backend = "rjd3")
   jd$run()
   mj <- persephone3:::diagnostic_metrics(jd)
@@ -270,13 +300,30 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
     expect_true(rel(live$value, bridge[[nm]]$value) < 1e-12, info = paste(nm, "F bridge"))
     expect_true(rel(live$pvalue, bridge[[nm]]$pvalue) < 1e-12, info = paste(nm, "p bridge"))
   }
-  # The other half of the definition: the shipped attach is the levels variant
-  # (pinned bit-for-bit above), so on a log-transformed template the two
-  # conventions differ materially -- measured 2.19e-01 relative here. Pinning the
-  # divergence means a silent change of either convention fails this file.
+  # Reference parity, numeric and live: the shipped attach (working-scale log
+  # input, pinned bit-for-bit above on the native side) meets the live rjd3
+  # field at the scaled tolerance convention. Measured here: the delivered
+  # metric triple equals the live values 2.91929946792 / 0.0103902093362 /
+  # 2.61868801941 at rel 0.0e+00 (both F values and the td-sa p-value) to
+  # 8.9e-16 (td-i p-value) -- far inside 2e-8 * (1 + |ref|).
+  mn3 <- persephone3:::diagnostic_metrics(auto)
+  mj3 <- persephone3:::diagnostic_metrics(jd3)
+  for (key in c("td_sa_all", "td_sa_f", "td_i_all")) {
+    expect_true(near(mn3[[key]]$statistic, mj3[[key]]$statistic),
+                info = paste0("rsa3 ", key, " statistic"))
+    expect_true(near(mn3[[key]]$pvalue, mj3[[key]]$pvalue),
+                info = paste0("rsa3 ", key, " pvalue"))
+  }
+  # Convention guard (keeps the parity above from being a coincidence of
+  # scale): the OLD attach read the DELIVERED LEVELS components, and the
+  # primitive on the live fit's own levels components sits 6.4e-01 away from
+  # the shipped value (measured; 3.55903611041 vs 2.91929946792). A silent
+  # revert of either convention fails this pin.
+  lev3 <- rkalos::native_residual_trading_days_tests(as.numeric(sa3), as.numeric(i3),
+            as.integer(stats::start(sa3)[1L]), as.integer(stats::start(sa3)[2L]))
   expect_true(abs(auto$output$diagnostics$td.ftest.sa$value -
-                    ud3[["diagnostics.td-sa-all"]]$value) > 0.05,
-              info = "levels-vs-working-scale divergence is still the definition")
+                    lev3[["td-sa-all"]]$value) > 0.05,
+              info = "the attach feeds working-scale components, not the levels ones")
   # Both fits classify the TD effect the same way at 0.05, the level the quality
   # report column and the dashboard actually serve.
   expect_identical(auto$generateQrTable()[["Residual.TD.Effect"]],
@@ -299,6 +346,23 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
     expect_true(rel(live$value, bridge_t[[nm]]$value) < 1e-10, info = paste("tramo", nm, "F bridge"))
     expect_true(rel(live$pvalue, bridge_t[[nm]]$pvalue) < 1e-10, info = paste("tramo", nm, "p bridge"))
   }
+  # Reference parity, numeric and live, on the SEATS route at the existing
+  # 2e-8 * (1 + |ref|) convention: the attach pair 1.57867653594 /
+  # 1.93578513630 against the live 1.57867658409 / 1.93578513503, measured
+  # |dF| 4.8e-08 (band 5.2e-08) and 1.3e-09 (band 5.9e-08), |dp| 1.4e-08 and
+  # 2.0e-10. The sa residual is the documented amplification (~1000x) of the
+  # tolerance-banded initial SEATS components -- inside the band by
+  # construction, deliberately not tightened into a bit claim.
+  mt3 <- persephone3:::diagnostic_metrics(tramo)
+  mj3t <- persephone3:::diagnostic_metrics(jt)
+  for (key in c("td_sa_all", "td_i_all")) {
+    expect_true(near(mt3[[key]]$statistic, mj3t[[key]]$statistic),
+                info = paste0("tramo rsafull ", key, " statistic"))
+    expect_true(near(mt3[[key]]$pvalue, mj3t[[key]]$pvalue),
+                info = paste0("tramo rsafull ", key, " pvalue"))
+  }
+  expect_identical(tramo$generateQrTable()[["Residual.TD.Effect"]],
+                   jt$generateQrTable()[["Residual.TD.Effect"]])
   # The additive control that keeps the parity claim above non-vacuous: with no
   # transform in force (tramo rsa0) the initial and final published blocks
   # coincide and the native attach reaches tolerance parity with the live field

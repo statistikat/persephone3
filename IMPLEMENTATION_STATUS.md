@@ -1965,3 +1965,68 @@ That commit is **not yet pushed** upstream: the pin resolves only once the
 rkalos maintainer pushes it, and `rJava` was added to `Suggests` because the
 M6-c capture-domain guard in `R/helpers.R` calls `requireNamespace("rJava")`
 (it was the one remaining `'::' import not declared` check WARNING).
+
+## TD attach convention switch consumed; TD parity turned numeric (2026-11-25)
+
+rkalos `0.1.0.9029` at `a0c17fb` (core `20e6063` unchanged) switches the
+`diagnostics[["td.ftest.sa"]]`/`[["td.ftest.i"]]` attach to the JVM
+`GenericSaTests` input convention, closing the reference-parity follow-up the
+preceding entry recorded: the X-13 routes pass the fit's `preadjustment$log`
+flag, so the attach tests `log(finalSA/finalIrregular)` on a log-estimated fit
+(a no-op for additive fits), and the SEATS route tests the working-scale
+initial decomposition rows the envelope publishes as `output$initial`
+(`SeasonallyAdjusted`/`Irregular`, `Value`), the counterpart of `lsa`/`lirr`.
+This is exactly the rkalos-side change the root-cause entry predicted as
+reachable from the delivered envelope alone. `DESCRIPTION` now requires rkalos
+`>= 0.1.0.9029` and pins
+`Remotes: github::statistikat/rkalos@a0c17fb42fd64ace230f9be8c119f9be0bbeda91`
+("Switch the residual trading-day attach to the reference input scale in R");
+like its predecessor the pinned commit resolves once the maintainer pushes it.
+
+`inst/tinytest/test-native-td-parity.R` consumes the switch. The ungated
+attach-definition block no longer pins the delivered LEVELS components: it
+re-derives the working-scale inputs from the same delivered envelope
+(`log()`-when-flagged for X-13, the `output$initial` Value rows for SEATS)
+and pins `td.ftest.sa`/`td.ftest.i` bit-for-bit against the primitive — the
+identity holds on all four fits, additive and log alike. The rsa3 and rsafull
+assertions, previously divergence-only, become genuine cross-backend numeric
+parity at the existing `2e-8 * (1 + |ref|)` convention: rsa3
+(`x11.fcasts = 0` on the JVM side) delivers
+`td_sa_all 2.91929946792`/`p 0.0103902093362`/`td_i_all 2.61868801941`, the
+live field matching at rel 0.0e+00 to 8.9e-16, and rsafull reaches the live
+`1.57867658409`/`1.93578513503` at |dF| 4.8e-08 (band 5.2e-08) and 1.3e-09
+(|dp| 1.4e-08 and 2.0e-10) — the SEATS residual is the documented ~1000x
+amplification of the tolerance-banded initial components and stays a
+tolerance claim, deliberately not tightened into a bit claim. Classification
+parity (diagnostics table, QR `Residual.TD.Effect`, the additive tramo-rsa0
+control) is unchanged; the former divergence pin becomes a convention guard:
+the primitive on the live fit's own LEVELS components sits 6.4e-01 away from
+the shipped value, so a silent revert of either convention fails the file.
+The definitional bridges (log components at rel 1e-12, stochastics at rel
+1e-10) are untouched — the JVM side did not move. The file is **101
+expectations** with Java absent (unchanged) and **146 → 157** in the oracle
+default pass. No other test file pins a td scalar: `test-diagnostic-values.R`
+cross-checks stored rjd3 fixtures against their own fields and synthetic
+values, and the chart/QR/dashboard tests derive from the live fit.
+
+**Verification (R 4.5.1, rkalos 0.1.0.9029 / core `20e6063dea6f97d2957a7a3057313812c6f5d2f0`).**
+Both verification lanes restaged onto the new rkalos slot: `ISOLATED RKALOS
+version=0.1.0.9029 core=20e6063dea6f97d2957a7a3057313812c6f5d2f0` in the
+Java-free lane (`ISOLATED LIBRARY tmp_opencode/m7-c-persephone/nojava-iso
+entries=470`, all six Java-related packages absent — they are the only farm/
+base entries the library lacks) and the same build in the oracle overlay.
+Java-free native lane: **17 files, 4451 expectations, 0 failing**, per-file
+counts unchanged. Oracle pass A (`PERSEPHONE_ORACLE_PASS=default`, live JVM):
+**39 files, 6471 expectations (+11, all inside `test-native-td-parity.R`),
+0 fails**, exactly the five documented bridge deferrals. Oracle pass B
+(`tools/run-oracle-bridge-pass.R` under the capture flags): **5 files, 5781
+expectations, 0 fails** — its five bridge files were not touched.
+`tools/verify-nojava.R --native`: exit 0. `tools/verify-lifecycle.R`:
+**`LIFECYCLE STEPS=41 GAPS=0`**, exit 0; the printed p-values of the two log
+lanes shift with the convention (x13-rsa3 `fTestSA_td` 0.001999 → 0.01173,
+tramo-rsa1 0.0003103 → 0.004324), every assert holding. Final artifact
+re-certification: `R CMD build` (vignettes rebuilt) + `R CMD check
+--no-manual` on the source archive with the oracle lane and
+`PERSEPHONE_ORACLE_PASS=default`: **Status: OK**, exit 0, tests lane 379 s
+with the same five deferrals. Transcripts: `tmp_opencode/m7-c-persephone/`
+(`*-m7e.log`).
