@@ -299,6 +299,23 @@ sumOutlierName <- function(x, v) {
   paste0(as.character(v$type), format(d, "%Y"), ".", per)
 }
 
+# logical for the rows of the summary() Outliers table (one per outlier
+# variable, in the order of the description): TRUE for the outliers that the
+# estimation detected automatically, FALSE for the ones the user set in the
+# specification; the same matching as in getOutliers(), see
+# spec_outlier_keys()
+sumOutlierAuto <- function(x) {
+  variables <- x$output$preprocessing$description$variables
+  otl <- Filter(function(v) {
+    as.character(v$type) %in% c("AO", "LS", "TC")
+  }, variables)
+  keys <- spec_outlier_keys(x$params)
+  vapply(otl, function(v) {
+    d <- regmatches(v$name, regexpr("[0-9]{4}-[0-9]{2}-[0-9]{2}", v$name))
+    length(d) != 1 || !(paste(as.character(v$type), d) %in% keys)
+  }, TRUE)
+}
+
 # x11 filter descriptions: "FILTER_S3X3" -> "3x3", others kept as in the
 # output ("FILTER_C1303B" -> "C1303B")
 sumFilterName <- function(s) {
@@ -391,7 +408,9 @@ sumArimaSpec <- function(x) {
 }
 
 # print a labelled table of coefficients with the columns
-# coef, stderr, t value, P(>|t|)
+# coef, stderr, t value, P(>|t|); an "autoout" column of the table (the TRUE/
+# FALSE of the Outliers table, see sumOutlierAuto()) is printed as a last
+# column
 sumPrintCoef <- function(tbl, title) {
   if (is.null(tbl) || nrow(tbl) == 0) {
     return(invisible())
@@ -404,6 +423,9 @@ sumPrintCoef <- function(tbl, title) {
     `P(>|t|)` = format.pval(tbl$p, digits = 3, eps = 1e-10),
     check.names = FALSE
   )
+  if (!is.null(tbl$autoout)) {
+    out <- cbind(out, autoout = tbl$autoout)
+  }
   rownames(out) <- rownames(tbl)
   print(out, right = TRUE, quote = FALSE)
   cat("\n")
@@ -425,6 +447,11 @@ sumNum <- function(v) format(signif(v, 6), scientific = FALSE)
 #' (Q and Q-M2) and the overall quality indicator.
 #'
 #' @details
+#'
+#' The `autoout` column of the Outliers table tells how each outlier entered
+#' the model, with the same meaning as in [getOutlierTable()]: `TRUE` for the
+#' ones the estimation detected by itself, `FALSE` for the ones the user set
+#' in the specification (the `outliers` argument or [fixOutlier()]).
 #'
 #' In the trading day table the regressors are labelled with their names (the
 #' column names of the user-defined regressors, see [perTd()] and its
@@ -510,10 +537,13 @@ summary.persephone <- function(x, ...) {
     sumArimaTable(x),
     paste("ARIMA parameters", sumArimaSpec(x))
   )
-  sumPrintCoef(
-    sumCoefTable(x, c("AO", "LS", "TC"), labelFun),
-    "Outliers"
-  )
+  otlTab <- sumCoefTable(x, c("AO", "LS", "TC"), labelFun)
+  if (!is.null(otlTab)) {
+    # as in getOutliers(): TRUE for the automatically detected outliers,
+    # FALSE for the ones the user set in the specification
+    otlTab$autoout <- sumOutlierAuto(x)
+  }
+  sumPrintCoef(otlTab, "Outliers")
   tdTab <- sumCoefTable(x, "TD", labelFun)
   if (!is.null(tdTab) && nrow(tdTab) == 6 &&
       !any(grepl("^sun", tolower(rownames(tdTab))))) {

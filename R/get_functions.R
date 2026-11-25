@@ -1,3 +1,22 @@
+# the outliers pre-specified by the user in the specification, as "TYPE
+# YYYY-MM-DD" keys (regarima$regression$outliers for x13,
+# tramo$regression$outliers for tramoseats); the output of a run does not
+# distinguish them from the automatically detected ones, so both getOutliers()
+# and the summary() match on this pair
+spec_outlier_keys <- function(params) {
+  spec <- unclass(params)
+  spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
+  otl <- spec$regression$outliers
+  if (length(otl) == 0) {
+    return(character(0))
+  }
+  paste(
+    vapply(otl, function(o) as.character(o$code), ""),
+    as.Date(vapply(otl, function(o) as.numeric(o$pos), numeric(1)),
+            origin = "1970-01-01")
+  )
+}
+
 #' Extract outlier information from a Persephone object
 #'
 #' This function retrieves outlier details (AO, LS, TC) from a fitted Persephone
@@ -110,26 +129,12 @@ getOutliers <- function(x) {
 
     # The output of the run does not distinguish manually specified from
     # automatically detected outliers; only the specification knows the manual
-    # ones (regarima$regression$outliers for x13, tramo$regression$outliers
-    # for tramoseats). Matching works on the type/date pair.
-    spec <- unclass(x$params)
-    spec <- if (!is.null(spec$regarima)) spec$regarima else spec$tramo
-    spec_outliers <- spec$regression$outliers
-    manual <- if (length(spec_outliers) == 0) {
-      NULL
-    } else {
-      data.frame(
-        type = vapply(spec_outliers, function(o) as.character(o$code), ""),
-        date = as.Date(
-          vapply(spec_outliers, function(o) as.numeric(o$pos), numeric(1)),
-          origin = "1970-01-01"
-        )
-      )
-    }
-    outliers$autoout <- if (is.null(manual)) {
+    # ones (spec_outlier_keys()). Matching works on the type/date pair.
+    keys <- spec_outlier_keys(x$params)
+    outliers$autoout <- if (length(keys) == 0) {
       TRUE
     } else {
-      !(paste(outliers$type, outliers$date) %in% paste(manual$type, manual$date))
+      !(paste(outliers$type, outliers$date) %in% keys)
     }
 
     # recentout: outliers falling into the last 5 (monthly) or 3 (quarterly)
