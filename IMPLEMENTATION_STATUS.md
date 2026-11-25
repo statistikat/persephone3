@@ -3,6 +3,16 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Scratch evidence disposition (2026-11-25)
+
+The maintainer's post-milestone cleanup (workspace commit `d0173f5`) removed
+the `tmp_opencode/` scratch that earlier entries cite by path (farm
+libraries, oracle run logs, the re-baseline ledger, M4-era lanes). Entries
+stand as written history; their figures are restated in the entry bodies, and
+the harnesses that produced them are committed (`tools/verify-lifecycle.R`,
+`tools/verify-nojava.R`, `tools/run-oracle-bridge-pass.R`) and re-run against
+fresh clones for the item-15 pass. No entry is amended in place.
+
 ## Oracle lane partitioned by JVM math-flag capture domain (2026-11-24)
 
 The M6 re-baseline investigation root-caused the x86_64 oracle-lane reds
