@@ -15,10 +15,12 @@ head_i <- grep("^-- Outliers", s)
 expect_identical(length(head_i), 1L)
 expect_true(grepl("autoout", s[head_i + 1]))
 
-# the pre-specified outlier is FALSE, the detected one is TRUE
+# the pre-specified outlier is FALSE, the detected one is TRUE; the p-value
+# of the spike is tiny and must be shown as "< 0.0001"
 rows <- grep("^AO[0-9]{4}\\.", s, value = TRUE)
 expect_true(any(grepl("^AO1953\\.07", rows) & grepl("FALSE\\s*$", rows)))
 expect_true(any(grepl("^AO1960\\.09", rows) & grepl("TRUE\\s*$", rows)))
+expect_true(any(grepl("^AO1960\\.09", rows) & grepl("< 0.0001", rows)))
 
 # the classification must agree with getOutliers()
 g <- persephone3:::getOutliers(obj)

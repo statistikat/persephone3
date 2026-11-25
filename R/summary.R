@@ -420,7 +420,7 @@ sumPrintCoef <- function(tbl, title) {
     coef = sumNum(tbl$coef),
     stderr = sumNum(tbl$stderr),
     `t value` = sumNum(tbl$t),
-    `P(>|t|)` = format.pval(tbl$p, digits = 3, eps = 1e-10),
+    `P(>|t|)` = sumPval(tbl$p),
     check.names = FALSE
   )
   if (!is.null(tbl$autoout)) {
@@ -432,6 +432,16 @@ sumPrintCoef <- function(tbl, title) {
 }
 
 sumNum <- function(v) format(signif(v, 6), scientific = FALSE)
+
+# the p-values of the coefficient tables: everything below 0.0001 shares the
+# "< 0.0001" display, which keeps the tables readable (format.pval() would
+# print such values in scientific notation or as "< 1e-04")
+sumPval <- function(p) {
+  small <- which(!is.na(p) & p < 0.0001)
+  out <- format.pval(p, digits = 3, eps = 0)
+  out[small] <- "< 0.0001"
+  out
+}
 
 #' Summary of a Seasonal Adjustment
 #'
@@ -562,7 +572,7 @@ summary.persephone <- function(x, ...) {
     if (!is.null(f_td)) {
       cat("Trading days:            ",
           sprintf("F(%d, %d) = %.3f", f_td$df1, f_td$df2, f_td$value),
-          "  P =", format.pval(f_td$pvalue, digits = 3, eps = 1e-10), "\n\n")
+          "  P =", sumPval(f_td$pvalue), "\n\n")
     }
   }
   sumPrintCoef(
@@ -581,7 +591,7 @@ summary.persephone <- function(x, ...) {
       cat("-- Joint F tests ", strrep("-", 44), "\n", sep = "")
       cat("User regressors:         ",
           sprintf("F(%d, %d) = %.3f", f_user$df1, f_user$df2, f_user$value),
-          "  P =", format.pval(f_user$pvalue, digits = 3, eps = 1e-10), "\n")
+          "  P =", sumPval(f_user$pvalue), "\n")
       cat("\n")
     }
   }
