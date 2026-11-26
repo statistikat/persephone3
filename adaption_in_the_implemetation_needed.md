@@ -1,6 +1,32 @@
 # Persephone implementation changes needed
 
 Reviewed 2026-11-23 on `rkalos_backend`, based on `3946e9b`. The development dependency points to the matching local rkalos implementation commit `50eee9f`.
+Refreshed 2026-11-27 on `rkalos_backend` at `789f684`; all five review items remain fixed and were re-certified through the M8 release review. The historical verification section is retained as recorded.
+
+## Status refresh (2026-11-27)
+
+The M6 reporting/diagnostics scope closed, and the **M7 cutover landed**: the native
+backend is the **default** (`8ec3036`, item 27) — a fresh Java-free install (469-entry
+library, all six Java packages absent) runs the ordinary-defaults lifecycle end to end
+(`STEPS=41 GAPS=0` in the M8 report), with the Java reference backend retained as an
+opt-in parity tool. M8 release review on the pushed artifacts: native suite
+**4,451/0**, parity Pass A **6,473/0** (+5 recorded deferrals), Pass B **5,781/0**,
+`R CMD check` **Status: OK** with vignettes, and the published `Remotes:` install chain
+proven end to end through `install_github` from GitHub. The dependency now tracks
+`rkalos` 0.1.0.9031+ through the GitHub chain (core `ec17543`; core `6fee68c`
+lands via the in-flight rkalos re-pin).
+
+## Remaining items (2026-11-27)
+
+1. **Branch integration**: `master` is an ancestor of `rkalos_backend` (146 commits
+   behind); merging and publishing the branch is the maintainer's release step.
+2. **Downstream re-certification** when the rkalos re-pin (D4 drift class ≤3.1e-08 on
+   arming shapes; gapped/k=0 fixtures byte-identical) lands: rerun the native suite,
+   Pass A/B and the lifecycle on the new backend, with any moved self-pins re-qualified
+   the same way as the rkalos/pykalos re-pin.
+3. **Hosted platform qualification**: Java-free install and native suites on
+   macOS/Windows hosted runners (Linux fully certified here).
+4. **Publication**: CRAN/GitHub release actions stay maintainer-side.
 
 ## P1 — Make the existing reporting methods work for native fits
 
