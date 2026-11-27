@@ -13,14 +13,27 @@ for (obj in list(fixed, automatic)) {
                    Trend = obj$result$components$t)
   dates <- zoo::as.Date(obj$ts)
   dy <- obj$plot()
-  expect_identical(as.Date(dy$x$data[[1L]]), dates)
+  # M12 alignment (2026-11-27): the automatic lane's default one-year horizon
+  # extends the dygraph axis (observed 144 + 12 forecast months, the forecast
+  # tail itself is pinned in test-native-forecasts.R); the observed columns
+  # are read back on the observed window.
+  dy_dates <- as.Date(dy$x$data[[1L]])
+  expect_identical(dy_dates[seq_along(dates)], dates)
+  expect_identical(length(dy_dates),
+                   length(dates) + if (identical(obj, automatic)) 12L else 0L)
   for (name in names(expected)) {
     index <- match(name, dy$x$attrs$labels)
-    expect_identical(as.numeric(dy$x$data[[index]]), as.numeric(expected[[name]]))
+    expect_identical(as.numeric(dy$x$data[[index]])[seq_along(dates)],
+                     as.numeric(expected[[name]]))
   }
   hc <- obj$hchart()$x$hc_opts
   series_names <- vapply(hc$series, "[[", character(1), "name")
-  expect_identical(sort(series_names), sort(tolower(names(expected))))
+  # M12 alignment (2026-11-27): the automatic lane requests the template's
+  # one-year horizon, so its chart gains the forecast series (SEs stay
+  # honestly absent -- no confidence interval band, see test-native-forecasts).
+  expected_series <- sort(tolower(c(names(expected),
+                                    if (identical(obj, automatic)) "forecast")))
+  expect_identical(sort(series_names), expected_series)
   for (name in names(expected)) {
     points <- hc$series[[match(tolower(name), series_names)]]$data
     expect_equal(vapply(points, "[[", numeric(1), 1L),
@@ -29,14 +42,35 @@ for (obj in list(fixed, automatic)) {
   }
   effects <- plotSeasIrrCal(obj, plotEngine = "dygraph", annualComparison = 1L)
   labels <- c("Seasonal Component", "Irregular Component", "Calendar Effects")
-  expect_identical(effects$x$attrs$labels[-1L], labels)
-  expect_identical(as.Date(effects$x$data[[1L]]), dates)
+  # With the automatic lane's default forecast horizon the effects chart adds
+  # the two forecast extension series (seasonal, calendar) and extends the
+  # dygraph axis; the fixed route keeps the observed-only chart.
+  fc_labels <- c("Forecasts Seasonal Comp.", "Forecasts Calendar Eff.")
+  is_auto <- identical(obj, automatic)
+  expect_identical(effects$x$attrs$labels[-1L],
+                   if (is_auto) c(labels, fc_labels) else labels)
+  eff_dates <- as.Date(effects$x$data[[1L]])
+  expect_identical(eff_dates[seq_along(dates)], dates)
+  expect_identical(length(eff_dates),
+                   length(dates) + if (is_auto) 12L else 0L)
   hc_effects <- obj$plotSeasIrrCal()$x$hc_opts$series
-  expect_identical(vapply(hc_effects, "[[", character(1), "name"), labels)
+  expect_identical(vapply(hc_effects, "[[", character(1), "name"),
+                   if (is_auto) c(labels, fc_labels) else labels)
   fields <- list(obj$output$finals$tables$d16, obj$output$finalIrregular, obj$output$finals$tables$d18)
   for (i in seq_along(fields)) {
-    expect_identical(as.numeric(effects$x$data[[i + 1L]]), as.numeric(fields[[i]]))
+    expect_identical(as.numeric(effects$x$data[[i + 1L]])[seq_along(dates)],
+                     as.numeric(fields[[i]]))
     expect_identical(vapply(hc_effects[[i]]$data, "[[", numeric(1), 2L), as.numeric(fields[[i]]))
+  }
+  if (is_auto) {
+    # The extension series carry the dated forecast tables (12 points each);
+    # on the dygraph they follow the three observed columns (data[[5]]/[[6]]).
+    win <- (length(dates) + 1L):length(eff_dates)
+    expect_identical(as.numeric(effects$x$data[[5L]])[win],
+                     as.numeric(obj$output$finals$tables$d16a))
+    expect_identical(as.numeric(effects$x$data[[6L]])[win],
+                     as.numeric(obj$output$finals$tables$d18a))
+    expect_identical(lengths(lapply(hc_effects[4:5], function(s) s$data)), c(12L, 12L))
   }
   expect_identical(obj$result$components$y, obj$output$preadjustment$tables$a1)
   for (type in c("original", "sa", "irregular")) {

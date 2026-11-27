@@ -61,8 +61,9 @@
 # invariant to a linear rescaling but NOT to a nonlinear change of scale, so
 # the switch IS the reference-parity statement, measured live in this file:
 # the additive x13 rsa0 fit stays at rel 3.9e-09, the log rsa3 template
-# (x11.fcasts = 0 on the JVM side) reaches the live triple 2.91929946792 /
-# p 0.0103902093362 / i 2.61868801941 at rel 0.0e+00 to 8.9e-16, and tramo
+# (x11.fcasts = 0 on the JVM side, the zero-horizon-qualified layer) reaches
+# the live triple 2.91929946792 / p 0.0103902093362 / i 2.61868801941 at
+# rel 0.0e+00 to 8.9e-16, and tramo
 # rsafull reaches 1.57867658409 / 1.93578513503 at |dF| 4.8e-08 / 1.3e-09 --
 # the SEATS residual is by construction: the TD machine amplifies the
 # tolerance-banded initial SEATS components (~1e-11 in the series) ~1000x to
@@ -263,8 +264,26 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
                      ud[[pair[2]]]$pvalue), info = pair[2])
   }
   # rsa3: the residual diagnostics scalars the ungate now serves are
-  # tolerance parity against the live preprocessing diagnostics.
+  # tolerance parity against the live preprocessing diagnostics. The layered
+  # claims below (bit-exact bridge, 1e-12 bridge pins, the 2e-8*(1+|ref|)
+  # cross-backend convention) are the ZERO-HORIZON-QUALIFIED layer and stay
+  # measured at x11.fcasts = 0 -- their qualified capture condition (M6-c/M7).
+  # The M12 alignment (2026-11-27) moved the native DEFAULT to the template
+  # horizon (forecast = -1); the default-vs-default TD margins are reported in
+  # the default-class block at the end of this section as MEASURED FACTS, not
+  # asserted at these budgets: at forecast = 12 the rjd3 tables are themselves
+  # JVM-domain-sensitive -- the same fit captured with and without the
+  # _dexp/_dlog capture flags differs by 2.22e-07 (d11final) / 7.52e-10
+  # (d13final) max abs, and its own two-domain td-sa F gap (1.33e-07) EXCEEDS
+  # the rjd3-vs-native gap (1.06e-07) -- so maTest's F machine, which
+  # amplifies table ulps by ~10^4, cannot meet the 2e-8 convention at the
+  # template horizon in the default math domain for ANY implementation.
+  # Recorded with tuples in the M12 lane report and the dated
+  # IMPLEMENTATION_STATUS.md note; no budget here was relaxed or tightened.
   jd3 <- perX13(AirPassengers, "rsa3", backend = "rjd3", speclist = list(x11.fcasts = 0L))
+  auto0 <- perX13(AirPassengers, "rsa3", backend = "native",
+                  speclist = list(backcast = 0L, forecast = 0L))
+  auto0$run()
   jd3$run()
   ud3 <- jd3$output$user_defined
   expect_true(near(r$ser, ud3$residuals.ser), info = "rsa3 residuals.ser")
@@ -300,13 +319,14 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
     expect_true(rel(live$value, bridge[[nm]]$value) < 1e-12, info = paste(nm, "F bridge"))
     expect_true(rel(live$pvalue, bridge[[nm]]$pvalue) < 1e-12, info = paste(nm, "p bridge"))
   }
-  # Reference parity, numeric and live: the shipped attach (working-scale log
-  # input, pinned bit-for-bit above on the native side) meets the live rjd3
-  # field at the scaled tolerance convention. Measured here: the delivered
-  # metric triple equals the live values 2.91929946792 / 0.0103902093362 /
-  # 2.61868801941 at rel 0.0e+00 (both F values and the td-sa p-value) to
-  # 8.9e-16 (td-i p-value) -- far inside 2e-8 * (1 + |ref|).
-  mn3 <- persephone3:::diagnostic_metrics(auto)
+  # Reference parity, numeric and live (ZERO-HORIZON-QUALIFIED layer): the
+  # shipped attach (working-scale log input, pinned bit-for-bit above on the
+  # native side) meets the live rjd3 field at the scaled tolerance convention.
+  # Measured here: the delivered metric triple equals the live values
+  # 2.91929946792 / 0.0103902093362 / 2.61868801941 at rel 0.0e+00 (both F
+  # values and the td-sa p-value) to 8.9e-16 (td-i p-value) -- far inside
+  # 2e-8 * (1 + |ref|).
+  mn3 <- persephone3:::diagnostic_metrics(auto0)
   mj3 <- persephone3:::diagnostic_metrics(jd3)
   for (key in c("td_sa_all", "td_sa_f", "td_i_all")) {
     expect_true(near(mn3[[key]]$statistic, mj3[[key]]$statistic),
@@ -321,7 +341,7 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
   # revert of either convention fails this pin.
   lev3 <- rkalos::native_residual_trading_days_tests(as.numeric(sa3), as.numeric(i3),
             as.integer(stats::start(sa3)[1L]), as.integer(stats::start(sa3)[2L]))
-  expect_true(abs(auto$output$diagnostics$td.ftest.sa$value -
+  expect_true(abs(auto0$output$diagnostics$td.ftest.sa$value -
                     lev3[["td-sa-all"]]$value) > 0.05,
               info = "the attach feeds working-scale components, not the levels ones")
   # Both fits classify the TD effect the same way at 0.05, the level the quality
@@ -329,6 +349,46 @@ if (requireNamespace("rjd3x13", quietly = TRUE) &&
   expect_identical(auto$generateQrTable()[["Residual.TD.Effect"]],
                    jd3$generateQrTable()[["Residual.TD.Effect"]])
   expect_identical(auto$generateQrTable()[["Residual.TD.Effect"]], "Yes")
+
+  # --- M12 default-class parity at the aligned template horizons ------------
+  # Budget-free statements only (classification equality + the
+  # horizon-invariant residual bundle). The F VALUES at the default horizons
+  # are measured, recorded and reported -- deliberately NOT asserted at the
+  # 2e-8*(1+|ref|) convention, which the zero-horizon-qualified layer above
+  # keeps at full strength: at forecast = 12 the rjd3 tables move by
+  # 2.22e-07 (d11final max abs) between the JVM's own two math domains, so
+  # maTest's amplified F cannot satisfy the convention in the default domain
+  # against ANY reference (rjd3's own cross-domain td-sa gap 1.33e-07 exceeds
+  # the native-vs-rjd3 gap 1.06e-07 by 25%). Stop-and-report tuples:
+  #   td-sa F: native 2.8406525858195382 | rjd3 default-domain 2.8406524797952204
+  #            | rjd3 bridge-domain 2.8406526123323372
+  #   |d| default 1.06e-07 (band 7.68e-08) | bridge 2.65e-08 (inside)
+  #   td-sa p: native 0.012278267499684494, rjd3 default 0.012278270259159674
+  #            (|d| 2.76e-09, inside band)
+  #   td-i  F: |d| 4.03e-09 (band 7.11e-08, inside)
+  # The td-i-all p DEFINITIONAL bridge pin (rel 1e-12) measures 1.39e-12 at
+  # the default horizons (F rel 2.61e-13 amplified through the F CDF) for the
+  # same reason; the pin stays where it was qualified (fc0, measured
+  # <= 8.9e-16). Both lanes keep classifying the effect at 0.05 below. The
+  # residual bundle (preprocessing stage, horizon-invariant by construction)
+  # matches within the file's own scaled convention: measured max abs
+  # 3.02e-09 against a band of >= 2e-8 (bit-exact only in the bridge math
+  # domain, where the qualified captures were taken).
+  jd3d <- perX13(AirPassengers, "rsa3", backend = "rjd3")
+  jd3d$run()
+  ud3d <- jd3d$output$user_defined
+  expect_true(all(abs(as.numeric(r$tsres) - as.numeric(ud3d$residuals.tsres)) <=
+                    2e-8 * (1 + abs(as.numeric(ud3d$residuals.tsres)))),
+              info = "residuals are horizon-invariant within the file convention")
+  expect_identical(auto$generateQrTable()[["Residual.TD.Effect"]],
+                   jd3d$generateQrTable()[["Residual.TD.Effect"]])
+  message(sprintf(paste0("rsa3 default-vs-default (both lanes at template default ",
+      "fc=-1): td-sa F native %.11f jvm %.11f |d| %.3g (2e-8 band %.3g, NOT asserted, ",
+      "see block comment); td-i F |d| %.3g"),
+      auto$output$diagnostics$td.ftest.sa$value, ud3d[["diagnostics.td-sa-all"]]$value,
+      abs(auto$output$diagnostics$td.ftest.sa$value - ud3d[["diagnostics.td-sa-all"]]$value),
+      2e-8 * (1 + ud3d[["diagnostics.td-sa-all"]]$value),
+      abs(auto$output$diagnostics$td.ftest.i$value - ud3d[["diagnostics.td-i-all"]]$value)))
 
   # TRAMO-SEATS: the reference field reads
   # SeatsResults.getInitialComponents() (SA and Irregular, Value), which rjd3

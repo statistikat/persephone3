@@ -19,7 +19,9 @@
 # automodel enabled + no calendar/Easter/user regressors) fits the qualified
 # envelope; rsa4/rsa5c detect trading days and Easter -- refused by name with
 # the measured template facts, mirroring the core's fail-closed matrix (21-I
-# deferral status quoted verbatim). The default horizons are zero. The automatic route accepts
+# deferral status quoted verbatim). The request horizons are the template's
+# own measured X-11 horizons: x11.nfcasts = -1 (one year, effective 12 months
+# on the monthly qualified domain) and x11.nbcasts = 0. The automatic route accepts
 # explicit forecast and backcast counts and the sigma policy.
 #
 # The stock fixed-structure templates RSA0, RSA1 and RSA2c estimate the
@@ -163,8 +165,10 @@ backend_native_auto_gate <- function(context = "the automatic fit", method = "x1
 # (va), predcv 0.14286 (reduce_va), ljungbox 0.95, tsig 1.0 (cascade ratio
 # limit and mean-rule cutoff carried as ur_limit and mean_test_final). The
 # X-11 block is the decoder automatic surface: msr in every period, automatic
-# Henderson (trend_length 0 at the core), zero horizons, sigma handled by the
-# caller, msr_policy "jdplus" and the neutral mode request (see header).
+# Henderson (trend_length 0 at the core), the template horizons (forecast -1
+# year = the measured x11.nfcasts = -1; backcast 0 = x11.nbcasts = 0), sigma
+# handled by the caller, msr_policy "jdplus" and the neutral mode request (see
+# header).
 backend_native_auto_decode <- function(sigma, lower_sigma, upper_sigma) {
   list(
     transform = list(aicc = -2),
@@ -181,7 +185,7 @@ backend_native_auto_decode <- function(sigma, lower_sigma, upper_sigma) {
                accept_airline = FALSE, ur_limit = 0.95),
     regression = list(mean_test_initial = 1.96, mean_test_final = 1, tsig = 1),
     sigma = sigma, lower_sigma = lower_sigma, upper_sigma = upper_sigma,
-    msr_policy = "jdplus", mode = "additive", backcast = 0L, forecast = 0L)
+    msr_policy = "jdplus", mode = "additive", backcast = 0L, forecast = -1L)
 }
 
 backend_native_default_spec <- function(method, template, freq) {
@@ -207,7 +211,7 @@ backend_native_default_spec <- function(method, template, freq) {
     }
     return(structure(list(method = "x13", template = "rsa3",
                          frequency = af$frequency, sigma_policy = NULL,
-                         backcast = 0L, forecast = 0L,
+                         backcast = 0L, forecast = -1L,
                          lower_sigma = 1.5, upper_sigma = 2.5),
                      class = c("persephone_native_auto_spec",
                                "persephone_native_spec")))

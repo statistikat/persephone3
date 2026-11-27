@@ -94,7 +94,12 @@ local({
       as.numeric(AirPassengers) - as.numeric(adjusted)) / as.numeric(AirPassengers))), "%")
     expect_identical(qr$Max.Adj, measure(model$adjusted))
     if (requireNamespace(paste0("rjd3", method), quietly = TRUE)) {
-      spec <- if (method == "x13") list(x11.fcasts = 0L) else NULL
+      # M12 alignment (2026-11-27): the x13 reference runs the rsa3 template
+      # DEFAULT horizons (nfcasts = -1), matching the native lane; the earlier
+      # x11.fcasts = 0L override existed only to match the then-zero native
+      # default. Max.Adj (max |y - sa| / y, integer %) now measures 25% on
+      # both lanes (it was 24% vs 25% across the horizon split).
+      spec <- NULL
       reference <- constructor(AirPassengers, tpl, speclist = spec, backend = "rjd3")
       reference$run()
       ref <- reference$generateQrTable()

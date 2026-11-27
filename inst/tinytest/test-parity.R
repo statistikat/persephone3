@@ -538,9 +538,12 @@ local({
   expect_identical(cap$native_x13_fit_automatic, TRUE)
   # Re-baselined 2026-11-21 at rkalos b90d367 (automatic_fit schema 3L):
   # x11$zero_horizon_only was REPLACED by x11$horizon_envelope (the 21-H.4 R
-  # horizon qualification); the Persephone automatic request still pins the
-  # zero horizons of the decode table, and the RESTRICTED fit keeps
-  # zero_horizon_only = TRUE (asserted in the restricted block above).
+  # horizon qualification). Since the M12 horizon alignment (2026-11-27) the
+  # Persephone automatic request sends the decode table's own template
+  # horizons (forecast = -1 -> effective 12, backcast = 0, the measured
+  # x11.nfcasts/-1 and x11.nbcasts/0 of the JVM rsa3 template), inside that
+  # envelope; the RESTRICTED fit keeps zero_horizon_only = TRUE (asserted in
+  # the restricted block above).
   expect_identical(af$schema_version, 3L)
   expect_identical(af$native_x13_fit_automatic, TRUE)
   expect_identical(af$frequency, 12L)
@@ -583,12 +586,25 @@ local({
   expect_identical(res$provenance$mode_requested, "additive")
   expect_identical(res$provenance$mode_effective, "multiplicative")
   expect_match(res$provenance$request_fingerprint, "^[0-9a-f]{8}-[0-9a-f]{8}$")
-  expect_null(res$forecasts)                 # zero_horizon_only
-  expect_null(auto_fit_m4$forecasts)
+  # Template-default horizons (M12 alignment, 2026-11-27): the JVM rsa3
+  # template measures x11.nfcasts = -1 / x11.nbcasts = 0 and the native
+  # request reproduces them, so the default fit publishes one year of
+  # forecast points (no backcasts). i_f and y_ef stay honestly unprovided
+  # (no core surface yet -- P4/P5 slice briefs).
+  expect_identical(res$provenance$effective_backcast, 0L)
+  expect_identical(res$provenance$effective_forecast, 12L)
+  expect_identical(res$forecasts, auto_fit_m4$forecasts)
+  fc_auto <- auto_fit_m4$forecasts
+  expect_true(inherits(fc_auto, "persephone_forecasts"))
+  expect_identical(vapply(fc_auto$points[c("y", "t", "sa", "s", "cal")], length,
+                          integer(1)),
+                   stats::setNames(rep(12L, 5L), c("y", "t", "sa", "s", "cal")))
+  expect_null(fc_auto$points$i)
+  expect_true(all(fc_auto$availability$standard_errors == "unavailable"))
   avail <- stats::setNames(res$availability$state, res$availability$field)
-  expect_true(all(avail[c("y", "t", "sa", "i", "s", "cal")] == "available"))
-  expect_true(all(avail[c("y_f", "t_f", "sa_f", "s_f",
-                           "i_f", "cal_f", "y_ef")] == "not_provided"))
+  expect_true(all(avail[c("y", "t", "sa", "i", "s", "cal", "y_f", "t_f",
+                          "sa_f", "s_f", "cal_f")] == "available"))
+  expect_true(all(avail[c("i_f", "y_ef")] == "unavailable"))
   sa <- res$components$sa
   expect_identical(as.integer(stats::frequency(sa)), 12L)
   expect_identical(time_domain(stats::tsp(sa)), time_domain(stats::tsp(series_m)))
@@ -599,7 +615,8 @@ local({
   expect_true(m$log)
   expect_identical(c(m$p, m$d, m$q, m$bp, m$bd, m$bq), c(0L, 1L, 1L, 0L, 1L, 1L))
   expect_identical(as.integer(m$effective_observations), 131L)
-  # The pinned JDemetra+ decisions on this series (rsa3, zero horizons).
+  # The pinned JDemetra+ decisions on this series (rsa3; the request horizons
+  # do not enter the selection: identical under forecast = 0 and forecast = -1).
   expect_identical(as.integer(auto_fit_m4$output$selection$d$final_henderson_length), 9L)
   expect_true(all(auto_fit_m4$output$selection$d$seas_filter == 3L))
   # is_stale semantics for the single adjustable field.
@@ -654,8 +671,9 @@ local({
 
 # Fail-closed matrix (verbatim core statuses through the product path): the
 # automatic lane answers the pinned unsupported: status for an incomplete
-# series, with the request fingerprint and no Java fallback. Default zero-horizon
-# requests retain the original observed calendar.
+# series, with the request fingerprint and no Java fallback. Requests retain
+# the original observed calendar in their components (horizon extensions live
+# only in the dated forecast tables).
 local({
   broken <- series_m
   broken[5L] <- NA_real_
@@ -669,17 +687,23 @@ local({
 # byte-deterministic across processes on the qualified stack, proven by the
 # capture pairs; text identity of the %.17g renderings is the pin), recorded
 # 2026-11-21 for rkalos 00c3a88 / core f500162 through the product path.
+# Re-recorded 2026-11-27 for the template-horizon default (forecast = -1,
+# the JVM rsa3 template's measured x11.nfcasts): the previous renderings were
+# the zero-horizon request and stay bit-reproducible through
+# speclist = list(forecast = 0L); against the JVM rsa3 DEFAULT these values
+# close the as-called final-series distance from max |delta| 5.141 (rel 1.2%)
+# to the sub-1e-12 ulp class (see the dated IMPLEMENTATION_STATUS.md entry).
 local({
   sa <- as.numeric(auto_fit_m4$result$components$sa)
   t <- as.numeric(auto_fit_m4$result$components$t)
   i <- as.numeric(auto_fit_m4$result$components$i)
   g <- function(v) paste(sprintf("%.17g", v), collapse = ";")
   expect_identical(g(rev(utils::tail(sa, 4))),
-                   "485.24840286656132;484.86271289531953;499.37673144370382;481.9029100100957")
+                   "488.93033644682504;487.57552858287698;496.77291366958877;483.25182595065911")
   expect_identical(g(rev(utils::tail(t, 4))),
-                   "485.31117497124382;484.47953905665042;483.91343452551052;483.46082170609282")
+                   "491.8304339022078;488.69781286657042;486.12817857487835;484.3665220273993")
   expect_identical(g(rev(utils::tail(i, 4))),
-                   "0.9998706559668934;1.0007908978765443;1.0319546758055094;0.99677758439556818")
+                   "0.99410346075501421;0.99770352096091774;1.0218969719589519;0.9976986516903058")
   # R's sum/mean intermediates depend on the platform's long double.
   # Accumulate rounding residuals so identical binary64 component vectors
   # give the same 17-digit checksum on arm64 and x86.
@@ -698,26 +722,34 @@ local({
     estimate <- compensated_sum(values) / length(values)
     estimate + compensated_sum(values - estimate) / length(values)
   }
-  expect_identical(sprintf("%.17g", corrected_mean(sa)), "280.02966131208768")
-  expect_identical(sprintf("%.17g", corrected_mean(t)), "279.93986187656731")
-  expect_identical(sprintf("%.17g", compensated_sum(sa)), "40324.271228940626")
-  expect_identical(sprintf("%.17g", compensated_sum(t)), "40311.340110225698")
-  expect_identical(sprintf("%.17g", compensated_sum(i)), "144.03999396875952")
+  expect_identical(sprintf("%.17g", corrected_mean(sa)), "280.05744581956469")
+  expect_identical(sprintf("%.17g", corrected_mean(t)), "280.10282649118341")
+  expect_identical(sprintf("%.17g", compensated_sum(sa)), "40328.272198017316")
+  expect_identical(sprintf("%.17g", compensated_sum(t)), "40334.80701473041")
+  expect_identical(sprintf("%.17g", compensated_sum(i)), "143.99536843374648")
 })
 
 # Decision-bit matrix against the pinned JVM captures (JVM-free here): the
 # product lane's decisions must be byte-identical to the pinned JDemetra+
 # choices on all three corpus series; tier families must stay inside the
-# contract bands (violations print their magnitudes and fail).
+# contract bands (violations print their magnitudes and fail). The captures
+# are zero-horizon JVM fits (fixtures/native/parity-m4/, 2026-11-21), and
+# X-11 final tables are horizon-sensitive, so the compared lane requests
+# the SAME horizons the captures carry: forecast = 0L stays an explicitly
+# supported request (the default is now the template's forecast = -1L; the
+# default path is qualified by the default-horizon block above and by the
+# live dual-lane section below, which runs both backends at the default).
 local({
   fixture_dir <- parity_auto_dir()
-  fits <- list(air = auto_fit_m4)
-  for (id in c("ao", "seas")) {
-    obj <- perX13(read_series_fixture(id), "rsa3", backend = "native")
+  corpus_fit <- function(series) {
+    obj <- perX13(series, "rsa3", backend = "native",
+                  speclist = list(backcast = 0L, forecast = 0L))
     obj$run()
     expect_identical(obj$result$status$code, "success")
-    fits[[id]] <- obj
+    obj
   }
+  fits <- list(air = corpus_fit(series_m))
+  for (id in c("ao", "seas")) fits[[id]] <- corpus_fit(read_series_fixture(id))
   for (id in names(fits)) {
     pinned <- parity_auto_key_lines(file.path(fixture_dir, paste0("jvm-rsa3-", id, ".txt")))
     native <- parity_auto_native_lines(fits[[id]]$output)
@@ -899,17 +931,21 @@ local({
   }
 })
 
-# Dual-lane automatic template (rsa3, item M4), reference exactly as in the
-# capture evidence: raw x13_fast on the pinned rsa3 template with zero
-# horizons (the decisions are contract-proven horizon-invariant; zero horizons
-# pin the native envelope). Three checks per corpus series: the LIVE JVM fit
+# Dual-lane automatic template (rsa3, item M4). Since the M12 horizon
+# alignment (2026-11-27) the reference is the pinned rsa3 TEMPLATE DEFAULT
+# (x11.nfcasts = -1 / x11.nbcasts = 0) -- what both product lanes now request
+# by default. The fixtures/native/parity-m4/ captures stay the zero-horizon
+# JVM records they were taken as; decision bits are contract-proven
+# horizon-invariant, so the stack pins below are unaffected, and the tier
+# families now measure the as-called default-vs-default margins. Three checks
+# per corpus series: the LIVE JVM fit
 # must reproduce the PINNED capture (stack-pin drift check -- the captures
 # were byte-identical across independent JVM processes), the NATIVE product
 # fit must reproduce the pinned DECISION BITS, and the tier families must stay
 # inside the contract bands (STOP-with-diagnostics, never widen).
 local({
   fixture_dir <- parity_auto_dir()
-  xspec <- rjd3x13::set_x11(rjd3x13::x13_spec("rsa3"), fcasts = 0, bcasts = 0)
+  xspec <- rjd3x13::x13_spec("rsa3")   # template default horizons (M12 alignment)
   native_objects <- list(air = auto_fit_m4)
   for (id in c("ao", "seas")) {
     obj <- perX13(read_series_fixture(id), "rsa3", backend = "native")

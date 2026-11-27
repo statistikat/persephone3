@@ -106,8 +106,9 @@ if (identical(rkalos::capabilities()$native_x13_fit_restricted, TRUE)) {
 # Automatic native fit (item M4): the qualified automatic-spec X-13 fit for
 # the pinned rsa3 decode table, gated by capabilities()$native_x13_fit_
 # automatic, runs through the product path WITHOUT Java; the remaining rsa
-# templates refuse naming the measured template facts. Check both the
-# zero-horizon default and an explicit forecast window.
+# templates refuse naming the measured template facts. Check both the template
+# default horizon (one year of forecasts, the JVM rsa3 template's x11.nfcasts
+# = -1; M12 alignment 2026-11-27) and an explicit forecast window.
 if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
   stopifnot(identical(rkalos::capabilities()$automatic_fit$x11$sigma_policy_default,
                       "legacy"))
@@ -127,11 +128,17 @@ if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
             identical(obj$result$provenance$decode_template, "rsa3"),
             identical(obj$result$provenance$sigma_provenance, "legacy (default)"),
             stats::frequency(obj$adjusted) == 12L,
-            is.null(obj$forecasts),
+            # Template-default horizon: twelve forecast points on the dated
+            # A1a domain, standard errors honestly unavailable.
+            inherits(obj$forecasts, "persephone_forecasts"),
+            identical(obj$forecasts$points$y, obj$output$preadjustment$tables$a1a),
+            length(obj$forecasts$points$y) == 12L,
+            identical(as.numeric(start(obj$forecasts$points$y)), c(1961, 1)),
+            all(obj$forecasts$availability$standard_errors == "unavailable"),
             # Compare the 17-digit round-trip strings directly. Parsing these
             # decimals as R literals can round to a neighbour on macOS ARM64.
             identical(sprintf("%.17g", as.numeric(obj$adjusted)[142:144]),
-                      c("499.37673144370382", "484.86271289531953", "485.24840286656132")))
+                      c("496.77291366958877", "487.57552858287698", "488.93033644682504")))
   refused <- tryCatch({
     perX13(AirPassengers, "rsa4", backend = "native")
     "no error"

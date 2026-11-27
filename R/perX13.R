@@ -170,8 +170,9 @@ x13Single <- R6::R6Class(
 #'   through `template = "rsa3"`, whose module state is a pinned decode table
 #'   of the JDemetra+ rsa3 specification
 #'   (`capabilities()$native_x13_fit_automatic`) -- never
-#'   `capabilities()$fit`. For the native rsa3 route, backcast and forecast default
-#'   to zero. Supply whole numbers through speclist or updateParams. Positive
+#'   `capabilities()$fit`. For the native rsa3 route the horizons default to the
+#'   JDemetra+ template's own: forecast one year (`-1`, twelve months) and
+#'   backcast zero. Supply whole numbers through speclist or updateParams. Positive
 #'   counts specify months and negative counts specify years. The forecasts field
 #'   returns dated original, trend, adjusted, seasonal and calendar points.
 #'   Monthly stock RSA0, RSA1 and RSA2c estimate the airline coefficients and select the X-11 filters, with twelve forecasts. Other native templates fail explicitly with
