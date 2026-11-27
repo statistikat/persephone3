@@ -1,5 +1,12 @@
 # persephone3 (development version)
 
+* 2026-11-27 (M12): the reference-backend canonical envelope now mirrors the
+  native envelope's `effective_backcast`/`effective_forecast` provenance
+  fields (x13 only; positive counts are months, negative counts years x
+  frequency), so the horizons actually executed are visible on both
+  backends' result objects under one name pair. The TRAMO-SEATS lane echoes
+  nothing (engine-automatic horizon modes).
+
 * 2026-11-27 (M12 rsa3 lane): the native automatic rsa3 route now sends the
   horizons measured on the JDemetra+ template — `forecast = -1` (twelve
   months) and `backcast = 0` — so the effective X-11 request matches the rjd3

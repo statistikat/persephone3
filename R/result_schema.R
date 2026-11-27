@@ -28,6 +28,24 @@ backend_versions <- function(backend, method) {
   }), packages)
 }
 
+# Effective-horizon echo for the reference-backend envelope (M12, 2026-11-27):
+# the canonical result mirrors the native automatic envelope's
+# effective_backcast/effective_forecast fields, so "what ran" is visible on
+# both backends' result objects under one name pair. X-13 JVM semantics: a
+# positive count is months, a negative count is years (|n| x frequency); the
+# X-11 spec default when unstated is zero. TRAMO-SEATS horizons use the
+# engine's automatic modes instead, so that lane echoes nothing.
+effective_horizon <- function(method, parameters, frequency) {
+  if (!identical(method, "x13")) return(list())
+  resolve <- function(n) {
+    if (is.null(n) || !length(n) || is.na(n)) return(0L)
+    n <- as.integer(n[1L])
+    if (n >= 0L) n else as.integer(-n * as.integer(frequency))
+  }
+  list(effective_backcast = resolve(parameters$x11$nbcasts),
+       effective_forecast = resolve(parameters$x11$nfcasts))
+}
+
 normalize_backend_result <- function(output, method, backend, spec, ts) {
   method <- backend_method(method)
   backend <- resolve_backend(backend)
@@ -78,7 +96,10 @@ normalize_backend_result <- function(output, method, backend, spec, ts) {
   code <- if (is.null(output)) "failed" else if (is.null(components$sa)) "incomplete" else "success"
   structure(list(schema_version = 1L, method = method, backend = backend,
                  specification = specification,
-                 provenance = list(backend = backend, packages = backend_versions(backend, method)),
+                 provenance = c(list(backend = backend, packages = backend_versions(backend, method)),
+                                if (backend == "rjd3")
+                                  effective_horizon(method, specification$parameters,
+                                                    stats::frequency(ts))),
                  status = list(code = code, convergence = "not_reported"),
                  domain = backend_domain(ts), components = components,
                  forecasts = forecasts,

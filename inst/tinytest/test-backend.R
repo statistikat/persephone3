@@ -109,6 +109,18 @@ if (all(vapply(c("rjd3toolkit", "rjd3x13", "rjd3tramoseats"),
       expect_identical(canonical$specification$parameters, spec)
       expect_identical(unserialize(serialize(canonical, NULL)), canonical)
       expect_identical(canonical$status$code, "success")
+      # Effective-horizon echo (M12/P3, 2026-11-27): the reference-backend
+      # envelope exposes the same effective_backcast/effective_forecast pair
+      # the native automatic envelope publishes. The rsa0 template measures
+      # x11.nfcasts = -1 / x11.nbcasts = 0 (this lane's live survey): one
+      # year of forecasts at the series frequency for x13; TRAMO-SEATS
+      # horizons are engine-automatic and echo nothing.
+      if (method == "x13") {
+        expect_identical(canonical$provenance$effective_backcast, 0L)
+        expect_identical(canonical$provenance$effective_forecast, as.integer(freq))
+      } else {
+        expect_null(canonical$provenance$effective_forecast)
+      }
     }
     updated <- persephone3:::backend_update_spec(spec, method, 4,
                                                 list(transform.fun = "None"), "rjd3")
