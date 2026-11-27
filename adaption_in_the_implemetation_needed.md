@@ -23,7 +23,19 @@ lands via the in-flight rkalos re-pin).
 2. **Downstream re-certification** when the rkalos re-pin (D4 drift class ≤3.1e-08 on
    arming shapes; gapped/k=0 fixtures byte-identical) lands: rerun the native suite,
    Pass A/B and the lifecycle on the new backend, with any moved self-pins re-qualified
-   the same way as the rkalos/pykalos re-pin.
+   the same way as the rkalos/pykalos re-pin. — **executed 2026-11-27: pushed-chain
+   re-cert green** (fresh GitHub install: `persephone3` at `336858f` + `rkalos` main
+   `4fde8b0` = `0.1.0.9032` on core `6fee68c`, vendored SLICOT compiled ON; 326-entry
+   Java-free library, six reference packages absent): native suite 17 files **4,451/0**,
+   Pass A 39 files **6,473/0** with the same five recorded deferrals, Pass B
+   **5,781/0** under the bridge JVM (capture flags proven), lifecycle **STEPS=41
+   GAPS=0** — all per-file tables zero movement against the M8 baselines (every tuple
+   SAME, no self-pin moved). Spot witnesses equal the recorded values: estimated
+   `RSA1` `td.ftest.sa` 2.8406525858195382 (p 0.012278267499684494; rel 6.903e-09 to
+   the frozen oracle, inside the documented 9.3e-09), automatic `RSA3`
+   2.919299467916046 / 0.01039020933615779, likelihood 244.69648645086414 / ssq
+   0.17660260497368421 with fixture-pinned ARMA coefficients identical, and all eight
+   delivered-component dumps sha256-identical to the M8-era records.
 3. **Hosted platform qualification**: Java-free install and native suites on
    macOS/Windows hosted runners (Linux fully certified here).
 4. **Publication**: CRAN/GitHub release actions stay maintainer-side.
