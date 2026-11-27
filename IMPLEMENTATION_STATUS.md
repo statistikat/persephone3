@@ -3,6 +3,47 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## TRAMO template horizons re-measured: the zero-forecast finding is withdrawn (2026-11-27, M12 tramo follow-up)
+
+Maintainer ruling: apply the rsa3 horizon-alignment outcome family-wide and
+align the native TRAMO defaults to the measured JVM behavior ("native -2L
+versus measured 0"), measure first. The measurement contradicts the premise,
+so per the ruling's own stop rule NOTHING was flipped: this is a
+STOP-AND-REPORT. No horizon default, test expectation or budget moved; the
+only source-tree change is a comment recording the withdrawal (see below).
+The TRAMO half of the earlier
+survey was a probe artifact — it grepped a non-existent `tramo.nfcasts` field,
+printed the empty value, and aborted on a `match.arg` template-name error
+before any live count could contradict it; the real field is `seats.nfcasts`.
+Re-measured live on this host (rjd3 3.9.0 spec, OpenJDK 21.0.11): all four
+native-qualified TRAMO templates (`RSA0 RSA1 RSA3 RSAfull`) carry
+`seats.nfcasts = -2` / `seats.nbcasts = 0`, and default
+`perTramo(backend = "rjd3")` fits emit 24-point forecast series
+(`y_f/t_f/sa_f/s_f/i_f`), a 12-point `cal_f`, and zero backcast points on
+every template — exactly what the native lane already sends
+(`forecast = -2L` / `backcast = 0L` -> 24 points, zero backcasts). The native
+TRAMO defaults already match the JVM template defaults; the proposed flip to
+zero would have moved the native lane AWAY from the reference and violated
+the parity budgets' direction rule. Spot acceptance at the default call on
+both backends, qualified bridge math domain, all four templates: every
+component and forecast-point field bit-exact (max abs 0), forecast standard
+errors <= 9.95e-13. Measured fact (no pin exists or moves): in the plain-JVM
+default math domain the JVM's own `y_ef(24)` field crosses domains by more
+than the 2e-8*(1+|ref|) convention (rsa3: 2.05e-06 abs, band ratio 1.14,
+versus 8.24e-13 in the bridge domain) — the same JVM-domain-sensitivity class
+as the rsa3 TD F-test tuple in the entry below; the qualified live-JVM tramo
+blocks are bridge-gated for exactly this reason. The `perTramo` roxygen/Rd
+sentence "The defaults are two years of forecasts and zero backcasts" is
+correct as measured and stays. X-13 re-confirmed needing nothing further: all
+six templates at `nfcasts = -1` / `nbcasts = 0`. The 2026-11-27 rsa3 NEWS
+bullet's withdrawn sentence was corrected in place (release-facing text must
+not ship the artifact); the ledger entry below stays as recorded, superseded
+by this entry. The only source-tree edit of this follow-up is the matching
+rationale clause in the `effective_horizon()` comment (behavior-neutral).
+Suite state is unchanged: native 4458/0, Pass A 6494/0, Pass B 5781/0
+re-certified at HEAD `1d67700` with zero changed files; `verify-nojava` PASS;
+lifecycle `STEPS=41 GAPS=0`.
+
 ## Template-horizon alignment of the native rsa3 route and the residual divergence classes (2026-11-27, M12 lane)
 
 `perX13(AirPassengers, "rsa3"); $run()` diverged across backends by up to
@@ -29,7 +70,9 @@ policy): the native stock estimated lane (`rsa0/rsa1/rsa2c`) already sent
 the native TRAMO lane sends `forecast = -2L` (documented 24 months) while the
 JVM TRAMO templates carry no `nfcasts` and produce **zero** forecasts by
 engine default — the divergence runs the other way there and was left
-untouched by this slice. The reference-backend envelope now mirrors the
+untouched by this slice. [Superseded same day by the re-measurement above:
+the templates carry `seats.nfcasts = -2` (24 months, zero backcasts) and the
+native TRAMO defaults already match.] The reference-backend envelope now mirrors the
 native `effective_backcast`/`effective_forecast` echo pair (x13: positive
 counts are months, negative counts years x frequency; TRAMO-SEATS echoes
 nothing), so both backends' result objects state what ran.

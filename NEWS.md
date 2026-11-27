@@ -5,7 +5,8 @@
   fields (x13 only; positive counts are months, negative counts years x
   frequency), so the horizons actually executed are visible on both
   backends' result objects under one name pair. The TRAMO-SEATS lane echoes
-  nothing (engine-automatic horizon modes).
+  nothing; its horizons are explicit `forecast`/`backcast` fields in each
+  lane's own specification.
 
 * 2026-11-27 (M12 rsa3 lane): the native automatic rsa3 route now sends the
   horizons measured on the JDemetra+ template — `forecast = -1` (twelve
@@ -17,10 +18,11 @@
   calendar D18 bit-exact, the split forecast tables (A1a, D11a/D12a/D16a/D18a)
   published and matching (<= 5.34e-12). Zero-horizon requests stay fully
   supported (`speclist = list(forecast = 0L)`) and the zero-horizon-qualified
-  layers (parity-m4 captures, TD F-test bit-exact claims) are untouched. The
-  native TRAMO default (`forecast = -2`, 24 months) diverges from the TRAMO
-  templates' engine-default horizon (measured 0 forecasts) the other way —
-  left for a maintainer family-wide policy.
+  layers (parity-m4 captures, TD F-test bit-exact claims) are untouched. A
+  same-day re-measurement confirmed the native TRAMO default (`forecast = -2`,
+  24 months) against the TRAMO templates' measured horizons
+  (`seats.nfcasts = -2` / `seats.nbcasts = 0` — 24 months, zero backcasts):
+  already aligned, nothing changed.
 
 * 2026-11-25 (item 27, decision 397cfe8): the default backend is now `native`.
   `perX13()`, `perTramo()`, `perBatch()`, `perHts()` and `as.persephone()`

@@ -33,8 +33,10 @@ backend_versions <- function(backend, method) {
 # effective_backcast/effective_forecast fields, so "what ran" is visible on
 # both backends' result objects under one name pair. X-13 JVM semantics: a
 # positive count is months, a negative count is years (|n| x frequency); the
-# X-11 spec default when unstated is zero. TRAMO-SEATS horizons use the
-# engine's automatic modes instead, so that lane echoes nothing.
+# X-11 spec default when unstated is zero. TRAMO-SEATS horizons are explicit
+# forecast/backcast fields on each lane's own specification (the JVM templates
+# measure seats.nfcasts = -2 / seats.nbcasts = 0; re-measured 2026-11-27), so
+# that lane echoes nothing.
 effective_horizon <- function(method, parameters, frequency) {
   if (!identical(method, "x13")) return(list())
   resolve <- function(n) {
