@@ -40,6 +40,19 @@ lands via the in-flight rkalos re-pin).
    macOS/Windows hosted runners (Linux fully certified here).
 4. **Publication**: CRAN/GitHub release actions stay maintainer-side.
 
+## Accepted numeric divergence classes (2026-11-27, M12 rsa3 lane)
+
+Recorded per the M12 assessment (AirPassengers rsa3 reference example, both
+backends at the aligned template horizons): final-table ulp residue
+<= 5.12e-12 abs (<= 1e-14 rel) with bit-exact preadjustment/residuals/model;
+TD F-test diagnostics at fc12 measure 2.65e-08 (bridge domain, inside the
+2e-8*(1+|ref|) band) / 1.06e-07 (default domain — where the rjd3 tables
+themselves move 2.22e-07 between math domains, so no implementation can meet
+the band there at fc12) — the documented maTest ~10^4 amplification of the
+table ulps, inside the ratified D4 drift class (<= 3.1e-08). The fc0-qualified
+bit-exact layers are unchanged; nothing was relaxed. Full tuples and the
+qualification ledger: the dated M12 entry in `IMPLEMENTATION_STATUS.md`.
+
 ## P1 — Make the existing reporting methods work for native fits
 
 **Fixed for both current routes. Full diagnostics and reporting parity remain planned for M6.** Getters, summary, print and the diagnostic projection read the fitted native result. The automatic route reports model orders, effective mode and detected variables. The restricted route reports supplied coefficients. Unknown dates and unavailable inference remain typed missing values. Tests cover fits with and without outliers, including a fixed pulse and a detected outlier. [Getters](R/get_functions.R) · [Summary](R/summary.R) · [Reporting regressions](inst/tinytest/test-native-reporting.R) · [M6 reporting scope](https://github.com/statistikat/kalos/blob/24e4452/docs/NUMERICAL_ROADMAP.md#L607)

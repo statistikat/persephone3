@@ -3,6 +3,60 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## Template-horizon alignment of the native rsa3 route and the residual divergence classes (2026-11-27, M12 lane)
+
+`perX13(AirPassengers, "rsa3"); $run()` diverged across backends by up to
+6.52 (1.34 %) in the final tables — entirely one SPEC/DEFAULTS item: the
+decode table sent `forecast = 0` while the pinned JDemetra+ rsa3 template
+measures `x11.nfcasts = -1` / `x11.nbcasts = 0` (live survey of all six X-13
+templates at the 3.9.0 spec; every one carries nfcasts = -1, nbcasts = 0).
+Commit `e53758a` aligns the request (`forecast = -1L` in
+`backend_native_auto_decode()` and the rsa3 default spec). During the
+assessment the matching incantation was `speclist = list(forecast = -1)`;
+that lever remains and is now what the default sends. Post-alignment, at the
+user's exact call: final X-11 tables max abs <= 5.12e-12 (<= 9.8e-15 rel),
+preadjustment a1/a6-a9, model residuals and calendar D18 bit-exact, split
+forecast tables (A1a, D11a/D12a/D16a/D18a) published and matching
+(<= 5.34e-12); request fingerprint moves 2ec60fe6-f295b328 -> 07f5bd48-b708c6d9.
+Qualification: native suite 4451/0 -> 4458/0, Pass A 6473/0 -> 6488/0, Pass B
+5781/0 unchanged; parity-m4 captures untouched (the JVM-free matrix and the
+TD bit-exact layers keep requesting their capture horizons explicitly);
+lifecycle `STEPS=41 GAPS=0`; `verify-nojava` PASS.
+
+Template-family survey (inspect-only, for the maintainer's family-wide
+policy): the native stock estimated lane (`rsa0/rsa1/rsa2c`) already sent
+`forecast = -1L`, matching those templates; `rsa4/rsa5c` stay refused (21-I);
+the native TRAMO lane sends `forecast = -2L` (documented 24 months) while the
+JVM TRAMO templates carry no `nfcasts` and produce **zero** forecasts by
+engine default — the divergence runs the other way there and was left
+untouched by this slice. The reference-backend envelope now mirrors the
+native `effective_backcast`/`effective_forecast` echo pair (x13: positive
+counts are months, negative counts years x frequency; TRAMO-SEATS echoes
+nothing), so both backends' result objects state what ran.
+
+Residual accepted divergence classes after alignment (all class-(3) numerics;
+recorded so future fieldmax runs do not re-litigate; no budget was or may be
+relaxed):
+
+* Final-table ulp residue <= 5.12e-12 abs (<= 1e-14 rel), AICc 5.7e-13 —
+  landing-order arithmetic; log-likelihood, coefficients, preadjustment and
+  residuals bit-exact.
+* TD F-test (post-hoc diagnostic, `TradingDaysTest.maTest`) at the aligned
+  horizons: td-sa default-vs-default margin 2.65e-08 in the bridge math
+  domain (inside the 2e-8*(1+|ref|) band 7.7e-08) but 1.06e-07 in the
+  default domain — because the rjd3 tables are themselves domain-sensitive
+  at fc12 (same fit across math domains: d11final 2.22e-07 max abs; the JVM
+  cross-domain td-sa gap 1.33e-07 exceeds the native-vs-rjd3 gap), and
+  maTest amplifies table ulps ~10^4. The td-i-all p definitional bridge
+  measures 1.39e-12 at fc12 against its 1e-12 pin (F rel 2.61e-13 through
+  the F CDF). Both pins stay where they were qualified (fc0: bit-exact to
+  8.9e-16); the td-parity file documents these tuples in its default-class
+  block and asserts only budget-free statements there.
+* JVM-side-only coverage gaps (M-stats, y_ef, i_f) are not divergences but
+  absent surfaces; slice briefs P4 (X-11 monitoring statistics) and P5
+  (automatic-lane forecast standard errors, wrapper consumer-ready at
+  `R/forecasts.R`) were filed to the roadmap.
+
 ## Scratch evidence disposition (2026-11-25)
 
 The maintainer's post-milestone cleanup (workspace commit `d0173f5`) removed
