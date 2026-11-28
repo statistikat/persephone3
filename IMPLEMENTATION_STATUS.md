@@ -3,6 +3,114 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## The published X-13 irregular forecast lands on the native envelopes: the i_f-unavailable honesty pins retire as presence pins (2026-11-28, M15 consumer lane)
+
+Maintainer authorization (quoted verbatim): "1. authorize" (round 1 of the
+honesty-pin retirement, 2026-11-28, parent program) — the retirement of the
+i_f-unavailable honesty pins into presence pins, new sites, same category as
+the ratified y_ef retirement (M13 entry above). The rkalos re-pin `c761f45`
+(version `0.1.0.9035`, core `1e2e3c8`) publishes the X-13 irregular-component
+forecast `irregular_forecast` — the core entry's own pair (`status`,
+`values`), the constant placeholder the JVM X13Extractor manufactures on the
+finals trend-forecast (D12a) domain — on BOTH native X-13 envelopes. The 9035
+core ledger settled the consumer premise: "consumers read it by name and
+nothing existing changes". This lane retires the honesty pins (fresh GitHub-
+chain qualification in `tmp_opencode/m15-p3if`: `git ls-remote` proof
+`refs/heads/main = c761f4512b7d05c3854cc5b1a7be75f00833398f`,
+`refs/heads/rkalos_backend = 681d7a77b280f0e1aa07d4b8d8733167f93e7a8a`; clean
+tarball installs; probes 9035 / core `1e2e3c8` / SLICOT-ON / pinned OpenBLAS
+provider / `slicot` TRUE; `identical(capabilities(), cap-9034-era)` TRUE —
+zero advertise bit).
+
+Surface mapping (LIVE reads — `m15-p3if-feature-rjd3-ref.log` bridge-domain
+JVM, `m15-p3if-feature-native.log` Java-free lane; no invention):
+
+| user-visible surface | reference lane (rjd3, live read) | native lane (this round) | note |
+|---|---|---|---|
+| i_f series | `user_defined$i_f` — ts over the D12a domain (12 points at 1961-1962 on `rsa3`), every word `3ff0000000000000` = 1.0; `rsa0` answers `0000000000000000` = +0.0 | envelope pair `x$output$irregular_forecast` (`status`, `values`) — the core entry's member names, values bit-identical to the same constant words | envelope fields are never renamed by the wrapper |
+| forecast contract slot | served as `forecasts$points$i`; availability rows `i`/points `available`, field `i_f` `available` | `points$i` stays honestly NULL, field `i_f` stays `"unavailable"` — the WRAPPER consumption is a separate future landing (the 9035 ledger: nothing existing changes) | recorded honestly in the new file; retired pins asserted a missing CORE surface — that premise is gone |
+| status arms | (no separate status node) | `"available"` / `"no_requested_predictions"` (zero horizon, empty vector) verbatim; `"unavailable"` is the entry's defensive arm, never fabricated; refusals carry no pair (21-I verified) | |
+| constant semantics | 1.0 under the JVM DecompositionMode predicate (Multiplicative OR LogAdditive), +0.0 otherwise (Additive, PseudoAdditive) | same predicate, live-verified at this boundary (log_additive → 1.0, pseudo_additive → +0.0, level arm → +0.0) | engine-vs-JVM claim is the core's thirteen-case double-JVM replay (144/144 words BIT, 9035 entry) |
+
+Per-site retirement (i_f arms ONLY; live enumeration of every prior
+"unavailable" string in `inst/tinytest/` and `tools/` classified the rest as
+non-i_F and left them verbatim):
+
+| site | old | new | evidence |
+|---|---|---|---|
+| `inst/tinytest/test-parity.R:603` | `expect_null(fc_auto$points$i)` | presence pin: pair by member name, values BIT-identical to the live-recorded twelve words `3ff0000000000000`, count = D12a count | `m15-p3if-feature-native.log` (pair hex/count/d12a domain) |
+| `inst/tinytest/test-parity.R:621` | `expect_identical(avail[["i_f"]], "unavailable")` | `expect_identical(ifc_auto$status, "available")` — status verbatim | same log (pair status) |
+| `inst/tinytest/test-parity.R:593-594` (comment) | "i_f stays honestly unprovided (no core surface yet -- P4 slice brief)" | M15 landing note | 9035 ledger |
+| `inst/tinytest/test-native-forecasts.R:26` | `expect_identical(fc$points$i, NULL)` | presence pin: pair by name, status verbatim, six recorded words BIT (1.0 verbatim, log fit), count = D12a count, D12a domain `(1961, 1)` | same log (6-horizon arms) |
+
+STAY VERBATIM (still true — classified non-i_F): `test-parity.R:615-616` and
+`test-native-forecasts.R:41-42` (STANDARD-ERRORS catch-alls — the i_f
+uncertainty arm publishes nothing anywhere, SE rows stay `"unavailable"`;
+reference SE state is `not_provided`), `tools/verify-nojava.R` 135-145 and
+`tools/verify-lifecycle.R` (SE/band arms — the verify tools contain NO i_f
+pin), `test-native-tramoseats-rsa3.R:70` (TRAMO SE arms),
+`test-native-x13-estimated.R:50` (SE arms), all `t/sa/cal/y_ef` availability
+strings, dashboard `quality`/`mstats` "unavailable" strings.
+
+New `inst/tinytest/test-native-x13-iforecast.R` (consumer-side fidelity,
+39 expectations; NOT added to the bridge-pass roster — no roster edit was in
+the authorization, so the pass B roster keeps its six files): result-object
+surface by the mapping above (pair members by name, `result$raw` verbatim,
+unserialize round-trip), values BIT-tier hex words RECORDED LIVE (12×
+`3ff0000000000000` automatic, 12× `0000000000000000` estimated `rsa0` — the
+byte pattern pins the +0.0 sign), constant semantics by mode (log_additive
+1.0, pseudo_additive +0.0, level arm +0.0), the D12a domain/count arms, the
+zero-horizon `"no_requested_predictions"` + empty vector — direct AND through
+the wrapper (`forecasts` stays honestly NULL) —, the wrapper product arm's
+honest state (slot NULL, `i_f` string `"unavailable"`, narrative corrected to
+a CONSUMER gap), refusal absence (21-I core status verbatim, no pair; wrapper
+`rsa4` refusal), and the cross-backend note vs the reference constants
+(the reference manufactures 1.0/0.0 verbatim — word-exact, no tolerance).
+
+Trio on the 9035 backend (wired tree; fresh GitHub-chain tarball
+`m15-p3if-persephone3_0.1.0-681d7a7-wired.tar.gz` sha256
+`7ccfe0d65cff82e8e4a1c9919941e48f9dd67ac165a355f5f705074e59226abe`, the four
+spliced files byte-identical to the workspace):
+
+| lane | c5- (9034, certified) | c6-base (baseline tree, 9035) | c6 (final, 9035) |
+|---|---|---|---|
+| native | 18 files / 4516 / fail 0 | 18 / 4516 / fail 0 | 19 / 4559 / fail 0 |
+| pass A | 40 / 6557 / fail 0 | 40 / 6557 / fail 0 | 41 / 6602 / fail 0 |
+| pass B | 6 / 5844 / fail 0 | 6 / 5844 / fail 0 | 6 / 5848 / fail 0 |
+
+Movers audit (certification): c6-base vs c5- is ZERO movement in all three
+lanes (every shared row byte-identical; the six pass B tuples identical) —
+the backend bump alone moves nothing, so every c6 mover is by construction an
+authorized edit. c6 vs c5- movers, exactly the authorized set: native
+`test-native-forecasts.R` 67→71 (+4) plus the NEW file (+39); pass A
+additionally `test-parity.R` 414→416 (+2); pass B only
+`test-native-forecasts.R` 83→87 (+4 — the new presence pins run in the bridge
+pass too; the other five FILE tuples byte-identical). Every other file row is
+byte-identical to the c5- logs (`m15-p3if-compare-trio.py`, final-vs-c5 and
+final-vs-base agree). SUPERSESSION: this c6 trio (9035 backend) is the new
+certified baseline; the c5- trio (9034 backend) is superseded by
+`c6-native/passA/passB` here.
+
+Verifies on the wired build (isolated tmp-lib, RKALOS 0.1.0.9035 core
+1e2e3c8, forbidden Java absent): `verify-nojava.c6.log` VERIFY-NOJAVA-EXIT=0,
+3 PASS lines; `verify-lifecycle.c6.log` LIFECYCLE STEPS=41 GAPS=0 — the
+baseline exactly. The verify tools contain NO i_f pin (enumerated above):
+verify-nojava is BYTE-IDENTICAL to the certified c5- transcript (both
+`beb7f3fab92cd90a…333a`); verify-lifecycle differs only in four environment
+lines — the isolated-library path (m14→m15 lane), the `ISOLATED RKALOS`
+version/core line (the bump itself), the callr child-isolation libPaths echo,
+and the shiny launcher's ephemeral port — every step status PASS, no
+semantic delta (`19aae212bae2e982…8f6` vs `8e5a3ebdadc50981…f54`;
+`m15-p3if-verify-lifecycle-c5-c6.diff`).
+
+DESCRIPTION: Imports floor `rkalos (>= 0.1.0.9032)` → `(>= 0.1.0.9035)` —
+this round CREATES the 9035 dependency (the retargeted pins read
+`irregular_forecast` from the fit envelope; anything older than 9035 lacks
+the field and the pinned tests must fail LOUDLY, not defer). `Remotes` ref →
+`github::statistikat/rkalos@c761f4512b7d05c3854cc5b1a7be75f00833398f` (the
+pushed commit carrying the field; proven by `ls-remote` above). No numeric
+budget moved anywhere.
+
 ## The X-11 diagnostic battery goes live on the native lanes: mirrored under the reference names, measured against the live JVM (2026-11-28, M14 consumer lane)
 
 The rkalos re-pin `cf324c1` (version `0.1.0.9034`, core `c3706ea`) publishes the

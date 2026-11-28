@@ -23,7 +23,30 @@ for (key in names(expected)) {
   expect_identical(as.numeric(start(fc$points[[key]])), c(1961, 1))
   expect_identical(length(fc$points[[key]]), 6L)
 }
-expect_identical(fc$points$i, NULL)
+# M15 (2026-11-28): i_f honesty-pin retirement (maintainer authorization of
+# 2026-11-28, honesty-pin retirement round 1). This arm asserted
+# expect_identical(fc$points$i, NULL) on the "no core surface" premise; the fit
+# envelope now carries the published irregular forecast as the core entry's own
+# pair (rkalos 0.1.0.9035, core 1e2e3c8). Presence pin mirroring the
+# reference's own semantics (rjd3 serves i_f as the constant placeholder
+# user_defined$i_f over the finals trend-forecast D12a domain): pair by member
+# name, status verbatim, values BIT-identical to the words RECORDED LIVE on
+# this lane (six times 3ff0000000000000 = the constant 1.0 verbatim on this
+# log fit), count = the D12a-domain count, on the D12a domain. Full battery of
+# arms: inst/tinytest/test-native-x13-iforecast.R.
+ifc <- raw$irregular_forecast
+expect_identical(names(ifc), c("status", "values"))
+expect_identical(ifc$status, "available", info = "i_f status verbatim")
+hex_doubles <- function(h) vapply(h, function(s)
+  readBin(as.raw(rev(strtoi(substring(s, seq(1L, 16L, 2L),
+                  seq(2L, 16L, 2L)), 16L))), "double"), numeric(1))
+expect_identical(as.numeric(ifc$values),
+                 unname(hex_doubles(rep("3ff0000000000000", 6L))),
+                 info = "i_f values bit-identical to the live recording")
+expect_identical(length(ifc$values), length(raw$finals$tables$d12a),
+                 info = "count equals the D12a-domain count")
+expect_identical(as.numeric(stats::start(raw$finals$tables$d12a)), c(1961, 1),
+                 info = "the pair lands on the D12a domain")
 # M13 P5 (rkalos 0.1.0.9033, core 69f83be): the automatic lane publishes the
 # original-series forecast standard errors and the wrapper consumes the
 # envelope pair by name (R/forecasts.R native_automatic_forecasts). Presence

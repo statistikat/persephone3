@@ -590,8 +590,13 @@ local({
   # template measures x11.nfcasts = -1 / x11.nbcasts = 0 and the native
   # request reproduces them, so the default fit publishes one year of
   # forecast points (no backcasts). y_ef became a live envelope surface with
-  # the M13 P5 landing (rkalos 0.1.0.9033, core 69f83be); i_f stays honestly
-  # unprovided (no core surface yet -- P4 slice brief).
+  # the M13 P5 landing (rkalos 0.1.0.9033, core 69f83be); i_f became one with
+  # the M15 landing (rkalos 0.1.0.9035, core 1e2e3c8): the fit envelope now
+  # carries the published irregular forecast as the core entry's own pair
+  # (status, values) over the finals trend-forecast (D12a) domain. The
+  # i_f-unavailable honesty pins retired into the presence pins below
+  # (maintainer authorization of 2026-11-28, honesty-pin retirement round 1;
+  # mapping and conventions: IMPLEMENTATION_STATUS.md, M15 consumer entry).
   expect_identical(res$provenance$effective_backcast, 0L)
   expect_identical(res$provenance$effective_forecast, 12L)
   expect_identical(res$forecasts, auto_fit_m4$forecasts)
@@ -600,7 +605,22 @@ local({
   expect_identical(vapply(fc_auto$points[c("y", "t", "sa", "s", "cal")], length,
                           integer(1)),
                    stats::setNames(rep(12L, 5L), c("y", "t", "sa", "s", "cal")))
-  expect_null(fc_auto$points$i)
+  # M15 (2026-11-28): i_f presence pin, retiring the "no core surface" value
+  # arm (was expect_null(fc_auto$points$i)). The envelope pair by the core
+  # entry's own member names; values BIT-identical to the words RECORDED LIVE
+  # on this lane (twelve times 3ff0000000000000 = the reference's constant 1.0
+  # verbatim on this log fit, no back-transform), count = the D12a-domain
+  # count. Semantics and the full battery of arms:
+  # inst/tinytest/test-native-x13-iforecast.R.
+  hexw <- function(x) vapply(as.numeric(x), function(d)
+    paste(rev(as.character(writeBin(d, raw()))), collapse = ""), character(1))
+  ifc_auto <- res$raw$irregular_forecast
+  expect_identical(names(ifc_auto), c("status", "values"))
+  expect_identical(hexw(ifc_auto$values), rep("3ff0000000000000", 12L),
+                   info = "i_f words are the live recording, BIT-exact")
+  expect_identical(length(ifc_auto$values),
+                   length(res$raw$finals$tables$d12a),
+                   info = "count equals the D12a-domain count")
   # M13 P5 (2026-11-28): the automatic lane's y SE is available. Presence
   # pins only — no SE numerics hand-pinned here: the core entry replays 144
   # predictions against the dual-JVM evidence at <= 1e-12 relative (worst
@@ -618,7 +638,11 @@ local({
   expect_true(all(avail[c("y", "t", "sa", "i", "s", "cal", "y_f", "t_f",
                           "sa_f", "s_f", "cal_f")] == "available"))
   expect_identical(avail[["y_ef"]], "available")
-  expect_identical(avail[["i_f"]], "unavailable")
+  # M15: status verbatim (retires the former availability arm
+  # expect_identical(avail[["i_f"]], "unavailable") -- the "no core surface"
+  # premise is gone; the wrapper PRODUCT slot's honest state now travels in
+  # test-native-x13-iforecast.R).
+  expect_identical(ifc_auto$status, "available", info = "i_f status verbatim")
   sa <- res$components$sa
   expect_identical(as.integer(stats::frequency(sa)), 12L)
   expect_identical(time_domain(stats::tsp(sa)), time_domain(stats::tsp(series_m)))
