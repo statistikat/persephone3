@@ -3,6 +3,76 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## The X-11 diagnostic battery goes live on the native lanes: mirrored under the reference names, measured against the live JVM (2026-11-28, M14 consumer lane)
+
+The rkalos re-pin `cf324c1` (version `0.1.0.9034`, core `c3706ea`) publishes the
+X-11 diagnostic battery — `x11_mstats`: `status`, `m1..m11` through the pinned
+`getM` clamp, `q`, `qm2`, `q_grade`, `qm2_grade` — on BOTH native X-13 fit
+envelopes (automatic rsa3 route and the stock estimated RSA0/RSA1/RSA2c
+route). This lane consumes it (fresh-clone qualification in
+`tmp_opencode/m14-p3consumer`: tarball installs, `identical(capabilities(),
+cap-9033-era)` TRUE — no advertise bit; probes 9034 / core c3706ea /
+SLICOT-ON / pinned OpenBLAS provider / `slicot` TRUE). There was no pre-existing
+`x11_mstats` consumption; the pre-existing name-based consumption of the
+REFERENCE battery (`mstats`/`q`/`qm2`, `m1..m11` — `R/diagnostic_rules.R`,
+`R/diagnosticsTable.R`, `R/printDiagnostics.R`) is the mapping target, verified
+against a LIVE rjd3 `perX13("rsa3")` run in the bridge domain.
+
+Surface decision (mirror the reference, no invention — live-verified shapes):
+
+| user-visible surface | reference lane (rjd3, live read) | native lane (this change) | note |
+|---|---|---|---|
+| raw fit block | `obj$output$mstats` — members exactly `m1..m11, q, qm2` | `obj$output$x11_mstats` — same member names, verbatim rkalos field name | envelope fields are never renamed by the wrapper |
+| result-envelope mirror | (no canonical component; raw + user-defined nodes only) | `obj$result$mstats` — verbatim echo of the fit battery under the reference's user-visible component name, both lanes | refuse-answers echo verbatim (`"unsupported:pseudo_additive"` + untouched `-1`/`NaN` words, empty grades); ABSENT whenever the fit carries no battery (restricted/TRAMO lanes, non-available statuses, rkalos < 9034) |
+| diagnostic columns Q / Q2 | `mstats$q`/`$qm2` via `diagnostic_metrics` | native-first paths `x11_mstats/q`, `x11_mstats/qm2` | refused battery answers keep `q`/`qm2` at NaN — the shared finite-value guard leaves those arms honestly missing, never an interpreted refusal |
+| `nMstatOutside` (m-words > 1) | `output$mstats` member grep | same formula over `x11_mstats` (members identically named) | shared formula; the `-1` defaults of a refused answer never count, as on the Java lane |
+| dashboard cards / QR `Q-Stat` | from `diagnostic_metrics` | filled from the battery | previously honest NA |
+| summary Quality section | user-defined `m-statistics.q`/`m-statistics.q-m2` | unchanged: the native summary keeps its compact honest form | the `m-statistics.*` canonical nodes stay reference-lane artifacts (they come from the JVM user-defined output; the core publishes no counterpart) — honest gap |
+| grade words / `quality.summary` | only the aggregate `quality.summary` ("Good") | core's extra `q_grade`/`qm2_grade` publication; `TotalQ` stays honest NA natively | honest gap both ways: no per-grade words on the reference, no aggregate on the native lane |
+
+Wiring sites: `R/backend_native.R` (`normalize_native_automatic_result` —
+serves automatic AND estimated-template lanes), `R/diagnostic_rules.R`
+(native-first `q`/`q2` paths), `R/diagnosticsTable.R` (native battery feeds the
+m-count). New `inst/tinytest/test-native-x11-mstats.R` (sixth bridge-parity file,
+added to the `tools/run-oracle-bridge-pass.R` roster — a roster line for the new
+file, no existing pin touched): live-recorded hex words on both lanes
+(bit-identical to the rkalos 9034 gold recordings — no hand-set numerics),
+mirror + column + card consumption, restricted/21-I absence arms, the PADD
+refuse-answer verbatim (`-1`/`NaN`/empty grades, wrapper arms stay missing),
+and the cross-backend parity against the LIVE JVM battery on the same call.
+
+Cross-backend parity (bridge domain, same `rsa3` call, live on both sides —
+`tmp_opencode/m14-p3consumer/parity-x11-mstats-table.csv`), at the core's
+certified tiers — m4 and the grade words BIT, the twelve rest at the core's
+measured-worst tier 3.226e-13 (achieved per member: m1 7.6e-17, m2 6.9e-17,
+m3 0 (bit), m5 3.9e-16, m6 3.4e-15, m7 2.8e-16, m8 1.6e-15, m9 3.1e-15,
+m10 5.2e-15, m11 5.2e-15, q 7.8e-16, qm2 8.9e-16; worst 5.163e-15, 63x inside
+the pinned tier, nothing pinned looser than the certified value):
+
+| member | JVM hex | native hex | abs diff |
+|---|---|---|---|
+| m3 | 0000000000000000 | 0000000000000000 | 0 (bit) |
+| m4 | 3febfdc8d332eebf | 3febfdc8d332eebf | 0 (bit) |
+| worst rest (m10/m11) | …fe9b3 / …cd4e | …fe956 / …ccf1 | 5.163e-15 |
+
+Q/Q2 land as the JVM's own table values (0.26 / 0.29). Non-regression trio on
+the 9034 backend with the wired build (c5-, vs the e71bdc7-era c4- baseline
+4470/6511/5790 fails 0): native `TOTAL files=18 results=4516 fail=0`, Pass A
+`TOTAL files=40 results=6557 fail=0`, Pass B `BRIDGE-PASS TOTAL files=6
+expectations=5844 fails=0` — the movement is EXACTLY the new file's isolated
+rows (native/passA 46 each — its bridge block defers in pass A per the capture-
+domain guard; passB 54); every shared per-file row byte-identical, the five
+baseline pass-B tuples byte-identical, zero movers elsewhere. Verifies on the
+isolated Java-free tmp-lib (rkalos 9034/core c3706ea, forbidden stack absent):
+`verify-nojava.R --native` PASS (its automatic block now shows Q 0.26 Q2 0.29;
+the restricted row stays NA/NA honestly) and `verify-lifecycle.R`
+`LIFECYCLE STEPS=41 GAPS=0` — the baseline unchanged. `capabilities()` is
+byte-identical to the 9033-era recording (the advertise-bit precedent stands).
+Remotes stay untouched: `cf324c1`/`9034` (and core `c3706ea`) are UNPUSHED in
+the rkalos repository, so the `Remotes:` pin and the DESCRIPTION floor (0.1.0.9032,
+which stays honest: an older rkalos simply carries no battery and the absence
+arms serve) move only after the maintainer pushes.
+
 ## The automatic-lane forecast standard errors go live: the no-SE pins retire as presence pins (2026-11-28, M13 consumer lane)
 
 The rkalos re-pin `0cbcb2e` (version `0.1.0.9033`, core `69f83bed`) publishes

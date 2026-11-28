@@ -122,9 +122,13 @@ generate_diagnostics_table <- function(x) {
   n_out <- if (is.null(out)) NA_integer_ else nrow(out)
   out_p <- if (length(x$ts)) n_out / length(x$ts) else NA_real_
   # m-statistic acceptance counts (m1..m11, accepted below 1; NA entries such as
-  # M6 without a 3x5 filter are not counted). Java-lane only: native objects
-  # carry no rjd3 mstats block, so mvals is empty and the count falls back to NA.
-  mstats <- x$output$mstats
+  # M6 without a 3x5 filter are not counted). Both lanes: the reference reads the
+  # rjd3 mstats block; the native lane reads the rkalos envelope's x11_mstats
+  # battery (M14, rkalos 0.1.0.9034), whose members carry the same words, so the
+  # count formula is shared verbatim (a refused answer's -1 defaults never count
+  # as outside, exactly as on the Java lane). A build without the battery field
+  # keeps the honest NA fallback.
+  mstats <- if (identical(x$result$backend, "native")) x$output$x11_mstats else x$output$mstats
   mvals <- suppressWarnings(as.numeric(
     unlist(mstats[grepl("^m[0-9]{1,2}$", names(mstats))], use.names = FALSE)
   ))

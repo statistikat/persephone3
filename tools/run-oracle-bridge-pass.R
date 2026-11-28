@@ -1,4 +1,5 @@
-# Oracle lane, bridge-domain pass (item M6-c, 2026-11-24): run the five
+# Oracle lane, bridge-domain pass (item M6-c, 2026-11-24; the roster grows to
+# six bridge-parity files with the M14 battery file, 2026-11-28): run the
 # bridge-parity files whose live-JVM blocks compare against JVM captures
 # qualified with HotSpot's _dexp/_dlog intrinsics DISABLED. On x86-64 the JVM
 # must therefore already run the capture flags when this starts -- export
@@ -12,7 +13,7 @@
 # domains coincide: the guard is inert and this runs as an ordinary rerun.
 files <- c("test-native-forecasts.R", "test-native-tramoseats-rsa1.R",
            "test-native-tramoseats-rsa3.R", "test-native-tramoseats-rsafull.R",
-           "test-native-x13-estimated.R")
+           "test-native-x13-estimated.R", "test-native-x11-mstats.R")
 Sys.setenv(PERSEPHONE_ORACLE_PASS = "bridge")
 library(persephone3)
 library(tinytest)

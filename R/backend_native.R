@@ -723,6 +723,18 @@ normalize_native_automatic_result <- function(fit, spec, ts) {
     # plotResiduals(); nothing is synthesized here.
     envelope$diagnostics$residuals <- fit$residuals
   }
+  # The X-11 diagnostic battery (M14, rkalos 0.1.0.9034 / core c3706ea): both
+  # native X-13 routes publish it on the fit envelope as x11_mstats (status,
+  # m1..m11 through the pinned clamp, q, qm2, q_grade, qm2_grade). The
+  # reference backend shows its battery to users as the output component
+  # "mstats" with identically named members (live-verified: m1..m11, q, qm2),
+  # so the wrapper mirrors the fit's battery onto the result under that same
+  # component name, verbatim -- refuse-answers (status
+  # "unsupported:pseudo_additive" with the -1/NaN word defaults) included and
+  # never a partial battery. A fit that carries no battery (restricted or
+  # TRAMO lane, non-available status, rkalos builds before 9034) keeps the
+  # component ABSENT; nothing is synthesized.
+  if (!is.null(fit$x11_mstats)) envelope$mstats <- fit$x11_mstats
   envelope
 }
 

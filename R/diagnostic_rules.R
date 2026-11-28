@@ -96,6 +96,23 @@ diagnostic_metrics <- function(x) {
   } else {
     c("user_defined", "diagnostics.seas-si-combined")
   }
+  # The X-11 diagnostic battery (M14, rkalos 0.1.0.9034 / core c3706ea): the
+  # reference lane publishes it as the output component "mstats" (members
+  # m1..m11, q, qm2) plus the user-defined m-statistics nodes. The native
+  # envelope carries the same battery under the core's published field name
+  # x11_mstats (same-name member words, status and grade words verbatim); the
+  # native-first paths below feed the SAME Q/Q2 columns, m-statistic count and
+  # dashboard cards from it (the native summary block keeps its own compact
+  # honest form). A refused battery answer (status
+  # "unsupported:pseudo_additive") keeps q/qm2 at NaN and the word defaults
+  # at -1, so the shared finite-value guard leaves those arms honestly
+  # missing -- never an interpreted refusal.
+  q_paths <- list(c("mstats", "q"), c("user_defined", "m-statistics.q"))
+  q2_paths <- list(c("mstats", "qm2"), c("user_defined", "m-statistics.q-m2"))
+  if (identical(x$result$backend, "native")) {
+    q_paths <- c(list(c("x11_mstats", "q")), q_paths)
+    q2_paths <- c(list(c("x11_mstats", "qm2")), q2_paths)
+  }
   list(
     normality = residual_test("doornikhansen"),
     independence = residual_test("lb"),
@@ -108,8 +125,8 @@ diagnostic_metrics <- function(x) {
     td_i_all = metric("diagnostics.td-i-all", c("diagnostics", "td.ftest.i")),
     td_i_last = metric("diagnostics.td-i-last"),
     td_sa_f = metric("diagnostics.td-sa-all", c("diagnostics", "td.ftest.sa")),
-    q = number(list(c("mstats", "q"), c("user_defined", "m-statistics.q"))),
-    q2 = number(list(c("mstats", "qm2"), c("user_defined", "m-statistics.q-m2"))),
+    q = number(q_paths),
+    q2 = number(q2_paths),
     quality = category(list(c("user_defined", "quality.summary"))),
     arima = arima, log = log)
 }
