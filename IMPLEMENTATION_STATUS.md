@@ -3,6 +3,69 @@
 Updated: **2026-11-24**. The repository split is integrated on
 `rkalos_backend`. **rkalos is a required dependency**.
 
+## The automatic-lane forecast standard errors go live: the no-SE pins retire as presence pins (2026-11-28, M13 consumer lane)
+
+The rkalos re-pin `0cbcb2e` (version `0.1.0.9033`, core `69f83bed`) publishes
+`series_forecast_stdev` + `series_forecast_stdev_status` on the automatic
+X-13 route, and this package's consumer path (`R/forecasts.R`,
+`native_automatic_forecasts()`, unchanged by design) delivers them
+end to end: the default `perX13(AirPassengers, "rsa3")` native fit carries
+`standard_errors$y` — 12 points on 1961-01..1961-12, `identical()` to the
+envelope pair by name, status `"available"` verbatim. Consumer-side parity
+against a LIVE bridge-domain JVM reference run: worst 3.13e-13 abs /
+7.90e-15 rel over the 12 horizons (inside the core's own replay tier of
+1e-12, worst 1.86e-14; per-horizon table
+`tmp_opencode/m13-p3consumer/parity-yef-table.csv`). The `capabilities()`
+vector is byte-identical to the 9032-era one — no advertise bit — so the
+pre-P5 honest-absence pins could not gate old-vs-new and the first
+qualification pass (c3-) measured exactly the movement the P5 slice brief
+had foreseen: three test files and both verify harnesses pinned the
+automatic lane's "standard errors honestly unavailable" shape. STOP-AND-
+REPORT; the maintainer ruling of 2026-11-28 is quoted verbatim in full:
+**"authorize"** — approving option 1 of that report: "retire the four test
+pin sites + two tools/verify pins you classified, as presence-pins with new
+positive assertions; no tolerance moves". Executed under exactly that
+scope; the t/sa/cal/i unavailable arms and every numeric budget are
+untouched.
+
+Per-site change (site | old assertion | new assertion | evidence):
+
+| site | old | new | evidence |
+|---|---|---|---|
+| `inst/tinytest/test-native-charts.R` | hchart series names exclude `"confidence interval"`; dy columns read back with `as.numeric()` | automatic lane pins `forecast` + `confidence interval` and the band `identical()` to points ± 1.96 SE (the certified `x13-rsa0` arm); a `dy_center()` reader takes the middle of the range-series `(low, value, high)` triple — the layout the SE-carrying dygraph has always used (estimated route, 9032 witness) | 96/0 native, 102/0 pass A |
+| `inst/tinytest/test-native-forecasts.R` | `all(fc$availability$standard_errors == "unavailable")`; `expect_false` band in hchart; plain `as.numeric` dy/hierarchy read-backs | envelope status `"available"` verbatim, `standard_errors$y` `identical()` to the envelope pair, length + dates pinned; y-availability `"available"`, non-y components keep the verbatim unavailable arm; band exists and equals points ± 1.96 SE; triple-centre read-backs (main chart and hierarchy). The aggregated `forecastsIndirect$standard_errors$y` stays `NULL` (aggregation does not fabricate SEs) — pin unchanged | 67/0 native, 83/0 pass B |
+| `inst/tinytest/test-parity.R` (lines 603/607) | `all(fc_auto$availability$standard_errors == "unavailable")`; `avail[c("i_f","y_ef")] == "unavailable"` | y SE available + non-NULL + 12 points + 1961-01 start; non-y arms unchanged; `y_ef -> "available"`, `i_f -> "unavailable"` (P4 stays honest). No SE numerics hand-pinned; the comment cites the core replay (144 predictions, <= 1e-12 rel, worst 1.86e-14) and the parity table (worst 3.13e-13 abs) | 414/0 pass A |
+| `tools/verify-nojava.R` | `all(...standard_errors == "unavailable")` in the default-rsa3 block | pair consumed by name: status verbatim, `identical()` envelope identity, 12 points on 1961-01, non-y unavailable arms kept | PASS (`--native`, Java-free `tmp-lib`) |
+| `tools/verify-lifecycle.R` | x13-rsa3 lane `se = "unavailable"` | `se = "available"` — the harness then runs the certified band arm: `confidence band identical to points -/+ 1.96*SE (n SE = 6)`; plot-fit step re-certifies the `(lowerci, y_f, upperci)` triple | `LIFECYCLE STEPS=41 GAPS=0` |
+
+New certified trio baselines on the `0cbcb2e`-era backend (documented
+supersession of the tramo-era `4458/0 | 6494/0 | 5781/0` totals; every
+expectation change is additive — zero failures everywhere, zero numeric
+expectation moved): native `TOTAL files=17 results=4470 pass=4470 fail=0`
+(charts 93->96, forecasts 58->67); Pass A `TOTAL files=39 results=6511
+pass=6511 fail=0` (charts 99->102, forecasts 58->67, parity 409->414);
+Pass B `BRIDGE-PASS TOTAL files=5 expectations=5790 fails=0` (forecasts
+74->83; the other four files' tuples byte-identical to the tramo-era log).
+Movers audit: native {charts, forecasts}; pass A {charts, forecasts,
+parity}; pass B {forecasts} — exactly the authorized sites; all other rows
+byte-identical to the tramo-era per-file tables. Pre-fix (c3-) and
+re-recorded (c4-) verify transcripts archived side by side in
+`tmp_opencode/m13-p3consumer/` — sha256: `verify-nojava` pre-fix
+`4554f6b1…ac302` (fails at the old :137 pin) vs re-recorded `52587f5f…a36b4`
+(PASS); `verify-lifecycle` pre-fix `31e4a312…f2b413` (HARD LIFECYCLE
+FAILURE at x13-rsa3/forecast: "available expected: unavailable") vs
+re-recorded `5103cb32…8cf020` (STEPS=41 GAPS=0). Backend for all of it:
+fresh git-archive installs into the lane libraries — rkalos `0cbcb2e`
+(`0.1.0.9033`, core `69f83bed…`, SLICOT-ON, OpenBLAS provider) and this
+package at `50c5eca`; the JVM reference ran the bridge capture profile
+(in-process `_dexp`/`_dlog` disabled), OpenJDK 21.0.11.
+
+Standing pending step (NOT part of this commit): the `DESCRIPTION`
+`Remotes:` pin bump to the `0cbcb2e`-era ref — and the dependency floor —
+can only follow the maintainer's push of rkalos (`0cbcb2e`) and the kalos
+core (`69f83bed`); both are unpushed and nothing in this lane touched or
+used the GitHub chain.
+
 ## TRAMO template horizons re-measured: the zero-forecast finding is withdrawn (2026-11-27, M12 tramo follow-up)
 
 Maintainer ruling: apply the rsa3 horizon-alignment outcome family-wide and

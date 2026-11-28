@@ -7,6 +7,13 @@ expect_identical(plot(fixed)$x$attrs$labels[-1], "Original")
 observed <- AirPassengers
 observed[70] <- observed[70] * 3
 automatic <- perX13(observed, "rsa3", backend = "native")
+# M13 P5 (2026-11-28): on the SE-carrying automatic lane the dygraph uses the
+# range-series layout and serializes every numeric column as the
+# (low, value, high) triple; the restricted route keeps plain vectors. Read
+# the centre value back from either layout.
+dy_center <- function(col) if (is.list(col)) {
+  vapply(col, function(v) if (!length(v)) NA_real_ else v[[2L]], numeric(1))
+} else as.numeric(col)
 for (obj in list(fixed, automatic)) {
   obj$run()
   expected <- list(Original = obj$ts, `Seasonally Adjusted` = obj$result$components$sa,
@@ -23,17 +30,30 @@ for (obj in list(fixed, automatic)) {
                    length(dates) + if (identical(obj, automatic)) 12L else 0L)
   for (name in names(expected)) {
     index <- match(name, dy$x$attrs$labels)
-    expect_identical(as.numeric(dy$x$data[[index]])[seq_along(dates)],
+    expect_identical(dy_center(dy$x$data[[index]])[seq_along(dates)],
                      as.numeric(expected[[name]]))
   }
   hc <- obj$hchart()$x$hc_opts
   series_names <- vapply(hc$series, "[[", character(1), "name")
   # M12 alignment (2026-11-27): the automatic lane requests the template's
-  # one-year horizon, so its chart gains the forecast series (SEs stay
-  # honestly absent -- no confidence interval band, see test-native-forecasts).
+  # one-year horizon, so its chart gains the forecast series. M13 P5
+  # (2026-11-28, rkalos 0.1.0.9033 / core 69f83be): the automatic lane also
+  # publishes the forecast standard errors, so the band appears — the pinned
+  # identity below mirrors the certified estimated-route (x13-rsa0) arm; the
+  # restricted route has no forecasts and stays band-free by the equality.
   expected_series <- sort(tolower(c(names(expected),
-                                    if (identical(obj, automatic)) "forecast")))
+                                    if (identical(obj, automatic))
+                                      c("forecast", "confidence interval"))))
   expect_identical(sort(series_names), expected_series)
+  if (identical(obj, automatic)) {
+    fc <- obj$forecasts
+    band <- hc$series[[match("confidence interval", series_names)]]
+    expect_identical(length(band$data), length(fc$points$y))
+    expect_identical(vapply(band$data, "[[", numeric(1), "low"),
+                     as.numeric(fc$points$y - 1.96 * fc$standard_errors$y))
+    expect_identical(vapply(band$data, "[[", numeric(1), "high"),
+                     as.numeric(fc$points$y + 1.96 * fc$standard_errors$y))
+  }
   for (name in names(expected)) {
     points <- hc$series[[match(tolower(name), series_names)]]$data
     expect_equal(vapply(points, "[[", numeric(1), 1L),

@@ -89,7 +89,7 @@ lanes <- list(
   list(id = "x13-rsa3",
        construct = function() perX13(AirPassengers, "rsa3", backend = "native",
                                      speclist = list(backcast = 0L, forecast = 6L)),
-       n_fc = 6L, se = "unavailable", residuals = TRUE),
+       n_fc = 6L, se = "available", residuals = TRUE),
   list(id = "tramo-rsa0", construct = function() perTramo(AirPassengers, "rsa0",
                                                           backend = "native"),
        n_fc = 24L, se = "available", residuals = TRUE),

@@ -24,7 +24,22 @@ for (key in names(expected)) {
   expect_identical(length(fc$points[[key]]), 6L)
 }
 expect_identical(fc$points$i, NULL)
-expect_true(all(fc$availability$standard_errors == "unavailable"))
+# M13 P5 (rkalos 0.1.0.9033, core 69f83be): the automatic lane publishes the
+# original-series forecast standard errors and the wrapper consumes the
+# envelope pair by name (R/forecasts.R native_automatic_forecasts). Presence
+# pins only -- the engine-vs-JVM claim is the core's replay (144 predictions
+# at <= 1e-12 relative, worst 1.86e-14) plus the live bridge-domain parity
+# table (worst 3.13e-13 abs, tmp_opencode/m13-p3consumer/parity-yef-table.csv);
+# no SE numerics are hand-pinned here.
+expect_identical(raw$series_forecast_stdev_status, "available")
+expect_identical(fc$standard_errors$y, raw$series_forecast_stdev)
+expect_identical(length(fc$standard_errors$y), 6L)
+expect_identical(as.numeric(start(fc$standard_errors$y)), c(1961, 1))
+expect_identical(fc$availability$standard_errors[fc$availability$component == "y"],
+                 "available")
+expect_identical(fc$availability$uncertainty_reason[fc$availability$component == "y"], "")
+# The non-y components keep their honest unavailable arms unchanged.
+expect_true(all(fc$availability$standard_errors[fc$availability$component != "y"] == "unavailable"))
 expect_identical(fc$mode, "Multiplicative")
 expect_identical(unserialize(serialize(fc, NULL)), fc)
 expect_identical(as.numeric(start(raw$preadjustment$tables$a1b)), c(1948, 10))
@@ -45,15 +60,27 @@ expect_identical(length(x$forecasts$points$y), 12L)
 expect_false(identical(old$provenance$request_fingerprint, x$result$provenance$request_fingerprint))
 
 # Both chart engines show the points, with no currency or scale conversion.
+# M13 P5 (2026-11-28): the SE-carrying automatic lane draws the band, exactly
+# like the estimated route -- the band must equal points +/- 1.96 SE (the
+# verify-lifecycle identity), and the dygraph range-series layout serializes
+# every point as the (low, value, high) triple whose centre is the point.
 points <- x$forecasts$points$y
 hc <- x$hchart()$x$hc_opts$series
 hc_names <- vapply(hc, "[[", character(1), "name")
-expect_false("confidence interval" %in% hc_names)
+expect_true("confidence interval" %in% hc_names)
+band <- hc[[match("confidence interval", hc_names)]]
+expect_identical(length(band$data), length(points))
+expect_identical(vapply(band$data, "[[", numeric(1), "low"),
+                 as.numeric(points - 1.96 * x$forecasts$standard_errors$y))
+expect_identical(vapply(band$data, "[[", numeric(1), "high"),
+                 as.numeric(points + 1.96 * x$forecasts$standard_errors$y))
 expect_identical(vapply(hc[[match("forecast", hc_names)]]$data, "[[", numeric(1), 2L),
                  as.numeric(points))
 dy <- x$plot()
 index <- match("Forecasts", dy$x$attrs$labels)
-expect_identical(as.numeric(tail(dy$x$data[[index]], length(points))), as.numeric(points))
+expect_identical(vapply(tail(dy$x$data[[index]], length(points)),
+                        function(v) if (!length(v)) NA_real_ else v[[2L]], numeric(1)),
+                 as.numeric(points))
 expect_false("Forecasts" %in% x$plot(forecasts = FALSE)$x$attrs$labels)
 
 # Two fitted components retain their selected forecasts in a hierarchy.
@@ -65,7 +92,9 @@ expect_identical(h$forecastsIndirect$standard_errors$y, NULL)
 direct <- h$forecastsDirect$points$y
 graph <- plot(h, showOutliers = FALSE)
 index <- match("Forecasts", graph$x$attrs$labels)
-expect_identical(as.numeric(tail(graph$x$data[[index]], length(direct))), as.numeric(direct))
+expect_identical(vapply(tail(graph$x$data[[index]], length(direct)),
+                        function(v) if (!length(v)) NA_real_ else v[[2L]], numeric(1)),
+                 as.numeric(direct))
 expect_true(all(c("Direct SA", "Indirect SA") %in% graph$x$attrs$labels))
 
 # The independent reference exposes cal_f and y_ef on its own horizon;

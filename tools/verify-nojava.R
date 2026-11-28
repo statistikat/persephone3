@@ -129,12 +129,20 @@ if (identical(rkalos::capabilities()$native_x13_fit_automatic, TRUE)) {
             identical(obj$result$provenance$sigma_provenance, "legacy (default)"),
             stats::frequency(obj$adjusted) == 12L,
             # Template-default horizon: twelve forecast points on the dated
-            # A1a domain, standard errors honestly unavailable.
+            # A1a domain, plus the original-series forecast standard errors
+            # (M13 P5, rkalos 0.1.0.9033 / core 69f83be): the envelope pair
+            # is consumed by name and reported available; the other
+            # components keep their honest unavailable arms.
             inherits(obj$forecasts, "persephone_forecasts"),
             identical(obj$forecasts$points$y, obj$output$preadjustment$tables$a1a),
             length(obj$forecasts$points$y) == 12L,
             identical(as.numeric(start(obj$forecasts$points$y)), c(1961, 1)),
-            all(obj$forecasts$availability$standard_errors == "unavailable"),
+            identical(obj$output$series_forecast_stdev_status, "available"),
+            identical(obj$forecasts$standard_errors$y, obj$output$series_forecast_stdev),
+            length(obj$forecasts$standard_errors$y) == 12L,
+            identical(as.numeric(start(obj$forecasts$standard_errors$y)), c(1961, 1)),
+            all(obj$forecasts$availability$standard_errors[
+                  obj$forecasts$availability$component != "y"] == "unavailable"),
             # Compare the 17-digit round-trip strings directly. Parsing these
             # decimals as R literals can round to a neighbour on macOS ARM64.
             identical(sprintf("%.17g", as.numeric(obj$adjusted)[142:144]),

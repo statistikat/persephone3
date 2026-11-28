@@ -589,8 +589,9 @@ local({
   # Template-default horizons (M12 alignment, 2026-11-27): the JVM rsa3
   # template measures x11.nfcasts = -1 / x11.nbcasts = 0 and the native
   # request reproduces them, so the default fit publishes one year of
-  # forecast points (no backcasts). i_f and y_ef stay honestly unprovided
-  # (no core surface yet -- P4/P5 slice briefs).
+  # forecast points (no backcasts). y_ef became a live envelope surface with
+  # the M13 P5 landing (rkalos 0.1.0.9033, core 69f83be); i_f stays honestly
+  # unprovided (no core surface yet -- P4 slice brief).
   expect_identical(res$provenance$effective_backcast, 0L)
   expect_identical(res$provenance$effective_forecast, 12L)
   expect_identical(res$forecasts, auto_fit_m4$forecasts)
@@ -600,11 +601,24 @@ local({
                           integer(1)),
                    stats::setNames(rep(12L, 5L), c("y", "t", "sa", "s", "cal")))
   expect_null(fc_auto$points$i)
-  expect_true(all(fc_auto$availability$standard_errors == "unavailable"))
+  # M13 P5 (2026-11-28): the automatic lane's y SE is available. Presence
+  # pins only — no SE numerics hand-pinned here: the core entry replays 144
+  # predictions against the dual-JVM evidence at <= 1e-12 relative (worst
+  # 1.86e-14, rkalos 0cbcb2e lane) and the live bridge-domain parity check
+  # reaches worst 3.13e-13 abs over the 12 horizons
+  # (tmp_opencode/m13-p3consumer/parity-yef-table.csv).
+  expect_identical(fc_auto$availability$standard_errors[fc_auto$availability$component == "y"],
+                   "available")
+  expect_true(!is.null(fc_auto$standard_errors$y))
+  expect_identical(length(fc_auto$standard_errors$y), 12L)
+  expect_identical(as.numeric(stats::start(fc_auto$standard_errors$y)), c(1961, 1))
+  expect_true(all(fc_auto$availability$standard_errors[fc_auto$availability$component != "y"] ==
+                    "unavailable"))
   avail <- stats::setNames(res$availability$state, res$availability$field)
   expect_true(all(avail[c("y", "t", "sa", "i", "s", "cal", "y_f", "t_f",
                           "sa_f", "s_f", "cal_f")] == "available"))
-  expect_true(all(avail[c("i_f", "y_ef")] == "unavailable"))
+  expect_identical(avail[["y_ef"]], "available")
+  expect_identical(avail[["i_f"]], "unavailable")
   sa <- res$components$sa
   expect_identical(as.integer(stats::frequency(sa)), 12L)
   expect_identical(time_domain(stats::tsp(sa)), time_domain(stats::tsp(series_m)))
